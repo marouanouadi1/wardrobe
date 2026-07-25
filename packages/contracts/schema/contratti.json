@@ -1,0 +1,1858 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Contratti",
+  "description": "Generato da services/api/src/domain/models.py — non modificare a mano.",
+  "type": "object",
+  "properties": {
+    "AggiornamentoCapo": {
+      "$ref": "#/$defs/AggiornamentoCapo"
+    },
+    "AnalisiAvviata": {
+      "$ref": "#/$defs/AnalisiAvviata"
+    },
+    "AnalisiVisione": {
+      "$ref": "#/$defs/AnalisiVisione"
+    },
+    "AttributoCapo": {
+      "$ref": "#/$defs/AttributoCapo"
+    },
+    "Capo": {
+      "$ref": "#/$defs/Capo"
+    },
+    "CapoSintetico": {
+      "$ref": "#/$defs/CapoSintetico"
+    },
+    "Colore": {
+      "$ref": "#/$defs/Colore"
+    },
+    "ContestoSuggerimento": {
+      "$ref": "#/$defs/ContestoSuggerimento"
+    },
+    "CorrezioniCapo": {
+      "$ref": "#/$defs/CorrezioniCapo"
+    },
+    "ElencoCapi": {
+      "$ref": "#/$defs/ElencoCapi"
+    },
+    "EsecuzionePlayground": {
+      "$ref": "#/$defs/EsecuzionePlayground"
+    },
+    "EsitoAnalisi": {
+      "$ref": "#/$defs/EsitoAnalisi"
+    },
+    "EsitoEsecuzione": {
+      "$ref": "#/$defs/EsitoEsecuzione"
+    },
+    "EsitoPlayground": {
+      "$ref": "#/$defs/EsitoPlayground"
+    },
+    "FiltroArmadio": {
+      "$ref": "#/$defs/FiltroArmadio"
+    },
+    "FotoCapo": {
+      "$ref": "#/$defs/FotoCapo"
+    },
+    "ImpegnoAgenda": {
+      "$ref": "#/$defs/ImpegnoAgenda"
+    },
+    "JobIa": {
+      "$ref": "#/$defs/JobIa"
+    },
+    "LetturaCapo": {
+      "$ref": "#/$defs/LetturaCapo"
+    },
+    "Meteo": {
+      "$ref": "#/$defs/Meteo"
+    },
+    "ModelloDisponibile": {
+      "$ref": "#/$defs/ModelloDisponibile"
+    },
+    "NuovoOutfit": {
+      "$ref": "#/$defs/NuovoOutfit"
+    },
+    "OrigineOutfit": {
+      "$ref": "#/$defs/OrigineOutfit"
+    },
+    "Outfit": {
+      "$ref": "#/$defs/Outfit"
+    },
+    "PreferenzeStile": {
+      "$ref": "#/$defs/PreferenzeStile"
+    },
+    "PresetPrompt": {
+      "$ref": "#/$defs/PresetPrompt"
+    },
+    "Profilo": {
+      "$ref": "#/$defs/Profilo"
+    },
+    "RichiestaAnalisi": {
+      "$ref": "#/$defs/RichiestaAnalisi"
+    },
+    "RichiestaPlayground": {
+      "$ref": "#/$defs/RichiestaPlayground"
+    },
+    "RichiestaSuggerimenti": {
+      "$ref": "#/$defs/RichiestaSuggerimenti"
+    },
+    "RichiestaUpload": {
+      "$ref": "#/$defs/RichiestaUpload"
+    },
+    "RiepilogoArmadio": {
+      "$ref": "#/$defs/RiepilogoArmadio"
+    },
+    "RispostaSuggerimenti": {
+      "$ref": "#/$defs/RispostaSuggerimenti"
+    },
+    "SlotAvatar": {
+      "$ref": "#/$defs/SlotAvatar"
+    },
+    "Stagione": {
+      "$ref": "#/$defs/Stagione"
+    },
+    "StatoAnalisi": {
+      "$ref": "#/$defs/StatoAnalisi"
+    },
+    "StatoCapo": {
+      "$ref": "#/$defs/StatoCapo"
+    },
+    "Suggerimento": {
+      "$ref": "#/$defs/Suggerimento"
+    },
+    "TipoCapo": {
+      "$ref": "#/$defs/TipoCapo"
+    },
+    "UploadFirmato": {
+      "$ref": "#/$defs/UploadFirmato"
+    },
+    "UsoToken": {
+      "$ref": "#/$defs/UsoToken"
+    },
+    "Vestizione": {
+      "$ref": "#/$defs/Vestizione"
+    },
+    "VestizioneColori": {
+      "$ref": "#/$defs/VestizioneColori"
+    }
+  },
+  "$defs": {
+    "AggiornamentoCapo": {
+      "additionalProperties": false,
+      "properties": {
+        "correzioni": {
+          "$ref": "#/$defs/CorrezioniCapo"
+        },
+        "nome": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "preferito": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stato": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatoCapo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "title": "AggiornamentoCapo",
+      "type": "object"
+    },
+    "AnalisiAvviata": {
+      "additionalProperties": false,
+      "description": "L'app riceve un identificativo e interroga lo stato: l'analisi è lenta.\n\nTenerla asincrona è ciò che permette il caricamento in blocco di venti foto\nsenza che l'app resti appesa a una richiesta HTTP di quaranta secondi.",
+      "properties": {
+        "esecuzione_id": {
+          "type": "string"
+        },
+        "stato": {
+          "$ref": "#/$defs/StatoAnalisi"
+        }
+      },
+      "required": [
+        "esecuzione_id"
+      ],
+      "title": "AnalisiAvviata",
+      "type": "object"
+    },
+    "AnalisiVisione": {
+      "additionalProperties": false,
+      "description": "Traccia di chi ha letto la foto, quando, e con quanta sicurezza.",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "modello": {
+          "type": "string"
+        },
+        "eseguita_il": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "confidenze": {
+          "additionalProperties": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/AttributoCapo"
+          },
+          "type": "object"
+        },
+        "corretti_a_mano": {
+          "items": {
+            "$ref": "#/$defs/AttributoCapo"
+          },
+          "type": "array"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "provider",
+        "modello",
+        "eseguita_il"
+      ],
+      "title": "AnalisiVisione",
+      "type": "object"
+    },
+    "AttributoCapo": {
+      "description": "Gli attributi che il modello di visione legge dalla foto.\n\nOgnuno porta la sua confidenza: è il motivo per cui `Capo` non ha un unico\npunteggio complessivo.",
+      "enum": [
+        "tipo",
+        "colore",
+        "materiale",
+        "fantasia",
+        "stagione",
+        "vestibilita",
+        "lavaggio"
+      ],
+      "title": "AttributoCapo",
+      "type": "string"
+    },
+    "Capo": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "nome": {
+          "type": "string"
+        },
+        "tipo": {
+          "$ref": "#/$defs/TipoCapo"
+        },
+        "slot": {
+          "$ref": "#/$defs/SlotAvatar"
+        },
+        "colore": {
+          "$ref": "#/$defs/Colore"
+        },
+        "foto": {
+          "$ref": "#/$defs/FotoCapo"
+        },
+        "brand": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sottotipo": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "materiale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fantasia": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stagione": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Stagione"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "vestibilita": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lavaggio": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stato": {
+          "$ref": "#/$defs/StatoCapo"
+        },
+        "preferito": {
+          "type": "boolean"
+        },
+        "ultimo_uso": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "volte_indossato": {
+          "type": "integer"
+        },
+        "analisi": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AnalisiVisione"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "creato_il": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "aggiornato_il": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "nome",
+        "tipo",
+        "slot",
+        "colore",
+        "foto",
+        "creato_il",
+        "aggiornato_il"
+      ],
+      "title": "Capo",
+      "type": "object"
+    },
+    "CapoSintetico": {
+      "additionalProperties": false,
+      "description": "Il capo come lo vede il modello di suggerimento.\n\nVolutamente magro: meno token per capo significa più capi nel contesto.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "nome": {
+          "type": "string"
+        },
+        "tipo": {
+          "$ref": "#/$defs/TipoCapo"
+        },
+        "slot": {
+          "$ref": "#/$defs/SlotAvatar"
+        },
+        "colore": {
+          "type": "string"
+        },
+        "hex": {
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "type": "string"
+        },
+        "materiale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stagione": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Stagione"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stato": {
+          "$ref": "#/$defs/StatoCapo"
+        }
+      },
+      "required": [
+        "id",
+        "nome",
+        "tipo",
+        "slot",
+        "colore",
+        "hex"
+      ],
+      "title": "CapoSintetico",
+      "type": "object"
+    },
+    "Colore": {
+      "additionalProperties": false,
+      "description": "Nome leggibile più esadecimale.\n\nL'hex non è un vezzo: è quello che il manichino 3D usa per tingere le mesh.\nSenza hex, l'avatar non può indossare il capo.",
+      "properties": {
+        "nome": {
+          "type": "string"
+        },
+        "hex": {
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "nome",
+        "hex"
+      ],
+      "title": "Colore",
+      "type": "object"
+    },
+    "ContestoSuggerimento": {
+      "additionalProperties": false,
+      "description": "Tutto ciò che lo stilista può sapere, e nient'altro.\n\nÈ anche il payload che il playground mostra in chiaro: se un suggerimento\nesce strano, si guarda qui prima di dare la colpa al modello.",
+      "properties": {
+        "capi_disponibili": {
+          "items": {
+            "$ref": "#/$defs/CapoSintetico"
+          },
+          "type": "array"
+        },
+        "meteo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Meteo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "agenda": {
+          "items": {
+            "$ref": "#/$defs/ImpegnoAgenda"
+          },
+          "type": "array"
+        },
+        "in_lavaggio": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "indossati_di_recente": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "preferenze": {
+          "$ref": "#/$defs/PreferenzeStile"
+        },
+        "richiesta_utente": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "numero_proposte": {
+          "maximum": 5,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "capi_disponibili"
+      ],
+      "title": "ContestoSuggerimento",
+      "type": "object"
+    },
+    "CorrezioniCapo": {
+      "additionalProperties": false,
+      "description": "Le correzioni dell'utente, una per attributo, tutte tipizzate.\n\nVolutamente non è `dict[str, str]`: correggere il colore significa mandare\nnome più hex, e il tipo deve stare nell'enum. Un dizionario di stringhe\nfarebbe passare «maglietta» come tipo e lo scopriremmo sull'avatar.",
+      "properties": {
+        "tipo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TipoCapo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "colore": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Colore"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "materiale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fantasia": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stagione": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Stagione"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "vestibilita": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lavaggio": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "title": "CorrezioniCapo",
+      "type": "object"
+    },
+    "ElencoCapi": {
+      "additionalProperties": false,
+      "properties": {
+        "capi": {
+          "items": {
+            "$ref": "#/$defs/Capo"
+          },
+          "type": "array"
+        },
+        "totale": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "capi",
+        "totale"
+      ],
+      "title": "ElencoCapi",
+      "type": "object"
+    },
+    "EsecuzionePlayground": {
+      "additionalProperties": false,
+      "description": "Riga dello storico: serve a confrontare provider a distanza di giorni.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "eseguita_il": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "job": {
+          "$ref": "#/$defs/JobIa"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "modello": {
+          "type": "string"
+        },
+        "temperatura": {
+          "type": "number"
+        },
+        "latenza_ms": {
+          "type": "integer"
+        },
+        "costo_eur": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "esito": {
+          "$ref": "#/$defs/EsitoEsecuzione"
+        },
+        "preset": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "eseguita_il",
+        "job",
+        "provider",
+        "modello",
+        "temperatura",
+        "latenza_ms",
+        "esito"
+      ],
+      "title": "EsecuzionePlayground",
+      "type": "object"
+    },
+    "EsitoAnalisi": {
+      "additionalProperties": false,
+      "properties": {
+        "esecuzione_id": {
+          "type": "string"
+        },
+        "stato": {
+          "$ref": "#/$defs/StatoAnalisi"
+        },
+        "capo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Capo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "errore": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "esecuzione_id",
+        "stato"
+      ],
+      "title": "EsitoAnalisi",
+      "type": "object"
+    },
+    "EsitoEsecuzione": {
+      "enum": [
+        "ok",
+        "vago",
+        "errore"
+      ],
+      "title": "EsitoEsecuzione",
+      "type": "string"
+    },
+    "EsitoPlayground": {
+      "additionalProperties": false,
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "esito": {
+          "$ref": "#/$defs/EsitoEsecuzione"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "modello": {
+          "type": "string"
+        },
+        "latenza_ms": {
+          "type": "integer"
+        },
+        "uso": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UsoToken"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "costo_eur": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "testo": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lettura": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LetturaCapo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "suggerimenti": {
+          "items": {
+            "$ref": "#/$defs/Suggerimento"
+          },
+          "type": "array"
+        },
+        "errore": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "ok",
+        "esito",
+        "provider",
+        "modello",
+        "latenza_ms"
+      ],
+      "title": "EsitoPlayground",
+      "type": "object"
+    },
+    "FiltroArmadio": {
+      "additionalProperties": false,
+      "properties": {
+        "tipo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TipoCapo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stato": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatoCapo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "solo_preferiti": {
+          "type": "boolean"
+        },
+        "testo": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "title": "FiltroArmadio",
+      "type": "object"
+    },
+    "FotoCapo": {
+      "additionalProperties": false,
+      "properties": {
+        "chiave": {
+          "description": "Chiave dell'oggetto su S3",
+          "type": "string"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "URL firmato, a vita breve"
+        },
+        "larghezza": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "altezza": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "chiave"
+      ],
+      "title": "FotoCapo",
+      "type": "object"
+    },
+    "ImpegnoAgenda": {
+      "additionalProperties": false,
+      "properties": {
+        "ora": {
+          "type": "string"
+        },
+        "titolo": {
+          "type": "string"
+        },
+        "dress_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "ora",
+        "titolo"
+      ],
+      "title": "ImpegnoAgenda",
+      "type": "object"
+    },
+    "JobIa": {
+      "description": "I due lavori veri che l'IA fa nel prodotto.\n\nIl playground esercita questi, non una chat generica: così provare un\nprovider nuovo significa aggiungere un adapter, mai toccare una schermata.",
+      "enum": [
+        "analisi_capo",
+        "suggerimento"
+      ],
+      "title": "JobIa",
+      "type": "string"
+    },
+    "LetturaCapo": {
+      "additionalProperties": false,
+      "description": "Quello che il modello di visione dichiara di aver letto dalla foto.\n\nTutto opzionale per costruzione: «se un attributo non è leggibile metti\nnull, non tirare a indovinare». Non è ancora un `Capo` — diventa tale solo\npassando da `domain.vision.crea_capo`.",
+      "properties": {
+        "tipo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TipoCapo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sottotipo": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nome_proposto": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "colore": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Colore"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "materiale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fantasia": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stagione": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Stagione"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "vestibilita": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lavaggio": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidenze": {
+          "additionalProperties": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/AttributoCapo"
+          },
+          "type": "object"
+        }
+      },
+      "title": "LetturaCapo",
+      "type": "object"
+    },
+    "Meteo": {
+      "additionalProperties": false,
+      "properties": {
+        "citta": {
+          "type": "string"
+        },
+        "temp_c": {
+          "type": "number"
+        },
+        "condizione": {
+          "type": "string"
+        },
+        "percepita_c": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "citta",
+        "temp_c",
+        "condizione"
+      ],
+      "title": "Meteo",
+      "type": "object"
+    },
+    "ModelloDisponibile": {
+      "additionalProperties": false,
+      "description": "Una riga della lista modelli del playground.",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "etichetta": {
+          "type": "string"
+        },
+        "visione": {
+          "type": "boolean"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "costo_input_eur_mtok": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "costo_output_eur_mtok": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "configurato": {
+          "type": "boolean"
+        },
+        "accetta_temperatura": {
+          "description": "Falso sui modelli che hanno rimosso il parametro e rifiutano la richiesta con 400. In un banco di prova una manopola che non fa niente è peggio di una manopola assente: da lì si traggono conclusioni sbagliate.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "provider",
+        "id",
+        "etichetta",
+        "visione"
+      ],
+      "title": "ModelloDisponibile",
+      "type": "object"
+    },
+    "NuovoOutfit": {
+      "additionalProperties": false,
+      "properties": {
+        "nome": {
+          "type": "string"
+        },
+        "vestizione": {
+          "$ref": "#/$defs/Vestizione"
+        },
+        "occasione": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "origine": {
+          "$ref": "#/$defs/OrigineOutfit"
+        }
+      },
+      "required": [
+        "nome",
+        "vestizione"
+      ],
+      "title": "NuovoOutfit",
+      "type": "object"
+    },
+    "OrigineOutfit": {
+      "enum": [
+        "manuale",
+        "ia",
+        "suggerito_modificato"
+      ],
+      "title": "OrigineOutfit",
+      "type": "string"
+    },
+    "Outfit": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "nome": {
+          "type": "string"
+        },
+        "vestizione": {
+          "$ref": "#/$defs/Vestizione"
+        },
+        "occasione": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "origine": {
+          "$ref": "#/$defs/OrigineOutfit"
+        },
+        "volte_indossato": {
+          "type": "integer"
+        },
+        "ultimo_uso": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "creato_il": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "nome",
+        "vestizione",
+        "creato_il"
+      ],
+      "title": "Outfit",
+      "type": "object"
+    },
+    "PreferenzeStile": {
+      "additionalProperties": false,
+      "properties": {
+        "stili": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "palette": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "evita": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "title": "PreferenzeStile",
+      "type": "object"
+    },
+    "PresetPrompt": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "etichetta": {
+          "type": "string"
+        },
+        "job": {
+          "$ref": "#/$defs/JobIa"
+        },
+        "system_prompt": {
+          "type": "string"
+        },
+        "temperatura": {
+          "maximum": 2,
+          "minimum": 0,
+          "type": "number"
+        },
+        "max_token": {
+          "maximum": 32000,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "etichetta",
+        "job",
+        "system_prompt"
+      ],
+      "title": "PresetPrompt",
+      "type": "object"
+    },
+    "Profilo": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "nome": {
+          "type": "string"
+        },
+        "citta": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "preferenze": {
+          "$ref": "#/$defs/PreferenzeStile"
+        },
+        "foto_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "avatar_foto_chiave": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Foto a figura intera per l'avatar 2D, quando il 3D non basta"
+        },
+        "creato_il": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "nome",
+        "creato_il"
+      ],
+      "title": "Profilo",
+      "type": "object"
+    },
+    "RichiestaAnalisi": {
+      "additionalProperties": false,
+      "properties": {
+        "chiave_foto": {
+          "type": "string"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "modello": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "chiave_foto"
+      ],
+      "title": "RichiestaAnalisi",
+      "type": "object"
+    },
+    "RichiestaPlayground": {
+      "additionalProperties": false,
+      "properties": {
+        "job": {
+          "$ref": "#/$defs/JobIa"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "modello": {
+          "type": "string"
+        },
+        "system_prompt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "temperatura": {
+          "maximum": 2,
+          "minimum": 0,
+          "type": "number"
+        },
+        "max_token": {
+          "maximum": 32000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "chiave_foto": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Obbligatoria per il job analisi_capo"
+        },
+        "contesto": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContestoSuggerimento"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Obbligatorio per il job suggerimento"
+        }
+      },
+      "required": [
+        "job",
+        "provider",
+        "modello"
+      ],
+      "title": "RichiestaPlayground",
+      "type": "object"
+    },
+    "RichiestaSuggerimenti": {
+      "additionalProperties": false,
+      "properties": {
+        "richiesta_utente": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "meteo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Meteo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "agenda": {
+          "items": {
+            "$ref": "#/$defs/ImpegnoAgenda"
+          },
+          "type": "array"
+        },
+        "numero_proposte": {
+          "maximum": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "modello": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "title": "RichiestaSuggerimenti",
+      "type": "object"
+    },
+    "RichiestaUpload": {
+      "additionalProperties": false,
+      "properties": {
+        "content_type": {
+          "type": "string"
+        },
+        "nota": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "content_type"
+      ],
+      "title": "RichiestaUpload",
+      "type": "object"
+    },
+    "RiepilogoArmadio": {
+      "additionalProperties": false,
+      "properties": {
+        "totale": {
+          "type": "integer"
+        },
+        "da_lavare": {
+          "type": "integer"
+        },
+        "dormienti": {
+          "type": "integer"
+        },
+        "valore_dormiente_eur": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "totale",
+        "da_lavare",
+        "dormienti"
+      ],
+      "title": "RiepilogoArmadio",
+      "type": "object"
+    },
+    "RispostaSuggerimenti": {
+      "additionalProperties": false,
+      "properties": {
+        "suggerimenti": {
+          "items": {
+            "$ref": "#/$defs/Suggerimento"
+          },
+          "type": "array"
+        },
+        "contesto": {
+          "$ref": "#/$defs/ContestoSuggerimento"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "modello": {
+          "type": "string"
+        },
+        "latenza_ms": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "suggerimenti",
+        "contesto",
+        "provider",
+        "modello",
+        "latenza_ms"
+      ],
+      "title": "RispostaSuggerimenti",
+      "type": "object"
+    },
+    "SlotAvatar": {
+      "description": "Le cinque posizioni che l'avatar sa vestire.\n\nI valori coincidono con le chiavi di `mannequin.setOutfit()`.",
+      "enum": [
+        "top",
+        "bottom",
+        "outer",
+        "shoes",
+        "dress"
+      ],
+      "title": "SlotAvatar",
+      "type": "string"
+    },
+    "Stagione": {
+      "enum": [
+        "primavera",
+        "estate",
+        "autunno",
+        "inverno",
+        "mezza_stagione",
+        "tutto_lanno"
+      ],
+      "title": "Stagione",
+      "type": "string"
+    },
+    "StatoAnalisi": {
+      "enum": [
+        "in_corso",
+        "completata",
+        "fallita"
+      ],
+      "title": "StatoAnalisi",
+      "type": "string"
+    },
+    "StatoCapo": {
+      "enum": [
+        "pulito",
+        "da_lavare",
+        "in_lavaggio"
+      ],
+      "title": "StatoCapo",
+      "type": "string"
+    },
+    "Suggerimento": {
+      "additionalProperties": false,
+      "description": "Una proposta dello stilista, già validata contro l'armadio vero.",
+      "properties": {
+        "titolo": {
+          "type": "string"
+        },
+        "match": {
+          "maximum": 100,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "vestizione": {
+          "$ref": "#/$defs/Vestizione"
+        },
+        "perche": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "type": "array"
+        }
+      },
+      "required": [
+        "titolo",
+        "match",
+        "vestizione",
+        "perche"
+      ],
+      "title": "Suggerimento",
+      "type": "object"
+    },
+    "TipoCapo": {
+      "enum": [
+        "top",
+        "pantaloni",
+        "scarpe",
+        "capospalla",
+        "abito",
+        "accessorio"
+      ],
+      "title": "TipoCapo",
+      "type": "string"
+    },
+    "UploadFirmato": {
+      "additionalProperties": false,
+      "description": "Risposta all'app prima che carichi la foto: l'upload va diretto a S3.",
+      "properties": {
+        "chiave": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "metodo": {
+          "type": "string"
+        },
+        "intestazioni": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "scade_in_s": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "chiave",
+        "url",
+        "scade_in_s"
+      ],
+      "title": "UploadFirmato",
+      "type": "object"
+    },
+    "UsoToken": {
+      "additionalProperties": false,
+      "properties": {
+        "token_input": {
+          "type": "integer"
+        },
+        "token_output": {
+          "type": "integer"
+        }
+      },
+      "title": "UsoToken",
+      "type": "object"
+    },
+    "Vestizione": {
+      "additionalProperties": false,
+      "description": "Chi occupa quale slot dell'avatar. I valori sono id di capo.\n\nLe chiavi sono quelle di `mannequin.setOutfit()`: non tradurle.",
+      "properties": {
+        "top": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bottom": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "shoes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dress": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "title": "Vestizione",
+      "type": "object"
+    },
+    "VestizioneColori": {
+      "additionalProperties": false,
+      "description": "La stessa vestizione, risolta in colori: è ciò che il renderer riceve.\n\nIl manichino non indossa fotografie, tinge primitive. Per questo il colore\ndominante estratto dalla foto è il ponte fra le due feature di punta.",
+      "properties": {
+        "top": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bottom": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outer": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "shoes": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dress": {
+          "anyOf": [
+            {
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "title": "VestizioneColori",
+      "type": "object"
+    }
+  }
+}

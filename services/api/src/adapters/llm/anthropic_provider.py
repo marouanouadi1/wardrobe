@@ -1,0 +1,148 @@
+"""Claude, tramite l'SDK ufficiale.
+
+È il provider di riferimento del progetto e l'unico con un SDK vero come
+dipendenza: retry, errori tipizzati e structured output li fa lui. Gli altri
+provider sono adapter HTTP sottili, perché servono al confronto nel playground,
+non a reggere la produzione.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+import anthropic
+from anthropic import omit
+from anthropic.types import TextBlock
+
+from adapters.llm.base import chiave, cronometra
+from domain.errors import ErroreProvider
+from domain.models import ModelloDisponibile, UsoToken
+from domain.ports import RichiestaLlm, RispostaLlm
+
+NOME = "anthropic"
+VARIABILE_CHIAVE = "ANTHROPIC_API_KEY"
+
+# Prezzi di listino in dollari per milione di token (input, output).
+# Anthropic fattura in dollari: la conversione in euro la fa il registro, così
+# il tasso sta in un posto solo.
+PREZZI_USD: dict[str, tuple[float, float]] = {
+    "claude-opus-5": (5.0, 25.0),
+    "claude-sonnet-5": (3.0, 15.0),
+    "claude-haiku-4-5": (1.0, 5.0),
+}
+
+# Su questi modelli `temperature` è stato rimosso e la richiesta viene
+# rifiutata con 400. La temperatura del playground quindi non li raggiunge:
+# l'equivalente è `output_config.effort`, che regola la profondità del
+# ragionamento — non la casualità. Non facciamo finta che siano la stessa cosa.
+SENZA_TEMPERATURA = frozenset({"claude-opus-5", "claude-sonnet-5", "claude-opus-4-8"})
+
+
+def catalogo(configurato: bool) -> list[ModelloDisponibile]:
+    return [
+        ModelloDisponibile(
+            provider=NOME,
+            id="claude-opus-5",
+            accetta_temperatura="claude-opus-5" not in SENZA_TEMPERATURA,
+            etichetta="Claude Opus 5",
+            visione=True,
+            note="il più accurato sui tessuti e sulle etichette",
+            configurato=configurato,
+        ),
+        ModelloDisponibile(
+            provider=NOME,
+            id="claude-sonnet-5",
+            accetta_temperatura="claude-sonnet-5" not in SENZA_TEMPERATURA,
+            etichetta="Claude Sonnet 5",
+            visione=True,
+            note="quasi come Opus, a un terzo del prezzo",
+            configurato=configurato,
+        ),
+        ModelloDisponibile(
+            provider=NOME,
+            id="claude-haiku-4-5",
+            accetta_temperatura="claude-haiku-4-5" not in SENZA_TEMPERATURA,
+            etichetta="Claude Haiku 4.5",
+            visione=True,
+            note="il più economico: buono per l'analisi in blocco",
+            configurato=configurato,
+        ),
+    ]
+
+
+class ProviderAnthropic:
+    nome = NOME
+
+    def __init__(self, chiave_override: str | None = None) -> None:
+        self._chiave = chiave(NOME, VARIABILE_CHIAVE, chiave_override)
+
+    def modelli(self) -> list[ModelloDisponibile]:
+        return catalogo(configurato=True)
+
+    def completa(self, richiesta: RichiestaLlm) -> RispostaLlm:
+        client = anthropic.Anthropic(api_key=self._chiave)
+
+        contenuto: list[Any] = [
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": immagine.media_type,
+                    "data": immagine.base64,
+                },
+            }
+            for immagine in richiesta.immagini
+        ]
+        contenuto.append({"type": "text", "text": richiesta.prompt})
+
+        # `omit` è il sentinella dell'SDK per «non mandare affatto questo
+        # parametro». Serve perché mandare `temperature=None` non è la stessa
+        # cosa che ometterlo, e sui modelli che l'hanno rimosso la differenza
+        # è fra una risposta e un 400.
+        output_config: Any = (
+            {"format": {"type": "json_schema", "schema": richiesta.schema_atteso}}
+            if richiesta.forza_json and richiesta.schema_atteso is not None
+            else omit
+        )
+
+        try:
+            messaggio, latenza_ms = cronometra(
+                lambda: client.messages.create(
+                    model=richiesta.modello,
+                    max_tokens=richiesta.max_token,
+                    messages=[{"role": "user", "content": contenuto}],
+                    system=richiesta.system or omit,
+                    temperature=(
+                        omit if richiesta.modello in SENZA_TEMPERATURA else richiesta.temperatura
+                    ),
+                    output_config=output_config,
+                )
+            )
+        except anthropic.APIStatusError as exc:
+            raise ErroreProvider(f"{NOME} ha risposto {exc.status_code}: {exc.message}") from exc
+        except anthropic.APIConnectionError as exc:
+            raise ErroreProvider(f"{NOME} non raggiungibile: {exc}") from exc
+
+        # Un rifiuto delle classificazioni di sicurezza arriva come 200 con
+        # stop_reason «refusal» e contenuto vuoto: leggere content[0] senza
+        # controllare qui esploderebbe con un IndexError inspiegabile.
+        if messaggio.stop_reason == "refusal":
+            raise ErroreProvider(f"{NOME} ha rifiutato la richiesta")
+
+        # La risposta è una lista di blocchi di tipi diversi (testo, pensiero,
+        # uso di strumenti): prendiamo solo il testo, restringendo per tipo e
+        # non per attributo — così se l'SDK aggiunge un blocco nuovo, il
+        # controllo dei tipi ce lo dice invece di farci leggere un campo che
+        # non esiste.
+        testo = "".join(
+            blocco.text for blocco in messaggio.content if isinstance(blocco, TextBlock)
+        )
+        return RispostaLlm(
+            testo=testo,
+            modello=messaggio.model,
+            uso=UsoToken(
+                token_input=messaggio.usage.input_tokens,
+                token_output=messaggio.usage.output_tokens,
+            ),
+            latenza_ms=latenza_ms,
+        )

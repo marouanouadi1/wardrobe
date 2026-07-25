@@ -1,0 +1,76 @@
+name: mobile
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/contracts/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/mobile.yml"
+  pull_request:
+    paths:
+      - "apps/mobile/**"
+      - "packages/contracts/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/mobile.yml"
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: typecheck + lint + export web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # I tipi in packages/contracts sono generati dal backend: se il campo
+      # `materiale` cambia lì, questo tsc fallisce. È il punto in cui il
+      # disallineamento frontend/backend diventa visibile.
+      - name: Typecheck
+        run: npm run typecheck --workspace @wardrobe/mobile
+
+      - name: Lint
+        run: npm run lint --workspace @wardrobe/mobile
+
+      # L'export web è il controllo di build più economico che abbiamo:
+      # non serve un runner macOS né credenziali EAS.
+      - name: Export web
+        run: npm run build:web --workspace @wardrobe/mobile
+
+  build:
+    name: build EAS (preview)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [checks]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # Richiede EXPO_TOKEN nei secrets del repo. Finché non c'è, questo job
+      # va tenuto disabilitato: il gate vero sulle PR è il job `checks`.
+      - name: Build Android preview
+        run: eas build --platform android --profile preview --non-interactive --no-wait
+        working-directory: apps/mobile

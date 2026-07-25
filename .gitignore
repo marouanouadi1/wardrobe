@@ -1,0 +1,40 @@
+# node
+node_modules/
+npm-debug.log*
+.npm/
+
+# expo
+.expo/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+build/
+*.egg-info/
+
+# cdk
+infra/cdk.out/
+infra/*.d.ts
+infra/*.js
+!infra/jest.config.js
+
+# ambiente
+.env
+.env.*
+!.env.example
+
+# sistema
+.DS_Store
+Thumbs.db

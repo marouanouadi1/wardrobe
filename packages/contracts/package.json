@@ -1,0 +1,21 @@
+{
+  "name": "@wardrobe/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tipi condivisi, generati dai modelli Pydantic del backend",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "check": "node scripts/generate.mjs --verifica",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "json-schema-to-typescript": "^15.0.4",
+    "typescript": "~6.0.3"
+  }
+}

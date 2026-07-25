@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Tela",
+    "slug": "tela",
+    "scheme": "tela",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tela.armadio",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Serve per fotografare i tuoi capi e aggiungerli all'armadio.",
+        "NSPhotoLibraryUsageDescription": "Serve per scegliere dalla galleria le foto dei tuoi capi."
+      }
+    },
+    "android": {
+      "package": "com.tela.armadio",
+      "adaptiveIcon": {
+        "backgroundColor": "#15151A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-image",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiUrl": "http://localhost:8787"
+    }
+  }
+}

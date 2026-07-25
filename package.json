@@ -1,0 +1,39 @@
+{
+  "name": "wardrobe",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Tela — armadio digitale: app Expo, API Python su Lambda, infrastruttura CDK",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "infra"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "mobile": "npm run start --workspace @wardrobe/mobile",
+    "mobile:web": "npm run web --workspace @wardrobe/mobile",
+    "mobile:android": "npm run android --workspace @wardrobe/mobile",
+    "mobile:ios": "npm run ios --workspace @wardrobe/mobile",
+    "contracts:generate": "npm run generate --workspace @wardrobe/contracts",
+    "contracts:check": "npm run check --workspace @wardrobe/contracts",
+    "api:sync": "cd services/api && uv sync --all-extras",
+    "api:test": "cd services/api && uv run pytest",
+    "api:lint": "cd services/api && uv run ruff check . && uv run ruff format --check . && uv run mypy src",
+    "api:local": "cd services/api && uv run python -m handlers.local_server",
+    "infra:synth": "npm run synth --workspace @wardrobe/infra",
+    "infra:diff": "npm run diff --workspace @wardrobe/infra",
+    "infra:deploy": "npm run deploy --workspace @wardrobe/infra",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "typescript": "~6.0.3"
+  }
+}

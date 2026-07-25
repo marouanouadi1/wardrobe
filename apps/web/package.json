@@ -1,0 +1,9 @@
+{
+  "name": "@wardrobe/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Segnaposto: il posto per il web, quando servirà",
+  "scripts": {
+    "dev": "echo 'Non ancora implementato — vedi apps/web/README.md' && exit 1"
+  }
+}

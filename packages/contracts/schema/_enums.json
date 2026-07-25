@@ -1,0 +1,58 @@
+{
+  "TipoCapo": [
+    "top",
+    "pantaloni",
+    "scarpe",
+    "capospalla",
+    "abito",
+    "accessorio"
+  ],
+  "SlotAvatar": [
+    "top",
+    "bottom",
+    "outer",
+    "shoes",
+    "dress"
+  ],
+  "Stagione": [
+    "primavera",
+    "estate",
+    "autunno",
+    "inverno",
+    "mezza_stagione",
+    "tutto_lanno"
+  ],
+  "StatoCapo": [
+    "pulito",
+    "da_lavare",
+    "in_lavaggio"
+  ],
+  "AttributoCapo": [
+    "tipo",
+    "colore",
+    "materiale",
+    "fantasia",
+    "stagione",
+    "vestibilita",
+    "lavaggio"
+  ],
+  "OrigineOutfit": [
+    "manuale",
+    "ia",
+    "suggerito_modificato"
+  ],
+  "JobIa": [
+    "analisi_capo",
+    "suggerimento"
+  ],
+  "EsitoEsecuzione": [
+    "ok",
+    "vago",
+    "errore"
+  ],
+  "StatoAnalisi": [
+    "in_corso",
+    "completata",
+    "fallita"
+  ]
+}

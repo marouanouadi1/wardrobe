@@ -1,0 +1,86 @@
+[project]
+name = "wardrobe-api"
+version = "0.1.0"
+description = "API di Tela: handlers Lambda sottili sopra un domain puro"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.12",
+    "httpx>=0.28",
+    "psycopg[binary]>=3.2",
+    # Anthropic è il provider di riferimento e ha l'SDK ufficiale: retry,
+    # errori tipizzati e structured output li gestisce lui. Gli altri provider
+    # sono adapter HTTP sottili, perché servono al confronto nel playground.
+    "anthropic>=0.75",
+]
+
+[project.optional-dependencies]
+# boto3 è già nel runtime Lambda: sta qui per lo sviluppo e per mypy, e
+# scripts/build_lambda.sh lo esclude dallo zip.
+aws = ["boto3>=1.35"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.9",
+    "mypy>=1.14",
+    "boto3-stubs[s3,secretsmanager,stepfunctions]>=1.35",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# La struttura è quella richiesta: tre pacchetti top-level dentro src/.
+# handlers dipende da domain; domain non dipende da nessuno dei due altri.
+packages = ["src/domain", "src/handlers", "src/adapters"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "tests"]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM", "RUF", "TID"]
+ignore = [
+    "RUF001", # i nomi di dominio sono in italiano: gli accenti sono voluti
+    "RUF002",
+    "RUF003",
+    "N818",   # le eccezioni si chiamano ErroreX, non XError: dominio in italiano
+    "A003",   # `id` è un nome di campo legittimo nei modelli Pydantic
+]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+# Il vincolo architetturale reso eseguibile: se un import di boto3 finisce in
+# domain/, il lint fallisce. Vedi la regola per-file qui sotto.
+"boto3".msg = "boto3 solo in adapters/ — il domain resta puro"
+"botocore".msg = "botocore solo in adapters/ — il domain resta puro"
+"psycopg".msg = "psycopg solo in adapters/ — il domain resta puro"
+"httpx".msg = "httpx solo in adapters/ — il domain resta puro"
+
+[tool.ruff.lint.per-file-ignores]
+"src/adapters/**" = ["TID251"]
+"tests/**" = ["TID251"]
+"scripts/**" = ["TID251", "A"]
+# La tabella dei semi è una tabella: spezzarla su più righe la rende
+# illeggibile proprio nell'unico punto in cui si legge per colonne.
+"src/adapters/memory.py" = ["TID251", "E501"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+namespace_packages = true
+explicit_package_bases = true
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
