@@ -116,8 +116,10 @@ EsaColore = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
 class Colore(ModelloTela):
     """Nome leggibile più esadecimale.
 
-    L'hex non è un vezzo: è quello che il manichino 3D usa per tingere le mesh.
-    Senza hex, l'avatar non può indossare il capo.
+    L'hex non è un vezzo: è quello che il manichino 3D di oggi usa per tingere le
+    mesh, e per ora senza hex l'avatar non sa indossare il capo. È il primo passo:
+    l'ADR 0004 porta l'avatar a vestire la foto scontornata del capo come texture,
+    e allora il colore diventa il ripiego invece del requisito.
     """
 
     nome: str
@@ -216,10 +218,12 @@ class Vestizione(ModelloTela):
 
 
 class VestizioneColori(ModelloTela):
-    """La stessa vestizione, risolta in colori: è ciò che il renderer riceve.
+    """La stessa vestizione, risolta in colori: è ciò che il renderer riceve oggi.
 
-    Il manichino non indossa fotografie, tinge primitive. Per questo il colore
-    dominante estratto dalla foto è il ponte fra le due feature di punta.
+    Il manichino non indossa fotografie, tinge primitive: per questo il colore
+    dominante estratto dalla foto è, per ora, il ponte fra le due feature di punta.
+    Non è il traguardo — vedi ADR 0004: il capo va visto dalla sua foto
+    scontornata, applicata come texture. Questo modello resterà per il ripiego.
     """
 
     top: EsaColore | None = None
@@ -293,7 +297,11 @@ class Profilo(ModelloTela):
     foto_url: str | None = None
     avatar_foto_chiave: str | None = Field(
         default=None,
-        description="Foto a figura intera per l'avatar 2D, quando il 3D non basta",
+        description=(
+            "Foto a figura intera della persona. Oggi la usa l'avatar 2D, quando "
+            "il manichino 3D non basta; nella direzione dell'ADR 0004 è l'ingresso "
+            "del corpo 3D fedele alla persona, non un ripiego"
+        ),
     )
     creato_il: datetime
 

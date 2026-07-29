@@ -105,8 +105,10 @@ export interface CorrezioniCapo {
 /**
  * Nome leggibile più esadecimale.
  *
- * L'hex non è un vezzo: è quello che il manichino 3D usa per tingere le mesh.
- * Senza hex, l'avatar non può indossare il capo.
+ * L'hex non è un vezzo: è quello che il manichino 3D di oggi usa per tingere le
+ * mesh, e per ora senza hex l'avatar non sa indossare il capo. È il primo passo:
+ * l'ADR 0004 porta l'avatar a vestire la foto scontornata del capo come texture,
+ * e allora il colore diventa il ripiego invece del requisito.
  */
 export interface Colore {
   nome: string
@@ -358,7 +360,7 @@ export interface Profilo {
   preferenze?: PreferenzeStile
   foto_url?: string | null
   /**
-   * Foto a figura intera per l'avatar 2D, quando il 3D non basta
+   * Foto a figura intera della persona. Oggi la usa l'avatar 2D, quando il manichino 3D non basta; nella direzione dell'ADR 0004 è l'ingresso del corpo 3D fedele alla persona, non un ripiego
    */
   avatar_foto_chiave?: string | null
   creato_il: string
@@ -422,10 +424,12 @@ export interface UploadFirmato {
   scade_in_s: number
 }
 /**
- * La stessa vestizione, risolta in colori: è ciò che il renderer riceve.
+ * La stessa vestizione, risolta in colori: è ciò che il renderer riceve oggi.
  *
- * Il manichino non indossa fotografie, tinge primitive. Per questo il colore
- * dominante estratto dalla foto è il ponte fra le due feature di punta.
+ * Il manichino non indossa fotografie, tinge primitive: per questo il colore
+ * dominante estratto dalla foto è, per ora, il ponte fra le due feature di punta.
+ * Non è il traguardo — vedi ADR 0004: il capo va visto dalla sua foto
+ * scontornata, applicata come texture. Questo modello resterà per il ripiego.
  */
 export interface VestizioneColori {
   top?: string | null

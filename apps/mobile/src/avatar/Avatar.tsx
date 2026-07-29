@@ -12,6 +12,7 @@ import { Image } from 'expo-image'
 import { Component, type ReactNode, useState } from 'react'
 import { View } from 'react-native'
 import { colori as tinte, linee, raggi, spazi } from '../tema/tokens'
+import { Toccabile } from '../ui/base'
 import { Corpo, Etichetta } from '../ui/testo'
 import { ManichinoPiatto } from './ManichinoPiatto'
 import { Manichino3D } from './Manichino3D'
@@ -41,16 +42,21 @@ export function Avatar({
   colori,
   capi,
   fotoUtente,
+  onScegliFoto,
 }: {
   modo: ModoAvatar
   colori: VestizioneColori
   capi: Capo[]
   fotoUtente?: string | null
+  /** Apre la galleria per scegliere la foto a figura intera. */
+  onScegliFoto?: () => void
 }) {
   const [motivoRipiego, setMotivoRipiego] = useState<string | null>(null)
 
   if (modo === 'foto') {
-    return <AvatarFoto colori={colori} capi={capi} fotoUtente={fotoUtente} />
+    return (
+      <AvatarFoto colori={colori} capi={capi} fotoUtente={fotoUtente} onScegliFoto={onScegliFoto} />
+    )
   }
 
   return (
@@ -86,19 +92,25 @@ export function Avatar({
  * L'avatar 2D: la foto dell'utente, con i colori dell'outfit accanto.
  *
  * Non sovrapponiamo i capi alla foto con un ritaglio approssimativo: un collage
- * fatto male è peggio di nessun collage. Mostriamo la persona e, di fianco, la
- * combinazione di colori e i capi scelti — che è l'informazione vera. Quando
- * arriverà un modello di prova virtuale, si sostituisce questo componente e
- * nient'altro.
+ * fatto male è peggio di nessun collage, e senza geometria il capo non segue il
+ * corpo. Mostriamo la persona e, di fianco, la combinazione scelta — che è quanto
+ * si riesce a dire onestamente oggi, non l'informazione a cui il prodotto mira.
+ *
+ * La direzione è in `docs/adr/0004`: la foto della persona è l'ingresso di un
+ * corpo 3D fedele, non un ripiego di serie B, e i capi si vedono dalla propria
+ * foto scontornata applicata come texture. Quando arriverà, si sostituisce questo
+ * componente e nient'altro.
  */
 function AvatarFoto({
   colori,
   capi,
   fotoUtente,
+  onScegliFoto,
 }: {
   colori: VestizioneColori
   capi: Capo[]
   fotoUtente?: string | null
+  onScegliFoto?: () => void
 }) {
   const tinteScelte = [colori.outer, colori.dress ?? colori.top, colori.bottom, colori.shoes].filter(
     (tinta): tinta is string => Boolean(tinta),
@@ -106,9 +118,32 @@ function AvatarFoto({
 
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
-      <View style={{ flex: 1, overflow: 'hidden', borderRadius: raggi.grande }}>
+      <Toccabile
+        onPress={onScegliFoto}
+        scala={onScegliFoto ? 0.98 : 0}
+        style={{ flex: 1, overflow: 'hidden', borderRadius: raggi.grande }}
+      >
         {fotoUtente ? (
-          <Image source={{ uri: fotoUtente }} style={{ flex: 1 }} contentFit="cover" transition={200} />
+          <>
+            <Image source={{ uri: fotoUtente }} style={{ flex: 1 }} contentFit="cover" transition={200} />
+            {onScegliFoto ? (
+              <View
+                style={{
+                  position: 'absolute',
+                  left: spazi.s,
+                  bottom: spazi.s,
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: raggi.pillola,
+                  backgroundColor: 'rgba(255,253,249,0.78)',
+                }}
+              >
+                <Corpo taglia={11} tono="tenue">
+                  Cambia foto
+                </Corpo>
+              </View>
+            ) : null}
+          </>
         ) : (
           <View
             style={{
@@ -127,12 +162,12 @@ function AvatarFoto({
               la tua foto
             </Etichetta>
             <Corpo taglia={12.5} tono="tenue" style={{ textAlign: 'center' }}>
-              Aggiungi una foto a figura intera dal profilo: la useremo per farti
-              vedere i capi addosso.
+              Tocca per scegliere una tua foto a figura intera: la useremo per
+              farti vedere i capi addosso.
             </Corpo>
           </View>
         )}
-      </View>
+      </Toccabile>
 
       <View style={{ width: 74, paddingLeft: spazi.s, justifyContent: 'center', gap: spazi.s }}>
         {tinteScelte.map((tinta, indice) => (

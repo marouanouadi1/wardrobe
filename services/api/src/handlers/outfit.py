@@ -39,10 +39,13 @@ def salva(evento: Evento) -> Risposta:
 
 @endpoint
 def colori(evento: Evento) -> Risposta:
-    """GET /outfit/{outfitId}/colori — quello che serve al manichino 3D.
+    """GET /outfit/{outfitId}/colori — quello che serve al manichino 3D di oggi.
 
-    L'avatar non riceve capi né foto: riceve cinque colori. Questo endpoint fa
-    la traduzione lato server così che l'app non debba conoscere la regola.
+    Il manichino non riceve capi né foto: riceve cinque colori, e questo endpoint
+    fa la traduzione lato server così che l'app non debba conoscere la regola.
+    Vale per il primo passo: la direzione dell'ADR 0004 è che l'avatar vesta le
+    foto scontornate dei capi, e allora questo endpoint servirà il ripiego —
+    quando la texture non c'è — invece della vestizione normale.
     """
     utente, outfit_id = utente_id(evento), parametro(evento, "outfitId")
     outfit = next((o for o in repository().elenca_outfit(utente) if o.id == outfit_id), None)

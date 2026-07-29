@@ -81,9 +81,11 @@ export function vestizioneIndossabile(vestizione: Vestizione): boolean {
 /**
  * Traduce una vestizione in colori.
  *
- * È il ponte fra le due feature di punta: il manichino non indossa fotografie,
- * tinge superfici, e i colori sono quelli che il modello di visione ha letto
- * dalle foto dei capi.
+ * Il ponte com'è oggi: il manichino non indossa le fotografie, tinge superfici
+ * con i colori che il modello di visione ha letto dalle foto dei capi. È il primo
+ * passo, non il traguardo — la direzione è che il capo si veda dalla sua foto
+ * scontornata, applicata come texture (`docs/adr/0004`). Quando arriverà, questa
+ * funzione resta per il ripiego: serve ancora quando la texture non c'è.
  */
 export function coloriDiVestizione(vestizione: Vestizione, capi: Map<string, Capo>): VestizioneColori {
   const risolvi = (id: string | null | undefined) => (id ? (capi.get(id)?.colore.hex ?? null) : null)

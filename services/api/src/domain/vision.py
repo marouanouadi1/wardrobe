@@ -65,8 +65,14 @@ PROMPT_ANALISI = (
     "Se nella foto ci sono più capi, descrivi quello in primo piano."
 )
 
-# Un capo senza tipo non si può appendere all'avatar; senza colore non si può
-# tingere. Tutto il resto è correggibile dopo, con calma, dall'utente.
+# Un capo senza tipo non si può appendere all'avatar; senza colore, il manichino
+# di oggi non ha niente da tingere. Tutto il resto è correggibile dopo, con calma,
+# dall'utente.
+#
+# Il colore è qui perché l'avatar tinge primitive, e l'ADR 0004 dice che smetterà
+# di farlo: con la foto del capo scontornata e applicata come texture, un capo dal
+# colore illeggibile resta indossabile. Quando la texture arriverà, questa tupla è
+# il primo posto da toccare — il colore scende da requisito a ripiego.
 ATTRIBUTI_INDISPENSABILI = (AttributoCapo.TIPO, AttributoCapo.COLORE)
 
 

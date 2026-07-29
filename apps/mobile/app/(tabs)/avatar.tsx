@@ -8,6 +8,7 @@
  */
 
 import type { SlotAvatar } from '@wardrobe/contracts'
+import * as ImagePicker from 'expo-image-picker'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useState } from 'react'
 import { Image } from 'expo-image'
@@ -23,11 +24,38 @@ import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Testata } from '../../src/ui/testata'
 
 export default function SchermataAvatar() {
-  const { capi, indice, vestizione, vestiSlot, svestiSlot, mescola, salvaOutfit, outfit, profilo } =
-    useArmadio()
+  const {
+    capi,
+    indice,
+    vestizione,
+    vestiSlot,
+    svestiSlot,
+    mescola,
+    salvaOutfit,
+    outfit,
+    profilo,
+    fotoAvatar,
+    impostaFotoAvatar,
+    avvisa,
+  } = useArmadio()
   const [modo, setModo] = useState<ModoAvatar>('manichino')
   const [slotAperto, setSlotAperto] = useState<SlotAvatar | null>(null)
   const [salvato, setSalvato] = useState(false)
+
+  /**
+   * La foto a figura intera si scegli da qui, non dal profilo: è l'unico posto
+   * in cui serve, e chi apre «La tua foto» sta già cercando dove metterla.
+   */
+  async function scegliFotoAvatar() {
+    const permesso = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!permesso.granted) {
+      avvisa('Senza accesso alle foto non posso mostrarti i capi addosso.')
+      return
+    }
+    const esito = await ImagePicker.launchImageLibraryAsync({ quality: 0.85, mediaTypes: ['images'] })
+    if (esito.canceled || !esito.assets[0]) return
+    await impostaFotoAvatar(esito.assets[0].uri)
+  }
 
   const coloriAddosso = coloriDiVestizione(vestizione, indice)
   const capiAddosso = capiDiVestizione(vestizione, indice)
@@ -60,7 +88,8 @@ export default function SchermataAvatar() {
             modo={modo}
             colori={coloriAddosso}
             capi={capiAddosso}
-            fotoUtente={profilo?.avatar_foto_chiave ? profilo.foto_url : null}
+            fotoUtente={fotoAvatar}
+            onScegliFoto={() => void scegliFotoAvatar()}
           />
         </View>
 

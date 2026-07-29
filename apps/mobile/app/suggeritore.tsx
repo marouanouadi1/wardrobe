@@ -14,7 +14,16 @@ import { ScrollView, TextInput, View } from 'react-native'
 import { useArmadio } from '../src/dati/archivio'
 import { capiDiVestizione } from '../src/dati/dominio'
 import { colori, linee, ombre, raggi, spazi } from '../src/tema/tokens'
-import { BadgeIa, BottonePrimario, Icona, Pillola, Scheda, Segmenti, Toccabile } from '../src/ui/base'
+import {
+  BadgeIa,
+  BottonePrimario,
+  BottoneSecondario,
+  Icona,
+  Pillola,
+  Scheda,
+  Segmenti,
+  Toccabile,
+} from '../src/ui/base'
 import { Corpo, Titolo } from '../src/ui/testo'
 import { Testata } from '../src/ui/testata'
 
@@ -44,11 +53,12 @@ interface Messaggio {
 
 export default function Suggeritore() {
   const parametri = useLocalSearchParams<{ chiedi?: string }>()
-  const { suggerimenti, indice, vesti, chiediSuggerimenti } = useArmadio()
+  const { suggerimenti, indice, vesti, salvaOutfit, chiediSuggerimenti } = useArmadio()
   const [modo, setModo] = useState<Modo>(parametri.chiedi ? 'chat' : 'proposte')
   const [bozza, setBozza] = useState('')
   const [risposte, setRisposte] = useState<Record<string, string>>({})
   const [generato, setGenerato] = useState(false)
+  const [salvati, setSalvati] = useState<string[]>([])
   // La domanda che arriva da «Oggi» entra nella conversazione già allo stato
   // iniziale: farlo in un effetto costerebbe un secondo render e un lampo di
   // schermata vuota.
@@ -158,13 +168,33 @@ export default function Suggeritore() {
                       ))}
                     </View>
 
-                    <BottonePrimario
-                      testo="Provalo"
-                      onPress={() => {
-                        vesti(proposta.vestizione)
-                        router.push('/(tabs)/avatar')
-                      }}
-                    />
+                    {/* «Salva» tiene la proposta senza doverla prima provare:
+                        due tocchi in meno per chi ha già deciso. */}
+                    <View style={{ flexDirection: 'row', gap: spazi.s }}>
+                      <BottonePrimario
+                        testo="Provalo"
+                        style={{ flex: 1 }}
+                        onPress={() => {
+                          vesti(proposta.vestizione)
+                          router.push('/(tabs)/avatar')
+                        }}
+                      />
+                      <BottoneSecondario
+                        testo={salvati.includes(proposta.titolo) ? 'Salvato' : 'Salva'}
+                        style={{ paddingHorizontal: 18 }}
+                        onPress={
+                          salvati.includes(proposta.titolo)
+                            ? undefined
+                            : () => {
+                                setSalvati((precedenti) => [...precedenti, proposta.titolo])
+                                void salvaOutfit(proposta.titolo, {
+                                  vestizione: proposta.vestizione,
+                                  origine: 'ia',
+                                })
+                              }
+                        }
+                      />
+                    </View>
                   </View>
                 </View>
               )

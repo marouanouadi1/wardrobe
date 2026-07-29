@@ -26,10 +26,6 @@ const CONTESTO = [
 
 const SCORCIATOIE = ['Ho una cena', 'Fa freddo', 'Solo capi puliti', 'Sorprendimi']
 
-function foto(id: number): string {
-  return `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=800&h=1000&fit=crop`
-}
-
 export default function Oggi() {
   const { suggerimenti, indice, profilo, vesti, avviso, avvisa } = useArmadio()
   const [domanda, setDomanda] = useState('')
@@ -38,6 +34,12 @@ export default function Oggi() {
   const vivi = suggerimenti.filter((s) => !scartati.includes(s.titolo))
   const principale = vivi[0] ?? suggerimenti[0]
   const alternative = vivi.slice(1, 3)
+
+  // La copertina della proposta grande: il primo capo della vestizione, con la
+  // stessa regola del suggeritore — se cambio proposta cambia anche la foto,
+  // altrimenti il pulsante «cambia» sembrerebbe non funzionare.
+  const copertina = principale ? capiDiVestizione(principale.vestizione, indice)[0] : undefined
+  const daLavare = Array.from(indice.values()).filter((capo) => capo.stato !== 'pulito').length
 
   function chiedi(testo: string) {
     router.push({ pathname: '/suggeritore', params: { chiedi: testo } })
@@ -161,8 +163,8 @@ export default function Oggi() {
             }}
           >
             <Image
-              source={{ uri: foto(8217314) }}
-              style={{ width: '100%', height: 392 }}
+              source={{ uri: copertina?.foto.url ?? undefined }}
+              style={{ width: '100%', height: 392, backgroundColor: copertina?.colore.hex }}
               contentFit="cover"
               contentPosition={{ top: '22%', left: '50%' }}
               transition={250}
@@ -289,22 +291,25 @@ export default function Oggi() {
 
         {/* Il promemoria della lavatrice: chiude il cerchio fra «cosa metto» e
             «cosa ho disponibile», ed è il motivo per cui i suggerimenti non
-            propongono capi sporchi. */}
-        <Scheda imbottitura={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <Bolla nome="ricarica" sfondo="rgba(21,21,26,0.06)" tinta={colori.inchiostro} />
-          <View style={{ flex: 1 }}>
-            <Titolo taglia={17}>
-              {`Hai ${Array.from(indice.values()).filter((c) => c.stato !== 'pulito').length} capi in lavatrice`}
-            </Titolo>
-            <Corpo taglia={12.5} tono="tenue">
-              Li escludo dai suggerimenti finché non tornano puliti.
-            </Corpo>
-          </View>
-          <BottoneSecondario
-            testo="Vedi"
-            onPress={() => router.push({ pathname: '/(tabs)/armadio', params: { stato: 'da_lavare' } })}
-          />
-        </Scheda>
+            propongono capi sporchi. Con la lavatrice vuota la scheda non ha
+            niente da dire, e sparisce. */}
+        {daLavare > 0 ? (
+          <Scheda imbottitura={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Bolla nome="ricarica" sfondo="rgba(21,21,26,0.06)" tinta={colori.inchiostro} />
+            <View style={{ flex: 1 }}>
+              <Titolo taglia={17}>
+                {daLavare === 1 ? 'Hai un capo in lavatrice' : `Hai ${daLavare} capi in lavatrice`}
+              </Titolo>
+              <Corpo taglia={12.5} tono="tenue">
+                Li escludo dai suggerimenti finché non tornano puliti.
+              </Corpo>
+            </View>
+            <BottoneSecondario
+              testo="Vedi"
+              onPress={() => router.push({ pathname: '/(tabs)/armadio', params: { stato: 'da_lavare' } })}
+            />
+          </Scheda>
+        ) : null}
       </ScrollView>
     </View>
   )

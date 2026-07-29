@@ -10,6 +10,7 @@
 import type {
   AttributoCapo,
   Capo,
+  OrigineOutfit,
   Outfit,
   Profilo,
   Suggerimento,
@@ -36,6 +37,14 @@ interface Stato {
   suggerimenti: Suggerimento[]
   /** Cosa indossa l'avatar in questo momento. Vive solo sul telefono. */
   vestizione: Vestizione
+  /**
+   * La foto a figura intera per l'avatar 2D, come URI sul dispositivo.
+   *
+   * Sta qui e non dentro `profilo` perché il contratto porta solo la chiave S3
+   * (`avatar_foto_chiave`), non un URL da mostrare: finché il backend non
+   * firmerà anche la lettura, la foto visibile è quella scelta sul telefono.
+   */
+  fotoAvatar: string | null
   avviso: string | null
 }
 
@@ -45,6 +54,7 @@ type Azione =
   | { tipo: 'outfitAggiunto'; outfit: Outfit }
   | { tipo: 'suggerimenti'; suggerimenti: Suggerimento[] }
   | { tipo: 'vestizione'; vestizione: Vestizione }
+  | { tipo: 'fotoAvatar'; uri: string | null; chiave?: string }
   | { tipo: 'avviso'; testo: string | null }
 
 const INIZIALE: Stato = {
@@ -54,6 +64,7 @@ const INIZIALE: Stato = {
   profilo: null,
   suggerimenti: [],
   vestizione: {},
+  fotoAvatar: null,
   avviso: null,
 }
 
@@ -72,6 +83,15 @@ function riduci(stato: Stato, azione: Azione): Stato {
       return { ...stato, suggerimenti: azione.suggerimenti }
     case 'vestizione':
       return { ...stato, vestizione: azione.vestizione }
+    case 'fotoAvatar':
+      return {
+        ...stato,
+        fotoAvatar: azione.uri,
+        profilo:
+          stato.profilo && azione.chiave
+            ? { ...stato.profilo, avatar_foto_chiave: azione.chiave }
+            : stato.profilo,
+      }
     case 'avviso':
       return { ...stato, avviso: azione.testo }
   }
@@ -86,8 +106,18 @@ interface Archivio extends Stato {
   vesti: (vestizione: Vestizione) => void
   vestiSlot: (capoId: string) => void
   svestiSlot: (slot: keyof Vestizione) => void
+  /** La foto a figura intera scelta dalla galleria: si vede subito, si carica dopo. */
+  impostaFotoAvatar: (uri: string) => Promise<void>
   mescola: () => void
-  salvaOutfit: (nome: string, occasione?: string) => Promise<void>
+  /**
+   * Salva un outfit. Senza `vestizione` salva quello che l'avatar indossa in
+   * questo momento; passandola si salva una proposta dell'IA senza doverla
+   * prima infilare all'avatar.
+   */
+  salvaOutfit: (
+    nome: string,
+    dettagli?: { occasione?: string; vestizione?: Vestizione; origine?: OrigineOutfit },
+  ) => Promise<void>
   chiediSuggerimenti: (richiesta?: string) => Promise<void>
   avvisa: (testo: string | null) => void
 }
@@ -233,6 +263,31 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
     [stato.vestizione],
   )
 
+  const impostaFotoAvatar = useCallback<Archivio['impostaFotoAvatar']>(
+    async (uri) => {
+      invia({ tipo: 'fotoAvatar', uri })
+      if (MODALITA_DEMO) return
+      try {
+        // Stessa strada delle foto dei capi: URL firmato e PUT diretta a S3, la
+        // foto non passa dal nostro backend.
+        const firma = await api.firmaUpload('image/jpeg')
+        await api.caricaFoto(firma, await (await fetch(uri)).blob())
+        invia({ tipo: 'fotoAvatar', uri, chiave: firma.chiave })
+        if (stato.profilo) {
+          await api.salvaProfilo({ ...stato.profilo, avatar_foto_chiave: firma.chiave })
+        }
+      } catch (errore) {
+        invia({
+          tipo: 'avviso',
+          testo: `La foto si vede sul telefono ma non è stata salvata: ${
+            errore instanceof Error ? errore.message : 'caricamento non riuscito'
+          }`,
+        })
+      }
+    },
+    [stato.profilo],
+  )
+
   const mescola = useCallback(() => {
     const scegli = (slot: Capo['slot']) => {
       const candidati = stato.capi.filter((capo) => capo.slot === slot && capo.stato === 'pulito')
@@ -251,15 +306,20 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
   }, [stato.capi])
 
   const salvaOutfit = useCallback<Archivio['salvaOutfit']>(
-    async (nome, occasione) => {
-      const nuovo = { nome, occasione, vestizione: stato.vestizione, origine: 'manuale' as const }
+    async (nome, dettagli) => {
+      const nuovo = {
+        nome,
+        occasione: dettagli?.occasione,
+        vestizione: dettagli?.vestizione ?? stato.vestizione,
+        origine: dettagli?.origine ?? ('manuale' as const),
+      }
       if (MODALITA_DEMO) {
         invia({
           tipo: 'outfitAggiunto',
           outfit: {
             ...nuovo,
             id: `locale-${Date.now()}`,
-            occasione: occasione ?? null,
+            occasione: dettagli?.occasione ?? null,
             volte_indossato: 0,
             ultimo_uso: null,
             creato_il: new Date().toISOString(),
@@ -308,6 +368,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       vesti,
       vestiSlot,
       svestiSlot,
+      impostaFotoAvatar,
       mescola,
       salvaOutfit,
       chiediSuggerimenti,
@@ -323,6 +384,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       vesti,
       vestiSlot,
       svestiSlot,
+      impostaFotoAvatar,
       mescola,
       salvaOutfit,
       chiediSuggerimenti,

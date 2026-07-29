@@ -7,10 +7,16 @@
  * — e il fatto che gira anche su iOS e Android, dove il canvas WebGL arriva da
  * expo-gl.
  *
- * Il capo non è una fotografia: è un colore. Ogni pezzo di stoffa è una
+ * Qui il capo non è una fotografia: è un colore. Ogni pezzo di stoffa è una
  * primitiva tinta con l'esadecimale che il modello di visione ha letto dalla
- * foto. È il motivo per cui l'analisi delle foto pretende `colore.hex` e lo
- * rifiuta se incerto.
+ * foto, ed è il motivo per cui l'analisi pretende `colore.hex` e lo rifiuta se
+ * incerto.
+ *
+ * È il primo passo, e va letto così. La direzione (`docs/adr/0004`) è opposta:
+ * il capo si vede dalla propria foto scontornata, applicata come texture su una
+ * geometria, addosso a un corpo fedele alla persona — non una primitiva generica
+ * a cui si cambia la tinta. Queste mesh restano come ripiego per quando la
+ * texture non c'è.
  */
 
 import { Canvas, useFrame } from '@react-three/fiber'
@@ -36,6 +42,9 @@ interface Trascinamento {
 function Figura({ colori, trascinamento }: { colori: PropsRenderer['colori']; trascinamento: React.RefObject<Trascinamento> }) {
   const gruppo = useRef<Group>(null)
 
+  // L'avviso «Clock: deprecated, use THREE.Timer» che compare in console viene
+  // dallo store di react-three-fiber, non da qui: `delta` lo calcola lui e ce lo
+  // passa. Da ricontrollare al prossimo bump di @react-three/fiber.
   useFrame((_stato, delta) => {
     const t = trascinamento.current
     if (!gruppo.current || !t) return

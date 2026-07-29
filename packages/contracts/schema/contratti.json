@@ -459,7 +459,7 @@
     },
     "Colore": {
       "additionalProperties": false,
-      "description": "Nome leggibile più esadecimale.\n\nL'hex non è un vezzo: è quello che il manichino 3D usa per tingere le mesh.\nSenza hex, l'avatar non può indossare il capo.",
+      "description": "Nome leggibile più esadecimale.\n\nL'hex non è un vezzo: è quello che il manichino 3D di oggi usa per tingere le\nmesh, e per ora senza hex l'avatar non sa indossare il capo. È il primo passo:\nl'ADR 0004 porta l'avatar a vestire la foto scontornata del capo come texture,\ne allora il colore diventa il ripiego invece del requisito.",
       "properties": {
         "nome": {
           "type": "string"
@@ -1348,7 +1348,7 @@
               "type": "null"
             }
           ],
-          "description": "Foto a figura intera per l'avatar 2D, quando il 3D non basta"
+          "description": "Foto a figura intera della persona. Oggi la usa l'avatar 2D, quando il manichino 3D non basta; nella direzione dell'ADR 0004 è l'ingresso del corpo 3D fedele alla persona, non un ripiego"
         },
         "creato_il": {
           "format": "date-time",
@@ -1793,7 +1793,7 @@
     },
     "VestizioneColori": {
       "additionalProperties": false,
-      "description": "La stessa vestizione, risolta in colori: è ciò che il renderer riceve.\n\nIl manichino non indossa fotografie, tinge primitive. Per questo il colore\ndominante estratto dalla foto è il ponte fra le due feature di punta.",
+      "description": "La stessa vestizione, risolta in colori: è ciò che il renderer riceve oggi.\n\nIl manichino non indossa fotografie, tinge primitive: per questo il colore\ndominante estratto dalla foto è, per ora, il ponte fra le due feature di punta.\nNon è il traguardo — vedi ADR 0004: il capo va visto dalla sua foto\nscontornata, applicata come texture. Questo modello resterà per il ripiego.",
       "properties": {
         "top": {
           "anyOf": [

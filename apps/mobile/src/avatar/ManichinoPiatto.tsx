@@ -2,9 +2,14 @@
  * Il manichino 2D: una silhouette in SVG, tinta con i colori dell'outfit.
  *
  * Non è un ripiego di serie B, è la garanzia: gira su qualunque telefono, non
- * usa WebGL, non ha dipendenze native, e mostra esattamente l'informazione che
- * conta — come stanno insieme quei colori. Il 3D aggiunge il piacere di girarci
- * intorno; questo assicura che la funzione ci sia sempre.
+ * usa WebGL, non ha dipendenze native, e mostra come stanno insieme quei colori.
+ * Il 3D aggiunge il piacere di girarci intorno; questo assicura che «vedi come ti
+ * sta» ci sia sempre, in qualche forma.
+ *
+ * Attenzione a cosa questo componente *non* dimostra: che i colori siano
+ * l'informazione importante. Non lo sono — sono ciò che si riesce a mostrare
+ * senza la texture del capo (`docs/adr/0004`). Il ruolo di questo file è restare
+ * l'ultima rete, anche quando il resto sarà una geometria texturizzata.
  *
  * Le proporzioni sono quelle del manichino 3D del design, appiattite.
  */

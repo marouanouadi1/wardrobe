@@ -9,13 +9,19 @@ Due funzioni portano il prodotto:
 - **il suggeritore** — un modello che propone outfit usando *solo* i capi che hai,
   con il contesto della giornata (meteo, agenda, cosa è in lavatrice, cosa hai
   messo ieri);
-- **l'avatar** — un manichino 3D che indossa i tuoi capi, girabile col dito, con
-  un ripiego 2D che funziona su qualunque telefono.
+- **l'avatar** — il tuo corpo in 3D che indossa i tuoi capi, girabile col dito.
 
-Le due sono la stessa pipeline: il manichino non indossa fotografie, tinge
-superfici con il **colore dominante** che il modello ha letto dalla foto. Per
-questo `domain/vision.py` pretende `colore.hex` e rifiuta il capo se non lo
-riconosce.
+Dove va l'avatar, e non è dove è oggi: **la foto del capo viene scontornata da un
+modello, dal ritaglio nasce una geometria, e la foto stessa diventa la texture del
+capo in 3D.** Nessun vestito prefabbricato a cui si cambia la tinta. E il corpo
+che lo indossa è fedele alla persona, non un manichino anonimo — con quale
+strumento si ottenga è ancora aperto.
+
+Quello che gira adesso è il primo passo: un manichino a primitive tinte con il
+**colore dominante** letto dalla foto, con un ripiego 2D che funziona su qualunque
+telefono. È anche il motivo per cui `domain/vision.py` pretende `colore.hex` e
+rifiuta il capo se non lo riconosce — un vincolo che vale per ora, non per scelta.
+Il perché sta in [`docs/adr/0004`](docs/adr/0004-l-avatar-veste-le-foto-non-i-colori.md).
 
 ## Struttura
 
@@ -55,9 +61,10 @@ questo monorepo non ha bisogno di Nx o Turborepo: tre workflow indipendenti e du
 gestori di pacchetti (npm per TypeScript, uv per Python) che convivono senza
 mediatori.
 
-**4. `docs/adr/`.** Tre decisioni scritte in breve — contesto, decisione,
+**4. `docs/adr/`.** Quattro decisioni scritte in breve — contesto, decisione,
 alternative scartate. Perché Step Functions, perché CDK invece di Terraform,
-perché l'upload va diretto su S3.
+perché l'upload va diretto su S3, e perché l'avatar deve vestire fotografie e non
+colori.
 
 ## Partire
 
@@ -157,6 +164,11 @@ nativi, ma serve un dispositivo o un simulatore. Se WebGL non parte, un confine
 di errore passa al manichino piatto: la funzione «vedi come ti sta» non si perde
 in nessun caso.
 
+**Dell'avatar vero non c'è ancora niente.** Nessun modello di scontorno, nessuna
+ricostruzione 3D, nessuno strumento per il corpo della persona: la direzione
+dell'ADR 0004 è scritta, non implementata. Quello che c'è è il manichino a
+primitive tinte.
+
 **Il deploy su AWS non è mai stato eseguito.** `cdk synth` produce i template,
 nessuno stack è stato creato, e il repository non è ancora un repository git —
 quindi i tre workflow non sono mai partiti.
@@ -167,13 +179,16 @@ sono sovrascrivibili da ambiente (`MODELLI_OPENAI`, `MODELLI_GOOGLE`). Anche i
 loro prezzi mancano dal catalogo: il playground mostra «—» invece di inventare un
 numero.
 
-## Le quattro domande che il design lascia aperte
+## Le domande che il design lascia aperte
 
 Il file di design contiene una scheda intitolata «Mi serve una risposta». Nessuna
-di queste blocca lo scaffold, ma la terza decide quanto dovrà allungarsi
-l'astrazione dell'avatar:
+di queste blocca lo scaffold:
 
-1. l'armadio è personale o condiviso (coppie, famiglie)?
-2. c'è una parte social, sì o no?
-3. l'avatar deve essere fedele al corpo o neutro?
-4. nel freemium, cosa si paga?
+- l'armadio è personale o condiviso (coppie, famiglie)?
+- c'è una parte social, sì o no?
+- nel freemium, cosa si paga?
+- **con quale strumento si costruisce il corpo dell'avatar?** — ricostruzione dalla
+  foto a figura intera o un servizio esterno. Che debba essere *fedele alla
+  persona* e non neutro non è più una domanda: lo decide l'ADR 0004. Resta aperto
+  il mezzo, ed è la scelta che pesa di più su quanto dovrà allungarsi
+  l'astrazione dell'avatar.

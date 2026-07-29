@@ -26,6 +26,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Il bundling della Lambda (build_lambda.sh) chiama `uv`: senza questo
+      # step il bundling locale fallisce e CDK cade sul fallback Docker, che
+      # non esegue lo script e produce BundlingProducedNoOutput.
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/api/uv.lock
+
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc

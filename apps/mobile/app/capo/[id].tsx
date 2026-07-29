@@ -59,6 +59,9 @@ export default function DettaglioCapo() {
   ]
 
   const ciStaBene = capi.filter((altro) => altro.slot !== capo.slot).slice(0, 6)
+  // «Segnato per oggi» si legge dal dato vero, non da uno stato locale: se
+  // rientri nella schermata il segno è ancora lì.
+  const messoOggi = capo.ultimo_uso?.slice(0, 10) === new Date().toISOString().slice(0, 10)
 
   return (
     <View style={{ flex: 1 }}>
@@ -138,15 +141,20 @@ export default function DettaglioCapo() {
             }}
           />
 
+          {/* Due interruttori: l'etichetta dice l'azione quando sono spenti e
+              conferma lo stato quando sono accesi. Il corallo è per il bucato,
+              mai il citron: quel verde parla solo per l'IA. */}
           <View style={{ flexDirection: 'row', gap: spazi.s }}>
             <BottoneSecondario
-              testo="L'ho messo oggi"
+              testo={messoOggi ? 'Segnato per oggi' : "L'ho messo oggi"}
+              riempimento={messoOggi ? colori.inchiostro : undefined}
+              tinta={messoOggi ? colori.crema : undefined}
               style={{ flex: 1 }}
-              onPress={() => void indossaOggi(capo.id)}
+              onPress={messoOggi ? undefined : () => void indossaOggi(capo.id)}
             />
             <BottoneSecondario
-              testo={capo.stato === 'pulito' ? 'Da lavare' : 'È pulito'}
-              evidenziato={capo.stato !== 'pulito'}
+              testo={capo.stato === 'pulito' ? 'Da lavare' : 'In lavatrice'}
+              riempimento={capo.stato === 'pulito' ? undefined : colori.coralloTenue}
               style={{ flex: 1 }}
               onPress={() => void cambiaStato(capo.id, capo.stato === 'pulito' ? 'da_lavare' : 'pulito')}
             />

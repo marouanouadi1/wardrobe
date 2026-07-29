@@ -32,6 +32,9 @@ const PASSI = [
 
 type Fase = 'scatta' | 'analisi' | 'esito'
 
+/** Quante foto si possono mandare in una volta, come nel design. */
+const LIMITE_BLOCCO = 20
+
 /** La lettura mostrata in demo: quella vera arriva dal modello. */
 const LETTURA_DEMO: LetturaCapo = {
   tipo: 'top',
@@ -52,6 +55,8 @@ export default function Carica() {
   const [passo, setPasso] = useState(0)
   const [foto, setFoto] = useState<string | null>(null)
   const [lettura, setLettura] = useState<LetturaCapo | null>(null)
+  /** Quante foto restano da mandare nell'analisi in blocco. */
+  const [inBlocco, setInBlocco] = useState<number | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout>[]>([])
 
   useEffect(() => () => timer.current.forEach(clearTimeout), [])
@@ -122,6 +127,60 @@ export default function Carica() {
     }
   }
 
+  /**
+   * L'analisi in blocco: chi ha appena scaricato l'app ha un armadio pieno, non
+   * un capo. Non c'è una coda nell'app — ogni foto parte per conto suo e i capi
+   * compaiono in armadio quando il modello ha finito, uno alla volta.
+   */
+  async function analizzaInBlocco() {
+    const permesso = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!permesso.granted) {
+      avvisa('Senza accesso alle foto non posso leggere i capi.')
+      return
+    }
+
+    const esito = await ImagePicker.launchImageLibraryAsync({
+      quality: 0.8,
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: LIMITE_BLOCCO,
+    })
+    if (esito.canceled || esito.assets.length === 0) return
+
+    if (MODALITA_DEMO) {
+      // Nessuna finzione: in demo non c'è un modello da interrogare, e simulare
+      // venti analisi che non avvengono sarebbe peggio che dirlo.
+      avvisa(
+        `Ho ${esito.assets.length} foto, ma in modalità demo non c'è nessun modello da interrogare: collega l'API e riprova.`,
+      )
+      return
+    }
+
+    let avviate = 0
+    setInBlocco(esito.assets.length)
+    try {
+      for (const scatto of esito.assets) {
+        const firma = await api.firmaUpload('image/jpeg')
+        await api.caricaFoto(firma, await (await fetch(scatto.uri)).blob())
+        await api.avviaAnalisi(firma.chiave)
+        avviate += 1
+        setInBlocco(esito.assets.length - avviate)
+      }
+      avvisa(
+        `${avviate} ${avviate === 1 ? 'capo' : 'capi'} in analisi: li trovi in armadio appena il modello ha finito.`,
+      )
+      router.push('/(tabs)/armadio')
+    } catch (errore) {
+      avvisa(
+        `${avviate} ${avviate === 1 ? 'foto inviata' : 'foto inviate'} su ${esito.assets.length}, poi si è fermato: ${
+          errore instanceof Error ? errore.message : 'caricamento non riuscito'
+        }`,
+      )
+    } finally {
+      setInBlocco(null)
+    }
+  }
+
   return (
     <View style={{ flex: 1 }}>
       <Testata occhiello="Nuovo capo" titolo="Aggiungi" />
@@ -186,7 +245,26 @@ export default function Carica() {
               </Forte>
             </Toccabile>
 
-            <BottoneSecondario testo="Dalla galleria" onPress={() => void scegliFoto(false)} />
+            <View style={{ flexDirection: 'row', gap: 9 }}>
+              <BottoneSecondario
+                testo="Dalla galleria"
+                onPress={() => void scegliFoto(false)}
+                style={{ flex: 1 }}
+              />
+              <BottoneSecondario
+                testo={`${LIMITE_BLOCCO} in blocco`}
+                onPress={() => void analizzaInBlocco()}
+                style={{ flex: 1 }}
+              />
+            </View>
+
+            {inBlocco !== null ? (
+              <Corpo taglia={12.5} tono="tenue" style={{ textAlign: 'center' }}>
+                {inBlocco === 0
+                  ? "Ci siamo, apro l'armadio…"
+                  : `Sto avviando l'analisi · ${inBlocco} ${inBlocco === 1 ? 'capo' : 'capi'} da mandare`}
+              </Corpo>
+            ) : null}
           </>
         ) : null}
 

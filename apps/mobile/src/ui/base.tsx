@@ -36,6 +36,9 @@ export function Toccabile({ children, style, scala = 0.97, haptic = true, ...pro
   return (
     <Pressable
       {...props}
+      // Senza `onPress` l'elemento è inerte: niente scala e niente vibrazione,
+      // altrimenti un pulsante già acceso risponderebbe al dito senza fare nulla.
+      disabled={props.disabled ?? !props.onPress}
       onPress={(evento) => {
         if (haptic && Platform.OS !== 'web') {
           void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
@@ -226,12 +229,18 @@ export function BottonePrimario({
 export function BottoneSecondario({
   testo,
   onPress,
-  evidenziato,
+  riempimento,
+  tinta,
   style,
 }: {
   testo: string
   onPress?: () => void
-  evidenziato?: boolean
+  /**
+   * Il fondo quando il pulsante è un interruttore già acceso. Non è mai citron:
+   * questo pulsante non parla per l'IA — vedi la regola in tokens.ts.
+   */
+  riempimento?: string
+  tinta?: string
   style?: ViewStyle
 }) {
   return (
@@ -245,11 +254,13 @@ export function BottoneSecondario({
         borderRadius: raggi.pillola,
         borderWidth: 1,
         borderColor: linee.chiara,
-        backgroundColor: evidenziato ? colori.citron : 'transparent',
+        backgroundColor: riempimento ?? 'transparent',
         ...style,
       }}
     >
-      <Forte taglia={13.5}>{testo}</Forte>
+      <Forte taglia={13.5} colore={tinta}>
+        {testo}
+      </Forte>
     </Toccabile>
   )
 }

@@ -21,15 +21,35 @@ import { Testata } from '../../src/ui/testata'
 const PLAYGROUND_VISIBILE = __DEV__ || MODALITA_DEMO
 
 export default function Profilo() {
-  const { capi, outfit, profilo } = useArmadio()
+  const { capi, outfit, profilo, avvisa } = useArmadio()
   const dormienti = capi.filter((capo) => dormiente(capo))
 
+  /**
+   * Le righe hanno un chevron, quindi devono portare da qualche parte. Quelle
+   * che non hanno ancora una schermata di modifica lo dicono invece di non fare
+   * nulla sotto il dito.
+   */
+  const daFare = (cosa: string) => () =>
+    avvisa(`La modifica di «${cosa}» arriva col prossimo passo: serve la schermata delle preferenze.`)
+
   const preferenze = [
-    { chiave: 'Stile', valore: profilo?.preferenze?.stili?.join(', ') || 'da impostare' },
-    { chiave: 'Palette', valore: profilo?.preferenze?.palette?.join(', ') || 'da impostare' },
-    { chiave: 'Evita', valore: profilo?.preferenze?.evita?.join(', ') || '—' },
-    { chiave: 'Città', valore: profilo?.citta ?? 'da impostare' },
-    { chiave: 'Outfit salvati', valore: String(outfit.length) },
+    {
+      chiave: 'Stile',
+      valore: profilo?.preferenze?.stili?.join(', ') || 'da impostare',
+      vai: daFare('Stile'),
+    },
+    {
+      chiave: 'Palette',
+      valore: profilo?.preferenze?.palette?.join(', ') || 'da impostare',
+      vai: daFare('Palette'),
+    },
+    { chiave: 'Evita', valore: profilo?.preferenze?.evita?.join(', ') || '—', vai: daFare('Evita') },
+    { chiave: 'Città', valore: profilo?.citta ?? 'da impostare', vai: daFare('Città') },
+    {
+      chiave: 'Outfit salvati',
+      valore: String(outfit.length),
+      vai: () => router.push('/outfit'),
+    },
   ]
 
   return (
@@ -89,8 +109,10 @@ export default function Profilo() {
         </Etichetta>
         <View style={{ borderRadius: raggi.medio + 4, backgroundColor: colori.scheda, overflow: 'hidden' }}>
           {preferenze.map((riga, indice) => (
-            <View
+            <Toccabile
               key={riga.chiave}
+              onPress={riga.vai}
+              scala={0}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -108,7 +130,7 @@ export default function Profilo() {
                 {riga.valore}
               </Corpo>
               <Icona nome="chevron" misura={15} colore="rgba(21,21,26,0.3)" spessore={2.4} />
-            </View>
+            </Toccabile>
           ))}
         </View>
 
@@ -119,8 +141,8 @@ export default function Profilo() {
             style={{ flex: 1 }}
           />
           <BottoneSecondario
-            testo="I tuoi outfit"
-            onPress={() => router.push('/outfit')}
+            testo="Rivedi l'intro"
+            onPress={() => router.push('/onboarding')}
             style={{ flex: 1 }}
           />
         </View>
