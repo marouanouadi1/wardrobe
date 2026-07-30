@@ -89,7 +89,10 @@ export default function Carica() {
         const stato = await api.statoAnalisi(avviata.esecuzione_id)
         if (stato.stato === 'completata' && stato.capo) {
           registraCapo(stato.capo)
-          router.replace(`/capo/${stato.capo.id}`)
+          setFase('scatta')
+          setFoto(null)
+          setPasso(0)
+          router.push(`/capo/${stato.capo.id}`)
           return
         }
         if (stato.stato === 'fallita') {
