@@ -6,7 +6,6 @@ from domain.errors import CapoNonTrovato
 from domain.models import (
     AggiornamentoCapo,
     AttributoCapo,
-    Capo,
     ElencoCapi,
     FiltroArmadio,
     NuovoCapoManuale,
@@ -20,7 +19,8 @@ from domain.wardrobe import (
     riepilogo,
     segna_indossato,
 )
-from handlers._container import archivio_foto, generatore_id, orologio, repository
+from handlers._container import generatore_id, orologio, repository
+from handlers._foto_capo import con_url as _con_url
 from handlers._http import Evento, Risposta, corpo, endpoint, ok, parametro, query, utente_id
 
 
@@ -31,25 +31,6 @@ def _filtro_da_query(evento: Evento) -> FiltroArmadio:
         stato=StatoCapo(parametri["stato"]) if parametri.get("stato") else None,
         solo_preferiti=parametri.get("preferiti") == "1",
         testo=parametri.get("testo"),
-    )
-
-
-def _con_url(capo: Capo) -> Capo:
-    """La foto viaggia come URL firmato a vita breve, mai come bucket pubblico."""
-    chiave_scontornata = capo.foto.chiave_scontornata
-    return capo.model_copy(
-        update={
-            "foto": capo.foto.model_copy(
-                update={
-                    "url": archivio_foto().url_lettura(capo.foto.chiave),
-                    "url_scontornata": (
-                        archivio_foto().url_lettura(chiave_scontornata)
-                        if chiave_scontornata
-                        else None
-                    ),
-                }
-            )
-        }
     )
 
 

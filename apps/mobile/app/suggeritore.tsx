@@ -7,6 +7,7 @@
  * come si raccoglie il contesto.
  */
 
+import type { Suggerimento } from '@wardrobe/contracts'
 import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
@@ -43,12 +44,17 @@ const DOMANDE = [
 
 const SPUNTI = ['Cosa metto stasera?', 'Fa più freddo, cambia', 'Solo capi puliti', 'Qualcosa che non uso mai']
 
-const RISPOSTA_FINTA =
-  'Ricevuto. Guardo cosa hai di pulito e adatto… Camicia in lino panna, pantalone cammello e sneaker bianche: leggero e mai usato insieme. Se poi cala, sopra ci metti il cardigan.'
-
 interface Messaggio {
   da: 'io' | 'tela'
   testo: string
+}
+
+/** Traduce la risposta vera del modello in un messaggio di chat. */
+function rispostaDa(suggerimenti: Suggerimento[]): string {
+  const primo = suggerimenti[0]
+  if (!primo) return 'Non ho trovato un outfit adatto con i capi che hai ora.'
+  const motivo = primo.perche[0] ? ` — ${primo.perche[0]}` : ''
+  return `${primo.titolo} (${primo.match}%)${motivo}`
 }
 
 export default function Suggeritore() {
@@ -59,37 +65,33 @@ export default function Suggeritore() {
   const [risposte, setRisposte] = useState<Record<string, string>>({})
   const [generato, setGenerato] = useState(false)
   const [salvati, setSalvati] = useState<string[]>([])
-  // La domanda che arriva da «Oggi» entra nella conversazione già allo stato
-  // iniziale: farlo in un effetto costerebbe un secondo render e un lampo di
-  // schermata vuota.
-  const [conversazione, setConversazione] = useState<Messaggio[]>(() => {
-    const apertura: Messaggio = {
+  const [inCorso, setInCorso] = useState(false)
+  const [conversazione, setConversazione] = useState<Messaggio[]>(() => [
+    {
       da: 'tela',
       testo:
         'Buongiorno! Milano, 12° e pioggia leggera. Alle 10 hai la riunione con il cliente. Vuoi che ti prepari qualcosa?',
-    }
-    const chiesto = parametri.chiedi?.trim()
-    return chiesto ? [apertura, { da: 'io', testo: chiesto }, { da: 'tela', testo: RISPOSTA_FINTA }] : [apertura]
-  })
+    },
+  ])
 
-  function invia(testo: string) {
+  async function invia(testo: string) {
     const pulito = testo.trim()
-    if (!pulito) return
-    setConversazione((precedenti) => [
-      ...precedenti,
-      { da: 'io', testo: pulito },
-      { da: 'tela', testo: RISPOSTA_FINTA },
-    ])
+    if (!pulito || inCorso) return
+    setConversazione((precedenti) => [...precedenti, { da: 'io', testo: pulito }])
     setBozza('')
-    void chiediSuggerimenti(pulito)
+    setInCorso(true)
+    const suggeriti = await chiediSuggerimenti(pulito)
+    setConversazione((precedenti) => [...precedenti, { da: 'tela', testo: rispostaDa(suggeriti) }])
+    setInCorso(false)
   }
 
   // Se la domanda arrivava da «Oggi», il suggeritore la gira al modello una
-  // volta sola.
+  // volta sola, come un messaggio in chat vero e proprio.
   useEffect(() => {
     const chiesto = parametri.chiedi?.trim()
-    if (chiesto) void chiediSuggerimenti(chiesto)
-  }, [parametri.chiedi, chiediSuggerimenti])
+    if (chiesto) void invia(chiesto)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parametri.chiedi])
 
   const complete = DOMANDE.every((domanda) => risposte[domanda.chiave])
 

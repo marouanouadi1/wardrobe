@@ -158,7 +158,7 @@ interface Archivio extends Stato {
     nome: string,
     dettagli?: { occasione?: string; vestizione?: Vestizione; origine?: OrigineOutfit },
   ) => Promise<void>
-  chiediSuggerimenti: (richiesta?: string) => Promise<void>
+  chiediSuggerimenti: (richiesta?: string) => Promise<Suggerimento[]>
   avvisa: (testo: string | null) => void
 }
 
@@ -407,11 +407,13 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
         modello: stato.modelloStilista?.modello,
       })
       invia({ tipo: 'suggerimenti', suggerimenti: risposta.suggerimenti })
+      return risposta.suggerimenti
     } catch (errore) {
       invia({
         tipo: 'avviso',
         testo: errore instanceof Error ? errore.message : 'Nessun suggerimento disponibile',
       })
+      return []
     }
   }, [stato.modelloStilista])
 

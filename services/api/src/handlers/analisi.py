@@ -29,6 +29,7 @@ from handlers._container import (
     orologio,
     repository,
 )
+from handlers._foto_capo import con_url
 from handlers._http import Evento, Risposta, corpo, endpoint, ok, parametro, utente_id
 
 PROVIDER_DEFAULT = os.environ.get("PROVIDER_VISIONE", "anthropic")
@@ -60,7 +61,7 @@ def avvia(evento: Evento) -> Risposta:
             _ESITI_LOCALI[esecuzione] = EsitoAnalisi(
                 esecuzione_id=esecuzione,
                 stato=StatoAnalisi.COMPLETATA,
-                capo=Capo.model_validate(salvato["capo"]),
+                capo=con_url(Capo.model_validate(salvato["capo"])),
             )
         except ErroreDominio as exc:
             _ESITI_LOCALI[esecuzione] = EsitoAnalisi(
@@ -103,7 +104,7 @@ def stato(evento: Evento) -> Risposta:
     descrizione = Orchestratore(os.environ["STATE_MACHINE_ARN"]).stato(esecuzione_id)
 
     if descrizione.stato is StatoAnalisi.COMPLETATA and descrizione.uscita:
-        capo = Capo.model_validate(descrizione.uscita["capo"])
+        capo = con_url(Capo.model_validate(descrizione.uscita["capo"]))
         return ok(EsitoAnalisi(esecuzione_id=esecuzione_id, stato=descrizione.stato, capo=capo))
 
     return ok(
