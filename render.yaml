@@ -1,5 +1,6 @@
 # Blueprint per provare l'app senza AWS e senza spendere nulla: due servizi
-# Render, entrambi sul piano free.
+# Render. I siti statici non hanno un piano da scegliere (sono sempre
+# gratuiti): solo wardrobe-api, un web service vero, è sul piano free.
 #
 #   wardrobe-api  — l'API in modalità DEV_MODE: armadio demo in memoria (12
 #                   capi seminati), niente Postgres, niente S3. Basta per
@@ -40,10 +41,8 @@ services:
       - key: GOOGLE_API_KEY
         sync: false
 
-  - type: web
+  - type: static
     name: wardrobe-web
-    runtime: static
-    plan: free
     rootDir: .
     buildCommand: npm ci && npm run build:web --workspace @wardrobe/mobile
     staticPublishPath: apps/mobile/dist
