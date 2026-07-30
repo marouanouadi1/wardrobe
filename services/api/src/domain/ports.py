@@ -70,7 +70,8 @@ class ProviderLlm(Protocol):
 
 @runtime_checkable
 class ArchivioFoto(Protocol):
-    """S3, in produzione. MinIO in locale. Un dict nei test."""
+    """S3 in produzione. Su disco o in memoria in locale, a seconda di
+    `CARTELLA_FOTO`. Un dict nei test."""
 
     def url_upload(
         self, chiave: str, content_type: str, scade_in_s: int = 900

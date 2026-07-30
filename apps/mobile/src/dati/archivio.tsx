@@ -26,9 +26,8 @@ import {
   useMemo,
   useReducer,
 } from 'react'
-import { MODALITA_DEMO, api } from './api'
+import { api } from './api'
 import { perId, slotDiTipo } from './dominio'
-import { CAPI_DEMO, OUTFIT_DEMO, PROFILO_DEMO, SUGGERIMENTI_DEMO } from './seed'
 
 /** Un modello scelto per uno dei due lavori veri: provider + id, come nel catalogo di `/dev/modelli`. */
 export interface SceltaModello {
@@ -169,12 +168,6 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
     let annullato = false
 
     async function carica() {
-      if (MODALITA_DEMO) {
-        invia({ tipo: 'caricato', capi: CAPI_DEMO, outfit: OUTFIT_DEMO, profilo: PROFILO_DEMO })
-        invia({ tipo: 'suggerimenti', suggerimenti: SUGGERIMENTI_DEMO })
-        invia({ tipo: 'vestizione', vestizione: SUGGERIMENTI_DEMO[0]!.vestizione })
-        return
-      }
       try {
         const [elenco, outfit, profilo] = await Promise.all([
           api.elencaCapi(),
@@ -185,12 +178,13 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
         invia({ tipo: 'caricato', capi: elenco.capi, outfit: outfit.outfit, profilo })
       } catch (errore) {
         if (annullato) return
-        // Il fallimento non lascia l'app bianca: mostriamo l'armadio di esempio
-        // e lo diciamo. Un'app vuota senza spiegazioni è il peggior esito.
-        invia({ tipo: 'caricato', capi: CAPI_DEMO, outfit: OUTFIT_DEMO, profilo: PROFILO_DEMO })
+        // Niente più fallback ai dati di esempio: con un backend vero un
+        // errore di rete non deve mai far ricomparire l'armadio finto sopra
+        // ai capi veri. Meglio un armadio vuoto con la causa in chiaro.
+        invia({ tipo: 'caricato', capi: [], outfit: [], profilo: null })
         invia({
           tipo: 'avviso',
-          testo: `Non riesco a raggiungere il server: sto mostrando l'armadio di esempio. (${
+          testo: `Non riesco a raggiungere il server. (${
             errore instanceof Error ? errore.message : 'errore sconosciuto'
           })`,
         })
@@ -209,7 +203,6 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
     async (capo: Capo, modifica: () => Promise<Capo>) => {
       // Ottimistico: prima l'interfaccia, poi la rete.
       invia({ tipo: 'capoAggiornato', capo })
-      if (MODALITA_DEMO) return
       try {
         invia({ tipo: 'capoAggiornato', capo: await modifica() })
       } catch (errore) {
@@ -246,35 +239,6 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
   )
 
   const creaCapoManuale = useCallback<Archivio['creaCapoManuale']>(async (nuovo) => {
-    if (MODALITA_DEMO) {
-      const adesso = new Date().toISOString()
-      const capo: Capo = {
-        id: `locale-${Date.now()}`,
-        nome: nuovo.nome,
-        tipo: nuovo.tipo,
-        slot: slotDiTipo(nuovo.tipo),
-        colore: nuovo.colore,
-        foto: { chiave: nuovo.chiave_foto },
-        brand: nuovo.brand ?? null,
-        sottotipo: nuovo.sottotipo ?? null,
-        materiale: nuovo.materiale ?? null,
-        fantasia: nuovo.fantasia ?? null,
-        stagione: nuovo.stagione ?? null,
-        vestibilita: nuovo.vestibilita ?? null,
-        lavaggio: nuovo.lavaggio ?? null,
-        stato: 'pulito',
-        preferito: false,
-        ultimo_uso: null,
-        volte_indossato: 0,
-        analisi: null,
-        etichette: nuovo.etichette ?? [],
-        appunti: nuovo.appunti ?? null,
-        creato_il: adesso,
-        aggiornato_il: adesso,
-      }
-      invia({ tipo: 'capoCreato', capo })
-      return
-    }
     // Nessun ottimismo qui: senza un id vero non c'è nulla da mostrare finché
     // il backend non risponde, a differenza di una correzione su un capo che
     // esiste già.
@@ -359,7 +323,6 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
   const impostaFotoAvatar = useCallback<Archivio['impostaFotoAvatar']>(
     async (uri) => {
       invia({ tipo: 'fotoAvatar', uri })
-      if (MODALITA_DEMO) return
       try {
         // Stessa strada delle foto dei capi: URL firmato e PUT diretta a S3, la
         // foto non passa dal nostro backend.
@@ -416,20 +379,6 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
         vestizione: dettagli?.vestizione ?? stato.vestizione,
         origine: dettagli?.origine ?? ('manuale' as const),
       }
-      if (MODALITA_DEMO) {
-        invia({
-          tipo: 'outfitAggiunto',
-          outfit: {
-            ...nuovo,
-            id: `locale-${Date.now()}`,
-            occasione: dettagli?.occasione ?? null,
-            volte_indossato: 0,
-            ultimo_uso: null,
-            creato_il: new Date().toISOString(),
-          },
-        })
-        return
-      }
       try {
         invia({ tipo: 'outfitAggiunto', outfit: await api.salvaOutfit(nuovo) })
       } catch (errore) {
@@ -443,10 +392,6 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
   )
 
   const chiediSuggerimenti = useCallback<Archivio['chiediSuggerimenti']>(async (richiesta) => {
-    if (MODALITA_DEMO) {
-      invia({ tipo: 'suggerimenti', suggerimenti: SUGGERIMENTI_DEMO })
-      return
-    }
     try {
       const risposta = await api.suggerimenti({
         richiesta_utente: richiesta,

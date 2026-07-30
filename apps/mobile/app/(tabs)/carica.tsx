@@ -7,57 +7,41 @@
  * sospetti. Ed è anche il momento in cui l'utente capisce cosa sa fare l'app.
  */
 
-import type { LetturaCapo, TipoCapo } from '@wardrobe/contracts'
+import type { TipoCapo } from '@wardrobe/contracts'
 import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { ScrollView, TextInput, View } from 'react-native'
-import { MODALITA_DEMO, api } from '../../src/dati/api'
+import { api } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
 import { PALETTE_COLORI } from '../../src/dati/dominio'
 import { ETICHETTE, colori, linee, ombre, raggi, spazi } from '../../src/tema/tokens'
-import { BadgeIa, BottonePrimario, BottoneSecondario, Icona, Pillola, Toccabile } from '../../src/ui/base'
-import { Attributo } from '../../src/ui/capi'
+import { BottonePrimario, BottoneSecondario, Icona, Pillola, Toccabile } from '../../src/ui/base'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Testata } from '../../src/ui/testata'
 
 const TIPI: TipoCapo[] = ['top', 'pantaloni', 'scarpe', 'capospalla', 'abito', 'accessorio']
 
 const PASSI = [
-  { testo: 'Isolo il capo dallo sfondo', esito: 'fatto' },
-  { testo: 'Categoria e sottocategoria', esito: 'Top · camicia' },
-  { testo: 'Colore dominante', esito: 'Panna' },
-  { testo: 'Tessuto e composizione', esito: 'Lino 100%' },
-  { testo: 'Etichetta di lavaggio', esito: '40°' },
+  { testo: 'Isolo il capo dallo sfondo' },
+  { testo: 'Categoria e sottocategoria' },
+  { testo: 'Colore dominante' },
+  { testo: 'Tessuto e composizione' },
+  { testo: 'Etichetta di lavaggio' },
 ]
 
-type Fase = 'scatta' | 'analisi' | 'esito' | 'manuale'
+type Fase = 'scatta' | 'analisi' | 'manuale'
 
 /** Quante foto si possono mandare in una volta, come nel design. */
 const LIMITE_BLOCCO = 20
-
-/** La lettura mostrata in demo: quella vera arriva dal modello. */
-const LETTURA_DEMO: LetturaCapo = {
-  tipo: 'top',
-  sottotipo: 'camicia',
-  nome_proposto: 'Camicia in lino',
-  colore: { nome: 'Panna', hex: '#E7DFD2' },
-  materiale: 'Lino 100%',
-  fantasia: 'Tinta unita',
-  stagione: 'estate',
-  vestibilita: 'Oversize',
-  lavaggio: '40° stira umida',
-  confidenze: { tipo: 96, colore: 94, materiale: 88, fantasia: 90, stagione: 80, vestibilita: 72, lavaggio: 85 },
-}
 
 export default function Carica() {
   const { avvisa, creaCapoManuale, modelloVisione } = useArmadio()
   const [fase, setFase] = useState<Fase>('scatta')
   const [passo, setPasso] = useState(0)
   const [foto, setFoto] = useState<string | null>(null)
-  const [lettura, setLettura] = useState<LetturaCapo | null>(null)
   /** Quante foto restano da mandare nell'analisi in blocco. */
   const [inBlocco, setInBlocco] = useState<number | null>(null)
   // Il percorso «a mano»: prima di fidarsi del modello, o quando lo scontorno
@@ -67,23 +51,6 @@ export default function Carica() {
   const [tipoManuale, setTipoManuale] = useState<TipoCapo>('top')
   const [coloreManuale, setColoreManuale] = useState(0)
   const [salvandoManuale, setSalvandoManuale] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout>[]>([])
-
-  useEffect(() => () => timer.current.forEach(clearTimeout), [])
-
-  const simulaPassi = useCallback(() => {
-    setFase('analisi')
-    setPasso(0)
-    timer.current = PASSI.map((_, indice) =>
-      setTimeout(() => setPasso(indice + 1), 420 * (indice + 1)),
-    )
-    timer.current.push(
-      setTimeout(() => {
-        setLettura(LETTURA_DEMO)
-        setFase('esito')
-      }, 420 * (PASSI.length + 1)),
-    )
-  }, [])
 
   async function scegliFoto(dallaFotocamera: boolean, percorso: 'auto' | 'manuale' = 'auto') {
     const permesso = dallaFotocamera
@@ -106,13 +73,8 @@ export default function Carica() {
       return
     }
 
-    if (MODALITA_DEMO) {
-      simulaPassi()
-      return
-    }
-
-    // Con il backend collegato: URL firmato, PUT diretta a S3, poi la pipeline.
-    // La foto non passa dal nostro server — vedi docs/adr/0003.
+    // URL firmato, PUT diretta a S3, poi la pipeline. La foto non passa dal
+    // nostro server — vedi docs/adr/0003.
     setFase('analisi')
     try {
       const firma = await api.firmaUpload('image/jpeg')
@@ -162,15 +124,6 @@ export default function Carica() {
     })
     if (esito.canceled || esito.assets.length === 0) return
 
-    if (MODALITA_DEMO) {
-      // Nessuna finzione: in demo non c'è un modello da interrogare, e simulare
-      // venti analisi che non avvengono sarebbe peggio che dirlo.
-      avvisa(
-        `Ho ${esito.assets.length} foto, ma in modalità demo non c'è nessun modello da interrogare: collega l'API e riprova.`,
-      )
-      return
-    }
-
     let avviate = 0
     setInBlocco(esito.assets.length)
     try {
@@ -202,19 +155,14 @@ export default function Carica() {
     setSalvandoManuale(true)
     try {
       const paletta = PALETTE_COLORI[coloreManuale]!
-      const chiaveFoto = MODALITA_DEMO
-        ? `locale/${Date.now()}`
-        : await (async () => {
-            const firma = await api.firmaUpload('image/jpeg')
-            await api.caricaFoto(firma, await (await fetch(foto)).blob())
-            return firma.chiave
-          })()
+      const firma = await api.firmaUpload('image/jpeg')
+      await api.caricaFoto(firma, await (await fetch(foto)).blob())
 
       await creaCapoManuale({
         nome: nomeManuale.trim() || `${ETICHETTE.tipo[tipoManuale]} ${paletta.nome.toLowerCase()}`,
         tipo: tipoManuale,
         colore: { nome: paletta.nome, hex: paletta.hex },
-        chiave_foto: chiaveFoto,
+        chiave_foto: firma.chiave,
       })
       avvisa(null)
       setFase('scatta')
@@ -402,83 +350,10 @@ export default function Carica() {
                     <Forte taglia={13.5} tono={fatto || inCorso ? 'forte' : 'debole'} style={{ flex: 1 }}>
                       {voce.testo}
                     </Forte>
-                    <Corpo taglia={12} tono="debole">
-                      {fatto ? voce.esito : ''}
-                    </Corpo>
                   </View>
                 )
               })}
             </View>
-          </>
-        ) : null}
-
-        {fase === 'esito' && lettura ? (
-          <>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 14 }}>
-              {foto ? (
-                <Image
-                  source={{ uri: foto }}
-                  style={{ width: 124, height: 154, borderRadius: raggi.scheda - 2 }}
-                  contentFit="cover"
-                />
-              ) : null}
-              <View style={{ flex: 1, gap: spazi.s }}>
-                <BadgeIa testo="pronto" />
-                <Titolo taglia={23}>{lettura.nome_proposto ?? 'Capo nuovo'}</Titolo>
-                <Corpo taglia={12.5} tono="tenue">
-                  {"Ha letto anche l'etichetta di lavaggio"}
-                </Corpo>
-              </View>
-            </View>
-
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spazi.s }}>
-              {(
-                [
-                  ['tipo', lettura.tipo ? ETICHETTE.tipo[lettura.tipo] : null],
-                  ['colore', lettura.colore?.nome ?? null],
-                  ['materiale', lettura.materiale],
-                  ['fantasia', lettura.fantasia],
-                  ['stagione', lettura.stagione ? ETICHETTE.stagione[lettura.stagione] : null],
-                  ['vestibilita', lettura.vestibilita],
-                  ['lavaggio', lettura.lavaggio],
-                ] as const
-              ).map(([chiave, valore]) =>
-                valore ? (
-                  <Attributo
-                    key={chiave}
-                    chiave={ETICHETTE.attributo[chiave]}
-                    valore={valore}
-                    incerto={(lettura.confidenze?.[chiave] ?? 100) < 86}
-                  />
-                ) : null,
-              )}
-            </View>
-
-            <Corpo taglia={11.5} tono="debole">
-              Quelli in corallo sono incerti: il modello preferisce che li confermi tu.
-            </Corpo>
-
-            <BottonePrimario
-              testo="Salva nell'armadio"
-              onPress={() => {
-                avvisa(
-                  MODALITA_DEMO
-                    ? "In modalità demo il capo non viene salvato: collega l'API per aggiungerlo davvero."
-                    : null,
-                )
-                setFase('scatta')
-                setFoto(null)
-                router.push('/(tabs)/armadio')
-              }}
-            />
-            <BottoneSecondario
-              testo="Rifai la foto"
-              onPress={() => {
-                setFase('scatta')
-                setFoto(null)
-              }}
-              style={{ borderColor: linee.chiara, ...ombre.bassa }}
-            />
           </>
         ) : null}
 

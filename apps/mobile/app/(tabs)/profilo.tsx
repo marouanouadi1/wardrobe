@@ -9,7 +9,7 @@
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
 import { ScrollView, View } from 'react-native'
-import { MODALITA_DEMO, URL_API } from '../../src/dati/api'
+import { URL_API } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
 import { dormiente } from '../../src/dati/dominio'
 import { colori, linee, raggi, spazi } from '../../src/tema/tokens'
@@ -18,7 +18,7 @@ import { Corpo, Etichetta, Forte, Numero, Titolo } from '../../src/ui/testo'
 import { Testata } from '../../src/ui/testata'
 
 /** In sviluppo il playground c'è sempre; in un'app pubblicata mai. */
-const PLAYGROUND_VISIBILE = __DEV__ || MODALITA_DEMO
+const PLAYGROUND_VISIBILE = __DEV__
 
 export default function Profilo() {
   const { capi, outfit, profilo, avvisa } = useArmadio()
@@ -74,7 +74,7 @@ export default function Profilo() {
             <Titolo taglia={22}>{profilo?.nome ?? 'Il tuo profilo'}</Titolo>
             <Corpo taglia={12.5} tono="tenue">
               {profilo?.citta ? `${profilo.citta} · ` : ''}
-              {MODALITA_DEMO ? 'modalità demo' : `collegato a ${URL_API}`}
+              {`collegato a ${URL_API}`}
             </Corpo>
           </View>
         </Scheda>

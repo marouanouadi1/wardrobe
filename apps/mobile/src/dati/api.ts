@@ -7,6 +7,8 @@
  * il rosso appare qui — al momento della build, non in produzione.
  */
 
+import Constants from 'expo-constants'
+import { Platform } from 'react-native'
 import type {
   AggiornamentoCapo,
   AnalisiAvviata,
@@ -28,17 +30,36 @@ import type {
   UploadFirmato,
 } from '@wardrobe/contracts'
 
+/** La porta di `npm run api:local` (default di `services/api`). */
+const PORTA_API_LOCALE = '8787'
+
 /**
- * L'indirizzo dell'API.
+ * In sviluppo (Expo Go o dev client), niente da scrivere a mano: si ricava
+ * dallo stesso host a cui il telefono si è già collegato per il bundle JS —
+ * lo stesso IP del QR code — assumendo che l'API giri sulla stessa macchina.
+ * Non è affidabile su un build EAS: lì non c'è un Metro a cui appoggiarsi, ed
+ * `EXPO_PUBLIC_API_URL` (sotto) prende sempre la precedenza.
  *
- * Se non è impostato, l'app gira in modalità demo con l'armadio di esempio: è
- * il comportamento predefinito, così `npm run mobile` funziona appena clonato
- * il repository. Per collegare il backend locale:
- *
- *   EXPO_PUBLIC_API_URL=http://localhost:8787 npm run mobile
+ * Sul web `Constants.expoConfig.hostUri` non esiste (non c'è un manifest
+ * scaricato da un Metro remoto): l'host giusto è quello con cui il browser ha
+ * già raggiunto la pagina, `window.location.hostname`.
  */
-export const URL_API = process.env.EXPO_PUBLIC_API_URL ?? null
-export const MODALITA_DEMO = URL_API === null
+function rilevaUrlSviluppo(): string | null {
+  if (Platform.OS === 'web') {
+    if (typeof window === 'undefined') return null
+    return `http://${window.location.hostname}:${PORTA_API_LOCALE}`
+  }
+  const hostUri = Constants.expoConfig?.hostUri
+  const host = hostUri?.split(':')[0]
+  return host ? `http://${host}:${PORTA_API_LOCALE}` : null
+}
+
+/**
+ * L'indirizzo dell'API. `EXPO_PUBLIC_API_URL` sovrascrive il rilevamento
+ * automatico — serve per un build EAS (backend in cloud) o quando l'euristica
+ * indovina l'host sbagliato (più schede di rete).
+ */
+export const URL_API = process.env.EXPO_PUBLIC_API_URL ?? rilevaUrlSviluppo()
 
 export class ErroreApi extends Error {
   constructor(
@@ -62,7 +83,11 @@ async function chiama<T>(
   opzioni: { metodo?: string; corpo?: unknown; intestazioni?: Record<string, string> } = {},
 ): Promise<T> {
   if (!URL_API) {
-    throw new ErroreApi(0, 'modalita_demo', 'Nessuna API configurata: l\'app è in modalità demo.')
+    throw new ErroreApi(
+      0,
+      'api_non_configurata',
+      'Non riesco a determinare l\'indirizzo dell\'API: imposta EXPO_PUBLIC_API_URL.',
+    )
   }
 
   const risposta = await fetch(`${URL_API}${percorso}`, {

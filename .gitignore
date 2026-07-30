@@ -35,6 +35,9 @@ infra/*.js
 .env.*
 !.env.example
 
+# foto vere caricate in locale (CARTELLA_FOTO)
+services/api/dati/
+
 # sistema
 .DS_Store
 Thumbs.db

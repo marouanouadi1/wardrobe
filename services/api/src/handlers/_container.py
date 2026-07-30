@@ -45,11 +45,20 @@ def generatore_id() -> GeneratoreId:
 
 @functools.cache
 def repository() -> RepositoryArmadio:
-    """Postgres in cloud, memoria in locale.
+    """Postgres in cloud, Postgres locale se c'è `DATABASE_URL`, altrimenti memoria.
 
     La versione in memoria è seminata con l'armadio del design: `npm run
-    api:local` dà all'app un backend vero senza toccare AWS.
+    api:local` dà all'app un backend vero senza toccare AWS. `DATABASE_URL`
+    (Postgres via docker-compose, vedi `db:up`) è lo switch per i capi veri
+    che devono sopravvivere a un riavvio — indipendente da `DEV_MODE`, che
+    resta acceso per l'header `X-Utente` in locale (vedi `archivio_foto`,
+    stesso schema di scelta indipendente dal `BUCKET_FOTO`).
     """
+    if os.environ.get("DATABASE_URL"):
+        from adapters.postgres import RepositoryPostgres
+
+        return RepositoryPostgres(dsn=os.environ["DATABASE_URL"])
+
     if in_sviluppo():
         from adapters.memory import RepositoryInMemoria
 
@@ -65,6 +74,14 @@ def repository() -> RepositoryArmadio:
 
 @functools.cache
 def archivio_foto() -> ArchivioFoto:
+    """Su disco se c'è `CARTELLA_FOTO` (persistente, per usare l'app per
+    davvero), in memoria altrimenti in sviluppo (si azzera ad ogni riavvio,
+    comodo solo per provare), S3 in cloud."""
+    if in_sviluppo() and os.environ.get("CARTELLA_FOTO"):
+        from adapters.filesystem import ArchivioFileSystem
+
+        return ArchivioFileSystem(os.environ["CARTELLA_FOTO"])
+
     if in_sviluppo() and not os.environ.get("BUCKET_FOTO"):
         from adapters.memory import ArchivioInMemoria
 

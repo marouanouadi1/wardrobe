@@ -115,15 +115,18 @@ class Ponte(BaseHTTPRequestHandler):
         self.wfile.write(corpo)
 
     def _dev_foto_put(self, chiave: str) -> None:
-        """PUT /dev/foto/{chiave} — la PUT vera dell'app, corpo grezzo (JPEG/PNG)."""
-        from adapters.memory import ArchivioInMemoria
+        """PUT /dev/foto/{chiave} — la PUT vera dell'app, corpo grezzo (JPEG/PNG).
 
+        Questa rotta esiste solo perché in locale non c'è un S3 a cui fare la
+        PUT diretta: sia `ArchivioInMemoria` sia `ArchivioFileSystem` la usano
+        come bersaglio della loro `url_upload()`, quindi qui basta chiamare
+        `salva()` — in cloud questa rotta non esiste, e `ArchivioS3` non ci
+        passa mai.
+        """
         lunghezza = int(self.headers.get("content-length") or 0)
         contenuto = self.rfile.read(lunghezza) if lunghezza else b""
         content_type = self.headers.get("content-type") or "application/octet-stream"
-        archivio = archivio_foto()
-        if isinstance(archivio, ArchivioInMemoria):
-            archivio.salva(chiave, contenuto, content_type)
+        archivio_foto().salva(chiave, contenuto, content_type)
         self._rispondi({"statusCode": 204, "body": ""})
 
     def _dev_foto_get(self, chiave: str) -> None:

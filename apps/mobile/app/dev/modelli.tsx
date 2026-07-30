@@ -14,9 +14,8 @@
 import type { ModelloDisponibile } from '@wardrobe/contracts'
 import { useEffect, useState } from 'react'
 import { ScrollView, View } from 'react-native'
-import { MODALITA_DEMO, api } from '../../src/dati/api'
+import { api } from '../../src/dati/api'
 import { type SceltaModello, useArmadio } from '../../src/dati/archivio'
-import { MODELLI_DEMO } from '../../src/dati/seed'
 import { colori, raggi, spazi } from '../../src/tema/tokens'
 import { Toccabile } from '../../src/ui/base'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
@@ -146,10 +145,9 @@ export default function ModelliInUso() {
     impostaModelloVisione,
     impostaModelloStilista,
   } = useArmadio()
-  const [modelli, setModelli] = useState(MODELLI_DEMO)
+  const [modelli, setModelli] = useState<ModelloDisponibile[]>([])
 
   useEffect(() => {
-    if (MODALITA_DEMO) return
     void (async () => {
       try {
         setModelli(await api.dev.modelli())
@@ -170,13 +168,6 @@ export default function ModelliInUso() {
         contentContainerStyle={{ paddingHorizontal: spazi.xl, paddingBottom: 60, gap: spazi.xl }}
         showsVerticalScrollIndicator={false}
       >
-        {MODALITA_DEMO ? (
-          <Corpo taglia={12} colore="rgba(247,244,239,0.55)">
-            In modalità demo la scelta non ha un backend da raggiungere: qui vedi come funziona,
-            ma «Aggiungi» e «Chiedi a Tela» restano sui dati di esempio.
-          </Corpo>
-        ) : null}
-
         <Selettore
           titolo="Lettura foto"
           descrizione={'Il modello che guarda la foto quando tocchi «Aggiungi».'}

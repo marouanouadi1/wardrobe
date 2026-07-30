@@ -22,13 +22,23 @@ from domain.models import Capo, EsecuzionePlayground, Outfit, Profilo
 
 
 class RepositoryPostgres:
-    def __init__(self, dsn_secret_arn: str, regione: str = "eu-south-1") -> None:
+    def __init__(
+        self, dsn_secret_arn: str | None = None, regione: str = "eu-south-1", dsn: str | None = None
+    ) -> None:
+        """`dsn` diretto per Postgres locale (docker-compose): salta Secrets
+        Manager, che in locale non esiste. In cloud si passa `dsn_secret_arn`."""
+        if dsn is None and dsn_secret_arn is None:
+            raise ValueError("serve dsn oppure dsn_secret_arn")
+        self._dsn_diretto = dsn
         self._secret_arn = dsn_secret_arn
         self._regione = regione
         self._connessione: psycopg.Connection[Any] | None = None
 
     # ── connessione ────────────────────────────────────────────────────────
     def _dsn(self) -> str:
+        if self._dsn_diretto is not None:
+            return self._dsn_diretto
+        assert self._secret_arn is not None
         segreti = boto3.client("secretsmanager", region_name=self._regione)
         segreto = json.loads(segreti.get_secret_value(SecretId=self._secret_arn)["SecretString"])
         return (

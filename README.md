@@ -68,24 +68,28 @@ colori.
 
 ## Partire
 
-### L'app, subito
+Serve sempre il backend: non esiste più una modalità demo con dati finti.
 
 ```bash
 npm install
-npm run mobile          # oppure: npm run mobile:web
-```
-
-Senza `EXPO_PUBLIC_API_URL` l'app parte in **modalità demo**: dodici capi di
-esempio, foto reali, tutte e undici le schermate navigabili. Nessun account AWS,
-nessun Docker, nemmeno Python.
-
-### Con il backend locale
-
-```bash
 npm run api:sync                    # dipendenze Python (uv)
-npm run api:local                   # API su http://localhost:8787, dati in memoria
-EXPO_PUBLIC_API_URL=http://localhost:8787 npm run mobile
+npm run db:up                       # Postgres in Docker, per i capi
+npm run api:local                   # API su http://localhost:8787
+npm run mobile                      # oppure: npm run mobile:web
 ```
+
+Nel `.env` di `services/api` (copiato da `.env.example`) servono almeno
+`ANTHROPIC_API_KEY` e, per far sopravvivere i capi al riavvio invece che
+perderli in memoria, `DATABASE_URL` e `CARTELLA_FOTO` (le foto restano su
+disco — vedi i commenti nel file).
+
+L'app trova da sola l'indirizzo dell'API: su Expo Go o dev client usa lo
+stesso host a cui si è già collegata per il bundle JS (lo stesso IP del QR
+code); su `mobile:web` usa l'host con cui il browser ha raggiunto la pagina
+(`window.location.hostname`). In entrambi i casi assume che l'API giri sulla
+stessa macchina — il caso comune in sviluppo. `EXPO_PUBLIC_API_URL` resta per
+sovrascriverlo esplicitamente (un backend in cloud, o quando l'euristica
+indovina l'host sbagliato).
 
 `api:local` costruisce lo stesso evento payload v2 di API Gateway e chiama gli
 stessi handler: quello che provi in locale è il codice che gira in cloud, senza
@@ -100,12 +104,11 @@ SAM e senza emulatori. Due cose girano diversamente, ed è dichiarato nel codice
 Senza queste due deviazioni la feature di punta non sarebbe provabile prima di un
 deploy — che è il modo più sicuro per scoprire un prompt sbagliato tardi.
 
-Per provare i modelli veri servono le chiavi:
+Per provare anche gli altri provider, oltre alle chiavi nel `.env`:
 
 ```bash
-export ANTHROPIC_API_KEY=...        # il provider di riferimento
-export OPENAI_API_KEY=...           # opzionali
-export GOOGLE_API_KEY=...
+OPENAI_API_KEY=...           # opzionali
+GOOGLE_API_KEY=...
 ```
 
 Poi **Profilo → Playground modelli**: si scelgono provider e modello, si modifica

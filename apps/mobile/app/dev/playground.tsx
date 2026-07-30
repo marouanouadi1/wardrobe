@@ -18,9 +18,8 @@
 import type { EsecuzionePlayground, EsitoPlayground, JobIa, ModelloDisponibile, PresetPrompt } from '@wardrobe/contracts'
 import { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, ScrollView, TextInput, View } from 'react-native'
-import { MODALITA_DEMO, api } from '../../src/dati/api'
+import { api } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
-import { MODELLI_DEMO } from '../../src/dati/seed'
 import { colori, raggi, spazi } from '../../src/tema/tokens'
 import { Icona, Pillola, Toccabile } from '../../src/ui/base'
 import { Corpo, Etichetta, Forte, Numero, Titolo } from '../../src/ui/testo'
@@ -30,7 +29,8 @@ const CREMA_TENUE = 'rgba(247,244,239,0.5)'
 const FONDO_CAMPO = 'rgba(247,244,239,0.06)'
 const BORDO_CAMPO = 'rgba(247,244,239,0.16)'
 
-const PRESET_DEMO: PresetPrompt[] = [
+/** Il form parte da questi finché il fetch di `/dev/preset` non risponde. */
+const PRESET_INIZIALI: PresetPrompt[] = [
   {
     id: 'analisi-foto-capo',
     etichetta: 'Analisi foto capo',
@@ -53,11 +53,11 @@ const PRESET_DEMO: PresetPrompt[] = [
 
 export default function Playground() {
   const { capi } = useArmadio()
-  const [modelli, setModelli] = useState<ModelloDisponibile[]>(MODELLI_DEMO)
-  const [preset, setPreset] = useState<PresetPrompt[]>(PRESET_DEMO)
+  const [modelli, setModelli] = useState<ModelloDisponibile[]>([])
+  const [preset, setPreset] = useState<PresetPrompt[]>(PRESET_INIZIALI)
   const [scelto, setScelto] = useState(0)
   const [presetScelto, setPresetScelto] = useState(0)
-  const [prompt, setPrompt] = useState(PRESET_DEMO[0]!.system_prompt)
+  const [prompt, setPrompt] = useState(PRESET_INIZIALI[0]!.system_prompt)
   const [temperatura, setTemperatura] = useState(0.2)
   const [maxToken, setMaxToken] = useState('900')
   const [chiaveSviluppo, setChiaveSviluppo] = useState('')
@@ -105,7 +105,6 @@ export default function Playground() {
   const contesto = contestoRemoto ?? contestoLocale
 
   useEffect(() => {
-    if (MODALITA_DEMO) return
     void (async () => {
       try {
         const [catalogo, elencoPreset, contestoVero, storicoVero] = await Promise.all([
@@ -130,24 +129,6 @@ export default function Playground() {
     if (!modello || inCorso) return
     setInCorso(true)
     setEsito(null)
-
-    if (MODALITA_DEMO) {
-      // Nessuna finzione di risposta del modello: diciamo cosa manca.
-      setTimeout(() => {
-        setEsito({
-          ok: false,
-          esito: 'errore',
-          provider: modello.provider,
-          modello: modello.id,
-          latenza_ms: 0,
-          errore:
-            "In modalità demo non c'è nessun backend da interrogare. Avvia `npm run api:local`, imposta EXPO_PUBLIC_API_URL e riprova.",
-          suggerimenti: [],
-        })
-        setInCorso(false)
-      }, 400)
-      return
-    }
 
     try {
       const risultato = await api.dev.esegui(

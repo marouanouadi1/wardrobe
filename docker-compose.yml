@@ -1,5 +1,5 @@
-# Solo per lo sviluppo locale: Postgres identico allo schema di Aurora,
-# e MinIO al posto di S3 per provare l'upload diretto senza toccare AWS.
+# Solo per lo sviluppo locale: Postgres identico allo schema di Aurora. Le
+# foto restano su disco (vedi adapters/filesystem.py), non servono qui.
 services:
   postgres:
     image: postgres:16-alpine
@@ -19,19 +19,5 @@ services:
       timeout: 3s
       retries: 10
 
-  minio:
-    image: minio/minio:latest
-    container_name: wardrobe-minio
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: wardrobe
-      MINIO_ROOT_PASSWORD: wardrobe123
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio_data:/data
-
 volumes:
   postgres_data:
-  minio_data:
