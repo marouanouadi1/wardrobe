@@ -119,9 +119,7 @@ class TestStatoConUrlFirmato:
         assert avviata["statusCode"] == 202
         esecuzione_id = json.loads(avviata["body"])["esecuzione_id"]
 
-        risposta = analisi.stato(
-            _evento_http(percorso={"esecuzioneId": esecuzione_id}), None
-        )
+        risposta = analisi.stato(_evento_http(percorso={"esecuzioneId": esecuzione_id}), None)
         dati = json.loads(risposta["body"])
         assert dati["stato"] == "completata"
         assert dati["capo"]["foto"]["url"]

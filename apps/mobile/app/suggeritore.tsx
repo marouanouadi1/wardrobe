@@ -91,10 +91,16 @@ export default function Suggeritore() {
   // Se la domanda arrivava da «Oggi», il suggeritore la gira al modello una
   // volta sola, come un messaggio in chat vero e proprio — dopo aver caricato
   // la cronologia, altrimenti finirebbe davanti ai messaggi precedenti.
+  //
+  // Il timeout non è un vezzo: sposta l'invio (e le sue setState) fuori dal
+  // corpo sincrono dell'effetto, in una callback vera e propria — è la
+  // differenza che chiede react-hooks/set-state-in-effect.
   useEffect(() => {
     if (!storiaCaricata) return
     const chiesto = parametri.chiedi?.trim()
-    if (chiesto) void invia(chiesto)
+    if (!chiesto) return
+    const id = setTimeout(() => void invia(chiesto), 0)
+    return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parametri.chiedi, storiaCaricata])
 
