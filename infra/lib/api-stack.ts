@@ -70,6 +70,9 @@ const ROTTE: readonly Rotta[] = [
 
   { metodo: HttpMethod.POST, percorso: '/suggerimenti', handler: 'handlers.suggerimenti.proponi' },
 
+  { metodo: HttpMethod.GET, percorso: '/chat', handler: 'handlers.chat.elenca' },
+  { metodo: HttpMethod.POST, percorso: '/chat', handler: 'handlers.chat.invia' },
+
   { metodo: HttpMethod.GET, percorso: '/outfit', handler: 'handlers.outfit.elenca' },
   { metodo: HttpMethod.POST, percorso: '/outfit', handler: 'handlers.outfit.salva' },
   {
@@ -83,6 +86,7 @@ const ROTTE: readonly Rotta[] = [
 
   { metodo: HttpMethod.GET, percorso: '/dev/modelli', handler: 'handlers.playground.modelli', soloPlayground: true },
   { metodo: HttpMethod.GET, percorso: '/dev/preset', handler: 'handlers.playground.preset', soloPlayground: true },
+  { metodo: HttpMethod.POST, percorso: '/dev/preset', handler: 'handlers.playground.salva_preset', soloPlayground: true },
   { metodo: HttpMethod.GET, percorso: '/dev/contesto', handler: 'handlers.playground.contesto', soloPlayground: true },
   { metodo: HttpMethod.GET, percorso: '/dev/playground/storico', handler: 'handlers.playground.storico', soloPlayground: true },
   { metodo: HttpMethod.POST, percorso: '/dev/playground', handler: 'handlers.playground.esegui_test', soloPlayground: true },

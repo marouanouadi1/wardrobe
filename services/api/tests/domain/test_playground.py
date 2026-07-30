@@ -13,7 +13,7 @@ from domain.models import (
     RichiestaPlayground,
     UsoToken,
 )
-from domain.playground import PRESETS, calcola_costo, esegui, preset, traccia
+from domain.playground import PRESETS, calcola_costo, esegui, preset, preset_effettivo, traccia
 from domain.ports import ImmagineLlm
 from domain.stylist import costruisci_contesto
 from fakes import ProviderFinto
@@ -162,6 +162,21 @@ class TestPreset:
         analisi = preset("analisi-foto-capo")
         assert analisi is not None
         assert analisi.temperatura <= 0.2
+
+
+class TestPresetEffettivo:
+    def test_senza_salvataggio_torna_il_default_di_fabbrica(self):
+        di_fabbrica = preset("suggeritore-mattina")
+        assert di_fabbrica is not None
+        assert preset_effettivo("suggeritore-mattina", None) == di_fabbrica
+
+    def test_il_salvato_vince_sul_default(self):
+        di_fabbrica = preset("suggeritore-mattina")
+        assert di_fabbrica is not None
+        salvato = di_fabbrica.model_copy(update={"system_prompt": "Nuovo prompt di prova"})
+
+        effettivo = preset_effettivo("suggeritore-mattina", salvato)
+        assert effettivo.system_prompt == "Nuovo prompt di prova"
 
 
 class TestTraccia:

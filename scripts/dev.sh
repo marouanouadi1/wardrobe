@@ -93,6 +93,17 @@ if [[ "$SCHEMA" != *capi* ]]; then
     psql -U wardrobe -d wardrobe -f /docker-entrypoint-initdb.d/0001_schema.sql >/dev/null
 fi
 
+# Stessa storia per la chat continua: un volume nato prima di questa
+# migrazione non la rivede mai da solo. `create ... if not exists` la rende
+# innocua da rieseguire.
+SCHEMA_CHAT="$("${COMPOSE[@]}" exec -T postgres \
+  psql -U wardrobe -d wardrobe -tAc "select to_regclass('public.messaggi_chat')" 2>/dev/null || true)"
+if [[ "$SCHEMA_CHAT" != *messaggi_chat* ]]; then
+  echo "→ tabelle della chat assenti: le applico"
+  "${COMPOSE[@]}" exec -T postgres \
+    psql -U wardrobe -d wardrobe -f /docker-entrypoint-initdb.d/0002_chat.sql >/dev/null
+fi
+
 # ---------------------------------------------------------- livello 1: API
 
 # La CWD è parte del contratto, non un vezzo:

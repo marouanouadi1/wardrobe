@@ -16,6 +16,7 @@ import type {
   Capo,
   ContestoSuggerimento,
   ElencoCapi,
+  ElencoMessaggiChat,
   EsitoAnalisi,
   EsitoPlayground,
   ModelloDisponibile,
@@ -24,9 +25,11 @@ import type {
   Outfit,
   PresetPrompt,
   Profilo,
+  RichiestaMessaggioChat,
   RichiestaPlayground,
   RichiestaSuggerimenti,
   RiepilogoArmadio,
+  RispostaChat,
   RispostaSuggerimenti,
   UploadFirmato,
 } from '@wardrobe/contracts'
@@ -175,6 +178,14 @@ export const api = {
   // ── suggerimenti e outfit ───────────────────────────────────────────────
   suggerimenti: (richiesta: RichiestaSuggerimenti) =>
     chiama<RispostaSuggerimenti>('/suggerimenti', { metodo: 'POST', corpo: richiesta }),
+
+  // ── chat continua ────────────────────────────────────────────────────────
+  chat: {
+    elenca: () => chiama<ElencoMessaggiChat>('/chat'),
+    invia: (richiesta: RichiestaMessaggioChat) =>
+      chiama<RispostaChat>('/chat', { metodo: 'POST', corpo: richiesta }),
+  },
+
   elencaOutfit: () => chiama<{ outfit: Outfit[] }>('/outfit'),
   salvaOutfit: (nuovo: NuovoOutfit) => chiama<Outfit>('/outfit', { metodo: 'POST', corpo: nuovo }),
 
@@ -186,6 +197,8 @@ export const api = {
   dev: {
     modelli: () => chiama<ModelloDisponibile[]>('/dev/modelli'),
     preset: () => chiama<PresetPrompt[]>('/dev/preset'),
+    salvaPreset: (preset: PresetPrompt) =>
+      chiama<PresetPrompt>('/dev/preset', { metodo: 'POST', corpo: preset }),
     contesto: () => chiama<ContestoSuggerimento>('/dev/contesto'),
     storico: () => chiama<import('@wardrobe/contracts').EsecuzionePlayground[]>('/dev/playground/storico'),
     esegui: (richiesta: RichiestaPlayground, chiaveProvider?: string) =>

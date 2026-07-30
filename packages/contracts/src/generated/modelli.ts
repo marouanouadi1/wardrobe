@@ -22,6 +22,7 @@ export type AttributoCapo = 'tipo' | 'colore' | 'materiale' | 'fantasia' | 'stag
  * I valori coincidono con le chiavi di `mannequin.setOutfit()`.
  */
 export type SlotAvatar = 'top' | 'bottom' | 'outer' | 'shoes' | 'dress'
+export type RuoloChat = 'utente' | 'tela'
 /**
  * I due lavori veri che l'IA fa nel prodotto.
  *
@@ -46,6 +47,7 @@ export interface Contratti {
   ContestoSuggerimento?: ContestoSuggerimento
   CorrezioniCapo?: CorrezioniCapo
   ElencoCapi?: ElencoCapi
+  ElencoMessaggiChat?: ElencoMessaggiChat
   EsecuzionePlayground?: EsecuzionePlayground
   EsitoAnalisi?: EsitoAnalisi
   EsitoEsecuzione?: EsitoEsecuzione
@@ -55,6 +57,7 @@ export interface Contratti {
   ImpegnoAgenda?: ImpegnoAgenda
   JobIa?: JobIa
   LetturaCapo?: LetturaCapo
+  MessaggioChat?: MessaggioChat
   Meteo?: Meteo
   ModelloDisponibile?: ModelloDisponibile
   NuovoCapoManuale?: NuovoCapoManuale
@@ -65,11 +68,14 @@ export interface Contratti {
   PresetPrompt?: PresetPrompt
   Profilo?: Profilo
   RichiestaAnalisi?: RichiestaAnalisi
+  RichiestaMessaggioChat?: RichiestaMessaggioChat
   RichiestaPlayground?: RichiestaPlayground
   RichiestaSuggerimenti?: RichiestaSuggerimenti
   RichiestaUpload?: RichiestaUpload
   RiepilogoArmadio?: RiepilogoArmadio
+  RispostaChat?: RispostaChat
   RispostaSuggerimenti?: RispostaSuggerimenti
+  RuoloChat?: RuoloChat
   SlotAvatar?: SlotAvatar
   Stagione?: Stagione
   StatoAnalisi?: StatoAnalisi
@@ -243,6 +249,49 @@ export interface ElencoCapi {
   capi: Capo[]
   totale: number
 }
+export interface ElencoMessaggiChat {
+  messaggi: MessaggioChat[]
+}
+/**
+ * Un turno della chat continua con lo stilista.
+ *
+ * Persiste per utente: non è una sessione che si azzera chiudendo l'app, è
+ * la stessa conversazione che si riprende da dove l'ha lasciata. `testo` sul
+ * turno di Tela è la risposta grezza del modello (JSON): serve a ridargliela
+ * come memoria al turno successivo. A schermo si mostra `suggerimenti`, non
+ * `testo`.
+ */
+export interface MessaggioChat {
+  id: string
+  ruolo: RuoloChat
+  testo: string
+  suggerimenti?: Suggerimento[]
+  creato_il: string
+}
+/**
+ * Una proposta dello stilista, già validata contro l'armadio vero.
+ */
+export interface Suggerimento {
+  titolo: string
+  match: number
+  vestizione: Vestizione
+  /**
+   * @maxItems 3
+   */
+  perche: [] | [string] | [string, string] | [string, string, string]
+}
+/**
+ * Chi occupa quale slot dell'avatar. I valori sono id di capo.
+ *
+ * Le chiavi sono quelle di `mannequin.setOutfit()`: non tradurle.
+ */
+export interface Vestizione {
+  top?: string | null
+  bottom?: string | null
+  outer?: string | null
+  shoes?: string | null
+  dress?: string | null
+}
 /**
  * Riga dello storico: serve a confrontare provider a distanza di giorni.
  */
@@ -301,30 +350,6 @@ export interface LetturaCapo {
   confidenze?: {
     [k: string]: number
   }
-}
-/**
- * Una proposta dello stilista, già validata contro l'armadio vero.
- */
-export interface Suggerimento {
-  titolo: string
-  match: number
-  vestizione: Vestizione
-  /**
-   * @maxItems 3
-   */
-  perche: [] | [string] | [string, string] | [string, string, string]
-}
-/**
- * Chi occupa quale slot dell'avatar. I valori sono id di capo.
- *
- * Le chiavi sono quelle di `mannequin.setOutfit()`: non tradurle.
- */
-export interface Vestizione {
-  top?: string | null
-  bottom?: string | null
-  outer?: string | null
-  shoes?: string | null
-  dress?: string | null
 }
 export interface FiltroArmadio {
   tipo?: TipoCapo | null
@@ -415,6 +440,11 @@ export interface RichiestaAnalisi {
   provider?: string | null
   modello?: string | null
 }
+export interface RichiestaMessaggioChat {
+  testo: string
+  meteo?: Meteo | null
+  agenda?: ImpegnoAgenda[]
+}
 export interface RichiestaPlayground {
   job: JobIa
   provider: string
@@ -448,6 +478,14 @@ export interface RiepilogoArmadio {
   da_lavare: number
   dormienti: number
   valore_dormiente_eur?: number | null
+}
+export interface RispostaChat {
+  utente: MessaggioChat
+  tela: MessaggioChat
+  contesto: ContestoSuggerimento
+  provider: string
+  modello: string
+  latenza_ms: number
 }
 export interface RispostaSuggerimenti {
   suggerimenti: Suggerimento[]

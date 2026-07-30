@@ -18,7 +18,7 @@ import boto3
 import psycopg
 from psycopg.rows import dict_row
 
-from domain.models import Capo, EsecuzionePlayground, Outfit, Profilo
+from domain.models import Capo, EsecuzionePlayground, MessaggioChat, Outfit, PresetPrompt, Profilo
 
 
 class RepositoryPostgres:
@@ -164,3 +164,49 @@ class RepositoryPostgres:
                 "insert into playground_esecuzioni (id, eseguita_il, dati) values (%s, %s, %s)",
                 (esecuzione.id, esecuzione.eseguita_il, esecuzione.model_dump_json()),
             )
+
+    # ── preset del playground ────────────────────────────────────────────────
+    def leggi_preset(self, preset_id: str) -> PresetPrompt | None:
+        with self._conn().cursor() as cur:
+            cur.execute("select dati from preset_prompt where id = %s", (preset_id,))
+            riga = cur.fetchone()
+            return PresetPrompt.model_validate(riga["dati"]) if riga else None
+
+    def salva_preset(self, preset: PresetPrompt) -> PresetPrompt:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                """
+                insert into preset_prompt (id, dati) values (%s, %s)
+                on conflict (id) do update set dati = excluded.dati, aggiornato_il = now()
+                """,
+                (preset.id, preset.model_dump_json()),
+            )
+        return preset
+
+    # ── chat continua ──────────────────────────────────────────────────────
+    def elenca_messaggi_chat(self, utente_id: str, limite: int = 200) -> list[MessaggioChat]:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                """
+                select dati from (
+                    select dati, creato_il from messaggi_chat
+                    where utente_id = %s
+                    order by creato_il desc
+                    limit %s
+                ) recenti
+                order by creato_il asc
+                """,
+                (utente_id, limite),
+            )
+            return [MessaggioChat.model_validate(r["dati"]) for r in cur.fetchall()]
+
+    def salva_messaggio_chat(self, utente_id: str, messaggio: MessaggioChat) -> MessaggioChat:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                """
+                insert into messaggi_chat (id, utente_id, creato_il, dati)
+                values (%s, %s, %s, %s)
+                """,
+                (messaggio.id, utente_id, messaggio.creato_il, messaggio.model_dump_json()),
+            )
+        return messaggio

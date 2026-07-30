@@ -108,6 +108,11 @@ class EsitoEsecuzione(StrEnum):
     ERRORE = "errore"
 
 
+class RuoloChat(StrEnum):
+    UTENTE = "utente"
+    TELA = "tela"
+
+
 Confidenza = Annotated[int, Field(ge=0, le=100)]
 Percentuale = Annotated[int, Field(ge=0, le=100)]
 EsaColore = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
@@ -462,6 +467,42 @@ class RispostaSuggerimenti(ModelloTela):
     provider: str
     modello: str
     latenza_ms: int
+
+
+class MessaggioChat(ModelloTela):
+    """Un turno della chat continua con lo stilista.
+
+    Persiste per utente: non è una sessione che si azzera chiudendo l'app, è
+    la stessa conversazione che si riprende da dove l'ha lasciata. `testo` sul
+    turno di Tela è la risposta grezza del modello (JSON): serve a ridargliela
+    come memoria al turno successivo. A schermo si mostra `suggerimenti`, non
+    `testo`.
+    """
+
+    id: str
+    ruolo: RuoloChat
+    testo: str
+    suggerimenti: list[Suggerimento] = Field(default_factory=list)
+    creato_il: datetime
+
+
+class RichiestaMessaggioChat(ModelloTela):
+    testo: str
+    meteo: Meteo | None = None
+    agenda: list[ImpegnoAgenda] = Field(default_factory=list)
+
+
+class RispostaChat(ModelloTela):
+    utente: MessaggioChat
+    tela: MessaggioChat
+    contesto: ContestoSuggerimento
+    provider: str
+    modello: str
+    latenza_ms: int
+
+
+class ElencoMessaggiChat(ModelloTela):
+    messaggi: list[MessaggioChat]
 
 
 class NuovoOutfit(ModelloTela):
