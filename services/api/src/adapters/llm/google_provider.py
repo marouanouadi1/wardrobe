@@ -103,6 +103,18 @@ class ProviderGoogle:
         ]
         parti.append({"text": richiesta.prompt})
 
+        # Gemini chiama il turno del modello "model", non "assistant" come gli
+        # altri provider: è l'unica differenza di vocabolario nel tradurre la
+        # cronologia.
+        contenuti: list[dict[str, object]] = [
+            {
+                "role": "user" if turno.ruolo == "utente" else "model",
+                "parts": [{"text": turno.testo}],
+            }
+            for turno in richiesta.cronologia
+        ]
+        contenuti.append({"role": "user", "parts": parti})
+
         generazione: dict[str, object] = {
             "temperature": richiesta.temperatura,
             "maxOutputTokens": richiesta.max_token,
@@ -121,7 +133,7 @@ class ProviderGoogle:
                 generazione["responseSchema"] = _converti_schema(richiesta.schema_atteso)
 
         corpo: dict[str, object] = {
-            "contents": [{"role": "user", "parts": parti}],
+            "contents": contenuti,
             "generationConfig": generazione,
         }
         if richiesta.system:

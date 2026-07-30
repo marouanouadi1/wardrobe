@@ -22,3 +22,4 @@ export const VALORI_ORIGINE_OUTFIT = ['manuale', 'ia', 'suggerito_modificato'] a
 export const VALORI_JOB_IA = ['analisi_capo', 'suggerimento'] as const
 export const VALORI_ESITO_ESECUZIONE = ['ok', 'vago', 'errore'] as const
 export const VALORI_STATO_ANALISI = ['in_corso', 'completata', 'fallita'] as const
+export const VALORI_RUOLO_CHAT = ['utente', 'tela'] as const

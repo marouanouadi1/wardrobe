@@ -7,11 +7,12 @@
  * come si raccoglie il contesto.
  */
 
-import type { Suggerimento } from '@wardrobe/contracts'
+import type { MessaggioChat } from '@wardrobe/contracts'
 import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ScrollView, TextInput, View } from 'react-native'
+import { api } from '../src/dati/api'
 import { useArmadio } from '../src/dati/archivio'
 import { capiDiVestizione, fotoDaMostrare } from '../src/dati/dominio'
 import { colori, linee, ombre, raggi, spazi } from '../src/tema/tokens'
@@ -25,7 +26,7 @@ import {
   Segmenti,
   Toccabile,
 } from '../src/ui/base'
-import { Corpo, Titolo } from '../src/ui/testo'
+import { Corpo, Forte, Titolo } from '../src/ui/testo'
 import { Testata } from '../src/ui/testata'
 
 type Modo = 'proposte' | 'chat' | 'guidato'
@@ -44,54 +45,58 @@ const DOMANDE = [
 
 const SPUNTI = ['Cosa metto stasera?', 'Fa più freddo, cambia', 'Solo capi puliti', 'Qualcosa che non uso mai']
 
-interface Messaggio {
-  da: 'io' | 'tela'
-  testo: string
-}
-
-/** Traduce la risposta vera del modello in un messaggio di chat. */
-function rispostaDa(suggerimenti: Suggerimento[]): string {
-  const primo = suggerimenti[0]
-  if (!primo) return 'Non ho trovato un outfit adatto con i capi che hai ora.'
-  const motivo = primo.perche[0] ? ` — ${primo.perche[0]}` : ''
-  return `${primo.titolo} (${primo.match}%)${motivo}`
-}
-
 export default function Suggeritore() {
   const parametri = useLocalSearchParams<{ chiedi?: string }>()
-  const { suggerimenti, indice, vesti, salvaOutfit, chiediSuggerimenti } = useArmadio()
+  const { suggerimenti, indice, vesti, salvaOutfit, chiediSuggerimenti, avvisa } = useArmadio()
   const [modo, setModo] = useState<Modo>(parametri.chiedi ? 'chat' : 'proposte')
   const [bozza, setBozza] = useState('')
   const [risposte, setRisposte] = useState<Record<string, string>>({})
   const [generato, setGenerato] = useState(false)
   const [salvati, setSalvati] = useState<string[]>([])
   const [inCorso, setInCorso] = useState(false)
-  const [conversazione, setConversazione] = useState<Messaggio[]>(() => [
-    {
-      da: 'tela',
-      testo:
-        'Buongiorno! Milano, 12° e pioggia leggera. Alle 10 hai la riunione con il cliente. Vuoi che ti prepari qualcosa?',
-    },
-  ])
+  const [conversazione, setConversazione] = useState<MessaggioChat[]>([])
+  const [storiaCaricata, setStoriaCaricata] = useState(false)
+
+  // La chat è continua, non una sessione che si azzera aprendo lo schermo:
+  // riprende dalla cronologia vera salvata sul backend, mai da un messaggio
+  // di benvenuto inventato.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const { messaggi } = await api.chat.elenca()
+        setConversazione(messaggi)
+      } catch {
+        // Storia non disponibile: la chat resta usabile, riparte vuota.
+      } finally {
+        setStoriaCaricata(true)
+      }
+    })()
+  }, [])
 
   async function invia(testo: string) {
     const pulito = testo.trim()
     if (!pulito || inCorso) return
-    setConversazione((precedenti) => [...precedenti, { da: 'io', testo: pulito }])
     setBozza('')
     setInCorso(true)
-    const suggeriti = await chiediSuggerimenti(pulito)
-    setConversazione((precedenti) => [...precedenti, { da: 'tela', testo: rispostaDa(suggeriti) }])
-    setInCorso(false)
+    try {
+      const risposta = await api.chat.invia({ testo: pulito })
+      setConversazione((precedenti) => [...precedenti, risposta.utente, risposta.tela])
+    } catch (errore) {
+      avvisa(errore instanceof Error ? errore.message : 'Il messaggio non è arrivato allo stilista')
+    } finally {
+      setInCorso(false)
+    }
   }
 
   // Se la domanda arrivava da «Oggi», il suggeritore la gira al modello una
-  // volta sola, come un messaggio in chat vero e proprio.
+  // volta sola, come un messaggio in chat vero e proprio — dopo aver caricato
+  // la cronologia, altrimenti finirebbe davanti ai messaggi precedenti.
   useEffect(() => {
+    if (!storiaCaricata) return
     const chiesto = parametri.chiedi?.trim()
     if (chiesto) void invia(chiesto)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parametri.chiedi])
+  }, [parametri.chiedi, storiaCaricata])
 
   const complete = DOMANDE.every((domanda) => risposte[domanda.chiave])
 
@@ -205,28 +210,76 @@ export default function Suggeritore() {
 
         {modo === 'chat' ? (
           <>
+            {storiaCaricata && conversazione.length === 0 && !inCorso ? (
+              <Corpo taglia={13} tono="debole" style={{ textAlign: 'center' }}>
+                {"Scrivi per iniziare: questa chat resta qui anche se chiudi l'app."}
+              </Corpo>
+            ) : null}
+
             <View style={{ gap: 11 }}>
-              {conversazione.map((messaggio, indiceMessaggio) => (
+              {conversazione.map((messaggio) => {
+                const daUtente = messaggio.ruolo === 'utente'
+                return (
+                  <View
+                    key={messaggio.id}
+                    style={{
+                      alignSelf: daUtente ? 'flex-end' : 'flex-start',
+                      maxWidth: '84%',
+                      paddingHorizontal: 16,
+                      paddingVertical: 14,
+                      backgroundColor: daUtente ? colori.inchiostro : colori.scheda,
+                      borderTopLeftRadius: 22,
+                      borderTopRightRadius: 22,
+                      borderBottomLeftRadius: daUtente ? 22 : 6,
+                      borderBottomRightRadius: daUtente ? 6 : 22,
+                      gap: spazi.s,
+                      ...ombre.bassa,
+                    }}
+                  >
+                    {daUtente ? (
+                      <Corpo taglia={14} scuro>
+                        {messaggio.testo}
+                      </Corpo>
+                    ) : (messaggio.suggerimenti?.length ?? 0) > 0 ? (
+                      // La risposta vera dello stilista: tutte le proposte che
+                      // ha fatto, non solo la prima riassunta a caso.
+                      messaggio.suggerimenti!.map((proposta) => (
+                        <View key={proposta.titolo} style={{ gap: 4 }}>
+                          <Forte taglia={14}>{`${proposta.titolo} · ${proposta.match}%`}</Forte>
+                          {proposta.perche.map((motivo) => (
+                            <Corpo key={motivo} taglia={13} tono="medio">
+                              {`— ${motivo}`}
+                            </Corpo>
+                          ))}
+                        </View>
+                      ))
+                    ) : (
+                      <Corpo taglia={14}>Non ho trovato un outfit adatto con i capi che hai ora.</Corpo>
+                    )}
+                  </View>
+                )
+              })}
+
+              {inCorso ? (
                 <View
-                  key={`${messaggio.da}-${indiceMessaggio}`}
                   style={{
-                    alignSelf: messaggio.da === 'io' ? 'flex-end' : 'flex-start',
+                    alignSelf: 'flex-start',
                     maxWidth: '84%',
                     paddingHorizontal: 16,
                     paddingVertical: 14,
-                    backgroundColor: messaggio.da === 'io' ? colori.inchiostro : colori.scheda,
+                    backgroundColor: colori.scheda,
                     borderTopLeftRadius: 22,
                     borderTopRightRadius: 22,
-                    borderBottomLeftRadius: messaggio.da === 'io' ? 22 : 6,
-                    borderBottomRightRadius: messaggio.da === 'io' ? 6 : 22,
+                    borderBottomLeftRadius: 6,
+                    borderBottomRightRadius: 22,
                     ...ombre.bassa,
                   }}
                 >
-                  <Corpo taglia={14} scuro={messaggio.da === 'io'}>
-                    {messaggio.testo}
+                  <Corpo taglia={14} tono="debole">
+                    Sto pensando…
                   </Corpo>
                 </View>
-              ))}
+              ) : null}
             </View>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>

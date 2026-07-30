@@ -60,6 +60,9 @@ class ProviderOllama:
         messaggi: list[dict[str, object]] = []
         if richiesta.system:
             messaggi.append({"role": "system", "content": richiesta.system})
+        for turno in richiesta.cronologia:
+            ruolo = "user" if turno.ruolo == "utente" else "assistant"
+            messaggi.append({"role": ruolo, "content": turno.testo})
         messaggi.append(messaggio)
 
         corpo: dict[str, object] = {

@@ -24,8 +24,10 @@ from domain.models import (
     Colore,
     EsecuzionePlayground,
     FotoCapo,
+    MessaggioChat,
     Outfit,
     PreferenzeStile,
+    PresetPrompt,
     Profilo,
     Stagione,
     StatoCapo,
@@ -220,6 +222,8 @@ class RepositoryInMemoria:
         self._profili: dict[str, Profilo] = {}
         self._usi: set[tuple[str, str, date]] = set()
         self._playground: list[EsecuzionePlayground] = []
+        self._preset: dict[str, PresetPrompt] = {}
+        self._chat: dict[str, list[MessaggioChat]] = {}
 
     @classmethod
     def con_semi(cls, utente_id: str = "demo") -> RepositoryInMemoria:
@@ -286,3 +290,18 @@ class RepositoryInMemoria:
 
     def salva_esecuzione_playground(self, esecuzione: EsecuzionePlayground) -> None:
         self._playground.append(esecuzione)
+
+    # ── preset e chat ──────────────────────────────────────────────────────
+    def leggi_preset(self, preset_id: str) -> PresetPrompt | None:
+        return self._preset.get(preset_id)
+
+    def salva_preset(self, preset: PresetPrompt) -> PresetPrompt:
+        self._preset[preset.id] = preset
+        return preset
+
+    def elenca_messaggi_chat(self, utente_id: str, limite: int = 200) -> list[MessaggioChat]:
+        return self._chat.get(utente_id, [])[-limite:]
+
+    def salva_messaggio_chat(self, utente_id: str, messaggio: MessaggioChat) -> MessaggioChat:
+        self._chat.setdefault(utente_id, []).append(messaggio)
+        return messaggio

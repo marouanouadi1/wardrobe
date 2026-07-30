@@ -61,6 +61,9 @@ RISPOSTE = (
     models.UsoToken,
     models.EsitoPlayground,
     models.EsecuzionePlayground,
+    models.MessaggioChat,
+    models.RispostaChat,
+    models.ElencoMessaggiChat,
 )
 
 RICHIESTE = (
@@ -77,6 +80,7 @@ RICHIESTE = (
     models.AggiornamentoCapo,
     models.RichiestaSuggerimenti,
     models.RichiestaPlayground,
+    models.RichiestaMessaggioChat,
 )
 
 ENUM = (
@@ -89,6 +93,7 @@ ENUM = (
     ("JobIa", models.JobIa),
     ("EsitoEsecuzione", models.EsitoEsecuzione),
     ("StatoAnalisi", models.StatoAnalisi),
+    ("RuoloChat", models.RuoloChat),
 )
 
 COSTANTI = {

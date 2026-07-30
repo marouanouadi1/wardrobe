@@ -66,6 +66,8 @@ export default function Playground() {
   const [inCorso, setInCorso] = useState(false)
   const [esito, setEsito] = useState<EsitoPlayground | null>(null)
   const [storico, setStorico] = useState<EsecuzionePlayground[]>([])
+  const [salvandoPreset, setSalvandoPreset] = useState(false)
+  const [presetAppenaSalvato, setPresetAppenaSalvato] = useState(false)
 
   const modello = modelli[scelto]
   const job: JobIa = preset[presetScelto]?.job ?? 'suggerimento'
@@ -161,6 +163,34 @@ export default function Playground() {
     }
   }
 
+  /**
+   * Persiste il prompt (e temperatura/max token) che si sta provando come
+   * nuovo default del job. Da qui in poi non lo legge solo questo schermo: lo
+   * legge anche la chat vera dell'app, a ogni messaggio — è così che un
+   * prompt provato qui diventa quello che l'utente vede in «Chiedi a Tela».
+   */
+  async function salvaPresetCorrente() {
+    const attuale = preset[presetScelto]
+    if (!attuale || salvandoPreset) return
+    setSalvandoPreset(true)
+    setPresetAppenaSalvato(false)
+    try {
+      const salvato = await api.dev.salvaPreset({
+        ...attuale,
+        system_prompt: prompt,
+        temperatura,
+        max_token: Number(maxToken) || attuale.max_token,
+      })
+      setPreset((precedenti) => precedenti.map((p, indicePreset) => (indicePreset === presetScelto ? salvato : p)))
+      setPresetAppenaSalvato(true)
+    } catch {
+      // Il playground resta uno strumento di prova: se il salvataggio fallisce
+      // si continua a testare il prompt in memoria, senza bloccare lo schermo.
+    } finally {
+      setSalvandoPreset(false)
+    }
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colori.inchiostro }}>
       <Testata occhiello="Solo interno" titolo="Playground IA" indietro scura />
@@ -181,6 +211,7 @@ export default function Playground() {
                 setPrompt(voce.system_prompt)
                 setTemperatura(voce.temperatura ?? 0.4)
                 setMaxToken(String(voce.max_token ?? 900))
+                setPresetAppenaSalvato(false)
               }}
             />
           ))}
@@ -248,7 +279,10 @@ export default function Playground() {
           </Etichetta>
           <TextInput
             value={prompt}
-            onChangeText={setPrompt}
+            onChangeText={(testo) => {
+              setPrompt(testo)
+              setPresetAppenaSalvato(false)
+            }}
             multiline
             style={{
               minHeight: 150,
@@ -264,6 +298,38 @@ export default function Playground() {
               textAlignVertical: 'top',
             }}
           />
+
+          {/* Finché non si preme qui, il prompt provato sopra resta solo
+              nella memoria di questo schermo: non lo vede né un altro
+              collaudo del playground riaperto, né la chat vera. */}
+          <Toccabile
+            onPress={() => void salvaPresetCorrente()}
+            scala={0.97}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              paddingVertical: 13,
+              borderRadius: raggi.pillola,
+              borderWidth: 1,
+              borderColor: colori.citron,
+              opacity: salvandoPreset ? 0.7 : 1,
+            }}
+          >
+            {salvandoPreset ? (
+              <ActivityIndicator color={colori.citron} />
+            ) : (
+              <Icona nome={presetAppenaSalvato ? 'spunta' : 'scintilla'} misura={14} spessore={2.2} colore={colori.citron} />
+            )}
+            <Forte taglia={13} colore={colori.citron}>
+              {salvandoPreset
+                ? 'Salvo…'
+                : presetAppenaSalvato
+                  ? 'Salvato — lo usa anche la chat vera'
+                  : 'Salva come preset predefinito'}
+            </Forte>
+          </Toccabile>
         </View>
 
         <View style={{ flexDirection: 'row', gap: spazi.m }}>
@@ -281,7 +347,14 @@ export default function Playground() {
               {[0, 0.2, 0.45, 0.7, 1].map((valore) => (
                 <Toccabile
                   key={valore}
-                  onPress={accettaTemperatura ? () => setTemperatura(valore) : undefined}
+                  onPress={
+                    accettaTemperatura
+                      ? () => {
+                          setTemperatura(valore)
+                          setPresetAppenaSalvato(false)
+                        }
+                      : undefined
+                  }
                   scala={accettaTemperatura ? 0.94 : 0}
                   style={{
                     flex: 1,
@@ -315,7 +388,10 @@ export default function Playground() {
             </Etichetta>
             <TextInput
               value={maxToken}
-              onChangeText={setMaxToken}
+              onChangeText={(testo) => {
+                setMaxToken(testo)
+                setPresetAppenaSalvato(false)
+              }}
               keyboardType="number-pad"
               style={{
                 paddingHorizontal: 14,

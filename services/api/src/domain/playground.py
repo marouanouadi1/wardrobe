@@ -59,6 +59,23 @@ def preset(preset_id: str) -> PresetPrompt | None:
     return next((p for p in PRESETS if p.id == preset_id), None)
 
 
+def preset_effettivo(preset_id: str, salvato: PresetPrompt | None) -> PresetPrompt:
+    """Il preset come lo userebbe davvero una chiamata in questo momento.
+
+    `salvato` è quello che l'utente ha eventualmente scritto e confermato nel
+    playground e che il repository ha persistito: se c'è, vince su quello di
+    fabbrica. È il ponte fra «provo un prompt nel playground» e «la chat vera
+    lo usa» — senza questa funzione i due resterebbero due copie che
+    divergono in silenzio.
+    """
+    if salvato is not None:
+        return salvato
+    trovato = preset(preset_id)
+    if trovato is None:
+        raise ValueError(f"preset sconosciuto: {preset_id}")
+    return trovato
+
+
 def calcola_costo(
     uso: UsoToken,
     *,

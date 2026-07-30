@@ -34,6 +34,9 @@
     "ElencoCapi": {
       "$ref": "#/$defs/ElencoCapi"
     },
+    "ElencoMessaggiChat": {
+      "$ref": "#/$defs/ElencoMessaggiChat"
+    },
     "EsecuzionePlayground": {
       "$ref": "#/$defs/EsecuzionePlayground"
     },
@@ -60,6 +63,9 @@
     },
     "LetturaCapo": {
       "$ref": "#/$defs/LetturaCapo"
+    },
+    "MessaggioChat": {
+      "$ref": "#/$defs/MessaggioChat"
     },
     "Meteo": {
       "$ref": "#/$defs/Meteo"
@@ -91,6 +97,9 @@
     "RichiestaAnalisi": {
       "$ref": "#/$defs/RichiestaAnalisi"
     },
+    "RichiestaMessaggioChat": {
+      "$ref": "#/$defs/RichiestaMessaggioChat"
+    },
     "RichiestaPlayground": {
       "$ref": "#/$defs/RichiestaPlayground"
     },
@@ -103,8 +112,14 @@
     "RiepilogoArmadio": {
       "$ref": "#/$defs/RiepilogoArmadio"
     },
+    "RispostaChat": {
+      "$ref": "#/$defs/RispostaChat"
+    },
     "RispostaSuggerimenti": {
       "$ref": "#/$defs/RispostaSuggerimenti"
+    },
+    "RuoloChat": {
+      "$ref": "#/$defs/RuoloChat"
     },
     "SlotAvatar": {
       "$ref": "#/$defs/SlotAvatar"
@@ -687,6 +702,22 @@
       "title": "ElencoCapi",
       "type": "object"
     },
+    "ElencoMessaggiChat": {
+      "additionalProperties": false,
+      "properties": {
+        "messaggi": {
+          "items": {
+            "$ref": "#/$defs/MessaggioChat"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "messaggi"
+      ],
+      "title": "ElencoMessaggiChat",
+      "type": "object"
+    },
     "EsecuzionePlayground": {
       "additionalProperties": false,
       "description": "Riga dello storico: serve a confrontare provider a distanza di giorni.",
@@ -1131,6 +1162,39 @@
         }
       },
       "title": "LetturaCapo",
+      "type": "object"
+    },
+    "MessaggioChat": {
+      "additionalProperties": false,
+      "description": "Un turno della chat continua con lo stilista.\n\nPersiste per utente: non è una sessione che si azzera chiudendo l'app, è\nla stessa conversazione che si riprende da dove l'ha lasciata. `testo` sul\nturno di Tela è la risposta grezza del modello (JSON): serve a ridargliela\ncome memoria al turno successivo. A schermo si mostra `suggerimenti`, non\n`testo`.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "ruolo": {
+          "$ref": "#/$defs/RuoloChat"
+        },
+        "testo": {
+          "type": "string"
+        },
+        "suggerimenti": {
+          "items": {
+            "$ref": "#/$defs/Suggerimento"
+          },
+          "type": "array"
+        },
+        "creato_il": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "ruolo",
+        "testo",
+        "creato_il"
+      ],
+      "title": "MessaggioChat",
       "type": "object"
     },
     "Meteo": {
@@ -1580,6 +1644,35 @@
       "title": "RichiestaAnalisi",
       "type": "object"
     },
+    "RichiestaMessaggioChat": {
+      "additionalProperties": false,
+      "properties": {
+        "testo": {
+          "type": "string"
+        },
+        "meteo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Meteo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "agenda": {
+          "items": {
+            "$ref": "#/$defs/ImpegnoAgenda"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "testo"
+      ],
+      "title": "RichiestaMessaggioChat",
+      "type": "object"
+    },
     "RichiestaPlayground": {
       "additionalProperties": false,
       "properties": {
@@ -1755,6 +1848,39 @@
       "title": "RiepilogoArmadio",
       "type": "object"
     },
+    "RispostaChat": {
+      "additionalProperties": false,
+      "properties": {
+        "utente": {
+          "$ref": "#/$defs/MessaggioChat"
+        },
+        "tela": {
+          "$ref": "#/$defs/MessaggioChat"
+        },
+        "contesto": {
+          "$ref": "#/$defs/ContestoSuggerimento"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "modello": {
+          "type": "string"
+        },
+        "latenza_ms": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "utente",
+        "tela",
+        "contesto",
+        "provider",
+        "modello",
+        "latenza_ms"
+      ],
+      "title": "RispostaChat",
+      "type": "object"
+    },
     "RispostaSuggerimenti": {
       "additionalProperties": false,
       "properties": {
@@ -1786,6 +1912,14 @@
       ],
       "title": "RispostaSuggerimenti",
       "type": "object"
+    },
+    "RuoloChat": {
+      "enum": [
+        "utente",
+        "tela"
+      ],
+      "title": "RuoloChat",
+      "type": "string"
     },
     "SlotAvatar": {
       "description": "Le cinque posizioni che l'avatar sa vestire.\n\nI valori coincidono con le chiavi di `mannequin.setOutfit()`.",

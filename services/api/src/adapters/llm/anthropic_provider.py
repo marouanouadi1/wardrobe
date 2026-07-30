@@ -8,11 +8,11 @@ non a reggere la produzione.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import anthropic
 from anthropic import omit
-from anthropic.types import TextBlock
+from anthropic.types import MessageParam, TextBlock
 
 from adapters.llm.base import chiave, cronometra
 from domain.errors import ErroreProvider
@@ -95,6 +95,12 @@ class ProviderAnthropic:
         ]
         contenuto.append({"type": "text", "text": richiesta.prompt})
 
+        messaggi: list[dict[str, Any]] = [
+            {"role": "user" if turno.ruolo == "utente" else "assistant", "content": turno.testo}
+            for turno in richiesta.cronologia
+        ]
+        messaggi.append({"role": "user", "content": contenuto})
+
         # `omit` è il sentinella dell'SDK per «non mandare affatto questo
         # parametro». Serve perché mandare `temperature=None` non è la stessa
         # cosa che ometterlo, e sui modelli che l'hanno rimosso la differenza
@@ -110,7 +116,7 @@ class ProviderAnthropic:
                 lambda: client.messages.create(
                     model=richiesta.modello,
                     max_tokens=richiesta.max_token,
-                    messages=[{"role": "user", "content": contenuto}],
+                    messages=cast(list[MessageParam], messaggi),
                     system=richiesta.system or omit,
                     temperature=(
                         omit if richiesta.modello in SENZA_TEMPERATURA else richiesta.temperatura

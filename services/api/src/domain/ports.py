@@ -8,16 +8,18 @@ del dominio istantanei e senza AWS.
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Protocol, runtime_checkable
+from typing import Literal, Protocol, runtime_checkable
 
 from pydantic import Field
 
 from domain.models import (
     Capo,
     EsecuzionePlayground,
+    MessaggioChat,
     ModelloDisponibile,
     ModelloTela,
     Outfit,
+    PresetPrompt,
     Profilo,
     UploadFirmato,
     UsoToken,
@@ -29,17 +31,31 @@ class ImmagineLlm(ModelloTela):
     base64: str
 
 
+class MessaggioLlm(ModelloTela):
+    """Un turno già avvenuto di una conversazione, da rimandare al modello.
+
+    Serve solo alla chat vera: i due job del playground restano one-shot e non
+    la valorizzano mai.
+    """
+
+    ruolo: Literal["utente", "assistente"]
+    testo: str
+
+
 class RichiestaLlm(ModelloTela):
     """Una chiamata a un modello, nella forma minima che ci serve.
 
-    Deliberatamente povera: nessun concetto di conversazione, nessun tool
-    calling. I due job di Tela sono one-shot, e ogni feature in più qui è una
-    feature da reimplementare per ogni provider nuovo.
+    Deliberatamente povera: nessun tool calling. I due job di Tela sono
+    one-shot, e ogni feature in più qui è una feature da reimplementare per
+    ogni provider nuovo. `cronologia` è l'unica eccezione: la chat continua ha
+    bisogno di memoria, e passarla come turni già formati costa meno, a ogni
+    provider, che reinventare un concetto di conversazione per ciascuno.
     """
 
     modello: str
     prompt: str
     system: str | None = None
+    cronologia: list[MessaggioLlm] = Field(default_factory=list)
     immagini: list[ImmagineLlm] = Field(default_factory=list)
     temperatura: float = 0.4
     max_token: int = 1200
@@ -125,6 +141,18 @@ class RepositoryArmadio(Protocol):
     def storico_playground(self, limite: int = 20) -> list[EsecuzionePlayground]: ...
 
     def salva_esecuzione_playground(self, esecuzione: EsecuzionePlayground) -> None: ...
+
+    def leggi_preset(self, preset_id: str) -> PresetPrompt | None:
+        """`None` se non è mai stato salvato: il chiamante ricade sul default di fabbrica."""
+        ...
+
+    def salva_preset(self, preset: PresetPrompt) -> PresetPrompt: ...
+
+    def elenca_messaggi_chat(self, utente_id: str, limite: int = 200) -> list[MessaggioChat]:
+        """La chat continua di un utente, in ordine cronologico. Una sola, non a sessioni."""
+        ...
+
+    def salva_messaggio_chat(self, utente_id: str, messaggio: MessaggioChat) -> MessaggioChat: ...
 
 
 @runtime_checkable

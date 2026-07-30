@@ -15,8 +15,8 @@ import base64
 import os
 
 from domain.errors import AccessoNegato
-from domain.models import RichiestaPlayground
-from domain.playground import PRESETS, esegui, traccia
+from domain.models import PresetPrompt, RichiestaPlayground
+from domain.playground import PRESETS, esegui, preset_effettivo, traccia
 from domain.ports import ImmagineLlm
 from domain.stylist import costruisci_contesto
 from handlers._container import (
@@ -52,8 +52,23 @@ def modelli(_evento: Evento) -> Risposta:
 
 @endpoint
 def preset(_evento: Evento) -> Risposta:
+    """GET /dev/preset — i preset di fabbrica, o l'ultima versione salvata di ciascuno."""
     _controlla_accesso()
-    return ok([p.model_dump(mode="json") for p in PRESETS])
+    effettivi = [preset_effettivo(p.id, repository().leggi_preset(p.id)) for p in PRESETS]
+    return ok([p.model_dump(mode="json") for p in effettivi])
+
+
+@endpoint
+def salva_preset(evento: Evento) -> Risposta:
+    """POST /dev/preset — salva il prompt (e la sua configurazione) come nuovo default.
+
+    Da qui in poi non lo usa solo il playground: la chat vera dello stilista
+    (`handlers.chat`) legge lo stesso preset a ogni messaggio. Modificarlo qui
+    e confermarlo è l'unico modo per cambiarlo senza un deploy.
+    """
+    _controlla_accesso()
+    nuovo = corpo(evento, PresetPrompt)
+    return ok(repository().salva_preset(nuovo))
 
 
 @endpoint
