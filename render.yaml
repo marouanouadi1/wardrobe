@@ -41,8 +41,9 @@ services:
       - key: GOOGLE_API_KEY
         sync: false
 
-  - type: static
+  - type: web
     name: wardrobe-web
+    runtime: static
     rootDir: .
     buildCommand: npm ci && npm run build:web --workspace @wardrobe/mobile
     staticPublishPath: apps/mobile/dist
