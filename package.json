@@ -12,6 +12,8 @@
     "node": ">=22"
   },
   "scripts": {
+    "dev": "bash scripts/dev.sh",
+    "dev:app": "bash scripts/dev.sh --app",
     "mobile": "npm run start --workspace @wardrobe/mobile",
     "mobile:web": "npm run web --workspace @wardrobe/mobile",
     "mobile:android": "npm run android --workspace @wardrobe/mobile",
@@ -25,8 +27,9 @@
     "infra:synth": "npm run synth --workspace @wardrobe/infra",
     "infra:diff": "npm run diff --workspace @wardrobe/infra",
     "infra:deploy": "npm run deploy --workspace @wardrobe/infra",
-    "db:up": "docker compose up -d postgres",
+    "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down",
+    "db:migrate": "docker compose up -d --wait postgres && docker compose exec -T postgres psql -U wardrobe -d wardrobe -f /docker-entrypoint-initdb.d/0001_schema.sql",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
   },

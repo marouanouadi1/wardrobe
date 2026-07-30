@@ -72,16 +72,25 @@ Serve sempre il backend: non esiste più una modalità demo con dati finti.
 
 ```bash
 npm install
-npm run api:sync                    # dipendenze Python (uv)
-npm run db:up                       # Postgres in Docker, per i capi
-npm run api:local                   # API su http://localhost:8787
-npm run mobile                      # oppure: npm run mobile:web
+npm run api:sync     # dipendenze Python (uv) — una volta sola
+npm run dev          # Postgres + API su http://localhost:8787
+npm run mobile       # in un secondo terminale: l'app Expo
 ```
 
+`npm run dev` aspetta che Postgres risponda davvero (l'healthcheck di
+`docker-compose.yml`) prima di avviare l'API, e si ferma con un messaggio
+chiaro se Docker Desktop è spento o se la porta 8787 è già occupata. Con
+**`npm run dev:app`** parte anche l'app nello stesso terminale: le righe
+dell'API sono marcate `[api]` e i tasti di Expo continuano a funzionare,
+perché il terminale resta suo. Ctrl-C ferma API e app; **Postgres resta
+acceso** — `npm run db:down` per spegnerlo. I pezzi restano usabili da soli:
+`npm run db:up` + `npm run api:local`.
+
 Nel `.env` di `services/api` (copiato da `.env.example`) servono almeno
-`ANTHROPIC_API_KEY` e, per far sopravvivere i capi al riavvio invece che
-perderli in memoria, `DATABASE_URL` e `CARTELLA_FOTO` (le foto restano su
-disco — vedi i commenti nel file).
+`ANTHROPIC_API_KEY`. `DATABASE_URL` e `CARTELLA_FOTO` sono già impostate nel
+`.env` d'esempio del progetto: sono la modalità normale, con i capi in
+Postgres e le foto su disco. Commentandole si torna alla memoria volatile, che
+non sopravvive al riavvio.
 
 L'app trova da sola l'indirizzo dell'API: su Expo Go o dev client usa lo
 stesso host a cui si è già collegata per il bundle JS (lo stesso IP del QR
@@ -121,9 +130,11 @@ registro, e nessuna schermata cambia.
 
 | Comando | Cosa fa |
 | --- | --- |
+| `npm run dev` | Postgres + API, con un comando solo |
+| `npm run dev:app` | come sopra, più l'app Expo |
 | `npm run mobile` | avvia l'app Expo |
 | `npm run mobile:web` | l'app nel browser |
-| `npm run api:local` | API in locale, dati in memoria |
+| `npm run api:local` | solo l'API (Postgres già acceso) |
 | `npm run api:test` | 106 test del dominio e degli handler |
 | `npm run api:lint` | ruff + ruff format + mypy strict |
 | `npm run contracts:generate` | rigenera i tipi TypeScript dal backend |
@@ -131,7 +142,9 @@ registro, e nessuna schermata cambia.
 | `npm run typecheck` | tsc su app, contratti e infrastruttura |
 | `npm run infra:synth` | sintetizza i template CloudFormation |
 | `npm run infra:deploy` | deploy (serve un account AWS) |
-| `npm run db:up` | Postgres e MinIO in locale |
+| `npm run db:up` | solo Postgres in Docker |
+| `npm run db:down` | spegne Postgres |
+| `npm run db:migrate` | riapplica lo schema (serve solo su un volume vecchio) |
 
 ## Stato
 
