@@ -47,3 +47,16 @@ class ArchivioS3:
         except Exception as exc:
             raise ErroreDominio(f"foto {chiave} illeggibile: {exc}") from exc
         return oggetto["Body"].read(), oggetto.get("ContentType", "image/jpeg")
+
+    def salva(self, chiave: str, contenuto: bytes, media_type: str) -> None:
+        """Scrive un contenuto derivato (es. la foto scontornata) da dentro la VPC.
+
+        A differenza dell'upload dell'app, qui non serve una firma: il chiamante
+        è la Lambda stessa, non il telefono dell'utente.
+        """
+        try:
+            self._s3.put_object(
+                Bucket=self._bucket, Key=chiave, Body=contenuto, ContentType=media_type
+            )
+        except Exception as exc:
+            raise ErroreDominio(f"impossibile salvare {chiave}: {exc}") from exc

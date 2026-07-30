@@ -173,4 +173,14 @@ describe('api', () => {
       .map((r) => String(r.Properties?.RouteKey))
     assert.deepEqual(senzaAuth, ['GET /salute'])
   })
+
+  it('in dev nessuna rotta ha l\'authorizer: è una prova senza login, di proposito', () => {
+    // `autenticazione: false` esiste solo per `dev` — vedi config.ts. Se
+    // questo test comincia a fallire su staging o produzione, qualcuno ha
+    // esteso il flag oltre l'ambiente per cui era pensato.
+    const template = Template.fromStack(costruisci('dev').api)
+    const rotte = Object.values(template.findResources('AWS::ApiGatewayV2::Route'))
+    const conAuth = rotte.filter((r) => r.Properties?.AuthorizationType === 'JWT')
+    assert.deepEqual(conAuth, [])
+  })
 })

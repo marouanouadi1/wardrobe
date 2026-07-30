@@ -16,6 +16,7 @@ import type {
   EsitoAnalisi,
   EsitoPlayground,
   ModelloDisponibile,
+  NuovoCapoManuale,
   NuovoOutfit,
   Outfit,
   PresetPrompt,
@@ -103,6 +104,9 @@ export const api = {
     return chiama<ElencoCapi>(`/capi${query ? `?${query}` : ''}`)
   },
   leggiCapo: (id: string) => chiama<Capo>(`/capi/${id}`),
+  /** Un capo inserito a mano: nessuna analisi, nessuna pipeline asincrona. */
+  creaCapo: (nuovo: NuovoCapoManuale) =>
+    chiama<Capo>('/capi', { metodo: 'POST', corpo: nuovo }),
   aggiornaCapo: (id: string, modifica: AggiornamentoCapo) =>
     chiama<Capo>(`/capi/${id}`, { metodo: 'PATCH', corpo: modifica }),
   segnaIndossato: (id: string) => chiama<Capo>(`/capi/${id}/indossato`, { metodo: 'POST' }),

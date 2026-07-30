@@ -111,7 +111,9 @@ def richiesta_suggerimento(
     *,
     system_prompt: str | None = None,
     temperatura: float = 0.45,
-    max_token: int = 1200,
+    # Stesso motivo di `richiesta_analisi`: margine per il pensiero acceso di
+    # default su Claude Opus 5, che condivide il tetto con la risposta.
+    max_token: int = 1800,
 ) -> RichiestaLlm:
     return RichiestaLlm(
         modello=modello,

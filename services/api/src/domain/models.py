@@ -131,6 +131,17 @@ class FotoCapo(ModelloTela):
     url: str | None = Field(default=None, description="URL firmato, a vita breve")
     larghezza: int | None = None
     altezza: int | None = None
+    chiave_scontornata: str | None = Field(
+        default=None,
+        description=(
+            "Chiave della stessa foto dopo lo scontorno: soggetto isolato, sfondo "
+            "trasparente. Assente se lo scontorno non è ancora passato o è fallito — "
+            "in quel caso l'app mostra l'originale, mai un buco vuoto."
+        ),
+    )
+    url_scontornata: str | None = Field(
+        default=None, description="URL firmato della foto scontornata"
+    )
 
 
 class AnalisiVisione(ModelloTela):
@@ -163,6 +174,17 @@ class Capo(ModelloTela):
     ultimo_uso: date | None = None
     volte_indossato: int = 0
     analisi: AnalisiVisione | None = None
+    etichette: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Tag liberi dell'utente (es. «lavoro», «da viaggio»): il modello di "
+            "visione non li scrive mai, per questo restano fuori da `LetturaCapo`."
+        ),
+    )
+    appunti: str | None = Field(
+        default=None,
+        description="Nota libera dell'utente sul capo. Mai vista dal modello di visione.",
+    )
     creato_il: datetime
     aggiornato_il: datetime
 
@@ -182,6 +204,7 @@ class CapoSintetico(ModelloTela):
     materiale: str | None = None
     stagione: Stagione | None = None
     stato: StatoCapo = StatoCapo.PULITO
+    etichette: list[str] = Field(default_factory=list)
 
 
 class LetturaCapo(ModelloTela):
@@ -392,6 +415,36 @@ class AggiornamentoCapo(ModelloTela):
     nome: str | None = None
     preferito: bool | None = None
     stato: StatoCapo | None = None
+    # `None` vuol dire «non toccare»: per svuotare le etichette manda una lista
+    # vuota esplicita, per svuotare gli appunti manda una stringa vuota.
+    etichette: list[str] | None = None
+    appunti: str | None = None
+
+
+class NuovoCapoManuale(ModelloTela):
+    """Un capo inserito a mano, senza passare dal modello di visione.
+
+    Nessuna `AnalisiVisione`: un capo che non è mai stato letto da un modello
+    non ha confidenze da mostrare, e non deve fingere di averle. Tipo e
+    colore restano obbligatori — sono gli stessi due attributi che
+    `ATTRIBUTI_INDISPENSABILI` chiede alla lettura automatica: senza tipo il
+    capo non ha uno slot per l'avatar, senza colore il manichino di oggi non
+    ha niente da tingere.
+    """
+
+    nome: str
+    tipo: TipoCapo
+    colore: Colore
+    chiave_foto: str
+    brand: str | None = None
+    sottotipo: str | None = None
+    materiale: str | None = None
+    fantasia: str | None = None
+    stagione: Stagione | None = None
+    vestibilita: str | None = None
+    lavaggio: str | None = None
+    etichette: list[str] = Field(default_factory=list)
+    appunti: str | None = None
 
 
 class RichiestaSuggerimenti(ModelloTela):

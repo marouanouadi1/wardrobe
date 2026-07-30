@@ -66,6 +66,7 @@ RISPOSTE = (
 RICHIESTE = (
     models.Vestizione,
     models.NuovoOutfit,
+    models.NuovoCapoManuale,
     models.Meteo,
     models.ImpegnoAgenda,
     models.PreferenzeStile,

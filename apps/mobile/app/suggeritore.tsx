@@ -12,7 +12,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ScrollView, TextInput, View } from 'react-native'
 import { useArmadio } from '../src/dati/archivio'
-import { capiDiVestizione } from '../src/dati/dominio'
+import { capiDiVestizione, fotoDaMostrare } from '../src/dati/dominio'
 import { colori, linee, ombre, raggi, spazi } from '../src/tema/tokens'
 import {
   BadgeIa,
@@ -116,10 +116,10 @@ export default function Suggeritore() {
                     ...ombre.scheda,
                   }}
                 >
-                  {capi[0]?.foto.url ? (
+                  {capi[0] && fotoDaMostrare(capi[0]) ? (
                     <View>
                       <Image
-                        source={{ uri: capi[0].foto.url }}
+                        source={{ uri: fotoDaMostrare(capi[0]) }}
                         style={{ width: '100%', height: 230, backgroundColor: capi[0].colore.hex }}
                         contentFit="cover"
                         contentPosition={{ top: '20%', left: '50%' }}
@@ -137,7 +137,7 @@ export default function Suggeritore() {
                       {capi.map((capo) => (
                         <Image
                           key={capo.id}
-                          source={{ uri: capo.foto.url ?? undefined }}
+                          source={{ uri: fotoDaMostrare(capo) }}
                           style={{
                             width: 52,
                             height: 64,

@@ -11,6 +11,7 @@ sono gli scatti dell'utente.
 from __future__ import annotations
 
 import base64
+import os
 from datetime import UTC, date, datetime, timedelta
 
 import httpx
@@ -40,6 +41,11 @@ from domain.wardrobe import slot_da_tipo
 _PIXEL = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAX+j5XQAAAABJRU5ErkJggg=="
 )
+
+
+def _porta_locale() -> str:
+    """La stessa porta su cui ascolta `local_server.py` (default 8787)."""
+    return os.environ.get("PORTA", "8787")
 
 
 def _foto_pexels(identificativo: int) -> str:
@@ -155,14 +161,29 @@ class ArchivioInMemoria:
         self._oggetti[chiave] = _PIXEL
         return UploadFirmato(
             chiave=chiave,
-            url=f"http://localhost:9000/finto/{chiave}",
+            # In locale non c'è S3: la PUT vera dell'app atterra su una rotta
+            # di `local_server.py` che scrive nel dizionario qui sotto — vedi
+            # `scrivi()`. Senza questo, la PUT finiva su un indirizzo che il
+            # backend non rileggeva mai, e `leggi()` restituiva il pixel
+            # finto anche per foto vere.
+            url=f"http://localhost:{_porta_locale()}/dev/foto/{chiave}",
             intestazioni={"content-type": content_type},
             scade_in_s=scade_in_s,
         )
 
     def url_lettura(self, chiave: str, scade_in_s: int = 3600) -> str:
         del scade_in_s
-        return f"http://localhost:9000/finto/{chiave}"
+        return f"http://localhost:{_porta_locale()}/dev/foto/{chiave}"
+
+    def salva(self, chiave: str, contenuto: bytes, media_type: str) -> None:
+        """Riceve il corpo della PUT vera dell'app, o una foto scontornata.
+
+        `media_type` è ignorato qui (`leggi()` restituisce sempre
+        «image/png» per gli oggetti caricati): in memoria non c'è un posto
+        dove tenerlo per chiave, ed è un dettaglio che conta solo per S3.
+        """
+        del media_type
+        self._oggetti[chiave] = contenuto
 
     def leggi(self, chiave: str) -> tuple[bytes, str]:
         caricata = self._oggetti.get(chiave)

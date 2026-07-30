@@ -10,6 +10,7 @@
 import type {
   AttributoCapo,
   Capo,
+  NuovoCapoManuale,
   OrigineOutfit,
   Outfit,
   Profilo,
@@ -51,6 +52,7 @@ interface Stato {
 type Azione =
   | { tipo: 'caricato'; capi: Capo[]; outfit: Outfit[]; profilo: Profilo | null }
   | { tipo: 'capoAggiornato'; capo: Capo }
+  | { tipo: 'capoCreato'; capo: Capo }
   | { tipo: 'outfitAggiunto'; outfit: Outfit }
   | { tipo: 'suggerimenti'; suggerimenti: Suggerimento[] }
   | { tipo: 'vestizione'; vestizione: Vestizione }
@@ -77,6 +79,8 @@ function riduci(stato: Stato, azione: Azione): Stato {
         ...stato,
         capi: stato.capi.map((capo) => (capo.id === azione.capo.id ? azione.capo : capo)),
       }
+    case 'capoCreato':
+      return { ...stato, capi: [azione.capo, ...stato.capi] }
     case 'outfitAggiunto':
       return { ...stato, outfit: [azione.outfit, ...stato.outfit] }
     case 'suggerimenti':
@@ -100,6 +104,11 @@ function riduci(stato: Stato, azione: Azione): Stato {
 interface Archivio extends Stato {
   indice: Map<string, Capo>
   correggi: (capoId: string, attributo: AttributoCapo, valore: unknown) => Promise<void>
+  /** Un capo inserito a mano: nessuna analisi, entra subito in armadio. */
+  creaCapoManuale: (nuovo: NuovoCapoManuale) => Promise<void>
+  /** `undefined` lascia il campo com'è; una lista/stringa lo sostituisce. */
+  aggiornaEtichette: (capoId: string, etichette: string[]) => Promise<void>
+  aggiornaAppunti: (capoId: string, appunti: string) => Promise<void>
   cambiaStato: (capoId: string, stato: Capo['stato']) => Promise<void>
   cambiaPreferito: (capoId: string) => Promise<void>
   indossaOggi: (capoId: string) => Promise<void>
@@ -203,6 +212,61 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       await applica(locale, () =>
         api.aggiornaCapo(capoId, { correzioni: { [attributo]: valore } as never }),
       )
+    },
+    [applica, indice],
+  )
+
+  const creaCapoManuale = useCallback<Archivio['creaCapoManuale']>(async (nuovo) => {
+    if (MODALITA_DEMO) {
+      const adesso = new Date().toISOString()
+      const capo: Capo = {
+        id: `locale-${Date.now()}`,
+        nome: nuovo.nome,
+        tipo: nuovo.tipo,
+        slot: slotDiTipo(nuovo.tipo),
+        colore: nuovo.colore,
+        foto: { chiave: nuovo.chiave_foto },
+        brand: nuovo.brand ?? null,
+        sottotipo: nuovo.sottotipo ?? null,
+        materiale: nuovo.materiale ?? null,
+        fantasia: nuovo.fantasia ?? null,
+        stagione: nuovo.stagione ?? null,
+        vestibilita: nuovo.vestibilita ?? null,
+        lavaggio: nuovo.lavaggio ?? null,
+        stato: 'pulito',
+        preferito: false,
+        ultimo_uso: null,
+        volte_indossato: 0,
+        analisi: null,
+        etichette: nuovo.etichette ?? [],
+        appunti: nuovo.appunti ?? null,
+        creato_il: adesso,
+        aggiornato_il: adesso,
+      }
+      invia({ tipo: 'capoCreato', capo })
+      return
+    }
+    // Nessun ottimismo qui: senza un id vero non c'è nulla da mostrare finché
+    // il backend non risponde, a differenza di una correzione su un capo che
+    // esiste già.
+    const capo = await api.creaCapo(nuovo)
+    invia({ tipo: 'capoCreato', capo })
+  }, [])
+
+  const aggiornaEtichette = useCallback<Archivio['aggiornaEtichette']>(
+    async (capoId, etichette) => {
+      const capo = indice.get(capoId)
+      if (!capo) return
+      await applica({ ...capo, etichette }, () => api.aggiornaCapo(capoId, { etichette }))
+    },
+    [applica, indice],
+  )
+
+  const aggiornaAppunti = useCallback<Archivio['aggiornaAppunti']>(
+    async (capoId, appunti) => {
+      const capo = indice.get(capoId)
+      if (!capo) return
+      await applica({ ...capo, appunti }, () => api.aggiornaCapo(capoId, { appunti }))
     },
     [applica, indice],
   )
@@ -362,6 +426,9 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       ...stato,
       indice,
       correggi,
+      creaCapoManuale,
+      aggiornaEtichette,
+      aggiornaAppunti,
       cambiaStato,
       cambiaPreferito,
       indossaOggi,
@@ -378,6 +445,9 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       stato,
       indice,
       correggi,
+      creaCapoManuale,
+      aggiornaEtichette,
+      aggiornaAppunti,
       cambiaStato,
       cambiaPreferito,
       indossaOggi,

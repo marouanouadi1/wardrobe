@@ -106,6 +106,34 @@ export function capiDiVestizione(vestizione: Vestizione, capi: Map<string, Capo>
     .filter((capo): capo is Capo => Boolean(capo))
 }
 
+/**
+ * Una manciata di colori comuni: più veloce che digitare un esadecimale a
+ * mano, per il form manuale e per la correzione di un colore letto male.
+ */
+export const PALETTE_COLORI = [
+  { nome: 'Bianco', hex: '#F7F4EF' },
+  { nome: 'Nero', hex: '#1C1C21' },
+  { nome: 'Grigio', hex: '#8A8A8E' },
+  { nome: 'Panna', hex: '#E7DFD2' },
+  { nome: 'Blu', hex: '#3B5A80' },
+  { nome: 'Indaco', hex: '#46536B' },
+  { nome: 'Verde', hex: '#5B6B4F' },
+  { nome: 'Rosso', hex: '#A6392C' },
+  { nome: 'Cammello', hex: '#A9805A' },
+  { nome: 'Rosa', hex: '#D9A9A0' },
+] as const
+
+/**
+ * La foto da mostrare: quella scontornata se c'è, altrimenti l'originale.
+ *
+ * Uno sfondo trasparente non è sempre garantito — il servizio di scontorno
+ * può non essere configurato o può fallire (vedi `handlers/analisi.py`) — e
+ * in quel caso l'app deve comunque mostrare qualcosa, mai un riquadro vuoto.
+ */
+export function fotoDaMostrare(capo: Capo): string | undefined {
+  return capo.foto.url_scontornata ?? capo.foto.url ?? undefined
+}
+
 /** «3 giorni», «ieri», «4 mesi»: come lo scrive il design. */
 export function quandoUsato(iso: string | null | undefined): string {
   if (!iso) return 'mai usato'

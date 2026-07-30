@@ -82,6 +82,24 @@ class ArchivioFoto(Protocol):
         """Restituisce (contenuto, media_type)."""
         ...
 
+    def salva(self, chiave: str, contenuto: bytes, media_type: str) -> None:
+        """Scrive un contenuto derivato (es. la foto scontornata), non caricato dall'app."""
+        ...
+
+
+@runtime_checkable
+class ServizioScontorno(Protocol):
+    """Isola il capo dallo sfondo. Un provider esterno, quasi sempre.
+
+    Vedi docs/adr/0004: è il passo che precede la lettura del modello di
+    visione, non un servizio a parte — un capo già ritagliato è anche una foto
+    più facile da leggere.
+    """
+
+    def scontorna(self, contenuto: bytes, media_type: str) -> bytes:
+        """Restituisce un PNG con lo sfondo trasparente."""
+        ...
+
 
 @runtime_checkable
 class RepositoryArmadio(Protocol):

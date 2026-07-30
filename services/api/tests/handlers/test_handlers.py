@@ -74,6 +74,47 @@ class TestCapi:
         risposta = capi.leggi(evento(), None)
         assert risposta["statusCode"] == 422
 
+    def test_crea_un_capo_a_mano(self):
+        risposta = capi.crea(
+            evento(
+                corpo={
+                    "nome": "Camicia in lino",
+                    "tipo": "top",
+                    "colore": {"nome": "Panna", "hex": "#E7DFD2"},
+                    "chiave_foto": "capi/demo/manuale.jpg",
+                }
+            ),
+            None,
+        )
+        assert risposta["statusCode"] == 201
+        dati = corpo_di(risposta)
+        assert dati["nome"] == "Camicia in lino"
+        assert dati["slot"] == "top"
+        # `ok()` serializza con `exclude_none=True`: un capo senza analisi non
+        # ha nemmeno la chiave, non la ha a `null`.
+        assert "analisi" not in dati
+        # È subito in armadio: nessun secondo passo, nessuna analisi asincrona.
+        assert corpo_di(capi.elenca(evento(), None))["totale"] == 13
+
+    def test_un_capo_a_mano_senza_tipo_e_un_422(self):
+        risposta = capi.crea(
+            evento(corpo={"nome": "Senza tipo", "colore": {"nome": "Nero", "hex": "#111111"}}), None
+        )
+        assert risposta["statusCode"] == 422
+
+    def test_aggiorna_etichette_e_appunti(self):
+        risposta = capi.aggiorna(
+            evento(
+                percorso={"capoId": "t4"},
+                corpo={"etichette": ["da lavoro", "comodo"], "appunti": "regalo"},
+            ),
+            None,
+        )
+        assert risposta["statusCode"] == 200
+        dati = corpo_di(risposta)
+        assert dati["etichette"] == ["da lavoro", "comodo"]
+        assert dati["appunti"] == "regalo"
+
     def test_corregge_un_attributo(self):
         risposta = capi.aggiorna(
             evento(

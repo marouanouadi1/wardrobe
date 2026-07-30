@@ -18,7 +18,26 @@ from urllib.parse import parse_qs, urlparse
 
 os.environ.setdefault("DEV_MODE", "1")
 
-from handlers import analisi, capi, foto, health, outfit, playground, profilo, suggerimenti
+# Un file `.env` in questa cartella (services/api/.env) è più facile da
+# spiegare a chi non ha mai usato un terminale di una variabile d'ambiente di
+# sistema: si scrive con il Blocco Note e basta. Va caricato prima di
+# importare gli handler, perché leggono le variabili («PROVIDER_VISIONE» e
+# simili) al momento dell'import, non dentro una funzione.
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from handlers import (  # noqa: E402
+    analisi,
+    capi,
+    foto,
+    health,
+    outfit,
+    playground,
+    profilo,
+    suggerimenti,
+)
+from handlers._container import archivio_foto  # noqa: E402
 
 Handler = Callable[[dict[str, Any], Any], dict[str, Any]]
 
@@ -26,6 +45,7 @@ ROTTE: list[tuple[str, re.Pattern[str], Handler]] = [
     ("GET", re.compile(r"^/salute$"), health.salute),
     ("POST", re.compile(r"^/foto/upload$"), foto.upload),
     ("GET", re.compile(r"^/capi$"), capi.elenca),
+    ("POST", re.compile(r"^/capi$"), capi.crea),
     ("GET", re.compile(r"^/capi/(?P<capoId>[^/]+)$"), capi.leggi),
     ("PATCH", re.compile(r"^/capi/(?P<capoId>[^/]+)$"), capi.aggiorna),
     ("POST", re.compile(r"^/capi/(?P<capoId>[^/]+)/indossato$"), capi.indossa),
@@ -44,6 +64,13 @@ ROTTE: list[tuple[str, re.Pattern[str], Handler]] = [
     ("GET", re.compile(r"^/dev/playground/storico$"), playground.storico),
     ("POST", re.compile(r"^/dev/playground$"), playground.esegui_test),
 ]
+
+# La foto viaggia come bytes grezzi, non come JSON: questa rotta sta fuori dal
+# meccanismo di `ROTTE` sopra, che decodifica sempre il corpo come stringa.
+# Serve a completare `ArchivioInMemoria.url_upload()`/`url_lettura()`: senza
+# nessun S3 in locale, la PUT vera dell'app e la GET che l'app fa per mostrare
+# la foto passano di qui.
+_PATTERN_DEV_FOTO = re.compile(r"^/dev/foto/(?P<chiave>.+)$")
 
 
 class Ponte(BaseHTTPRequestHandler):
@@ -87,7 +114,39 @@ class Ponte(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(corpo)
 
+    def _dev_foto_put(self, chiave: str) -> None:
+        """PUT /dev/foto/{chiave} — la PUT vera dell'app, corpo grezzo (JPEG/PNG)."""
+        from adapters.memory import ArchivioInMemoria
+
+        lunghezza = int(self.headers.get("content-length") or 0)
+        contenuto = self.rfile.read(lunghezza) if lunghezza else b""
+        content_type = self.headers.get("content-type") or "application/octet-stream"
+        archivio = archivio_foto()
+        if isinstance(archivio, ArchivioInMemoria):
+            archivio.salva(chiave, contenuto, content_type)
+        self._rispondi({"statusCode": 204, "body": ""})
+
+    def _dev_foto_get(self, chiave: str) -> None:
+        """GET /dev/foto/{chiave} — l'app la legge per mostrare la miniatura."""
+        from domain.errors import ErroreDominio
+
+        try:
+            contenuto, media_type = archivio_foto().leggi(chiave)
+        except ErroreDominio:
+            self._rispondi({"statusCode": 404, "body": json.dumps({"errore": "foto_inesistente"})})
+            return
+        self.send_response(200)
+        self.send_header("content-type", media_type)
+        self.send_header("access-control-allow-origin", "*")
+        self.send_header("content-length", str(len(contenuto)))
+        self.end_headers()
+        self.wfile.write(contenuto)
+
     def do_GET(self) -> None:
+        trovato = _PATTERN_DEV_FOTO.match(urlparse(self.path).path)
+        if trovato:
+            self._dev_foto_get(trovato.group("chiave"))
+            return
         self._instrada("GET")
 
     def do_POST(self) -> None:
@@ -97,6 +156,10 @@ class Ponte(BaseHTTPRequestHandler):
         self._instrada("PATCH")
 
     def do_PUT(self) -> None:
+        trovato = _PATTERN_DEV_FOTO.match(urlparse(self.path).path)
+        if trovato:
+            self._dev_foto_put(trovato.group("chiave"))
+            return
         self._instrada("PUT")
 
     def do_OPTIONS(self) -> None:

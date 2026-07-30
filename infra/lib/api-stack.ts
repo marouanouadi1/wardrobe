@@ -51,6 +51,7 @@ const ROTTE: readonly Rotta[] = [
   { metodo: HttpMethod.POST, percorso: '/foto/upload', handler: 'handlers.foto.upload' },
 
   { metodo: HttpMethod.GET, percorso: '/capi', handler: 'handlers.capi.elenca' },
+  { metodo: HttpMethod.POST, percorso: '/capi', handler: 'handlers.capi.crea' },
   { metodo: HttpMethod.GET, percorso: '/capi/{capoId}', handler: 'handlers.capi.leggi' },
   { metodo: HttpMethod.PATCH, percorso: '/capi/{capoId}', handler: 'handlers.capi.aggiorna' },
   {
@@ -174,7 +175,7 @@ export class ApiStack extends Stack {
         path: rotta.percorso,
         methods: [rotta.metodo],
         integration: new HttpLambdaIntegration(`Int${nomeFunzione}${rotta.metodo}`, funzione),
-        authorizer: rotta.pubblica ? undefined : authorizer,
+        authorizer: rotta.pubblica || !props.env2.autenticazione ? undefined : authorizer,
       })
     }
 

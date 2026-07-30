@@ -135,7 +135,10 @@ def richiesta_analisi(
     *,
     system_prompt: str | None = None,
     temperatura: float = 0.2,
-    max_token: int = 900,
+    # Alzato da 900: su Claude Opus 5 il pensiero è acceso di default anche
+    # omettendo il parametro, e `max_tokens` è un tetto su pensiero+risposta
+    # insieme — con 900 il primo JSON vero rischiava di arrivare troncato.
+    max_token: int = 1500,
 ) -> RichiestaLlm:
     """Compone la chiamata. Temperatura bassa: qui non serve fantasia."""
     return RichiestaLlm(
@@ -229,6 +232,7 @@ def crea_capo(
     *,
     capo_id: str,
     chiave_foto: str,
+    chiave_scontornata: str | None = None,
     provider: str,
     modello: str,
     adesso: datetime,
@@ -253,7 +257,7 @@ def crea_capo(
         tipo=pulita.tipo,
         slot=slot_da_tipo(pulita.tipo),
         colore=pulita.colore,
-        foto=FotoCapo(chiave=chiave_foto),
+        foto=FotoCapo(chiave=chiave_foto, chiave_scontornata=chiave_scontornata),
         sottotipo=pulita.sottotipo,
         materiale=pulita.materiale,
         fantasia=pulita.fantasia,

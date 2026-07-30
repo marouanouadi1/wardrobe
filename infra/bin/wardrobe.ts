@@ -56,9 +56,14 @@ class SegretiStack extends Stack {
     super(app, nome('Segreti'), { env })
     this.segretoProvider = new Secret(this, 'ChiaviProvider', {
       secretName: prefisso(env2, 'chiavi-provider'),
-      description: 'Chiavi API dei provider LLM: ANTHROPIC_API_KEY, OPENAI_API_KEY, ...',
+      description:
+        'Chiavi dei provider: ANTHROPIC_API_KEY (visione, stilista), OPENAI_API_KEY, FAL_KEY (scontorno)',
       generateSecretString: {
-        secretStringTemplate: JSON.stringify({ ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '' }),
+        secretStringTemplate: JSON.stringify({
+          ANTHROPIC_API_KEY: '',
+          OPENAI_API_KEY: '',
+          FAL_KEY: '',
+        }),
         generateStringKey: 'segnaposto',
       },
     })

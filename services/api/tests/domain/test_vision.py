@@ -139,6 +139,22 @@ class TestCreaCapo:
         with pytest.raises(LetturaNonValida, match="colore dominante"):
             self._crea(grezzo)
 
+    def test_porta_la_chiave_scontornata_se_presente(self):
+        capo = crea_capo(
+            interpreta_lettura(json.dumps(LETTURA_BUONA)),
+            capo_id="c1",
+            chiave_foto="capi/demo/c1.jpg",
+            chiave_scontornata="capi/demo/c1.jpg-scontornata",
+            provider="finto",
+            modello="finto-1",
+            adesso=ADESSO,
+        )
+        assert capo.foto.chiave_scontornata == "capi/demo/c1.jpg-scontornata"
+
+    def test_senza_scontorno_la_chiave_resta_vuota(self):
+        capo = self._crea(LETTURA_BUONA)
+        assert capo.foto.chiave_scontornata is None
+
 
 class TestRichiestaAnalisi:
     def test_porta_immagine_schema_e_temperatura_bassa(self):

@@ -9,11 +9,18 @@ from domain.models import (
     Capo,
     ElencoCapi,
     FiltroArmadio,
+    NuovoCapoManuale,
     StatoCapo,
     TipoCapo,
 )
-from domain.wardrobe import correggi_attributo, filtra, riepilogo, segna_indossato
-from handlers._container import archivio_foto, orologio, repository
+from domain.wardrobe import (
+    correggi_attributo,
+    crea_capo_manuale,
+    filtra,
+    riepilogo,
+    segna_indossato,
+)
+from handlers._container import archivio_foto, generatore_id, orologio, repository
 from handlers._http import Evento, Risposta, corpo, endpoint, ok, parametro, query, utente_id
 
 
@@ -29,10 +36,18 @@ def _filtro_da_query(evento: Evento) -> FiltroArmadio:
 
 def _con_url(capo: Capo) -> Capo:
     """La foto viaggia come URL firmato a vita breve, mai come bucket pubblico."""
+    chiave_scontornata = capo.foto.chiave_scontornata
     return capo.model_copy(
         update={
             "foto": capo.foto.model_copy(
-                update={"url": archivio_foto().url_lettura(capo.foto.chiave)}
+                update={
+                    "url": archivio_foto().url_lettura(capo.foto.chiave),
+                    "url_scontornata": (
+                        archivio_foto().url_lettura(chiave_scontornata)
+                        if chiave_scontornata
+                        else None
+                    ),
+                }
             )
         }
     )
@@ -51,6 +66,15 @@ def leggi(evento: Evento) -> Risposta:
     if capo is None:
         raise CapoNonTrovato(capo_id)
     return ok(_con_url(capo))
+
+
+@endpoint
+def crea(evento: Evento) -> Risposta:
+    """POST /capi — un capo inserito a mano, senza passare dal modello di visione."""
+    utente = utente_id(evento)
+    nuovo = corpo(evento, NuovoCapoManuale)
+    capo = crea_capo_manuale(nuovo, capo_id=generatore_id().nuovo(), adesso=orologio().adesso())
+    return ok(_con_url(repository().salva_capo(utente, capo)), 201)
 
 
 @endpoint
@@ -74,6 +98,10 @@ def aggiorna(evento: Evento) -> Risposta:
         capo = capo.model_copy(update={"stato": modifica.stato, "aggiornato_il": adesso})
     if modifica.nome is not None:
         capo = capo.model_copy(update={"nome": modifica.nome, "aggiornato_il": adesso})
+    if modifica.etichette is not None:
+        capo = capo.model_copy(update={"etichette": modifica.etichette, "aggiornato_il": adesso})
+    if modifica.appunti is not None:
+        capo = capo.model_copy(update={"appunti": modifica.appunti, "aggiornato_il": adesso})
 
     return ok(_con_url(repository().salva_capo(utente, capo)))
 

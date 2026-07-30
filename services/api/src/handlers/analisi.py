@@ -8,6 +8,7 @@ insieme i due pezzi, con retry sul primo. Vedi docs/adr/0001.
 from __future__ import annotations
 
 import base64
+import logging
 import os
 from typing import Any
 
@@ -103,15 +104,34 @@ def stato(evento: Evento) -> Risposta:
 
 
 def analizza(evento: dict[str, Any], _contesto: Any = None) -> dict[str, Any]:
-    """Task 1 — legge la foto e interroga il modello di visione.
+    """Task 1 — scontorna (se configurato), legge la foto, interroga il modello.
 
     Nessuna VPC, nessun accesso al database: solo S3 (via VPC endpoint gateway)
-    e HTTPS verso il provider. Se il provider è lento o rifiuta, ritenta Step
+    e HTTPS verso i provider. Se un provider è lento o rifiuta, ritenta Step
     Functions, non l'utente.
     """
     from adapters.llm.registry import provider_per_nome
+    from handlers._container import servizio_scontorno
 
     contenuto, media_type = archivio_foto().leggi(evento["chiave_foto"])
+
+    # Lo scontorno è un miglioramento, non un requisito: vedi docs/adr/0004,
+    # è il passo naturale prima della lettura — un capo già isolato dallo
+    # sfondo è anche una foto più facile da leggere per il modello. Ma
+    # provare l'app non deve dipendere dall'avere già una seconda chiave
+    # oltre a quella del provider di visione, quindi se non è configurato o
+    # fallisce si prosegue sulla foto originale.
+    chiave_scontornata: str | None = None
+    scontorno = servizio_scontorno()
+    if scontorno is not None:
+        try:
+            scontornata = scontorno.scontorna(contenuto, media_type)
+            chiave_scontornata = f"{evento['chiave_foto']}-scontornata"
+            archivio_foto().salva(chiave_scontornata, scontornata, "image/png")
+            contenuto, media_type = scontornata, "image/png"
+        except ErroreDominio as exc:
+            logging.getLogger("wardrobe").warning("scontorno non riuscito: %s", exc)
+
     immagine = ImmagineLlm(
         media_type=media_type, base64=base64.b64encode(contenuto).decode("ascii")
     )
@@ -126,6 +146,7 @@ def analizza(evento: dict[str, Any], _contesto: Any = None) -> dict[str, Any]:
         "modello": modello,
         "lettura": lettura.model_dump(mode="json"),
         "latenza_ms": risposta.latenza_ms,
+        "chiave_scontornata": chiave_scontornata,
     }
 
 
@@ -140,6 +161,7 @@ def salva(evento: dict[str, Any], _contesto: Any = None) -> dict[str, Any]:
         LetturaCapo.model_validate(evento["lettura"]),
         capo_id=generatore_id().nuovo(),
         chiave_foto=evento["chiave_foto"],
+        chiave_scontornata=evento.get("chiave_scontornata"),
         provider=evento["provider"],
         modello=evento["modello"],
         adesso=orologio().adesso(),

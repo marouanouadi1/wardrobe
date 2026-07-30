@@ -13,7 +13,7 @@ import os
 import uuid
 from datetime import UTC, date, datetime
 
-from domain.ports import ArchivioFoto, GeneratoreId, Orologio, RepositoryArmadio
+from domain.ports import ArchivioFoto, GeneratoreId, Orologio, RepositoryArmadio, ServizioScontorno
 
 
 class OrologioDiSistema:
@@ -73,3 +73,19 @@ def archivio_foto() -> ArchivioFoto:
     from adapters.s3 import ArchivioS3
 
     return ArchivioS3(bucket=os.environ["BUCKET_FOTO"])
+
+
+@functools.cache
+def servizio_scontorno() -> ServizioScontorno | None:
+    """`None` se non c'è una chiave: lo scontorno resta un passo facoltativo.
+
+    Senza `FAL_KEY` la pipeline di analisi prosegue sulla foto originale
+    invece di fallire — provare l'app non deve dipendere dall'aver già
+    configurato un secondo provider oltre a quello di visione.
+    """
+    if not os.environ.get("FAL_KEY"):
+        return None
+
+    from adapters.scontorno.fal_provider import ServizioScontornoFal
+
+    return ServizioScontornoFal()

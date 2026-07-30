@@ -10,7 +10,7 @@ import type { Capo } from '@wardrobe/contracts'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { View } from 'react-native'
-import { quandoUsato } from '../dati/dominio'
+import { fotoDaMostrare, quandoUsato } from '../dati/dominio'
 import { ETICHETTE, colori, linee, ombre, raggi, spazi } from '../tema/tokens'
 import { Toccabile } from './base'
 import { Corpo, Etichetta, Forte, Titolo } from './testo'
@@ -80,7 +80,7 @@ export function CapoAppeso({
         }}
       >
         <Image
-          source={{ uri: capo.foto.url ?? undefined }}
+          source={{ uri: fotoDaMostrare(capo) }}
           style={{ width: 132, height: 178 }}
           contentFit="cover"
           transition={200}
@@ -118,7 +118,7 @@ export function CapoInGriglia({ capo, onPress }: { capo: Capo; onPress: () => vo
       }}
     >
       <Image
-        source={{ uri: capo.foto.url ?? undefined }}
+        source={{ uri: fotoDaMostrare(capo) }}
         style={{ width: '100%', height: 182 }}
         contentFit="cover"
         transition={200}
@@ -155,7 +155,7 @@ export function CapoInElenco({ capo, onPress }: { capo: Capo; onPress: () => voi
       }}
     >
       <Image
-        source={{ uri: capo.foto.url ?? undefined }}
+        source={{ uri: fotoDaMostrare(capo) }}
         style={{ width: 50, height: 62, borderRadius: raggi.piccolo, backgroundColor: capo.colore.hex }}
         contentFit="cover"
         transition={200}
@@ -191,7 +191,7 @@ export function Miniatura({
   return (
     <Toccabile onPress={onPress} scala={onPress ? 0.96 : 0} style={{ width: larghezza }}>
       <Image
-        source={{ uri: capo.foto.url ?? undefined }}
+        source={{ uri: fotoDaMostrare(capo) }}
         style={{
           width: larghezza,
           height: altezza,

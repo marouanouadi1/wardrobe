@@ -11,6 +11,10 @@ dependencies = [
     # errori tipizzati e structured output li gestisce lui. Gli altri provider
     # sono adapter HTTP sottili, perché servono al confronto nel playground.
     "anthropic>=0.75",
+    # Solo per `local_server.py`: un file .env è più facile da spiegare a chi
+    # non ha mai usato un terminale di una variabile d'ambiente di sistema. In
+    # cloud le Lambda ricevono le chiavi da CDK, non toccano questo file.
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]

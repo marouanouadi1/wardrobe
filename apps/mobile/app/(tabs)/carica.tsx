@@ -7,20 +7,23 @@
  * sospetti. Ed è anche il momento in cui l'utente capisce cosa sa fare l'app.
  */
 
-import type { LetturaCapo } from '@wardrobe/contracts'
+import type { LetturaCapo, TipoCapo } from '@wardrobe/contracts'
 import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ScrollView, View } from 'react-native'
+import { ScrollView, TextInput, View } from 'react-native'
 import { MODALITA_DEMO, api } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
+import { PALETTE_COLORI } from '../../src/dati/dominio'
 import { ETICHETTE, colori, linee, ombre, raggi, spazi } from '../../src/tema/tokens'
-import { BadgeIa, BottonePrimario, BottoneSecondario, Icona, Toccabile } from '../../src/ui/base'
+import { BadgeIa, BottonePrimario, BottoneSecondario, Icona, Pillola, Toccabile } from '../../src/ui/base'
 import { Attributo } from '../../src/ui/capi'
-import { Corpo, Forte, Titolo } from '../../src/ui/testo'
+import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Testata } from '../../src/ui/testata'
+
+const TIPI: TipoCapo[] = ['top', 'pantaloni', 'scarpe', 'capospalla', 'abito', 'accessorio']
 
 const PASSI = [
   { testo: 'Isolo il capo dallo sfondo', esito: 'fatto' },
@@ -30,7 +33,7 @@ const PASSI = [
   { testo: 'Etichetta di lavaggio', esito: '40°' },
 ]
 
-type Fase = 'scatta' | 'analisi' | 'esito'
+type Fase = 'scatta' | 'analisi' | 'esito' | 'manuale'
 
 /** Quante foto si possono mandare in una volta, come nel design. */
 const LIMITE_BLOCCO = 20
@@ -50,13 +53,20 @@ const LETTURA_DEMO: LetturaCapo = {
 }
 
 export default function Carica() {
-  const { avvisa } = useArmadio()
+  const { avvisa, creaCapoManuale } = useArmadio()
   const [fase, setFase] = useState<Fase>('scatta')
   const [passo, setPasso] = useState(0)
   const [foto, setFoto] = useState<string | null>(null)
   const [lettura, setLettura] = useState<LetturaCapo | null>(null)
   /** Quante foto restano da mandare nell'analisi in blocco. */
   const [inBlocco, setInBlocco] = useState<number | null>(null)
+  // Il percorso «a mano»: prima di fidarsi del modello, o quando lo scontorno
+  // e la lettura automatica non bastano, l'utente compila lui i tre campi
+  // che servono perché il capo esista (nome, tipo, colore).
+  const [nomeManuale, setNomeManuale] = useState('')
+  const [tipoManuale, setTipoManuale] = useState<TipoCapo>('top')
+  const [coloreManuale, setColoreManuale] = useState(0)
+  const [salvandoManuale, setSalvandoManuale] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>[]>([])
 
   useEffect(() => () => timer.current.forEach(clearTimeout), [])
@@ -75,7 +85,7 @@ export default function Carica() {
     )
   }, [])
 
-  async function scegliFoto(dallaFotocamera: boolean) {
+  async function scegliFoto(dallaFotocamera: boolean, percorso: 'auto' | 'manuale' = 'auto') {
     const permesso = dallaFotocamera
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -90,6 +100,11 @@ export default function Carica() {
     if (esito.canceled || !esito.assets[0]) return
 
     setFoto(esito.assets[0].uri)
+
+    if (percorso === 'manuale') {
+      setFase('manuale')
+      return
+    }
 
     if (MODALITA_DEMO) {
       simulaPassi()
@@ -181,6 +196,38 @@ export default function Carica() {
     }
   }
 
+  /** Inserisce il capo a mano: nessuna pipeline, nessuna confidenza da correggere dopo. */
+  async function salvaManuale() {
+    if (!foto || salvandoManuale) return
+    setSalvandoManuale(true)
+    try {
+      const paletta = PALETTE_COLORI[coloreManuale]!
+      const chiaveFoto = MODALITA_DEMO
+        ? `locale/${Date.now()}`
+        : await (async () => {
+            const firma = await api.firmaUpload('image/jpeg')
+            await api.caricaFoto(firma, await (await fetch(foto)).blob())
+            return firma.chiave
+          })()
+
+      await creaCapoManuale({
+        nome: nomeManuale.trim() || `${ETICHETTE.tipo[tipoManuale]} ${paletta.nome.toLowerCase()}`,
+        tipo: tipoManuale,
+        colore: { nome: paletta.nome, hex: paletta.hex },
+        chiave_foto: chiaveFoto,
+      })
+      avvisa(null)
+      setFase('scatta')
+      setFoto(null)
+      setNomeManuale('')
+      router.push('/(tabs)/armadio')
+    } catch (errore) {
+      avvisa(errore instanceof Error ? errore.message : 'Capo non salvato')
+    } finally {
+      setSalvandoManuale(false)
+    }
+  }
+
   return (
     <View style={{ flex: 1 }}>
       <Testata occhiello="Nuovo capo" titolo="Aggiungi" />
@@ -265,6 +312,18 @@ export default function Carica() {
                   : `Sto avviando l'analisi · ${inBlocco} ${inBlocco === 1 ? 'capo' : 'capi'} da mandare`}
               </Corpo>
             ) : null}
+
+            <Toccabile onPress={() => void scegliFoto(false, 'manuale')} scala={0} style={{ alignItems: 'center' }}>
+              <Forte taglia={12.5} colore={colori.inchiostro} style={{ textDecorationLine: 'underline' }}>
+                Preferisco inserirlo a mano
+              </Forte>
+            </Toccabile>
+
+            <Corpo taglia={11} tono="debole" style={{ textAlign: 'center', paddingHorizontal: spazi.m }}>
+              {
+                "Se lo sfondo non viene via bene: su iPhone, tieni premuto sul capo in Foto e scegli «Copia soggetto», oppure in File tocca a lungo la foto e scegli «Rimuovi sfondo». In alternativa un sito come remove.bg."
+              }
+            </Corpo>
           </>
         ) : null}
 
@@ -414,6 +473,110 @@ export default function Carica() {
             />
             <BottoneSecondario
               testo="Rifai la foto"
+              onPress={() => {
+                setFase('scatta')
+                setFoto(null)
+              }}
+              style={{ borderColor: linee.chiara, ...ombre.bassa }}
+            />
+          </>
+        ) : null}
+
+        {fase === 'manuale' ? (
+          <>
+            <View
+              style={{
+                height: 260,
+                borderRadius: raggi.grande,
+                overflow: 'hidden',
+                backgroundColor: colori.inchiostro,
+              }}
+            >
+              {foto ? (
+                <Image source={{ uri: foto }} style={{ flex: 1 }} contentFit="cover" />
+              ) : null}
+            </View>
+
+            <Titolo taglia={22}>Di cosa si tratta?</Titolo>
+            <Corpo taglia={12.5} tono="tenue">
+              Tre cose bastano per farlo esistere in armadio: le altre le aggiungi quando vuoi,
+              dal dettaglio del capo.
+            </Corpo>
+
+            <View style={{ gap: spazi.s }}>
+              <Etichetta taglia={11} tono="debole">
+                Categoria
+              </Etichetta>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+                {TIPI.map((tipo) => (
+                  <Pillola
+                    key={tipo}
+                    testo={ETICHETTE.tipo[tipo]}
+                    attiva={tipo === tipoManuale}
+                    onPress={() => setTipoManuale(tipo)}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View style={{ gap: spazi.s }}>
+              <Etichetta taglia={11} tono="debole">
+                Colore
+              </Etichetta>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                {PALETTE_COLORI.map((voce, indice) => (
+                  <Toccabile
+                    key={voce.nome}
+                    onPress={() => setColoreManuale(indice)}
+                    scala={0.94}
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: raggi.pillola,
+                      backgroundColor: voce.hex,
+                      borderWidth: indice === coloreManuale ? 3 : 1,
+                      borderColor: indice === coloreManuale ? colori.citron : linee.chiara,
+                    }}
+                  >
+                    <View />
+                  </Toccabile>
+                ))}
+              </View>
+              <Corpo taglia={12} tono="tenue">
+                {PALETTE_COLORI[coloreManuale]!.nome}
+              </Corpo>
+            </View>
+
+            <View style={{ gap: spazi.s }}>
+              <Etichetta taglia={11} tono="debole">
+                Nome (facoltativo)
+              </Etichetta>
+              <TextInput
+                value={nomeManuale}
+                onChangeText={setNomeManuale}
+                placeholder={`${ETICHETTE.tipo[tipoManuale]} ${PALETTE_COLORI[coloreManuale]!.nome.toLowerCase()}`}
+                placeholderTextColor="rgba(21,21,26,0.35)"
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                  borderRadius: raggi.medio - 4,
+                  borderWidth: 1,
+                  borderColor: linee.chiara,
+                  backgroundColor: colori.scheda,
+                  fontFamily: 'Manrope_500Medium',
+                  fontSize: 14,
+                  color: colori.inchiostro,
+                }}
+              />
+            </View>
+
+            <BottonePrimario
+              testo={salvandoManuale ? 'Salvo…' : "Salva nell'armadio"}
+              disabilitato={salvandoManuale}
+              onPress={() => void salvaManuale()}
+            />
+            <BottoneSecondario
+              testo="Annulla"
               onPress={() => {
                 setFase('scatta')
                 setFoto(null)

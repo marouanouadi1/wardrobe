@@ -54,6 +54,22 @@ export class AnalisiStack extends Stack {
         removalPolicy: RemovalPolicy.DESTROY,
       })
 
+    // Le chiavi vere, non l'ARN del segreto: il codice Python le legge da
+    // `os.environ` (vedi `adapters/llm/base.py::chiave`), non da Secrets
+    // Manager a runtime. `secretValueFromJson` genera un riferimento
+    // dinamico di CloudFormation (`{{resolve:secretsmanager:...}}`), non il
+    // valore in chiaro nel template — il valore lo risolve CloudFormation al
+    // deploy, con lo stesso accesso IAM che servirebbe comunque per leggere
+    // il segreto.
+    const chiaviProvider = {
+      ANTHROPIC_API_KEY: props.segretoProvider.secretValueFromJson('ANTHROPIC_API_KEY').unsafeUnwrap(),
+      OPENAI_API_KEY: props.segretoProvider.secretValueFromJson('OPENAI_API_KEY').unsafeUnwrap(),
+      // Il servizio di scontorno: facoltativo, vedi `adapters/scontorno/`.
+      // Una stringa vuota fa sì che `servizio_scontorno()` la tratti come non
+      // configurata, esattamente come in locale senza `FAL_KEY`.
+      FAL_KEY: props.segretoProvider.secretValueFromJson('FAL_KEY').unsafeUnwrap(),
+    }
+
     const comuni = {
       runtime: Runtime.PYTHON_3_12,
       architecture: Architecture.ARM_64,
@@ -73,6 +89,7 @@ export class AnalisiStack extends Stack {
       // I modelli di visione su una foto grande possono prendersi mezzo minuto.
       timeout: Duration.seconds(90),
       memorySize: 512,
+      environment: { ...comuni.environment, ...chiaviProvider },
       description: 'Chiama i provider LLM. Nessun accesso al database.',
     })
     props.segretoProvider.grantRead(this.llmWorker)
@@ -87,6 +104,7 @@ export class AnalisiStack extends Stack {
       memorySize: 1024,
       environment: {
         ...comuni.environment,
+        ...chiaviProvider,
         BUCKET_FOTO: props.bucketFoto.bucketName,
       },
       description: 'Visione: foto -> attributi. Fuori dalla VPC.',

@@ -57,6 +57,7 @@ export interface Contratti {
   LetturaCapo?: LetturaCapo
   Meteo?: Meteo
   ModelloDisponibile?: ModelloDisponibile
+  NuovoCapoManuale?: NuovoCapoManuale
   NuovoOutfit?: NuovoOutfit
   OrigineOutfit?: OrigineOutfit
   Outfit?: Outfit
@@ -85,6 +86,8 @@ export interface AggiornamentoCapo {
   nome?: string | null
   preferito?: boolean | null
   stato?: StatoCapo | null
+  etichette?: string[] | null
+  appunti?: string | null
 }
 /**
  * Le correzioni dell'utente, una per attributo, tutte tipizzate.
@@ -156,6 +159,14 @@ export interface Capo {
   ultimo_uso?: string | null
   volte_indossato?: number
   analisi?: AnalisiVisione | null
+  /**
+   * Tag liberi dell'utente (es. «lavoro», «da viaggio»): il modello di visione non li scrive mai, per questo restano fuori da `LetturaCapo`.
+   */
+  etichette?: string[]
+  /**
+   * Nota libera dell'utente sul capo. Mai vista dal modello di visione.
+   */
+  appunti?: string | null
   creato_il: string
   aggiornato_il: string
 }
@@ -170,6 +181,14 @@ export interface FotoCapo {
   url?: string | null
   larghezza?: number | null
   altezza?: number | null
+  /**
+   * Chiave della stessa foto dopo lo scontorno: soggetto isolato, sfondo trasparente. Assente se lo scontorno non è ancora passato o è fallito — in quel caso l'app mostra l'originale, mai un buco vuoto.
+   */
+  chiave_scontornata?: string | null
+  /**
+   * URL firmato della foto scontornata
+   */
+  url_scontornata?: string | null
 }
 /**
  * Il capo come lo vede il modello di suggerimento.
@@ -186,6 +205,7 @@ export interface CapoSintetico {
   materiale?: string | null
   stagione?: Stagione | null
   stato?: StatoCapo
+  etichette?: string[]
 }
 /**
  * Tutto ciò che lo stilista può sapere, e nient'altro.
@@ -328,6 +348,31 @@ export interface ModelloDisponibile {
    * Falso sui modelli che hanno rimosso il parametro e rifiutano la richiesta con 400. In un banco di prova una manopola che non fa niente è peggio di una manopola assente: da lì si traggono conclusioni sbagliate.
    */
   accetta_temperatura?: boolean
+}
+/**
+ * Un capo inserito a mano, senza passare dal modello di visione.
+ *
+ * Nessuna `AnalisiVisione`: un capo che non è mai stato letto da un modello
+ * non ha confidenze da mostrare, e non deve fingere di averle. Tipo e
+ * colore restano obbligatori — sono gli stessi due attributi che
+ * `ATTRIBUTI_INDISPENSABILI` chiede alla lettura automatica: senza tipo il
+ * capo non ha uno slot per l'avatar, senza colore il manichino di oggi non
+ * ha niente da tingere.
+ */
+export interface NuovoCapoManuale {
+  nome: string
+  tipo: TipoCapo
+  colore: Colore
+  chiave_foto: string
+  brand?: string | null
+  sottotipo?: string | null
+  materiale?: string | null
+  fantasia?: string | null
+  stagione?: Stagione | null
+  vestibilita?: string | null
+  lavaggio?: string | null
+  etichette?: string[]
+  appunti?: string | null
 }
 export interface NuovoOutfit {
   nome: string

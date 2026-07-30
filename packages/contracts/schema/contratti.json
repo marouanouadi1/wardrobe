@@ -67,6 +67,9 @@
     "ModelloDisponibile": {
       "$ref": "#/$defs/ModelloDisponibile"
     },
+    "NuovoCapoManuale": {
+      "$ref": "#/$defs/NuovoCapoManuale"
+    },
     "NuovoOutfit": {
       "$ref": "#/$defs/NuovoOutfit"
     },
@@ -165,6 +168,29 @@
           "anyOf": [
             {
               "$ref": "#/$defs/StatoCapo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "etichette": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "appunti": {
+          "anyOf": [
+            {
+              "type": "string"
             },
             {
               "type": "null"
@@ -377,6 +403,24 @@
             }
           ]
         },
+        "etichette": {
+          "description": "Tag liberi dell'utente (es. «lavoro», «da viaggio»): il modello di visione non li scrive mai, per questo restano fuori da `LetturaCapo`.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "appunti": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Nota libera dell'utente sul capo. Mai vista dal modello di visione."
+        },
         "creato_il": {
           "format": "date-time",
           "type": "string"
@@ -444,6 +488,12 @@
         },
         "stato": {
           "$ref": "#/$defs/StatoCapo"
+        },
+        "etichette": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -908,6 +958,28 @@
               "type": "null"
             }
           ]
+        },
+        "chiave_scontornata": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Chiave della stessa foto dopo lo scontorno: soggetto isolato, sfondo trasparente. Assente se lo scontorno non è ancora passato o è fallito — in quel caso l'app mostra l'originale, mai un buco vuoto."
+        },
+        "url_scontornata": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "URL firmato della foto scontornata"
         }
       },
       "required": [
@@ -1153,6 +1225,118 @@
         "visione"
       ],
       "title": "ModelloDisponibile",
+      "type": "object"
+    },
+    "NuovoCapoManuale": {
+      "additionalProperties": false,
+      "description": "Un capo inserito a mano, senza passare dal modello di visione.\n\nNessuna `AnalisiVisione`: un capo che non è mai stato letto da un modello\nnon ha confidenze da mostrare, e non deve fingere di averle. Tipo e\ncolore restano obbligatori — sono gli stessi due attributi che\n`ATTRIBUTI_INDISPENSABILI` chiede alla lettura automatica: senza tipo il\ncapo non ha uno slot per l'avatar, senza colore il manichino di oggi non\nha niente da tingere.",
+      "properties": {
+        "nome": {
+          "type": "string"
+        },
+        "tipo": {
+          "$ref": "#/$defs/TipoCapo"
+        },
+        "colore": {
+          "$ref": "#/$defs/Colore"
+        },
+        "chiave_foto": {
+          "type": "string"
+        },
+        "brand": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sottotipo": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "materiale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fantasia": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stagione": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Stagione"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "vestibilita": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lavaggio": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "etichette": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "appunti": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "nome",
+        "tipo",
+        "colore",
+        "chiave_foto"
+      ],
+      "title": "NuovoCapoManuale",
       "type": "object"
     },
     "NuovoOutfit": {
