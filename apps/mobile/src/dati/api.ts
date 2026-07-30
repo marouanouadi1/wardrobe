@@ -8,6 +8,7 @@
  */
 
 import Constants from 'expo-constants'
+import { File } from 'expo-file-system'
 import { Platform } from 'react-native'
 import type {
   AggiornamentoCapo,
@@ -140,14 +141,22 @@ export const api = {
   // ── caricamento e analisi ────────────────────────────────────────────────
   firmaUpload: (contentType: string) =>
     chiama<UploadFirmato>('/foto/upload', { metodo: 'POST', corpo: { content_type: contentType } }),
-  /** La PUT va diretta a S3: la foto non passa dal nostro backend. */
-  caricaFoto: async (firma: UploadFirmato, corpo: Blob | ArrayBuffer) => {
-    const esito = await fetch(firma.url, {
-      method: firma.metodo ?? 'PUT',
+  /**
+   * La PUT va diretta a S3: la foto non passa dal nostro backend.
+   *
+   * Il caricamento legge `uri` con `expo-file-system`, non con `fetch(uri).arrayBuffer()`:
+   * su Android quest'ultimo può restituire in silenzio un corpo 404 "File not found" al
+   * posto dei byte della foto (bug noto del fetch WinterCG di Expo con gli URI `file://`
+   * del selettore immagini), che finiva caricato come se fosse la foto.
+   */
+  caricaFoto: async (firma: UploadFirmato, uri: string) => {
+    const esito = await new File(uri).upload(firma.url, {
+      httpMethod: (firma.metodo as 'PUT' | 'POST' | 'PATCH' | undefined) ?? 'PUT',
       headers: firma.intestazioni ?? {},
-      body: corpo as BodyInit,
     })
-    if (!esito.ok) throw new ErroreApi(esito.status, 'upload_fallito', 'Caricamento della foto non riuscito')
+    if (esito.status < 200 || esito.status >= 300) {
+      throw new ErroreApi(esito.status, 'upload_fallito', 'Caricamento della foto non riuscito')
+    }
     return firma.chiave
   },
   /**

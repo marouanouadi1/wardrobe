@@ -19,6 +19,7 @@ import { useArmadio } from '../../src/dati/archivio'
 import { PALETTE_COLORI } from '../../src/dati/dominio'
 import { ETICHETTE, colori, linee, ombre, raggi, spazi } from '../../src/tema/tokens'
 import { BottonePrimario, BottoneSecondario, Icona, Pillola, Toccabile } from '../../src/ui/base'
+import { Avviso } from '../../src/ui/avviso'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Testata } from '../../src/ui/testata'
 
@@ -38,7 +39,7 @@ type Fase = 'scatta' | 'analisi' | 'manuale'
 const LIMITE_BLOCCO = 20
 
 export default function Carica() {
-  const { avvisa, creaCapoManuale, modelloVisione } = useArmadio()
+  const { avvisa, creaCapoManuale, registraCapo, modelloVisione } = useArmadio()
   const [fase, setFase] = useState<Fase>('scatta')
   const [passo, setPasso] = useState(0)
   const [foto, setFoto] = useState<string | null>(null)
@@ -67,6 +68,9 @@ export default function Carica() {
     if (esito.canceled || !esito.assets[0]) return
 
     setFoto(esito.assets[0].uri)
+    // Un tentativo nuovo parte pulito: l'avviso del tentativo precedente non
+    // deve restare appeso sopra «Sto guardando il capo» (o sul modulo a mano).
+    avvisa(null)
 
     if (percorso === 'manuale') {
       setFase('manuale')
@@ -78,19 +82,20 @@ export default function Carica() {
     setFase('analisi')
     try {
       const firma = await api.firmaUpload('image/jpeg')
-      const contenuto = await (await fetch(esito.assets[0].uri)).blob()
-      await api.caricaFoto(firma, contenuto)
+      await api.caricaFoto(firma, esito.assets[0].uri)
       const avviata = await api.avviaAnalisi(firma.chiave, modelloVisione)
 
       for (let tentativo = 0; tentativo < 40; tentativo += 1) {
         const stato = await api.statoAnalisi(avviata.esecuzione_id)
         if (stato.stato === 'completata' && stato.capo) {
+          registraCapo(stato.capo)
           router.replace(`/capo/${stato.capo.id}`)
           return
         }
         if (stato.stato === 'fallita') {
           avvisa(stato.errore ?? "L'analisi non è riuscita: riprova con più luce.")
           setFase('scatta')
+          setPasso(0)
           return
         }
         setPasso((precedente) => Math.min(precedente + 1, PASSI.length))
@@ -98,9 +103,11 @@ export default function Carica() {
       }
       avvisa("L'analisi sta prendendo troppo: la trovi in armadio quando finisce.")
       setFase('scatta')
+      setPasso(0)
     } catch (errore) {
       avvisa(errore instanceof Error ? errore.message : 'Caricamento non riuscito')
       setFase('scatta')
+      setPasso(0)
     }
   }
 
@@ -124,12 +131,13 @@ export default function Carica() {
     })
     if (esito.canceled || esito.assets.length === 0) return
 
+    avvisa(null)
     let avviate = 0
     setInBlocco(esito.assets.length)
     try {
       for (const scatto of esito.assets) {
         const firma = await api.firmaUpload('image/jpeg')
-        await api.caricaFoto(firma, await (await fetch(scatto.uri)).blob())
+        await api.caricaFoto(firma, scatto.uri)
         await api.avviaAnalisi(firma.chiave, modelloVisione)
         avviate += 1
         setInBlocco(esito.assets.length - avviate)
@@ -156,7 +164,7 @@ export default function Carica() {
     try {
       const paletta = PALETTE_COLORI[coloreManuale]!
       const firma = await api.firmaUpload('image/jpeg')
-      await api.caricaFoto(firma, await (await fetch(foto)).blob())
+      await api.caricaFoto(firma, foto)
 
       await creaCapoManuale({
         nome: nomeManuale.trim() || `${ETICHETTE.tipo[tipoManuale]} ${paletta.nome.toLowerCase()}`,
@@ -184,6 +192,8 @@ export default function Carica() {
         contentContainerStyle={{ paddingHorizontal: spazi.xl, paddingBottom: 130, gap: spazi.l }}
         showsVerticalScrollIndicator={false}
       >
+        <Avviso />
+
         {fase === 'scatta' ? (
           <>
             <View

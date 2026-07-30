@@ -66,6 +66,16 @@ def avvia(evento: Evento) -> Risposta:
             _ESITI_LOCALI[esecuzione] = EsitoAnalisi(
                 esecuzione_id=esecuzione, stato=StatoAnalisi.FALLITA, errore=str(exc)
             )
+        except Exception:
+            # Qualunque altra eccezione (SDK del provider, rete, risposta non
+            # parsabile) non deve uscire come un 500 anonimo: il dettaglio
+            # resta nei log, non arriva al client.
+            logging.getLogger("wardrobe").exception("analisi fallita per %s", richiesta.chiave_foto)
+            _ESITI_LOCALI[esecuzione] = EsitoAnalisi(
+                esecuzione_id=esecuzione,
+                stato=StatoAnalisi.FALLITA,
+                errore="L'analisi non è riuscita: riprova con più luce.",
+            )
         return ok(AnalisiAvviata(esecuzione_id=esecuzione), 202)
 
     from adapters.stepfunctions import Orchestratore

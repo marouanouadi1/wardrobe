@@ -131,6 +131,9 @@ interface Archivio extends Stato {
   correggi: (capoId: string, attributo: AttributoCapo, valore: unknown) => Promise<void>
   /** Un capo inserito a mano: nessuna analisi, entra subito in armadio. */
   creaCapoManuale: (nuovo: NuovoCapoManuale) => Promise<void>
+  /** Un capo già creato dal backend (es. da un'analisi completata): lo mette
+   * subito in armadio, senza rifare la richiesta che l'ha prodotto. */
+  registraCapo: (capo: Capo) => void
   /** `undefined` lascia il campo com'è; una lista/stringa lo sostituisce. */
   aggiornaEtichette: (capoId: string, etichette: string[]) => Promise<void>
   aggiornaAppunti: (capoId: string, appunti: string) => Promise<void>
@@ -246,6 +249,10 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
     invia({ tipo: 'capoCreato', capo })
   }, [])
 
+  const registraCapo = useCallback<Archivio['registraCapo']>((capo) => {
+    invia({ tipo: 'capoCreato', capo })
+  }, [])
+
   const aggiornaEtichette = useCallback<Archivio['aggiornaEtichette']>(
     async (capoId, etichette) => {
       const capo = indice.get(capoId)
@@ -327,7 +334,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
         // Stessa strada delle foto dei capi: URL firmato e PUT diretta a S3, la
         // foto non passa dal nostro backend.
         const firma = await api.firmaUpload('image/jpeg')
-        await api.caricaFoto(firma, await (await fetch(uri)).blob())
+        await api.caricaFoto(firma, uri)
         invia({ tipo: 'fotoAvatar', uri, chiave: firma.chiave })
         if (stato.profilo) {
           await api.salvaProfilo({ ...stato.profilo, avatar_foto_chiave: firma.chiave })
@@ -416,6 +423,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       indice,
       correggi,
       creaCapoManuale,
+      registraCapo,
       aggiornaEtichette,
       aggiornaAppunti,
       cambiaStato,
@@ -437,6 +445,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       indice,
       correggi,
       creaCapoManuale,
+      registraCapo,
       aggiornaEtichette,
       aggiornaAppunti,
       cambiaStato,

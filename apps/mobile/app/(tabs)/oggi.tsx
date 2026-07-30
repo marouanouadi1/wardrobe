@@ -15,6 +15,7 @@ import { capiDiVestizione } from '../../src/dati/dominio'
 import { useArmadio } from '../../src/dati/archivio'
 import { colori, linee, ombre, raggi, spazi } from '../../src/tema/tokens'
 import { BadgeIa, Bolla, BottoneSecondario, Icona, Scheda, Toccabile } from '../../src/ui/base'
+import { Avviso } from '../../src/ui/avviso'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Testata } from '../../src/ui/testata'
 
@@ -27,7 +28,7 @@ const CONTESTO = [
 const SCORCIATOIE = ['Ho una cena', 'Fa freddo', 'Solo capi puliti', 'Sorprendimi']
 
 export default function Oggi() {
-  const { suggerimenti, indice, profilo, vesti, avviso, avvisa } = useArmadio()
+  const { suggerimenti, indice, profilo, vesti } = useArmadio()
   const [domanda, setDomanda] = useState('')
   const [scartati, setScartati] = useState<string[]>([])
 
@@ -57,13 +58,7 @@ export default function Oggi() {
         contentContainerStyle={{ paddingHorizontal: spazi.xl, paddingBottom: 130, gap: spazi.l }}
         showsVerticalScrollIndicator={false}
       >
-        {avviso ? (
-          <Toccabile onPress={() => avvisa(null)} scala={0}>
-            <Scheda imbottitura={spazi.m} style={{ backgroundColor: colori.coralloTenue }}>
-              <Corpo taglia={12.5}>{avviso}</Corpo>
-            </Scheda>
-          </Toccabile>
-        ) : null}
+        <Avviso />
 
         {/* Il contesto che il modello sta usando, in chiaro. Serve a fidarsi
             della proposta: se il meteo è sbagliato, si capisce subito perché. */}
