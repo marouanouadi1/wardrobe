@@ -30,6 +30,12 @@ import { MODALITA_DEMO, api } from './api'
 import { perId, slotDiTipo } from './dominio'
 import { CAPI_DEMO, OUTFIT_DEMO, PROFILO_DEMO, SUGGERIMENTI_DEMO } from './seed'
 
+/** Un modello scelto per uno dei due lavori veri: provider + id, come nel catalogo di `/dev/modelli`. */
+export interface SceltaModello {
+  provider: string
+  modello: string
+}
+
 interface Stato {
   pronto: boolean
   capi: Capo[]
@@ -46,6 +52,18 @@ interface Stato {
    * firmerà anche la lettura, la foto visibile è quella scelta sul telefono.
    */
   fotoAvatar: string | null
+  /**
+   * Il provider/modello scelto da «Profilo → Sviluppo → Modelli in uso» per i
+   * due lavori veri (lettura foto, suggerimenti) — non il playground, che ha
+   * la sua scelta separata e usa e getta.
+   *
+   * `null` = il predefinito del backend (`PROVIDER_VISIONE`/`PROVIDER_STILISTA`
+   * nel `.env`). Vive solo in memoria, come il resto dello store: si azzera a
+   * ogni riavvio dell'app, esattamente come l'armadio si azzera a ogni riavvio
+   * dell'API in sviluppo.
+   */
+  modelloVisione: SceltaModello | null
+  modelloStilista: SceltaModello | null
   avviso: string | null
 }
 
@@ -57,6 +75,8 @@ type Azione =
   | { tipo: 'suggerimenti'; suggerimenti: Suggerimento[] }
   | { tipo: 'vestizione'; vestizione: Vestizione }
   | { tipo: 'fotoAvatar'; uri: string | null; chiave?: string }
+  | { tipo: 'modelloVisione'; scelta: SceltaModello | null }
+  | { tipo: 'modelloStilista'; scelta: SceltaModello | null }
   | { tipo: 'avviso'; testo: string | null }
 
 const INIZIALE: Stato = {
@@ -67,6 +87,8 @@ const INIZIALE: Stato = {
   suggerimenti: [],
   vestizione: {},
   fotoAvatar: null,
+  modelloVisione: null,
+  modelloStilista: null,
   avviso: null,
 }
 
@@ -96,6 +118,10 @@ function riduci(stato: Stato, azione: Azione): Stato {
             ? { ...stato.profilo, avatar_foto_chiave: azione.chiave }
             : stato.profilo,
       }
+    case 'modelloVisione':
+      return { ...stato, modelloVisione: azione.scelta }
+    case 'modelloStilista':
+      return { ...stato, modelloStilista: azione.scelta }
     case 'avviso':
       return { ...stato, avviso: azione.testo }
   }
@@ -117,6 +143,9 @@ interface Archivio extends Stato {
   svestiSlot: (slot: keyof Vestizione) => void
   /** La foto a figura intera scelta dalla galleria: si vede subito, si carica dopo. */
   impostaFotoAvatar: (uri: string) => Promise<void>
+  /** `null` torna al predefinito del backend. Usate da «Modelli in uso». */
+  impostaModelloVisione: (scelta: SceltaModello | null) => void
+  impostaModelloStilista: (scelta: SceltaModello | null) => void
   mescola: () => void
   /**
    * Salva un outfit. Senza `vestizione` salva quello che l'avatar indossa in
@@ -352,6 +381,16 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
     [stato.profilo],
   )
 
+  const impostaModelloVisione = useCallback<Archivio['impostaModelloVisione']>(
+    (scelta) => invia({ tipo: 'modelloVisione', scelta }),
+    [],
+  )
+
+  const impostaModelloStilista = useCallback<Archivio['impostaModelloStilista']>(
+    (scelta) => invia({ tipo: 'modelloStilista', scelta }),
+    [],
+  )
+
   const mescola = useCallback(() => {
     const scegli = (slot: Capo['slot']) => {
       const candidati = stato.capi.filter((capo) => capo.slot === slot && capo.stato === 'pulito')
@@ -409,7 +448,12 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       return
     }
     try {
-      const risposta = await api.suggerimenti({ richiesta_utente: richiesta, numero_proposte: 3 })
+      const risposta = await api.suggerimenti({
+        richiesta_utente: richiesta,
+        numero_proposte: 3,
+        provider: stato.modelloStilista?.provider,
+        modello: stato.modelloStilista?.modello,
+      })
       invia({ tipo: 'suggerimenti', suggerimenti: risposta.suggerimenti })
     } catch (errore) {
       invia({
@@ -417,7 +461,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
         testo: errore instanceof Error ? errore.message : 'Nessun suggerimento disponibile',
       })
     }
-  }, [])
+  }, [stato.modelloStilista])
 
   const avvisa = useCallback((testo: string | null) => invia({ tipo: 'avviso', testo }), [])
 
@@ -436,6 +480,8 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       vestiSlot,
       svestiSlot,
       impostaFotoAvatar,
+      impostaModelloVisione,
+      impostaModelloStilista,
       mescola,
       salvaOutfit,
       chiediSuggerimenti,
@@ -455,6 +501,8 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       vestiSlot,
       svestiSlot,
       impostaFotoAvatar,
+      impostaModelloVisione,
+      impostaModelloStilista,
       mescola,
       salvaOutfit,
       chiediSuggerimenti,

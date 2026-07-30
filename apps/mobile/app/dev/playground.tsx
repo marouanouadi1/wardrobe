@@ -20,6 +20,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, ScrollView, TextInput, View } from 'react-native'
 import { MODALITA_DEMO, api } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
+import { MODELLI_DEMO } from '../../src/dati/seed'
 import { colori, raggi, spazi } from '../../src/tema/tokens'
 import { Icona, Pillola, Toccabile } from '../../src/ui/base'
 import { Corpo, Etichetta, Forte, Numero, Titolo } from '../../src/ui/testo'
@@ -28,16 +29,6 @@ import { Testata } from '../../src/ui/testata'
 const CREMA_TENUE = 'rgba(247,244,239,0.5)'
 const FONDO_CAMPO = 'rgba(247,244,239,0.06)'
 const BORDO_CAMPO = 'rgba(247,244,239,0.16)'
-
-/** Il catalogo mostrato in demo: gli stessi provider, senza chiamare il backend. */
-const MODELLI_DEMO: ModelloDisponibile[] = [
-  { provider: 'anthropic', id: 'claude-opus-5', accetta_temperatura: false, etichetta: 'Claude Opus 5', visione: true, note: 'il più accurato sui tessuti', costo_input_eur_mtok: 4.6, costo_output_eur_mtok: 23, configurato: false },
-  { provider: 'anthropic', id: 'claude-sonnet-5', accetta_temperatura: false, etichetta: 'Claude Sonnet 5', visione: true, note: 'quasi come Opus, a un terzo del prezzo', costo_input_eur_mtok: 2.76, costo_output_eur_mtok: 13.8, configurato: false },
-  { provider: 'anthropic', id: 'claude-haiku-4-5', etichetta: 'Claude Haiku 4.5', visione: true, note: 'per l\'analisi in blocco', costo_input_eur_mtok: 0.92, costo_output_eur_mtok: 4.6, configurato: false },
-  { provider: 'openai', id: 'gpt-5.1', etichetta: 'gpt-5.1', visione: true, note: 'prezzi da verificare', configurato: false },
-  { provider: 'google', id: 'gemini-2.5-pro', etichetta: 'gemini-2.5-pro', visione: true, note: 'contesto lungo', configurato: false },
-  { provider: 'ollama', id: 'llava', etichetta: 'llava (locale)', visione: true, note: 'gratis, gira sulla tua macchina', costo_input_eur_mtok: 0, costo_output_eur_mtok: 0, configurato: true },
-]
 
 const PRESET_DEMO: PresetPrompt[] = [
   {

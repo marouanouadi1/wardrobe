@@ -102,7 +102,15 @@ def schema_lettura() -> dict[str, object]:
             "confidenze",
         ],
         "properties": {
-            "tipo": {"type": ["string", "null"], "enum": [*[t.value for t in TipoCapo], None]},
+            # `anyOf` invece di `"type": ["string", "null"]` con `None` dentro
+            # `enum`: gli structured output di Anthropic rifiutano con 400 un
+            # valore enum che non combacia con un singolo tipo dichiarato.
+            "tipo": {
+                "anyOf": [
+                    {"type": "string", "enum": [t.value for t in TipoCapo]},
+                    {"type": "null"},
+                ]
+            },
             "sottotipo": testo_o_null,
             "nome_proposto": testo_o_null,
             "colore": {
@@ -114,8 +122,10 @@ def schema_lettura() -> dict[str, object]:
             "materiale": testo_o_null,
             "fantasia": testo_o_null,
             "stagione": {
-                "type": ["string", "null"],
-                "enum": [*[s.value for s in Stagione], None],
+                "anyOf": [
+                    {"type": "string", "enum": [s.value for s in Stagione]},
+                    {"type": "null"},
+                ]
             },
             "vestibilita": testo_o_null,
             "lavaggio": testo_o_null,

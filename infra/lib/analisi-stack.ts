@@ -64,6 +64,7 @@ export class AnalisiStack extends Stack {
     const chiaviProvider = {
       ANTHROPIC_API_KEY: props.segretoProvider.secretValueFromJson('ANTHROPIC_API_KEY').unsafeUnwrap(),
       OPENAI_API_KEY: props.segretoProvider.secretValueFromJson('OPENAI_API_KEY').unsafeUnwrap(),
+      GOOGLE_API_KEY: props.segretoProvider.secretValueFromJson('GOOGLE_API_KEY').unsafeUnwrap(),
       // Il servizio di scontorno: facoltativo, vedi `adapters/scontorno/`.
       // Una stringa vuota fa sì che `servizio_scontorno()` la tratti come non
       // configurata, esattamente come in locale senza `FAL_KEY`.

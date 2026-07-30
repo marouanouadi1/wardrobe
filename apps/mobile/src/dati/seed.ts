@@ -9,7 +9,7 @@
  * Le foto sono di Pexels (uso libero), le stesse del design.
  */
 
-import type { Capo, Outfit, Profilo, Suggerimento, TipoCapo } from '@wardrobe/contracts'
+import type { Capo, ModelloDisponibile, Outfit, Profilo, Suggerimento, TipoCapo } from '@wardrobe/contracts'
 import { slotDiTipo } from './dominio'
 
 const oggi = new Date()
@@ -186,4 +186,19 @@ export const SUGGERIMENTI_DEMO: Suggerimento[] = [
       'Se esci dopo cena, il cardigan basta.',
     ],
   },
+]
+
+/**
+ * Il catalogo mostrato in demo e come primo valore prima che il backend
+ * risponda: gli stessi quattro provider registrati in `adapters/llm/`, senza
+ * chiamare l'API. Condiviso fra il playground e «Modelli in uso» perché è lo
+ * stesso catalogo, non due elenchi che possono disallinearsi.
+ */
+export const MODELLI_DEMO: ModelloDisponibile[] = [
+  { provider: 'anthropic', id: 'claude-opus-5', accetta_temperatura: false, etichetta: 'Claude Opus 5', visione: true, note: 'il più accurato sui tessuti', costo_input_eur_mtok: 4.6, costo_output_eur_mtok: 23, configurato: false },
+  { provider: 'anthropic', id: 'claude-sonnet-5', accetta_temperatura: false, etichetta: 'Claude Sonnet 5', visione: true, note: 'quasi come Opus, a un terzo del prezzo', costo_input_eur_mtok: 2.76, costo_output_eur_mtok: 13.8, configurato: false },
+  { provider: 'anthropic', id: 'claude-haiku-4-5', etichetta: 'Claude Haiku 4.5', visione: true, note: 'per l\'analisi in blocco', costo_input_eur_mtok: 0.92, costo_output_eur_mtok: 4.6, configurato: false },
+  { provider: 'openai', id: 'gpt-5.1', etichetta: 'gpt-5.1', visione: true, note: 'prezzi da verificare', configurato: false },
+  { provider: 'google', id: 'gemini-2.5-pro', etichetta: 'gemini-2.5-pro', visione: true, note: 'contesto lungo', configurato: false },
+  { provider: 'ollama', id: 'llava', etichetta: 'llava (locale)', visione: true, note: 'gratis, gira sulla tua macchina', costo_input_eur_mtok: 0, costo_output_eur_mtok: 0, configurato: true },
 ]

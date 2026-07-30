@@ -6,6 +6,7 @@ Come per OpenAI, gli id dei modelli sono configurabili (`MODELLI_GOOGLE`).
 from __future__ import annotations
 
 import os
+from typing import cast
 
 from adapters.llm.base import alza_se_errore, chiave, client_http, cronometra
 from domain.errors import ErroreProvider
@@ -15,7 +16,12 @@ from domain.ports import RichiestaLlm, RispostaLlm
 NOME = "google"
 VARIABILE_CHIAVE = "GOOGLE_API_KEY"
 BASE = os.environ.get("GOOGLE_URL", "https://generativelanguage.googleapis.com/v1beta/models")
-MODELLI_DEFAULT = ("gemini-2.5-pro", "gemini-2.5-flash")
+# Gli alias "-latest" invece di un id fisso ("gemini-2.5-pro" era il default
+# precedente): Google smette di tanto in tanto di far leggere un id concreto ai
+# nuovi progetti ("no longer available to new users"), mentre l'alias risolve
+# sempre a un modello invocabile. Verificato con una chiave vera prima di
+# cambiarlo.
+MODELLI_DEFAULT = ("gemini-pro-latest", "gemini-flash-latest")
 
 
 def _modelli_configurati() -> list[str]:
@@ -23,6 +29,48 @@ def _modelli_configurati() -> list[str]:
     if not grezzo:
         return list(MODELLI_DEFAULT)
     return [m.strip() for m in grezzo.split(",") if m.strip()]
+
+
+def _converti_schema(nodo: object) -> object:
+    """Traduce il nostro JSON Schema nel sottoinsieme OpenAPI che Gemini accetta.
+
+    `responseSchema` di Gemini non ha `additionalProperties` (proto senza quel
+    campo) e non ammette `type` ripetuto: niente `["string", "null"]`, niente
+    `anyOf` per esprimere «nullable». L'equivalente è un `type` singolo più
+    `nullable: true` — vedi la richiesta di prova che ha confermato il formato.
+    """
+    if isinstance(nodo, list):
+        return [_converti_schema(elemento) for elemento in nodo]
+    if not isinstance(nodo, dict):
+        return nodo
+
+    if "anyOf" in nodo:
+        rami = [r for r in nodo["anyOf"] if isinstance(r, dict)]
+        non_null = [r for r in rami if r.get("type") != "null"]
+        if len(non_null) == 1:
+            # `non_null[0]` è un dict (filtrato sopra): `_converti_schema` su un
+            # dict ritorna sempre un dict, ma la firma resta `object` per poter
+            # ricorrere anche su liste e scalari.
+            convertito = cast(dict[str, object], _converti_schema(non_null[0]))
+            if any(r.get("type") == "null" for r in rami):
+                convertito["nullable"] = True
+            return convertito
+
+    risultato: dict[str, object] = {}
+    for campo, valore in nodo.items():
+        if campo == "additionalProperties":
+            continue
+        if campo == "type" and isinstance(valore, list):
+            non_null = [v for v in valore if v != "null"]
+            if non_null:
+                risultato["type"] = non_null[0]
+            if "null" in valore:
+                risultato["nullable"] = True
+        elif campo == "enum":
+            risultato["enum"] = [v for v in valore if v is not None]
+        else:
+            risultato[campo] = _converti_schema(valore)
+    return risultato
 
 
 def catalogo(configurato: bool) -> list[ModelloDisponibile]:
@@ -58,11 +106,19 @@ class ProviderGoogle:
         generazione: dict[str, object] = {
             "temperature": richiesta.temperatura,
             "maxOutputTokens": richiesta.max_token,
+            # I modelli "pro" più recenti (dietro l'alias `gemini-pro-latest`)
+            # ragionano sempre e non accettano un budget 0: senza un tetto
+            # basso, il pensiero arriva a consumare quasi tutto `maxOutputTokens`
+            # e il JSON finale esce troncato — stesso problema di
+            # `thinking={"type": "disabled"}` in `anthropic_provider.py`, qui
+            # risolto abbassando il budget invece di disattivarlo (non è
+            # permesso). 128 è il minimo consentito da Gemini.
+            "thinkingConfig": {"thinkingBudget": 128},
         }
         if richiesta.forza_json:
             generazione["responseMimeType"] = "application/json"
             if richiesta.schema_atteso is not None:
-                generazione["responseSchema"] = richiesta.schema_atteso
+                generazione["responseSchema"] = _converti_schema(richiesta.schema_atteso)
 
         corpo: dict[str, object] = {
             "contents": [{"role": "user", "parts": parti}],

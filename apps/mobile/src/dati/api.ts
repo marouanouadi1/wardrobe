@@ -125,8 +125,16 @@ export const api = {
     if (!esito.ok) throw new ErroreApi(esito.status, 'upload_fallito', 'Caricamento della foto non riuscito')
     return firma.chiave
   },
-  avviaAnalisi: (chiaveFoto: string) =>
-    chiama<AnalisiAvviata>('/capi/analisi', { metodo: 'POST', corpo: { chiave_foto: chiaveFoto } }),
+  /**
+   * `scelta` viene da «Profilo → Sviluppo → Modelli in uso»; `undefined` (il
+   * predefinito) lascia decidere al backend, cioè `PROVIDER_VISIONE` /
+   * `MODELLO_VISIONE` nel `.env`.
+   */
+  avviaAnalisi: (chiaveFoto: string, scelta?: { provider?: string; modello?: string } | null) =>
+    chiama<AnalisiAvviata>('/capi/analisi', {
+      metodo: 'POST',
+      corpo: { chiave_foto: chiaveFoto, provider: scelta?.provider, modello: scelta?.modello },
+    }),
   statoAnalisi: (esecuzioneId: string) =>
     chiama<EsitoAnalisi>(`/capi/analisi/${encodeURIComponent(esecuzioneId)}`),
 

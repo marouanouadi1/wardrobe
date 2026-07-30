@@ -153,7 +153,7 @@ export default function Profilo() {
               Sviluppo · solo interno
             </Etichetta>
             <Toccabile
-              onPress={() => router.push('/dev/playground')}
+              onPress={() => router.push('/dev/modelli')}
               scala={0.98}
               style={{
                 flexDirection: 'row',
@@ -167,13 +167,36 @@ export default function Profilo() {
               <Bolla nome="scintilla" misura={40} />
               <View style={{ flex: 1 }}>
                 <Titolo taglia={17} colore={colori.scheda}>
-                  Playground modelli
+                  Modelli in uso
                 </Titolo>
                 <Corpo taglia={12} colore="rgba(255,253,249,0.6)">
-                  Provider, prompt, costi, storico
+                  Quale provider legge le foto e propone gli outfit
                 </Corpo>
               </View>
               <Icona nome="chevron" misura={17} colore={colori.citron} spessore={2.4} />
+            </Toccabile>
+            <Toccabile
+              onPress={() => router.push('/dev/playground')}
+              scala={0.98}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
+                padding: 18,
+                borderRadius: raggi.medio + 4,
+                backgroundColor: colori.scheda,
+                borderWidth: 1,
+                borderColor: linee.tenue,
+              }}
+            >
+              <Bolla nome="scintilla" misura={40} sfondo="rgba(21,21,26,0.06)" tinta={colori.inchiostro} />
+              <View style={{ flex: 1 }}>
+                <Titolo taglia={17}>Playground modelli</Titolo>
+                <Corpo taglia={12} tono="tenue">
+                  Provider, prompt, costi, storico
+                </Corpo>
+              </View>
+              <Icona nome="chevron" misura={17} colore="rgba(21,21,26,0.3)" spessore={2.4} />
             </Toccabile>
           </>
         ) : null}

@@ -173,3 +173,24 @@ class TestRichiestaAnalisi:
         serializzato = json.dumps(schema)
         for vietato in ("pattern", "minimum", "maximum", "minLength", "maxLength"):
             assert vietato not in serializzato
+
+    def test_nessun_campo_incrocia_type_multiplo_ed_enum(self):
+        """Anthropic rifiuta con 400 un `enum` su un nodo il cui `type` è una
+        lista (es. `["string", "null"]`): un valore enum non combacia con un
+        singolo tipo dichiarato. La forma valida è `anyOf` con un tipo per ramo.
+        """
+        schema = richiesta_analisi(
+            ImmagineLlm(media_type="image/jpeg", base64="Zm90bw=="), "finto-1"
+        ).schema_atteso
+
+        def nodi(oggetto: object):
+            if isinstance(oggetto, dict):
+                yield oggetto
+                for valore in oggetto.values():
+                    yield from nodi(valore)
+            elif isinstance(oggetto, list):
+                for elemento in oggetto:
+                    yield from nodi(elemento)
+
+        for nodo in nodi(schema):
+            assert not (isinstance(nodo.get("type"), list) and "enum" in nodo), nodo

@@ -57,11 +57,12 @@ class SegretiStack extends Stack {
     this.segretoProvider = new Secret(this, 'ChiaviProvider', {
       secretName: prefisso(env2, 'chiavi-provider'),
       description:
-        'Chiavi dei provider: ANTHROPIC_API_KEY (visione, stilista), OPENAI_API_KEY, FAL_KEY (scontorno)',
+        'Chiavi dei provider: ANTHROPIC_API_KEY (visione, stilista), OPENAI_API_KEY, GOOGLE_API_KEY, FAL_KEY (scontorno)',
       generateSecretString: {
         secretStringTemplate: JSON.stringify({
           ANTHROPIC_API_KEY: '',
           OPENAI_API_KEY: '',
+          GOOGLE_API_KEY: '',
           FAL_KEY: '',
         }),
         generateStringKey: 'segnaposto',

@@ -17,7 +17,21 @@ from domain.ports import RichiestaLlm, RispostaLlm
 NOME = "openai"
 VARIABILE_CHIAVE = "OPENAI_API_KEY"
 URL = os.environ.get("OPENAI_URL", "https://api.openai.com/v1/chat/completions")
-MODELLI_DEFAULT = ("gpt-5.1", "gpt-5.1-mini")
+# `gpt-5.1-mini` non esiste nel catalogo OpenAI (mai verificato prima d'ora):
+# `gpt-5-mini`, della generazione precedente, è la variante economica con
+# visione che risulta davvero raggiungibile.
+MODELLI_DEFAULT = ("gpt-5.1", "gpt-5-mini")
+
+# I modelli "reasoning" di OpenAI (o1/o3/o4, la famiglia gpt-5) accettano solo
+# la temperatura di default e rifiutano con 400 qualunque altro valore. Stesso
+# problema di Anthropic (vedi `anthropic_provider.SENZA_TEMPERATURA`): lo
+# risolviamo per prefisso, non per id esatto, perché `MODELLI_OPENAI` può
+# introdurre varianti nuove della stessa famiglia senza toccare questo file.
+PREFISSI_SENZA_TEMPERATURA = ("gpt-5", "o1", "o3", "o4")
+
+
+def _accetta_temperatura(modello: str) -> bool:
+    return not modello.startswith(PREFISSI_SENZA_TEMPERATURA)
 
 
 def _modelli_configurati() -> list[str]:
@@ -32,6 +46,7 @@ def catalogo(configurato: bool) -> list[ModelloDisponibile]:
         ModelloDisponibile(
             provider=NOME,
             id=modello,
+            accetta_temperatura=_accetta_temperatura(modello),
             etichetta=modello,
             visione=True,
             note="prezzi da verificare nel listino OpenAI",
@@ -69,8 +84,9 @@ class ProviderOpenAI:
             "model": richiesta.modello,
             "messages": messaggi,
             "max_completion_tokens": richiesta.max_token,
-            "temperature": richiesta.temperatura,
         }
+        if _accetta_temperatura(richiesta.modello):
+            corpo["temperature"] = richiesta.temperatura
         if richiesta.forza_json:
             corpo["response_format"] = (
                 {

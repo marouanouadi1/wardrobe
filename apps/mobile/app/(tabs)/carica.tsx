@@ -53,7 +53,7 @@ const LETTURA_DEMO: LetturaCapo = {
 }
 
 export default function Carica() {
-  const { avvisa, creaCapoManuale } = useArmadio()
+  const { avvisa, creaCapoManuale, modelloVisione } = useArmadio()
   const [fase, setFase] = useState<Fase>('scatta')
   const [passo, setPasso] = useState(0)
   const [foto, setFoto] = useState<string | null>(null)
@@ -118,7 +118,7 @@ export default function Carica() {
       const firma = await api.firmaUpload('image/jpeg')
       const contenuto = await (await fetch(esito.assets[0].uri)).blob()
       await api.caricaFoto(firma, contenuto)
-      const avviata = await api.avviaAnalisi(firma.chiave)
+      const avviata = await api.avviaAnalisi(firma.chiave, modelloVisione)
 
       for (let tentativo = 0; tentativo < 40; tentativo += 1) {
         const stato = await api.statoAnalisi(avviata.esecuzione_id)
@@ -177,7 +177,7 @@ export default function Carica() {
       for (const scatto of esito.assets) {
         const firma = await api.firmaUpload('image/jpeg')
         await api.caricaFoto(firma, await (await fetch(scatto.uri)).blob())
-        await api.avviaAnalisi(firma.chiave)
+        await api.avviaAnalisi(firma.chiave, modelloVisione)
         avviate += 1
         setInBlocco(esito.assets.length - avviate)
       }
