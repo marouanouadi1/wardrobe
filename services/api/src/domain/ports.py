@@ -23,6 +23,8 @@ from domain.models import (
     Profilo,
     UploadFirmato,
     UsoToken,
+    Valutazione,
+    ValutazioneImmagine,
 )
 
 
@@ -119,6 +121,21 @@ class ServizioScontorno(Protocol):
 
 
 @runtime_checkable
+class ServizioGenerazioneImmagini(Protocol):
+    """Rigenera o pulisce la foto di un capo: mai una persona.
+
+    È il servizio che il banco immagini valuta (`scripts/genera_immagini.py`)
+    — scope deciso apposta, vedi `tests/fixtures/campioni/GUIDA.md`: nessun
+    virtual try-on, solo il capo.
+    """
+
+    def genera(self, contenuto: bytes, media_type: str, istruzioni: str, modello: str) -> bytes:
+        """Restituisce l'immagine risultato. Solleva `ErroreProvider` se il
+        servizio non torna con un'immagine."""
+        ...
+
+
+@runtime_checkable
 class RepositoryArmadio(Protocol):
     def elenca_capi(self, utente_id: str) -> list[Capo]: ...
 
@@ -153,6 +170,27 @@ class RepositoryArmadio(Protocol):
         ...
 
     def salva_messaggio_chat(self, utente_id: str, messaggio: MessaggioChat) -> MessaggioChat: ...
+
+    def salva_valutazione(self, valutazione: Valutazione) -> None:
+        """Idempotente su (run_id, provider, modello, campione_id): rilanciare lo
+        stesso modello sullo stesso campione dentro un run aggiorna la riga."""
+        ...
+
+    def elenca_valutazioni(self, run_id: str) -> list[Valutazione]: ...
+
+    def ultimo_run_valutazione(self) -> str | None:
+        """Il `run_id` più recente, o `None` se il banco non ha mai girato."""
+        ...
+
+    def salva_valutazione_immagine(self, valutazione: ValutazioneImmagine) -> None:
+        """Idempotente su (run_id, servizio, modello, campione_id): lo script
+        che genera l'immagine e la schermata che scrive il rating aggiornano
+        la stessa riga, non ne creano due."""
+        ...
+
+    def elenca_valutazioni_immagini(self, run_id: str) -> list[ValutazioneImmagine]: ...
+
+    def ultimo_run_valutazione_immagine(self) -> str | None: ...
 
 
 @runtime_checkable

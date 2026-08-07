@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from domain.chat import SYSTEM_PROMPT_CHAT
 from domain.errors import ErroreDominio
 from domain.models import (
     SOGLIA_SCARTO,
@@ -51,6 +52,20 @@ PRESETS: tuple[PresetPrompt, ...] = (
         system_prompt=SYSTEM_PROMPT_SUGGERIMENTO,
         temperatura=0.45,
         max_token=1200,
+    ),
+    PresetPrompt(
+        # `job` resta SUGGERIMENTO: non esiste (e non serve) un terzo valore
+        # di `JobIa` solo per la chat — cambierebbe `_enums.json` e la union
+        # TypeScript per un preset che il playground non esercita mai da solo
+        # (vedi domain.chat, che diverge apposta dal contratto di
+        # /suggerimenti). Questo preset è letto solo da `handlers.chat` per
+        # nome id, non dal ramo SUGGERIMENTO di `esegui()` qui sotto.
+        id="chat-stilista",
+        etichetta="Chat stilista",
+        job=JobIa.SUGGERIMENTO,
+        system_prompt=SYSTEM_PROMPT_CHAT,
+        temperatura=0.5,
+        max_token=1400,
     ),
 )
 

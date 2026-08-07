@@ -22,6 +22,21 @@ URL = os.environ.get("OPENAI_URL", "https://api.openai.com/v1/chat/completions")
 # visione che risulta davvero raggiungibile.
 MODELLI_DEFAULT = ("gpt-5.1", "gpt-5-mini")
 
+# Prezzi di listino in dollari per milione di token (input, output).
+# Verificati il 2026-08-07 sul listino OpenAI. Sono numeri che invecchiano:
+# quando `MODELLI_OPENAI` introduce un id nuovo, qui manca e il costo torna
+# None (vedi `domain.playground.calcola_costo`) — che è la risposta onesta,
+# non zero.
+#
+# Il tier di input "cached" (0.125 su gpt-5.1, 0.025 su gpt-5-mini) non è
+# modellato: nel banco di valutazione ogni chiamata è indipendente, non c'è
+# mai un prefisso ripetuto da cachare, e un terzo prezzo per un caso che non
+# si presenta sarebbe precisione finta.
+PREZZI_USD: dict[str, tuple[float, float]] = {
+    "gpt-5.1": (1.25, 10.0),
+    "gpt-5-mini": (0.25, 2.0),
+}
+
 # I modelli "reasoning" di OpenAI (o1/o3/o4, la famiglia gpt-5) accettano solo
 # la temperatura di default e rifiutano con 400 qualunque altro valore. Stesso
 # problema di Anthropic (vedi `anthropic_provider.SENZA_TEMPERATURA`): lo
@@ -49,7 +64,7 @@ def catalogo(configurato: bool) -> list[ModelloDisponibile]:
             accetta_temperatura=_accetta_temperatura(modello),
             etichetta=modello,
             visione=True,
-            note="prezzi da verificare nel listino OpenAI",
+            note="visione; listino verificato il 2026-08-07",
             configurato=configurato,
         )
         for modello in _modelli_configurati()

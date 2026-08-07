@@ -127,17 +127,54 @@ def richiesta_suggerimento(
     )
 
 
+def _valida_proposta(grezza: object, indice: dict[str, Capo], testo: str) -> Suggerimento | None:
+    """Una proposta, validata contro l'armadio vero.
+
+    `None` significa «non indossabile»: scartare la singola proposta zoppa e
+    tenere le altre è deliberato, un modello su tre proposte ne sbaglia una.
+    Ogni altro problema (capo inventato, struttura rotta, slot doppio) è più
+    grave e solleva — chi chiama decide se propagarlo o inghiottirlo.
+    """
+    if not isinstance(grezza, dict):
+        raise SuggerimentoNonValido("proposta non è un oggetto", testo)
+
+    capo_ids = grezza.get("capi")
+    if not isinstance(capo_ids, list) or not capo_ids:
+        raise SuggerimentoNonValido("proposta senza capi", testo)
+
+    inventati = [str(x) for x in capo_ids if str(x) not in indice]
+    if inventati:
+        raise SuggerimentoNonValido(
+            f"capi che non esistono nell'armadio: {', '.join(inventati)}", testo
+        )
+
+    vestizione, scartati = vestizione_da_capi([str(x) for x in capo_ids], indice)
+    if scartati:
+        raise SuggerimentoNonValido(
+            f"più capi per lo stesso slot dell'avatar: {', '.join(scartati)}", testo
+        )
+    if not vestizione_indossabile(vestizione):
+        return None
+
+    motivi = [str(m).strip() for m in grezza.get("perche", []) if str(m).strip()]
+    return Suggerimento(
+        titolo=str(grezza.get("titolo") or "Proposta").strip(),
+        match=max(0, min(100, int(grezza.get("match", 70)))),
+        vestizione=vestizione,
+        perche=motivi[:3],
+    )
+
+
 def interpreta_suggerimenti(testo: str, capi: list[Capo]) -> list[Suggerimento]:
     """Valida le proposte contro l'armadio vero.
 
     Tre livelli di severità, in ordine:
-    1. capo inventato -> errore, la risposta è inutilizzabile;
+    1. capo inventato, o struttura rotta -> errore, la risposta è inutilizzabile;
     2. proposta non indossabile (manca sopra o sotto) -> proposta scartata;
     3. nessuna proposta sopravvive -> errore.
 
-    Scartare la singola proposta zoppa e tenere le altre è deliberato: un
-    modello su tre proposte ne sbaglia una, e buttare via anche le due buone
-    farebbe pagare all'utente un problema nostro.
+    Usata da `/suggerimenti`, dove una lista di outfit è sempre la risposta
+    attesa: qui «nessuna proposta» è un fallimento, mai un turno silenzioso.
     """
     dati = estrai_json(testo)
     grezze = dati.get("proposte")
@@ -145,41 +182,41 @@ def interpreta_suggerimenti(testo: str, capi: list[Capo]) -> list[Suggerimento]:
         raise SuggerimentoNonValido("nessuna proposta nella risposta", testo)
 
     indice = per_id(capi)
-    proposte: list[Suggerimento] = []
-
-    for grezza in grezze:
-        if not isinstance(grezza, dict):
-            raise SuggerimentoNonValido("proposta non è un oggetto", testo)
-
-        capo_ids = grezza.get("capi")
-        if not isinstance(capo_ids, list) or not capo_ids:
-            raise SuggerimentoNonValido("proposta senza capi", testo)
-
-        inventati = [str(x) for x in capo_ids if str(x) not in indice]
-        if inventati:
-            raise SuggerimentoNonValido(
-                f"capi che non esistono nell'armadio: {', '.join(inventati)}", testo
-            )
-
-        vestizione, scartati = vestizione_da_capi([str(x) for x in capo_ids], indice)
-        if scartati:
-            raise SuggerimentoNonValido(
-                f"più capi per lo stesso slot dell'avatar: {', '.join(scartati)}", testo
-            )
-        if not vestizione_indossabile(vestizione):
-            continue
-
-        motivi = [str(m).strip() for m in grezza.get("perche", []) if str(m).strip()]
-        proposte.append(
-            Suggerimento(
-                titolo=str(grezza.get("titolo") or "Proposta").strip(),
-                match=max(0, min(100, int(grezza.get("match", 70)))),
-                vestizione=vestizione,
-                perche=motivi[:3],
-            )
-        )
+    proposte = [
+        proposta
+        for grezza in grezze
+        if (proposta := _valida_proposta(grezza, indice, testo)) is not None
+    ]
 
     if not proposte:
         raise SuggerimentoNonValido("nessuna proposta indossabile", testo)
 
+    return proposte
+
+
+def proposte_tolleranti(
+    dati: dict[str, object], capi: list[Capo], testo: str
+) -> list[Suggerimento]:
+    """Come `interpreta_suggerimenti`, ma per la chat: qui «nessuna proposta»
+    non è un errore, è un turno di solo testo.
+
+    Una proposta strutturalmente rotta (capo inventato, senza capi, slot
+    doppio) viene scartata invece di far fallire l'intero turno: la prosa in
+    "risposta" resta comunque valida da mostrare, e buttarla via per una
+    proposta a cui il modello ha aggiunto in coda un outfit malformato
+    sarebbe punire l'utente per un problema che non lo riguarda.
+    """
+    grezze = dati.get("proposte")
+    if not isinstance(grezze, list) or not grezze:
+        return []
+
+    indice = per_id(capi)
+    proposte: list[Suggerimento] = []
+    for grezza in grezze:
+        try:
+            proposta = _valida_proposta(grezza, indice, testo)
+        except SuggerimentoNonValido:
+            continue
+        if proposta is not None:
+            proposte.append(proposta)
     return proposte

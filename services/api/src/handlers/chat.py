@@ -1,31 +1,33 @@
 """POST /chat, GET /chat — la chat vera dello stilista.
 
-Stesso lavoro di /suggerimenti (proporre outfit sull'armadio vero), ma con
-memoria: ogni messaggio si aggiunge a una cronologia persistita per utente, e
-il modello la rivede prima di rispondere. Una chat per utente, continua — non
-ci sono sessioni da aprire o chiudere.
+Sullo stesso armadio vero di /suggerimenti, ma con memoria e con la voce:
+ogni messaggio si aggiunge a una cronologia persistita per utente, il modello
+la rivede prima di rispondere, e può rispondere a parole — non solo con una
+lista di outfit. Una chat per utente, continua — non ci sono sessioni da
+aprire o chiudere.
 
-Il system prompt non è la costante di `domain.stylist`: è quello effettivo
-(`domain.playground.preset_effettivo`), che riflette l'ultima versione salvata
-nel playground. Cambiare il prompt lì cambia anche questa chat, senza deploy.
+Il system prompt non è una costante: è quello effettivo
+(`domain.playground.preset_effettivo`) del preset "chat-stilista", che
+riflette l'ultima versione salvata nel playground. Cambiare il prompt lì
+cambia anche questa chat, senza deploy.
 """
 
 from __future__ import annotations
 
 import os
 
-from domain.chat import richiesta_chat
+from domain.chat import interpreta_risposta_chat, richiesta_chat
 from domain.models import MessaggioChat, RichiestaMessaggioChat, RispostaChat, RuoloChat
 from domain.playground import preset_effettivo
 from domain.ports import ProviderLlm
-from domain.stylist import costruisci_contesto, interpreta_suggerimenti
+from domain.stylist import costruisci_contesto
 from handlers._container import generatore_id, in_sviluppo, orologio, repository
 from handlers._http import Evento, Risposta, corpo, endpoint, ok, utente_id
 
 PROVIDER_DEFAULT = os.environ.get("PROVIDER_STILISTA", "anthropic")
 MODELLO_DEFAULT = os.environ.get("MODELLO_STILISTA", "")
 
-ID_PRESET_STILISTA = "suggeritore-mattina"
+ID_PRESET_STILISTA = "chat-stilista"
 
 
 def _provider(nome: str) -> ProviderLlm:
@@ -50,21 +52,20 @@ def elenca(evento: Evento) -> Risposta:
 
 @endpoint
 def invia(evento: Evento) -> Risposta:
-    """POST /chat — un messaggio, una risposta vera del modello, entrambi salvati."""
+    """POST /chat — un messaggio, una risposta vera del modello, entrambi salvati.
+
+    Il modello viene interpellato e la sua risposta validata PRIMA di salvare
+    qualunque turno. Se il modello risponde fuori formato, la cronologia resta
+    esattamente come l'utente l'ha lasciata — niente domanda senza risposta
+    che confonderebbe il turno successivo (due «utente» consecutivi sono
+    legali per ogni provider, ma è la forma che li disorienta di più).
+    """
     richiesta = corpo(evento, RichiestaMessaggioChat)
     utente = utente_id(evento)
 
     capi = repository().elenca_capi(utente)
     profilo = repository().leggi_profilo(utente)
     precedenti = repository().elenca_messaggi_chat(utente)
-
-    messaggio_utente = MessaggioChat(
-        id=generatore_id().nuovo(),
-        ruolo=RuoloChat.UTENTE,
-        testo=richiesta.testo,
-        creato_il=orologio().adesso(),
-    )
-    repository().salva_messaggio_chat(utente, messaggio_utente)
 
     contesto = costruisci_contesto(
         capi,
@@ -89,14 +90,23 @@ def invia(evento: Evento) -> Risposta:
             max_token=preset.max_token,
         )
     )
-    suggerimenti = interpreta_suggerimenti(risposta_llm.testo, capi)
+    risposta_stilista = interpreta_risposta_chat(risposta_llm.testo, capi)
+
+    adesso = orologio().adesso()
+    messaggio_utente = MessaggioChat(
+        id=generatore_id().nuovo(),
+        ruolo=RuoloChat.UTENTE,
+        testo=richiesta.testo,
+        creato_il=adesso,
+    )
+    repository().salva_messaggio_chat(utente, messaggio_utente)
 
     messaggio_tela = MessaggioChat(
         id=generatore_id().nuovo(),
         ruolo=RuoloChat.TELA,
-        testo=risposta_llm.testo,
-        suggerimenti=suggerimenti,
-        creato_il=orologio().adesso(),
+        testo=risposta_stilista.risposta,
+        suggerimenti=risposta_stilista.proposte,
+        creato_il=adesso,
     )
     repository().salva_messaggio_chat(utente, messaggio_tela)
 

@@ -27,10 +27,13 @@ import type {
   Profilo,
   RichiestaMessaggioChat,
   RichiestaPlayground,
+  RichiestaRatingImmagine,
   RichiestaSuggerimenti,
   RiepilogoArmadio,
   RispostaChat,
   RispostaSuggerimenti,
+  RispostaValutazioni,
+  RispostaValutazioniImmagini,
   UploadFirmato,
 } from '@wardrobe/contracts'
 
@@ -208,6 +211,23 @@ export const api = {
         // Solo in sviluppo: permette di provare un provider senza aspettare un
         // deploy che scriva la chiave su Secrets Manager.
         intestazioni: chiaveProvider ? { 'x-provider-key': chiaveProvider } : undefined,
+      }),
+    valutazioni: (run?: string) => {
+      const parametri = new URLSearchParams()
+      if (run) parametri.set('run', run)
+      const query = parametri.toString()
+      return chiama<RispostaValutazioni>(`/dev/valutazioni${query ? `?${query}` : ''}`)
+    },
+    immagini: (run?: string) => {
+      const parametri = new URLSearchParams()
+      if (run) parametri.set('run', run)
+      const query = parametri.toString()
+      return chiama<RispostaValutazioniImmagini>(`/dev/immagini${query ? `?${query}` : ''}`)
+    },
+    votaImmagine: (richiesta: RichiestaRatingImmagine) =>
+      chiama<import('@wardrobe/contracts').ValutazioneImmagine>('/dev/immagini', {
+        metodo: 'POST',
+        corpo: richiesta,
       }),
   },
 }

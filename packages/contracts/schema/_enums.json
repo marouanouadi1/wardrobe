@@ -58,5 +58,13 @@
   "RuoloChat": [
     "utente",
     "tela"
+  ],
+  "EsitoAttributo": [
+    "esatto",
+    "vicino",
+    "sbagliato",
+    "mancante",
+    "inventato",
+    "non_valutato"
   ]
 }

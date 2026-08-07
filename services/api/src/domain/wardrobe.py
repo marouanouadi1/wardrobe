@@ -29,7 +29,7 @@ from domain.models import (
 # regge la schermata del calendario.
 MESI_PER_DORMIENTE = 6
 
-_ATTRIBUTI_DI_CAMPO: dict[AttributoCapo, str] = {
+ATTRIBUTI_DI_CAMPO: dict[AttributoCapo, str] = {
     AttributoCapo.TIPO: "tipo",
     AttributoCapo.COLORE: "colore",
     AttributoCapo.MATERIALE: "materiale",
@@ -132,7 +132,7 @@ def correggi_attributo(
     risultato viene rivalidato — `model_copy` non valida, e un colore scritto a
     mano sbagliato entrerebbe in silenzio.
     """
-    campo = _ATTRIBUTI_DI_CAMPO[attributo]
+    campo = ATTRIBUTI_DI_CAMPO[attributo]
     aggiornamento: dict[str, object] = {campo: valore, "aggiornato_il": adesso}
 
     if attributo is AttributoCapo.TIPO and isinstance(valore, TipoCapo):
@@ -284,3 +284,10 @@ def colori_vestizione(vestizione: Vestizione, per_id: dict[str, Capo]) -> Vestiz
 
 def per_id(capi: list[Capo]) -> dict[str, Capo]:
     return {capo.id: capo for capo in capi}
+
+
+def ids_vestizione(vestizione: Vestizione) -> list[str]:
+    """Gli id dei capi occupati, negli slot dell'avatar in ordine fisso."""
+    return [
+        capo_id for slot in SlotAvatar if (capo_id := getattr(vestizione, slot.value)) is not None
+    ]

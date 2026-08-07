@@ -64,6 +64,14 @@ RISPOSTE = (
     models.MessaggioChat,
     models.RispostaChat,
     models.ElencoMessaggiChat,
+    models.GiudizioAttributo,
+    models.Calibrazione,
+    models.Valutazione,
+    models.RigaAggregata,
+    models.RispostaValutazioni,
+    models.RatingImmagine,
+    models.ValutazioneImmagine,
+    models.RispostaValutazioniImmagini,
 )
 
 RICHIESTE = (
@@ -81,6 +89,7 @@ RICHIESTE = (
     models.RichiestaSuggerimenti,
     models.RichiestaPlayground,
     models.RichiestaMessaggioChat,
+    models.RichiestaRatingImmagine,
 )
 
 ENUM = (
@@ -94,6 +103,7 @@ ENUM = (
     ("EsitoEsecuzione", models.EsitoEsecuzione),
     ("StatoAnalisi", models.StatoAnalisi),
     ("RuoloChat", models.RuoloChat),
+    ("EsitoAttributo", models.EsitoAttributo),
 )
 
 COSTANTI = {

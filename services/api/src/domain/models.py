@@ -116,6 +116,7 @@ class RuoloChat(StrEnum):
 Confidenza = Annotated[int, Field(ge=0, le=100)]
 Percentuale = Annotated[int, Field(ge=0, le=100)]
 EsaColore = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
+Voto1a5 = Annotated[int, Field(ge=1, le=5)]
 
 
 class Colore(ModelloTela):
@@ -279,6 +280,19 @@ class Suggerimento(ModelloTela):
     match: Percentuale
     vestizione: Vestizione
     perche: list[str] = Field(max_length=3)
+
+
+class RispostaStilista(ModelloTela):
+    """La risposta della chat vera: prosa libera, con proposte opzionali.
+
+    A differenza di `RispostaSuggerimenti` (sempre e solo una lista di
+    outfit), qui "risposta" c'è sempre — è quello che l'utente legge — e
+    "proposte" compare solo quando proporre un outfit è la cosa giusta da
+    fare in quel turno.
+    """
+
+    risposta: str
+    proposte: list[Suggerimento] = Field(default_factory=list)
 
 
 class Meteo(ModelloTela):
@@ -474,9 +488,11 @@ class MessaggioChat(ModelloTela):
 
     Persiste per utente: non è una sessione che si azzera chiudendo l'app, è
     la stessa conversazione che si riprende da dove l'ha lasciata. `testo` sul
-    turno di Tela è la risposta grezza del modello (JSON): serve a ridargliela
-    come memoria al turno successivo. A schermo si mostra `suggerimenti`, non
-    `testo`.
+    turno di Tela è la prosa libera della risposta (`RispostaStilista.risposta`),
+    quella che si mostra a schermo; `suggerimenti`, quando presenti, sono gli
+    outfit proposti nello stesso turno. La cronologia rimandata al modello
+    (`domain.chat.cronologia_da_messaggi`) riappende gli id di `suggerimenti`
+    al testo, perché il modello non li perda al turno successivo.
     """
 
     id: str
@@ -510,6 +526,212 @@ class NuovoOutfit(ModelloTela):
     vestizione: Vestizione
     occasione: str | None = None
     origine: OrigineOutfit = OrigineOutfit.MANUALE
+
+
+class VeritaAttributo(ModelloTela):
+    """Il valore vero di un attributo di un capo campione, per il banco di
+    valutazione dei modelli — non per l'uso quotidiano dell'app.
+
+    Tre stati, non uno solo:
+    - un valore atteso: `attesi` (e i suoi sinonimi accettati in `vicini`,
+      per non punire un modello per una differenza lessicale — «panna» ed
+      «écru» sono la stessa risposta);
+    - un'assenza attesa (`assente=True`): qui `null` è la risposta *giusta*,
+      non un buco — es. il lavaggio quando l'etichetta non è nella foto;
+    - non presente affatto in `CampioneValutazione.verita` per quell'attributo:
+      non è deducibile dalla foto (es. il materiale senza etichetta
+      leggibile). Diverso da `assente`: qui non sappiamo se il modello ha
+      ragione o torto, quindi non lo giudichiamo.
+
+    Il colore ha una quarta via, `hex` + `tolleranza_hex`: il verdetto si
+    decide sulla distanza RGB, non sul nome — è quello che l'avatar consuma
+    davvero, ed evita il pantano dei sinonimi italiani del colore.
+    """
+
+    attesi: list[str] = Field(default_factory=list)
+    vicini: list[str] = Field(default_factory=list)
+    assente: bool = False
+    hex: EsaColore | None = None
+    tolleranza_hex: int = 40
+
+
+class CampioneValutazione(ModelloTela):
+    """Un capo fotografato apposta per il banco di valutazione, con la sua
+    verità nota scritta a mano — non un capo vero preso dall'armadio di
+    qualcuno, e non un capo che l'app userà mai per un suggerimento.
+    """
+
+    id: str
+    descrizione: str
+    foto: str = Field(description="Nome del file dentro tests/fixtures/campioni/foto/")
+    verita: dict[AttributoCapo, VeritaAttributo] = Field(default_factory=dict)
+
+
+class EsitoAttributo(StrEnum):
+    """Il verdetto su un singolo attributo di un singolo campione.
+
+    Sei stati, non un booleano «giusto/sbagliato»: `NON_VALUTATO` e
+    `INVENTATO` sono informazione a sé, non un modo di dire «sbagliato» — il
+    primo dice che il campione non permette di giudicare, il secondo che il
+    modello ha risposto dove la risposta giusta era tacere.
+    """
+
+    ESATTO = "esatto"
+    VICINO = "vicino"
+    SBAGLIATO = "sbagliato"
+    MANCANTE = "mancante"
+    INVENTATO = "inventato"
+    NON_VALUTATO = "non_valutato"
+
+
+class GiudizioAttributo(ModelloTela):
+    attributo: AttributoCapo
+    esito: EsitoAttributo
+    atteso: str | None = None
+    ottenuto: str | None = None
+    confidenza: Confidenza | None = None
+
+
+class Calibrazione(ModelloTela):
+    """Se la confidenza dichiarata dal modello è coerente con l'essere giusto.
+
+    Sono i due modi in cui `SOGLIA_INCERTEZZA` e `SOGLIA_SCARTO` possono
+    sbagliare per un modello specifico: `sicuri_e_sbagliati` è il danno
+    peggiore (l'app mostra come affidabile un attributo che non lo è),
+    `timidi_e_giusti` è lo spreco opposto (`applica_soglie` butta via un
+    dato buono).
+    """
+
+    sicuri_e_sbagliati: int = 0
+    timidi_e_giusti: int = 0
+    scarto_confidenza: float | None = Field(
+        default=None,
+        description=(
+            "Media delle confidenze meno accuratezza·100. Positivo: il modello si sopravvaluta."
+        ),
+    )
+
+
+class Valutazione(ModelloTela):
+    """Una riga del banco: un modello, su un campione, in un run."""
+
+    id: str
+    run_id: str
+    eseguita_il: datetime
+    campione_id: str
+    provider: str
+    modello: str
+    latenza_ms: int
+    costo_eur: float | None = None
+    esito: EsitoEsecuzione
+    accuratezza: float = 0.0
+    giudizi: list[GiudizioAttributo] = Field(default_factory=list)
+    calibrazione: Calibrazione = Calibrazione()
+    errore: str | None = None
+
+
+class RigaAggregata(ModelloTela):
+    """Una riga della tabella di valutazione: tutti i campioni di un modello,
+    in un run, ridotti a numeri confrontabili."""
+
+    provider: str
+    modello: str
+    campioni: int
+    accuratezza_media: float
+    esatti_per_attributo: dict[AttributoCapo, float] = Field(default_factory=dict)
+    tasso_vago: float
+    tasso_errore: float
+    inventati: int
+    sicuri_e_sbagliati: int
+    timidi_e_giusti: int
+    scarto_confidenza: float | None = None
+    costo_medio_eur: float | None = None
+    latenza_mediana_ms: int
+
+
+class RispostaValutazioni(ModelloTela):
+    """GET /dev/valutazioni: la tabella aggregata di un run, più il dettaglio.
+
+    `run_id` è `None` solo se il banco non ha ancora mai girato — in quel caso
+    le due liste sono vuote, non un errore: non c'è ancora niente da mostrare.
+    """
+
+    run_id: str | None = None
+    righe: list[RigaAggregata] = Field(default_factory=list)
+    valutazioni: list[Valutazione] = Field(default_factory=list)
+
+
+class ModelloImmagine(ModelloTela):
+    """Una riga del catalogo dei modelli di generazione immagini.
+
+    Non è `ModelloDisponibile`: quello porta `visione`, un campo che per un
+    modello che genera immagini non ha senso, e il costo è per immagine, non
+    per milione di token — un'unità diversa merita un modello a sé.
+    """
+
+    servizio: str
+    id: str
+    etichetta: str
+    costo_eur_immagine: float | None = None
+    configurato: bool = False
+
+
+class RatingImmagine(ModelloTela):
+    """Il giudizio umano su un'immagine generata: 1-5, non calcolabile.
+
+    A differenza della lettura di visione non esiste una verità nota da
+    confrontare — «pulito» e «fedele al colore» li giudica solo un occhio,
+    dalla schermata di valutazione.
+    """
+
+    fedelta_colore: Voto1a5
+    pulizia: Voto1a5
+    artefatti: Voto1a5
+    note: str | None = None
+
+
+class ValutazioneImmagine(ModelloTela):
+    """Una riga del banco immagini: un modello, su un campione, in un run.
+
+    Nasce senza `rating`: lo scrive `scripts/genera_immagini.py` insieme a
+    `chiave_immagine`, `costo_eur` e `latenza_ms` (o `errore`, se il servizio
+    ha fallito). Il rating arriva dopo, dalla schermata di valutazione — due
+    scritture sulla stessa riga (vedi `salva_valutazione_immagine`), non due
+    tabelle.
+    """
+
+    id: str
+    run_id: str
+    eseguita_il: datetime
+    campione_id: str
+    servizio: str
+    modello: str
+    chiave_immagine: str | None = None
+    url: str | None = Field(default=None, description="URL firmato, riempito solo in lettura")
+    costo_eur: float | None = None
+    latenza_ms: int
+    errore: str | None = None
+    rating: RatingImmagine | None = None
+
+
+class RichiestaRatingImmagine(ModelloTela):
+    run_id: str
+    servizio: str
+    modello: str
+    campione_id: str
+    rating: RatingImmagine
+
+
+class RispostaValutazioniImmagini(ModelloTela):
+    """GET /dev/immagini: il banco immagini di un run, senza aggregazione.
+
+    A differenza di `RispostaValutazioni` non c'è una `RigaAggregata`: non
+    esiste un punteggio calcolabile da aggregare, solo rating umani — la
+    schermata di valutazione mostra la lista, non una tabella riassuntiva.
+    """
+
+    run_id: str | None = None
+    valutazioni: list[ValutazioneImmagine] = Field(default_factory=list)
 
 
 class ModelloDisponibile(ModelloTela):

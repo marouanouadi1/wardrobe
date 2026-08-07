@@ -18,7 +18,16 @@ import boto3
 import psycopg
 from psycopg.rows import dict_row
 
-from domain.models import Capo, EsecuzionePlayground, MessaggioChat, Outfit, PresetPrompt, Profilo
+from domain.models import (
+    Capo,
+    EsecuzionePlayground,
+    MessaggioChat,
+    Outfit,
+    PresetPrompt,
+    Profilo,
+    Valutazione,
+    ValutazioneImmagine,
+)
 
 
 class RepositoryPostgres:
@@ -210,3 +219,74 @@ class RepositoryPostgres:
                 (messaggio.id, utente_id, messaggio.creato_il, messaggio.model_dump_json()),
             )
         return messaggio
+
+    # ── banco di valutazione ──────────────────────────────────────────────
+    def salva_valutazione(self, valutazione: Valutazione) -> None:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                """
+                insert into valutazioni (run_id, provider, modello, campione_id, eseguita_il, dati)
+                values (%s, %s, %s, %s, %s, %s)
+                on conflict (run_id, provider, modello, campione_id) do update set
+                    eseguita_il = excluded.eseguita_il,
+                    dati = excluded.dati
+                """,
+                (
+                    valutazione.run_id,
+                    valutazione.provider,
+                    valutazione.modello,
+                    valutazione.campione_id,
+                    valutazione.eseguita_il,
+                    valutazione.model_dump_json(),
+                ),
+            )
+
+    def elenca_valutazioni(self, run_id: str) -> list[Valutazione]:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                "select dati from valutazioni where run_id = %s order by eseguita_il asc",
+                (run_id,),
+            )
+            return [Valutazione.model_validate(r["dati"]) for r in cur.fetchall()]
+
+    def ultimo_run_valutazione(self) -> str | None:
+        with self._conn().cursor() as cur:
+            cur.execute("select run_id from valutazioni order by eseguita_il desc limit 1")
+            riga = cur.fetchone()
+            return riga["run_id"] if riga else None
+
+    # ── banco immagini ────────────────────────────────────────────────────
+    def salva_valutazione_immagine(self, valutazione: ValutazioneImmagine) -> None:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                """
+                insert into valutazioni_immagini
+                    (run_id, servizio, modello, campione_id, eseguita_il, dati)
+                values (%s, %s, %s, %s, %s, %s)
+                on conflict (run_id, servizio, modello, campione_id) do update set
+                    eseguita_il = excluded.eseguita_il,
+                    dati = excluded.dati
+                """,
+                (
+                    valutazione.run_id,
+                    valutazione.servizio,
+                    valutazione.modello,
+                    valutazione.campione_id,
+                    valutazione.eseguita_il,
+                    valutazione.model_dump_json(),
+                ),
+            )
+
+    def elenca_valutazioni_immagini(self, run_id: str) -> list[ValutazioneImmagine]:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                "select dati from valutazioni_immagini where run_id = %s order by eseguita_il asc",
+                (run_id,),
+            )
+            return [ValutazioneImmagine.model_validate(r["dati"]) for r in cur.fetchall()]
+
+    def ultimo_run_valutazione_immagine(self) -> str | None:
+        with self._conn().cursor() as cur:
+            cur.execute("select run_id from valutazioni_immagini order by eseguita_il desc limit 1")
+            riga = cur.fetchone()
+            return riga["run_id"] if riga else None

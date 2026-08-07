@@ -14,11 +14,19 @@ from __future__ import annotations
 import base64
 import os
 
-from domain.errors import AccessoNegato
-from domain.models import PresetPrompt, RichiestaPlayground
+from domain.errors import AccessoNegato, RichiestaNonValida
+from domain.models import (
+    PresetPrompt,
+    RichiestaPlayground,
+    RichiestaRatingImmagine,
+    RispostaValutazioni,
+    RispostaValutazioniImmagini,
+    ValutazioneImmagine,
+)
 from domain.playground import PRESETS, esegui, preset_effettivo, traccia
 from domain.ports import ImmagineLlm
 from domain.stylist import costruisci_contesto
+from domain.valutazione import aggrega
 from handlers._container import (
     archivio_foto,
     generatore_id,
@@ -26,7 +34,7 @@ from handlers._container import (
     orologio,
     repository,
 )
-from handlers._http import Evento, Risposta, corpo, endpoint, ok, utente_id
+from handlers._http import Evento, Risposta, corpo, endpoint, ok, query, utente_id
 
 
 def _controlla_accesso() -> None:
@@ -129,3 +137,79 @@ def esegui_test(evento: Evento) -> Risposta:
         )
     )
     return ok(esito)
+
+
+@endpoint
+def valutazioni(evento: Evento) -> Risposta:
+    """GET /dev/valutazioni?run= — la tabella del banco (`scripts/valuta_modelli.py`).
+
+    Senza `run` prende l'ultimo: è quello che si vuole guardare nella
+    stragrande maggioranza dei casi, e evita a chi apre la schermata di dover
+    prima cercare l'id in uno storico.
+    """
+    _controlla_accesso()
+    run_id = query(evento).get("run") or repository().ultimo_run_valutazione()
+    if run_id is None:
+        return ok(RispostaValutazioni())
+
+    trovate = repository().elenca_valutazioni(run_id)
+    return ok(RispostaValutazioni(run_id=run_id, righe=aggrega(trovate), valutazioni=trovate))
+
+
+def _con_url_immagine(valutazione: ValutazioneImmagine) -> ValutazioneImmagine:
+    """La foto viaggia come URL firmato, mai come chiave nuda — stesso motivo
+    di `handlers._foto_capo.con_url`: la chiave da sola non basta all'app per
+    mostrare niente."""
+    if valutazione.chiave_immagine is None:
+        return valutazione
+    return valutazione.model_copy(
+        update={"url": archivio_foto().url_lettura(valutazione.chiave_immagine)}
+    )
+
+
+@endpoint
+def immagini(evento: Evento) -> Risposta:
+    """GET /dev/immagini?run= — il banco immagini (`scripts/genera_immagini.py`).
+
+    Senza aggregazione (vedi `RispostaValutazioniImmagini`): niente verità
+    nota da confrontare, solo la lista da mostrare come contact sheet.
+    """
+    _controlla_accesso()
+    run_id = query(evento).get("run") or repository().ultimo_run_valutazione_immagine()
+    if run_id is None:
+        return ok(RispostaValutazioniImmagini())
+
+    trovate = [_con_url_immagine(v) for v in repository().elenca_valutazioni_immagini(run_id)]
+    return ok(RispostaValutazioniImmagini(run_id=run_id, valutazioni=trovate))
+
+
+@endpoint
+def vota_immagine(evento: Evento) -> Risposta:
+    """POST /dev/immagini — assegna un rating umano a un'immagine già generata.
+
+    Aggiorna la riga che `scripts/genera_immagini.py` ha già scritto: non ne
+    crea una nuova, e non può votare un'immagine che non esiste nel run.
+    """
+    _controlla_accesso()
+    richiesta = corpo(evento, RichiestaRatingImmagine)
+
+    esistenti = repository().elenca_valutazioni_immagini(richiesta.run_id)
+    trovata = next(
+        (
+            v
+            for v in esistenti
+            if v.servizio == richiesta.servizio
+            and v.modello == richiesta.modello
+            and v.campione_id == richiesta.campione_id
+        ),
+        None,
+    )
+    if trovata is None:
+        raise RichiestaNonValida(
+            f"nessuna immagine per {richiesta.servizio}/{richiesta.modello} su "
+            f"{richiesta.campione_id} nel run «{richiesta.run_id}»"
+        )
+
+    aggiornata = trovata.model_copy(update={"rating": richiesta.rating})
+    repository().salva_valutazione_immagine(aggiornata)
+    return ok(_con_url_immagine(aggiornata))

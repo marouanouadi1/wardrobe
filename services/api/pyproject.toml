@@ -29,6 +29,10 @@ dev = [
     "ruff>=0.9",
     "mypy>=1.14",
     "boto3-stubs[s3,secretsmanager,stepfunctions]>=1.35",
+    # Solo per scripts/campioni_da_excel.py: legge il banco di prova che
+    # compilano anche i non sviluppatori, in docs/banco-di-prova-modelli.xlsx.
+    "openpyxl>=3.1",
+    "types-openpyxl>=3.1",
 ]
 
 [build-system]

@@ -33,6 +33,8 @@ from domain.models import (
     StatoCapo,
     TipoCapo,
     UploadFirmato,
+    Valutazione,
+    ValutazioneImmagine,
 )
 from domain.wardrobe import slot_da_tipo
 
@@ -224,6 +226,8 @@ class RepositoryInMemoria:
         self._playground: list[EsecuzionePlayground] = []
         self._preset: dict[str, PresetPrompt] = {}
         self._chat: dict[str, list[MessaggioChat]] = {}
+        self._valutazioni: dict[tuple[str, str, str, str], Valutazione] = {}
+        self._valutazioni_immagini: dict[tuple[str, str, str, str], ValutazioneImmagine] = {}
 
     @classmethod
     def con_semi(cls, utente_id: str = "demo") -> RepositoryInMemoria:
@@ -305,3 +309,41 @@ class RepositoryInMemoria:
     def salva_messaggio_chat(self, utente_id: str, messaggio: MessaggioChat) -> MessaggioChat:
         self._chat.setdefault(utente_id, []).append(messaggio)
         return messaggio
+
+    # ── banco di valutazione ───────────────────────────────────────────────
+    def salva_valutazione(self, valutazione: Valutazione) -> None:
+        chiave = (
+            valutazione.run_id,
+            valutazione.provider,
+            valutazione.modello,
+            valutazione.campione_id,
+        )
+        self._valutazioni[chiave] = valutazione
+
+    def elenca_valutazioni(self, run_id: str) -> list[Valutazione]:
+        trovate = [v for v in self._valutazioni.values() if v.run_id == run_id]
+        return sorted(trovate, key=lambda v: v.eseguita_il)
+
+    def ultimo_run_valutazione(self) -> str | None:
+        if not self._valutazioni:
+            return None
+        return max(self._valutazioni.values(), key=lambda v: v.eseguita_il).run_id
+
+    # ── banco immagini ───────────────────────────────────────────────────
+    def salva_valutazione_immagine(self, valutazione: ValutazioneImmagine) -> None:
+        chiave = (
+            valutazione.run_id,
+            valutazione.servizio,
+            valutazione.modello,
+            valutazione.campione_id,
+        )
+        self._valutazioni_immagini[chiave] = valutazione
+
+    def elenca_valutazioni_immagini(self, run_id: str) -> list[ValutazioneImmagine]:
+        trovate = [v for v in self._valutazioni_immagini.values() if v.run_id == run_id]
+        return sorted(trovate, key=lambda v: v.eseguita_il)
+
+    def ultimo_run_valutazione_immagine(self) -> str | None:
+        if not self._valutazioni_immagini:
+            return None
+        return max(self._valutazioni_immagini.values(), key=lambda v: v.eseguita_il).run_id

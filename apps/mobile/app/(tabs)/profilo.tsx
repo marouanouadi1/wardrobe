@@ -198,6 +198,29 @@ export default function Profilo() {
               </View>
               <Icona nome="chevron" misura={17} colore="rgba(21,21,26,0.3)" spessore={2.4} />
             </Toccabile>
+            <Toccabile
+              onPress={() => router.push('/dev/valutazioni')}
+              scala={0.98}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
+                padding: 18,
+                borderRadius: raggi.medio + 4,
+                backgroundColor: colori.scheda,
+                borderWidth: 1,
+                borderColor: linee.tenue,
+              }}
+            >
+              <Bolla nome="griglia" misura={40} sfondo="rgba(21,21,26,0.06)" tinta={colori.inchiostro} />
+              <View style={{ flex: 1 }}>
+                <Titolo taglia={17}>Valutazione modelli</Titolo>
+                <Corpo taglia={12} tono="tenue">
+                  Accuratezza e costo del banco a dieci campioni
+                </Corpo>
+              </View>
+              <Icona nome="chevron" misura={17} colore="rgba(21,21,26,0.3)" spessore={2.4} />
+            </Toccabile>
           </>
         ) : null}
       </ScrollView>

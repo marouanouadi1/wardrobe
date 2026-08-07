@@ -246,21 +246,22 @@ export default function Suggeritore() {
                       <Corpo taglia={14} scuro>
                         {messaggio.testo}
                       </Corpo>
-                    ) : (messaggio.suggerimenti?.length ?? 0) > 0 ? (
-                      // La risposta vera dello stilista: tutte le proposte che
-                      // ha fatto, non solo la prima riassunta a caso.
-                      messaggio.suggerimenti!.map((proposta) => (
-                        <View key={proposta.titolo} style={{ gap: 4 }}>
-                          <Forte taglia={14}>{`${proposta.titolo} · ${proposta.match}%`}</Forte>
-                          {proposta.perche.map((motivo) => (
-                            <Corpo key={motivo} taglia={13} tono="medio">
-                              {`— ${motivo}`}
-                            </Corpo>
-                          ))}
-                        </View>
-                      ))
                     ) : (
-                      <Corpo taglia={14}>Non ho trovato un outfit adatto con i capi che hai ora.</Corpo>
+                      // La risposta vera dello stilista: prima la prosa —
+                      // c'è sempre — poi le proposte, solo quando ci sono.
+                      <>
+                        <Corpo taglia={14}>{messaggio.testo}</Corpo>
+                        {messaggio.suggerimenti?.map((proposta) => (
+                          <View key={proposta.titolo} style={{ gap: 4 }}>
+                            <Forte taglia={14}>{`${proposta.titolo} · ${proposta.match}%`}</Forte>
+                            {proposta.perche.map((motivo) => (
+                              <Corpo key={motivo} taglia={13} tono="medio">
+                                {`— ${motivo}`}
+                              </Corpo>
+                            ))}
+                          </View>
+                        ))}
+                      </>
                     )}
                   </View>
                 )

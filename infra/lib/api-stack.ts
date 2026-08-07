@@ -90,6 +90,9 @@ const ROTTE: readonly Rotta[] = [
   { metodo: HttpMethod.GET, percorso: '/dev/contesto', handler: 'handlers.playground.contesto', soloPlayground: true },
   { metodo: HttpMethod.GET, percorso: '/dev/playground/storico', handler: 'handlers.playground.storico', soloPlayground: true },
   { metodo: HttpMethod.POST, percorso: '/dev/playground', handler: 'handlers.playground.esegui_test', soloPlayground: true },
+  { metodo: HttpMethod.GET, percorso: '/dev/valutazioni', handler: 'handlers.playground.valutazioni', soloPlayground: true },
+  { metodo: HttpMethod.GET, percorso: '/dev/immagini', handler: 'handlers.playground.immagini', soloPlayground: true },
+  { metodo: HttpMethod.POST, percorso: '/dev/immagini', handler: 'handlers.playground.vota_immagine', soloPlayground: true },
 ]
 
 export class ApiStack extends Stack {

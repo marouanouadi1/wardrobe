@@ -16,6 +16,9 @@
     "AttributoCapo": {
       "$ref": "#/$defs/AttributoCapo"
     },
+    "Calibrazione": {
+      "$ref": "#/$defs/Calibrazione"
+    },
     "Capo": {
       "$ref": "#/$defs/Capo"
     },
@@ -43,6 +46,9 @@
     "EsitoAnalisi": {
       "$ref": "#/$defs/EsitoAnalisi"
     },
+    "EsitoAttributo": {
+      "$ref": "#/$defs/EsitoAttributo"
+    },
     "EsitoEsecuzione": {
       "$ref": "#/$defs/EsitoEsecuzione"
     },
@@ -54,6 +60,9 @@
     },
     "FotoCapo": {
       "$ref": "#/$defs/FotoCapo"
+    },
+    "GiudizioAttributo": {
+      "$ref": "#/$defs/GiudizioAttributo"
     },
     "ImpegnoAgenda": {
       "$ref": "#/$defs/ImpegnoAgenda"
@@ -94,6 +103,9 @@
     "Profilo": {
       "$ref": "#/$defs/Profilo"
     },
+    "RatingImmagine": {
+      "$ref": "#/$defs/RatingImmagine"
+    },
     "RichiestaAnalisi": {
       "$ref": "#/$defs/RichiestaAnalisi"
     },
@@ -102,6 +114,9 @@
     },
     "RichiestaPlayground": {
       "$ref": "#/$defs/RichiestaPlayground"
+    },
+    "RichiestaRatingImmagine": {
+      "$ref": "#/$defs/RichiestaRatingImmagine"
     },
     "RichiestaSuggerimenti": {
       "$ref": "#/$defs/RichiestaSuggerimenti"
@@ -112,11 +127,20 @@
     "RiepilogoArmadio": {
       "$ref": "#/$defs/RiepilogoArmadio"
     },
+    "RigaAggregata": {
+      "$ref": "#/$defs/RigaAggregata"
+    },
     "RispostaChat": {
       "$ref": "#/$defs/RispostaChat"
     },
     "RispostaSuggerimenti": {
       "$ref": "#/$defs/RispostaSuggerimenti"
+    },
+    "RispostaValutazioni": {
+      "$ref": "#/$defs/RispostaValutazioni"
+    },
+    "RispostaValutazioniImmagini": {
+      "$ref": "#/$defs/RispostaValutazioniImmagini"
     },
     "RuoloChat": {
       "$ref": "#/$defs/RuoloChat"
@@ -144,6 +168,12 @@
     },
     "UsoToken": {
       "$ref": "#/$defs/UsoToken"
+    },
+    "Valutazione": {
+      "$ref": "#/$defs/Valutazione"
+    },
+    "ValutazioneImmagine": {
+      "$ref": "#/$defs/ValutazioneImmagine"
     },
     "Vestizione": {
       "$ref": "#/$defs/Vestizione"
@@ -296,6 +326,31 @@
       ],
       "title": "AttributoCapo",
       "type": "string"
+    },
+    "Calibrazione": {
+      "additionalProperties": false,
+      "description": "Se la confidenza dichiarata dal modello è coerente con l'essere giusto.\n\nSono i due modi in cui `SOGLIA_INCERTEZZA` e `SOGLIA_SCARTO` possono\nsbagliare per un modello specifico: `sicuri_e_sbagliati` è il danno\npeggiore (l'app mostra come affidabile un attributo che non lo è),\n`timidi_e_giusti` è lo spreco opposto (`applica_soglie` butta via un\ndato buono).",
+      "properties": {
+        "sicuri_e_sbagliati": {
+          "type": "integer"
+        },
+        "timidi_e_giusti": {
+          "type": "integer"
+        },
+        "scarto_confidenza": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Media delle confidenze meno accuratezza·100. Positivo: il modello si sopravvaluta."
+        }
+      },
+      "title": "Calibrazione",
+      "type": "object"
     },
     "Capo": {
       "additionalProperties": false,
@@ -818,6 +873,19 @@
       "title": "EsitoAnalisi",
       "type": "object"
     },
+    "EsitoAttributo": {
+      "description": "Il verdetto su un singolo attributo di un singolo campione.\n\nSei stati, non un booleano «giusto/sbagliato»: `NON_VALUTATO` e\n`INVENTATO` sono informazione a sé, non un modo di dire «sbagliato» — il\nprimo dice che il campione non permette di giudicare, il secondo che il\nmodello ha risposto dove la risposta giusta era tacere.",
+      "enum": [
+        "esatto",
+        "vicino",
+        "sbagliato",
+        "mancante",
+        "inventato",
+        "non_valutato"
+      ],
+      "title": "EsitoAttributo",
+      "type": "string"
+    },
     "EsitoEsecuzione": {
       "enum": [
         "ok",
@@ -1019,6 +1087,55 @@
       "title": "FotoCapo",
       "type": "object"
     },
+    "GiudizioAttributo": {
+      "additionalProperties": false,
+      "properties": {
+        "attributo": {
+          "$ref": "#/$defs/AttributoCapo"
+        },
+        "esito": {
+          "$ref": "#/$defs/EsitoAttributo"
+        },
+        "atteso": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ottenuto": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidenza": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "attributo",
+        "esito"
+      ],
+      "title": "GiudizioAttributo",
+      "type": "object"
+    },
     "ImpegnoAgenda": {
       "additionalProperties": false,
       "properties": {
@@ -1166,7 +1283,7 @@
     },
     "MessaggioChat": {
       "additionalProperties": false,
-      "description": "Un turno della chat continua con lo stilista.\n\nPersiste per utente: non è una sessione che si azzera chiudendo l'app, è\nla stessa conversazione che si riprende da dove l'ha lasciata. `testo` sul\nturno di Tela è la risposta grezza del modello (JSON): serve a ridargliela\ncome memoria al turno successivo. A schermo si mostra `suggerimenti`, non\n`testo`.",
+      "description": "Un turno della chat continua con lo stilista.\n\nPersiste per utente: non è una sessione che si azzera chiudendo l'app, è\nla stessa conversazione che si riprende da dove l'ha lasciata. `testo` sul\nturno di Tela è la prosa libera della risposta (`RispostaStilista.risposta`),\nquella che si mostra a schermo; `suggerimenti`, quando presenti, sono gli\noutfit proposti nello stesso turno. La cronologia rimandata al modello\n(`domain.chat.cronologia_da_messaggi`) riappende gli id di `suggerimenti`\nal testo, perché il modello non li perda al turno successivo.",
       "properties": {
         "id": {
           "type": "string"
@@ -1611,6 +1728,44 @@
       "title": "Profilo",
       "type": "object"
     },
+    "RatingImmagine": {
+      "additionalProperties": false,
+      "description": "Il giudizio umano su un'immagine generata: 1-5, non calcolabile.\n\nA differenza della lettura di visione non esiste una verità nota da\nconfrontare — «pulito» e «fedele al colore» li giudica solo un occhio,\ndalla schermata di valutazione.",
+      "properties": {
+        "fedelta_colore": {
+          "maximum": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "pulizia": {
+          "maximum": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "artefatti": {
+          "maximum": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "fedelta_colore",
+        "pulizia",
+        "artefatti"
+      ],
+      "title": "RatingImmagine",
+      "type": "object"
+    },
     "RichiestaAnalisi": {
       "additionalProperties": false,
       "properties": {
@@ -1736,6 +1891,35 @@
       "title": "RichiestaPlayground",
       "type": "object"
     },
+    "RichiestaRatingImmagine": {
+      "additionalProperties": false,
+      "properties": {
+        "run_id": {
+          "type": "string"
+        },
+        "servizio": {
+          "type": "string"
+        },
+        "modello": {
+          "type": "string"
+        },
+        "campione_id": {
+          "type": "string"
+        },
+        "rating": {
+          "$ref": "#/$defs/RatingImmagine"
+        }
+      },
+      "required": [
+        "run_id",
+        "servizio",
+        "modello",
+        "campione_id",
+        "rating"
+      ],
+      "title": "RichiestaRatingImmagine",
+      "type": "object"
+    },
     "RichiestaSuggerimenti": {
       "additionalProperties": false,
       "properties": {
@@ -1848,6 +2032,85 @@
       "title": "RiepilogoArmadio",
       "type": "object"
     },
+    "RigaAggregata": {
+      "additionalProperties": false,
+      "description": "Una riga della tabella di valutazione: tutti i campioni di un modello,\nin un run, ridotti a numeri confrontabili.",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "modello": {
+          "type": "string"
+        },
+        "campioni": {
+          "type": "integer"
+        },
+        "accuratezza_media": {
+          "type": "number"
+        },
+        "esatti_per_attributo": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/AttributoCapo"
+          },
+          "type": "object"
+        },
+        "tasso_vago": {
+          "type": "number"
+        },
+        "tasso_errore": {
+          "type": "number"
+        },
+        "inventati": {
+          "type": "integer"
+        },
+        "sicuri_e_sbagliati": {
+          "type": "integer"
+        },
+        "timidi_e_giusti": {
+          "type": "integer"
+        },
+        "scarto_confidenza": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "costo_medio_eur": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latenza_mediana_ms": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "provider",
+        "modello",
+        "campioni",
+        "accuratezza_media",
+        "tasso_vago",
+        "tasso_errore",
+        "inventati",
+        "sicuri_e_sbagliati",
+        "timidi_e_giusti",
+        "latenza_mediana_ms"
+      ],
+      "title": "RigaAggregata",
+      "type": "object"
+    },
     "RispostaChat": {
       "additionalProperties": false,
       "properties": {
@@ -1911,6 +2174,60 @@
         "latenza_ms"
       ],
       "title": "RispostaSuggerimenti",
+      "type": "object"
+    },
+    "RispostaValutazioni": {
+      "additionalProperties": false,
+      "description": "GET /dev/valutazioni: la tabella aggregata di un run, più il dettaglio.\n\n`run_id` è `None` solo se il banco non ha ancora mai girato — in quel caso\nle due liste sono vuote, non un errore: non c'è ancora niente da mostrare.",
+      "properties": {
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "righe": {
+          "items": {
+            "$ref": "#/$defs/RigaAggregata"
+          },
+          "type": "array"
+        },
+        "valutazioni": {
+          "items": {
+            "$ref": "#/$defs/Valutazione"
+          },
+          "type": "array"
+        }
+      },
+      "title": "RispostaValutazioni",
+      "type": "object"
+    },
+    "RispostaValutazioniImmagini": {
+      "additionalProperties": false,
+      "description": "GET /dev/immagini: il banco immagini di un run, senza aggregazione.\n\nA differenza di `RispostaValutazioni` non c'è una `RigaAggregata`: non\nesiste un punteggio calcolabile da aggregare, solo rating umani — la\nschermata di valutazione mostra la lista, non una tabella riassuntiva.",
+      "properties": {
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "valutazioni": {
+          "items": {
+            "$ref": "#/$defs/ValutazioneImmagine"
+          },
+          "type": "array"
+        }
+      },
+      "title": "RispostaValutazioniImmagini",
       "type": "object"
     },
     "RuoloChat": {
@@ -2049,6 +2366,171 @@
         }
       },
       "title": "UsoToken",
+      "type": "object"
+    },
+    "Valutazione": {
+      "additionalProperties": false,
+      "description": "Una riga del banco: un modello, su un campione, in un run.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "eseguita_il": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "campione_id": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "modello": {
+          "type": "string"
+        },
+        "latenza_ms": {
+          "type": "integer"
+        },
+        "costo_eur": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "esito": {
+          "$ref": "#/$defs/EsitoEsecuzione"
+        },
+        "accuratezza": {
+          "type": "number"
+        },
+        "giudizi": {
+          "items": {
+            "$ref": "#/$defs/GiudizioAttributo"
+          },
+          "type": "array"
+        },
+        "calibrazione": {
+          "$ref": "#/$defs/Calibrazione"
+        },
+        "errore": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "run_id",
+        "eseguita_il",
+        "campione_id",
+        "provider",
+        "modello",
+        "latenza_ms",
+        "esito"
+      ],
+      "title": "Valutazione",
+      "type": "object"
+    },
+    "ValutazioneImmagine": {
+      "additionalProperties": false,
+      "description": "Una riga del banco immagini: un modello, su un campione, in un run.\n\nNasce senza `rating`: lo scrive `scripts/genera_immagini.py` insieme a\n`chiave_immagine`, `costo_eur` e `latenza_ms` (o `errore`, se il servizio\nha fallito). Il rating arriva dopo, dalla schermata di valutazione — due\nscritture sulla stessa riga (vedi `salva_valutazione_immagine`), non due\ntabelle.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "eseguita_il": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "campione_id": {
+          "type": "string"
+        },
+        "servizio": {
+          "type": "string"
+        },
+        "modello": {
+          "type": "string"
+        },
+        "chiave_immagine": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "URL firmato, riempito solo in lettura"
+        },
+        "costo_eur": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latenza_ms": {
+          "type": "integer"
+        },
+        "errore": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rating": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RatingImmagine"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "run_id",
+        "eseguita_il",
+        "campione_id",
+        "servizio",
+        "modello",
+        "latenza_ms"
+      ],
+      "title": "ValutazioneImmagine",
       "type": "object"
     },
     "Vestizione": {

@@ -27,6 +27,16 @@ _COSTRUTTORI: dict[str, Callable[[str | None], ProviderLlm]] = {
     ollama_provider.NOME: ollama_provider.ProviderOllama,
 }
 
+# Un listino per provider, in dollari per milione di token (input, output).
+# Ollama non c'è: il suo catalogo popola già 0.0 da sé (gira in locale, costa
+# davvero zero) — un'informazione diversa da «non lo so», che è quella che
+# `_con_prezzi` lascia intatta per ogni provider assente da questa mappa.
+_PREZZI_PER_PROVIDER: dict[str, dict[str, tuple[float, float]]] = {
+    anthropic_provider.NOME: anthropic_provider.PREZZI_USD,
+    openai_provider.NOME: openai_provider.PREZZI_USD,
+    google_provider.NOME: google_provider.PREZZI_USD,
+}
+
 _VARIABILI_CHIAVE = {
     anthropic_provider.NOME: anthropic_provider.VARIABILE_CHIAVE,
     openai_provider.NOME: openai_provider.VARIABILE_CHIAVE,
@@ -78,10 +88,8 @@ def _con_prezzi(modello: ModelloDisponibile) -> ModelloDisponibile:
     """
     if modello.costo_input_eur_mtok is not None or modello.costo_output_eur_mtok is not None:
         return modello
-    if modello.provider != anthropic_provider.NOME:
-        return modello
 
-    prezzo = anthropic_provider.PREZZI_USD.get(modello.id)
+    prezzo = _PREZZI_PER_PROVIDER.get(modello.provider, {}).get(modello.id)
     if prezzo is None:
         return modello
 

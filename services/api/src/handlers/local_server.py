@@ -67,6 +67,9 @@ ROTTE: list[tuple[str, re.Pattern[str], Handler]] = [
     ("GET", re.compile(r"^/dev/contesto$"), playground.contesto),
     ("GET", re.compile(r"^/dev/playground/storico$"), playground.storico),
     ("POST", re.compile(r"^/dev/playground$"), playground.esegui_test),
+    ("GET", re.compile(r"^/dev/valutazioni$"), playground.valutazioni),
+    ("GET", re.compile(r"^/dev/immagini$"), playground.immagini),
+    ("POST", re.compile(r"^/dev/immagini$"), playground.vota_immagine),
 ]
 
 # La foto viaggia come bytes grezzi, non come JSON: questa rotta sta fuori dal

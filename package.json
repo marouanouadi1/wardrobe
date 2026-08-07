@@ -29,7 +29,7 @@
     "infra:deploy": "npm run deploy --workspace @wardrobe/infra",
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down",
-    "db:migrate": "docker compose up -d --wait postgres && docker compose exec -T postgres psql -U wardrobe -d wardrobe -f /docker-entrypoint-initdb.d/0001_schema.sql -f /docker-entrypoint-initdb.d/0002_chat.sql",
+    "db:migrate": "docker compose up -d --wait postgres && docker compose exec -T postgres psql -U wardrobe -d wardrobe -f /docker-entrypoint-initdb.d/0001_schema.sql -f /docker-entrypoint-initdb.d/0002_chat.sql -f /docker-entrypoint-initdb.d/0003_valutazioni.sql -f /docker-entrypoint-initdb.d/0004_valutazioni_immagini.sql",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
   },

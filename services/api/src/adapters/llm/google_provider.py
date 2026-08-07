@@ -23,6 +23,20 @@ BASE = os.environ.get("GOOGLE_URL", "https://generativelanguage.googleapis.com/v
 # cambiarlo.
 MODELLI_DEFAULT = ("gemini-pro-latest", "gemini-flash-latest")
 
+# Prezzi di listino in dollari per milione di token (input, output).
+# Verificati il 2026-08-07: alla data, `gemini-pro-latest` risolve a Gemini
+# 3.1 Pro (fino a 200k di contesto — oltre, Google applica una tariffa più
+# alta che qui non modelliamo) e `gemini-flash-latest` a Gemini 3.6 Flash.
+#
+# Sono prezzi legati all'ALIAS, non a un modello fisso: se Google sposta il
+# target dell'alias, questi numeri diventano sbagliati in silenzio. Fissare
+# un id concreto in `MODELLI_GOOGLE` e aggiungerlo qui è il modo per non
+# dipendere dall'alias quando il prezzo deve essere affidabile.
+PREZZI_USD: dict[str, tuple[float, float]] = {
+    "gemini-pro-latest": (2.0, 12.0),
+    "gemini-flash-latest": (1.5, 7.5),
+}
+
 
 def _modelli_configurati() -> list[str]:
     grezzo = os.environ.get("MODELLI_GOOGLE")
@@ -80,7 +94,7 @@ def catalogo(configurato: bool) -> list[ModelloDisponibile]:
             id=modello,
             etichetta=modello,
             visione=True,
-            note="contesto lungo; prezzi da verificare nel listino Google",
+            note="contesto lungo; listino verificato il 2026-08-07",
             configurato=configurato,
         )
         for modello in _modelli_configurati()

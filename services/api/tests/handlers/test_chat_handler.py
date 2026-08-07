@@ -32,6 +32,7 @@ def _corpo(risposta: dict[str, object]) -> object:
 def _risposta_modello(match: int = 88) -> str:
     return json.dumps(
         {
+            "risposta": "Ti direi questo, comodo per l'ufficio.",
             "proposte": [
                 {
                     "titolo": "Comodo per l'ufficio",
@@ -39,7 +40,7 @@ def _risposta_modello(match: int = 88) -> str:
                     "capi": ["t1", "b1", "s1"],
                     "perche": ["motivo uno", "motivo due"],
                 }
-            ]
+            ],
         }
     )
 
@@ -90,8 +91,8 @@ class TestChat:
         playground.salva_preset(
             _evento(
                 corpo={
-                    "id": "suggeritore-mattina",
-                    "etichetta": "Suggeritore mattina",
+                    "id": "chat-stilista",
+                    "etichetta": "Chat stilista",
                     "job": "suggerimento",
                     "system_prompt": "Prompt di prova salvato dal playground.",
                     "temperatura": 0.1,
@@ -106,16 +107,35 @@ class TestChat:
         assert finto.richieste[-1].system == "Prompt di prova salvato dal playground."
         assert finto.richieste[-1].temperatura == 0.1
 
-    def test_una_risposta_fuori_formato_lascia_comunque_lo_storico_coerente(
+    def test_una_risposta_senza_proposte_e_comunque_una_risposta_valida(
         self, monkeypatch: pytest.MonkeyPatch
     ):
-        # Il modello risponde fuori contratto: l'handler propaga l'errore di
-        # dominio (stesso comportamento di /suggerimenti), ma il messaggio
-        # dell'utente resta salvato — ha comunque chiesto qualcosa.
+        # «Grazie» non ha bisogno di un outfit: proposte assenti non è un
+        # errore per la chat, a differenza di /suggerimenti.
+        _monkeypatch_provider(
+            monkeypatch, json.dumps({"risposta": "Figurati, a domani!", "proposte": None})
+        )
+
+        risposta = chat.invia(_evento(corpo={"testo": "Grazie!"}), None)
+        assert risposta["statusCode"] == 200
+        dati = _corpo(risposta)
+        assert dati["tela"]["testo"] == "Figurati, a domani!"
+        assert dati["tela"]["suggerimenti"] == []
+
+        storia = _corpo(chat.elenca(_evento(), None))["messaggi"]
+        assert [m["ruolo"] for m in storia] == ["utente", "tela"]
+
+    def test_una_risposta_fuori_formato_non_lascia_niente_di_orfano(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        # Il modello non ha prodotto un JSON recuperabile: l'handler propaga
+        # l'errore di dominio, e stavolta non salva nemmeno il messaggio
+        # dell'utente — altrimenti resterebbe una domanda senza risposta a
+        # confondere il turno successivo.
         _monkeypatch_provider(monkeypatch, "non riesco a rispondere")
 
         risposta = chat.invia(_evento(corpo={"testo": "Cosa metto oggi?"}), None)
         assert risposta["statusCode"] >= 400
 
         storia = _corpo(chat.elenca(_evento(), None))["messaggi"]
-        assert [m["ruolo"] for m in storia] == ["utente"]
+        assert storia == []
