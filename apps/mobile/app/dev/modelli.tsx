@@ -1,5 +1,5 @@
 /**
- * Quale modello usano davvero «Aggiungi» e «Chiedi a Tela» — non il
+ * Quale modello usano davvero «Aggiungi» e «Chiedi a Wardrobe» — non il
  * playground, i due lavori veri del prodotto.
  *
  * Il playground misura: cambia modello per un solo test e non tocca niente
@@ -178,7 +178,7 @@ export default function ModelliInUso() {
 
         <Selettore
           titolo="Suggerimenti"
-          descrizione={'Il modello che propone gli outfit in «Chiedi a Tela».'}
+          descrizione={'Il modello che propone gli outfit in «Chiedi a Wardrobe».'}
           scelta={modelloStilista}
           imposta={impostaModelloStilista}
           modelli={modelli}

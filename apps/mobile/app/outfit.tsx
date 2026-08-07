@@ -95,7 +95,7 @@ export default function Outfit() {
                     {salvato.volte_indossato
                       ? `Indossato ${salvato.volte_indossato} volte · ultima ${quandoUsato(salvato.ultimo_uso)}`
                       : 'Mai indossato'}
-                    {salvato.origine === 'ia' ? ' · proposto da Tela' : ''}
+                    {salvato.origine === 'ia' ? ' · proposto da Wardrobe' : ''}
                   </Corpo>
                 </View>
                 <Toccabile

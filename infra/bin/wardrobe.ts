@@ -31,7 +31,7 @@ const env2 = ambiente(app.node.tryGetContext('ambiente') ?? process.env.WARDROBE
  */
 const env = { region: env2.regione }
 const comune = { env, env2 }
-const nome = (pezzo: string) => `Tela-${env2.nome}-${pezzo}`
+const nome = (pezzo: string) => `Wardrobe-${env2.nome}-${pezzo}`
 
 const rete = new ReteStack(app, nome('Rete'), comune)
 const archivio = new ArchivioStack(app, nome('Archivio'), comune)
@@ -93,6 +93,6 @@ new ApiStack(app, nome('Api'), {
   llmWorker: analisi.llmWorker,
 })
 
-Tags.of(app).add('progetto', 'tela')
+Tags.of(app).add('progetto', 'wardrobe')
 Tags.of(app).add('ambiente', env2.nome)
 Tags.of(app).add('gestito-da', 'cdk')

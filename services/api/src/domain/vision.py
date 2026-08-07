@@ -24,7 +24,7 @@ from domain.ports import ImmagineLlm, RichiestaLlm
 from domain.wardrobe import slot_da_tipo
 
 SYSTEM_PROMPT_ANALISI = """\
-Sei il modulo di visione di Tela, un armadio digitale.
+Sei il modulo di visione di Wardrobe, un armadio digitale.
 
 Ricevi la foto di UN SOLO capo di abbigliamento, scattata in casa da una persona
 qualunque: luce imperfetta, capo steso sul letto o appeso a una porta.

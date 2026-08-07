@@ -1,7 +1,7 @@
 -- La chat continua dello stilista, e il preset che la guida.
 --
 -- Una riga per turno, non una tabella "conversazioni": non esistono chat
--- multiple in Tela, solo quella dell'utente che continua. `preset_prompt`
+-- multiple in Wardrobe, solo quella dell'utente che continua. `preset_prompt`
 -- tiene la versione del system prompt che il playground ha salvato — quando
 -- manca, chi chiama ricade sul default di fabbrica in `domain/playground.py`.
 

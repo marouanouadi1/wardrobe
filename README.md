@@ -1,4 +1,4 @@
-# Tela — armadio digitale
+# Wardrobe — armadio digitale
 
 Fotografi i vestiti una volta sola. Un modello di visione legge categoria,
 colore, tessuto, stagione e lavaggio. Poi ogni mattina l'app propone cosa

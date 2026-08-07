@@ -121,7 +121,7 @@ class ProviderAnthropic:
                     temperature=(
                         omit if richiesta.modello in SENZA_TEMPERATURA else richiesta.temperatura
                     ),
-                    # I due lavori di Tela sono letture strutturate one-shot:
+                    # I due lavori di Wardrobe sono letture strutturate one-shot:
                     # non serve un ragionamento esteso, e su Claude Opus 5 il
                     # pensiero è acceso di default anche omettendo il
                     # parametro. Disabilitarlo qui evita di spendere token (e

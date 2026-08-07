@@ -2,7 +2,7 @@
   "name": "@wardrobe/infra",
   "version": "0.1.0",
   "private": true,
-  "description": "Infrastruttura di Tela in CDK TypeScript",
+  "description": "Infrastruttura di Wardrobe in CDK TypeScript",
   "scripts": {
     "synth": "cdk synth --quiet",
     "diff": "cdk diff",

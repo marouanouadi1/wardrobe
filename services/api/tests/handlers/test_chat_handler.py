@@ -59,10 +59,10 @@ class TestChat:
         assert risposta["statusCode"] == 200
         dati = _corpo(risposta)
         assert dati["utente"]["testo"] == "Cosa metto oggi?"
-        assert dati["tela"]["suggerimenti"][0]["titolo"] == "Comodo per l'ufficio"
+        assert dati["wardrobe"]["suggerimenti"][0]["titolo"] == "Comodo per l'ufficio"
 
         storia = _corpo(chat.elenca(_evento(), None))["messaggi"]
-        assert [m["ruolo"] for m in storia] == ["utente", "tela"]
+        assert [m["ruolo"] for m in storia] == ["utente", "wardrobe"]
 
     def test_il_secondo_messaggio_porta_la_cronologia_del_primo(
         self, monkeypatch: pytest.MonkeyPatch
@@ -119,11 +119,11 @@ class TestChat:
         risposta = chat.invia(_evento(corpo={"testo": "Grazie!"}), None)
         assert risposta["statusCode"] == 200
         dati = _corpo(risposta)
-        assert dati["tela"]["testo"] == "Figurati, a domani!"
-        assert dati["tela"]["suggerimenti"] == []
+        assert dati["wardrobe"]["testo"] == "Figurati, a domani!"
+        assert dati["wardrobe"]["suggerimenti"] == []
 
         storia = _corpo(chat.elenca(_evento(), None))["messaggi"]
-        assert [m["ruolo"] for m in storia] == ["utente", "tela"]
+        assert [m["ruolo"] for m in storia] == ["utente", "wardrobe"]
 
     def test_una_risposta_fuori_formato_non_lascia_niente_di_orfano(
         self, monkeypatch: pytest.MonkeyPatch

@@ -17,7 +17,7 @@ from domain.models import (
     EsecuzionePlayground,
     MessaggioChat,
     ModelloDisponibile,
-    ModelloTela,
+    ModelloWardrobe,
     Outfit,
     PresetPrompt,
     Profilo,
@@ -28,12 +28,12 @@ from domain.models import (
 )
 
 
-class ImmagineLlm(ModelloTela):
+class ImmagineLlm(ModelloWardrobe):
     media_type: str
     base64: str
 
 
-class MessaggioLlm(ModelloTela):
+class MessaggioLlm(ModelloWardrobe):
     """Un turno già avvenuto di una conversazione, da rimandare al modello.
 
     Serve solo alla chat vera: i due job del playground restano one-shot e non
@@ -44,10 +44,10 @@ class MessaggioLlm(ModelloTela):
     testo: str
 
 
-class RichiestaLlm(ModelloTela):
+class RichiestaLlm(ModelloWardrobe):
     """Una chiamata a un modello, nella forma minima che ci serve.
 
-    Deliberatamente povera: nessun tool calling. I due job di Tela sono
+    Deliberatamente povera: nessun tool calling. I due job di Wardrobe sono
     one-shot, e ogni feature in più qui è una feature da reimplementare per
     ogni provider nuovo. `cronologia` è l'unica eccezione: la chat continua ha
     bisogno di memoria, e passarla come turni già formati costa meno, a ogni
@@ -68,7 +68,7 @@ class RichiestaLlm(ModelloTela):
     )
 
 
-class RispostaLlm(ModelloTela):
+class RispostaLlm(ModelloWardrobe):
     testo: str
     modello: str
     uso: UsoToken = UsoToken()

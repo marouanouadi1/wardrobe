@@ -1,4 +1,4 @@
--- Schema di Tela.
+-- Schema di Wardrobe.
 --
 -- Ibrido di proposito: colonne vere e indicizzate per ciò su cui filtriamo o
 -- ordiniamo, `jsonb` per il resto del modello di dominio. Aggiungere un

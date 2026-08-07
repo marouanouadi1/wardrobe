@@ -2,7 +2,7 @@
   "name": "wardrobe",
   "private": true,
   "version": "0.1.0",
-  "description": "Tela — armadio digitale: app Expo, API Python su Lambda, infrastruttura CDK",
+  "description": "Wardrobe — armadio digitale: app Expo, API Python su Lambda, infrastruttura CDK",
   "workspaces": [
     "apps/*",
     "packages/*",

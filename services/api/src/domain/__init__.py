@@ -1,4 +1,4 @@
-"""Logica di dominio di Tela.
+"""Logica di dominio di Wardrobe.
 
 Regola unica e non negoziabile: qui non entra nessun SDK. Niente boto3, niente
 psycopg, niente httpx. Tutto quello che serve dall'esterno passa dai Protocol in

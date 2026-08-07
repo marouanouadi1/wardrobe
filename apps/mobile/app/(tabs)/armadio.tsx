@@ -260,7 +260,7 @@ export default function Armadio() {
           <Bolla nome="scintilla" />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Titolo taglia={15.5} colore={colori.scheda}>
-              Chiedi tu a Tela
+              Chiedi tu a Wardrobe
             </Titolo>
             <Corpo taglia={11.5} colore="rgba(255,253,249,0.55)">
               «Ho una cena, voglio stare comodo»

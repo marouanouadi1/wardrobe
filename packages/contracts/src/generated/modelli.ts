@@ -22,7 +22,7 @@ export type AttributoCapo = 'tipo' | 'colore' | 'materiale' | 'fantasia' | 'stag
  * I valori coincidono con le chiavi di `mannequin.setOutfit()`.
  */
 export type SlotAvatar = 'top' | 'bottom' | 'outer' | 'shoes' | 'dress'
-export type RuoloChat = 'utente' | 'tela'
+export type RuoloChat = 'utente' | 'wardrobe'
 /**
  * I due lavori veri che l'IA fa nel prodotto.
  *
@@ -293,7 +293,7 @@ export interface ElencoMessaggiChat {
  *
  * Persiste per utente: non è una sessione che si azzera chiudendo l'app, è
  * la stessa conversazione che si riprende da dove l'ha lasciata. `testo` sul
- * turno di Tela è la prosa libera della risposta (`RispostaStilista.risposta`),
+ * turno di Wardrobe è la prosa libera della risposta (`RispostaStilista.risposta`),
  * quella che si mostra a schermo; `suggerimenti`, quando presenti, sono gli
  * outfit proposti nello stesso turno. La cronologia rimandata al modello
  * (`domain.chat.cronologia_da_messaggi`) riappende gli id di `suggerimenti`
@@ -567,7 +567,7 @@ export interface RigaAggregata {
 }
 export interface RispostaChat {
   utente: MessaggioChat
-  tela: MessaggioChat
+  wardrobe: MessaggioChat
   contesto: ContestoSuggerimento
   provider: string
   modello: string

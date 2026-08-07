@@ -1283,7 +1283,7 @@
     },
     "MessaggioChat": {
       "additionalProperties": false,
-      "description": "Un turno della chat continua con lo stilista.\n\nPersiste per utente: non è una sessione che si azzera chiudendo l'app, è\nla stessa conversazione che si riprende da dove l'ha lasciata. `testo` sul\nturno di Tela è la prosa libera della risposta (`RispostaStilista.risposta`),\nquella che si mostra a schermo; `suggerimenti`, quando presenti, sono gli\noutfit proposti nello stesso turno. La cronologia rimandata al modello\n(`domain.chat.cronologia_da_messaggi`) riappende gli id di `suggerimenti`\nal testo, perché il modello non li perda al turno successivo.",
+      "description": "Un turno della chat continua con lo stilista.\n\nPersiste per utente: non è una sessione che si azzera chiudendo l'app, è\nla stessa conversazione che si riprende da dove l'ha lasciata. `testo` sul\nturno di Wardrobe è la prosa libera della risposta (`RispostaStilista.risposta`),\nquella che si mostra a schermo; `suggerimenti`, quando presenti, sono gli\noutfit proposti nello stesso turno. La cronologia rimandata al modello\n(`domain.chat.cronologia_da_messaggi`) riappende gli id di `suggerimenti`\nal testo, perché il modello non li perda al turno successivo.",
       "properties": {
         "id": {
           "type": "string"
@@ -2117,7 +2117,7 @@
         "utente": {
           "$ref": "#/$defs/MessaggioChat"
         },
-        "tela": {
+        "wardrobe": {
           "$ref": "#/$defs/MessaggioChat"
         },
         "contesto": {
@@ -2135,7 +2135,7 @@
       },
       "required": [
         "utente",
-        "tela",
+        "wardrobe",
         "contesto",
         "provider",
         "modello",
@@ -2233,7 +2233,7 @@
     "RuoloChat": {
       "enum": [
         "utente",
-        "tela"
+        "wardrobe"
       ],
       "title": "RuoloChat",
       "type": "string"

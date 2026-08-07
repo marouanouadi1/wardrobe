@@ -58,8 +58,8 @@ export class IdentitaStack extends Stack {
       oAuth: {
         flows: { authorizationCodeGrant: true },
         scopes: [OAuthScope.EMAIL, OAuthScope.OPENID, OAuthScope.PROFILE],
-        callbackUrls: ['tela://auth', 'http://localhost:8081'],
-        logoutUrls: ['tela://auth', 'http://localhost:8081'],
+        callbackUrls: ['wardrobe://auth', 'http://localhost:8081'],
+        logoutUrls: ['wardrobe://auth', 'http://localhost:8081'],
       },
       accessTokenValidity: Duration.hours(1),
       idTokenValidity: Duration.hours(1),

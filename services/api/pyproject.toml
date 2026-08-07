@@ -1,7 +1,7 @@
 [project]
 name = "wardrobe-api"
 version = "0.1.0"
-description = "API di Tela: handlers Lambda sottili sopra un domain puro"
+description = "API di Wardrobe: handlers Lambda sottili sopra un domain puro"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.12",

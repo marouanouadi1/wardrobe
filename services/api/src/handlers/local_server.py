@@ -181,7 +181,7 @@ class Ponte(BaseHTTPRequestHandler):
 
 def main() -> None:
     porta = int(os.environ.get("PORTA", "8787"))
-    print(f"API di Tela in ascolto su http://localhost:{porta} (DEV_MODE, dati in memoria)")
+    print(f"API di Wardrobe in ascolto su http://localhost:{porta} (DEV_MODE, dati in memoria)")
     ThreadingHTTPServer(("0.0.0.0", porta), Ponte).serve_forever()
 
 

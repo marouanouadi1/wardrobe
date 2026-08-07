@@ -79,5 +79,5 @@ export function ambiente(nome: string | undefined): Ambiente {
 }
 
 export function prefisso(env: Ambiente, pezzo: string): string {
-  return `tela-${env.nome}-${pezzo}`
+  return `wardrobe-${env.nome}-${pezzo}`
 }

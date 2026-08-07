@@ -80,7 +80,7 @@ export default function Suggeritore() {
     setInCorso(true)
     try {
       const risposta = await api.chat.invia({ testo: pulito })
-      setConversazione((precedenti) => [...precedenti, risposta.utente, risposta.tela])
+      setConversazione((precedenti) => [...precedenti, risposta.utente, risposta.wardrobe])
     } catch (errore) {
       avvisa(errore instanceof Error ? errore.message : 'Il messaggio non è arrivato allo stilista')
     } finally {
@@ -108,7 +108,7 @@ export default function Suggeritore() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Testata occhiello="Il tuo stilista" titolo="Chiedi a Tela" indietro />
+      <Testata occhiello="Il tuo stilista" titolo="Chiedi a Wardrobe" indietro />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: spazi.xl, paddingBottom: 60, gap: spazi.l }}

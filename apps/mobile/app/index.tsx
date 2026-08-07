@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react'
 import { View } from 'react-native'
 import { colori } from '../src/tema/tokens'
 
-const CHIAVE_INTRO = 'tela.intro-vista'
+const CHIAVE_INTRO = 'wardrobe.intro-vista'
 
 export default function Ingresso() {
   const [introVista, setIntroVista] = useState<boolean | null>(null)

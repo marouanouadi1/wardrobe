@@ -87,7 +87,7 @@ export default function Onboarding() {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Titolo taglia={22} colore={colori.scheda}>
-            tela
+            wardrobe
           </Titolo>
           <View
             style={{ width: 6, height: 6, borderRadius: 99, backgroundColor: colori.citron }}

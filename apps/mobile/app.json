@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Tela",
-    "slug": "tela",
-    "scheme": "tela",
+    "name": "Wardrobe",
+    "slug": "wardrobe",
+    "scheme": "wardrobe",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,14 +10,14 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.tela.armadio",
+      "bundleIdentifier": "com.wardrobe.armadio",
       "infoPlist": {
         "NSCameraUsageDescription": "Serve per fotografare i tuoi capi e aggiungerli all'armadio.",
         "NSPhotoLibraryUsageDescription": "Serve per scegliere dalla galleria le foto dei tuoi capi."
       }
     },
     "android": {
-      "package": "com.tela.armadio",
+      "package": "com.wardrobe.armadio",
       "adaptiveIcon": {
         "backgroundColor": "#15151A",
         "foregroundImage": "./assets/android-icon-foreground.png",

@@ -29,7 +29,7 @@ from domain.wardrobe import ids_vestizione
 MASSIMO_TURNI_CRONOLOGIA = 20
 
 SYSTEM_PROMPT_CHAT = """\
-Sei lo stilista personale di Tela. Parli italiano, dai del tu, sei breve.
+Sei lo stilista personale di Wardrobe. Parli italiano, dai del tu, sei breve.
 
 Rispondi SEMPRE con un oggetto JSON di questa forma, senza testo intorno:
 
@@ -72,12 +72,12 @@ PROMPT_CHAT = (
 def _testo_per_cronologia(messaggio: MessaggioChat) -> str:
     """Il turno come lo rivede il modello: la prosa, più gli id proposti.
 
-    `MessaggioChat.testo` di Tela è prosa libera, non più il JSON grezzo: da
+    `MessaggioChat.testo` di Wardrobe è prosa libera, non più il JSON grezzo: da
     sola perderebbe gli id dei capi appena proposti, e «fa più freddo,
     cambia» si appoggerebbe al nulla. Si aggiungono qui, non nel dato salvato
     — lo storico resta leggibile a schermo, il modello resta informato.
     """
-    if messaggio.ruolo is not RuoloChat.TELA or not messaggio.suggerimenti:
+    if messaggio.ruolo is not RuoloChat.WARDROBE or not messaggio.suggerimenti:
         return messaggio.testo
     righe = [messaggio.testo]
     for suggerimento in messaggio.suggerimenti:

@@ -1,5 +1,5 @@
 /**
- * I token del design di Tela.
+ * I token del design di Wardrobe.
  *
  * Una regola sopra tutte, e vale la pena scriverla qui perché è l'unica che
  * l'utente impara senza accorgersene: **il citron è dell'intelligenza

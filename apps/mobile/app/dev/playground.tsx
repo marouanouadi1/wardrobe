@@ -36,7 +36,7 @@ const PRESET_INIZIALI: PresetPrompt[] = [
     etichetta: 'Analisi foto capo',
     job: 'analisi_capo',
     system_prompt:
-      'Sei il modulo di visione di Tela. Ricevi la foto di UN SOLO capo e restituisci JSON con tipo, colore (nome + hex), materiale, fantasia, stagione, vestibilità, lavaggio e una confidenza 0-100 per ciascuno. Se un attributo non è leggibile mettilo a null: non tirare a indovinare.',
+      'Sei il modulo di visione di Wardrobe. Ricevi la foto di UN SOLO capo e restituisci JSON con tipo, colore (nome + hex), materiale, fantasia, stagione, vestibilità, lavaggio e una confidenza 0-100 per ciascuno. Se un attributo non è leggibile mettilo a null: non tirare a indovinare.',
     temperatura: 0.2,
     max_token: 900,
   },
@@ -45,7 +45,7 @@ const PRESET_INIZIALI: PresetPrompt[] = [
     etichetta: 'Suggeritore mattina',
     job: 'suggerimento',
     system_prompt:
-      'Sei lo stilista personale di Tela. Proponi outfit usando SOLO i capi forniti, citandoli per id. Massimo tre motivi brevi per proposta, tono amichevole, in italiano. Non inventare capi.',
+      'Sei lo stilista personale di Wardrobe. Proponi outfit usando SOLO i capi forniti, citandoli per id. Massimo tre motivi brevi per proposta, tono amichevole, in italiano. Non inventare capi.',
     temperatura: 0.45,
     max_token: 1200,
   },
@@ -167,7 +167,7 @@ export default function Playground() {
    * Persiste il prompt (e temperatura/max token) che si sta provando come
    * nuovo default del job. Da qui in poi non lo legge solo questo schermo: lo
    * legge anche la chat vera dell'app, a ogni messaggio — è così che un
-   * prompt provato qui diventa quello che l'utente vede in «Chiedi a Tela».
+   * prompt provato qui diventa quello che l'utente vede in «Chiedi a Wardrobe».
    */
   async function salvaPresetCorrente() {
     const attuale = preset[presetScelto]

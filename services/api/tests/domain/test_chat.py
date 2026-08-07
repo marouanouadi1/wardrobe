@@ -34,14 +34,14 @@ class TestCronologiaDaMessaggi:
     def test_traduce_i_ruoli_per_il_provider(self):
         messaggi = [
             _messaggio(RuoloChat.UTENTE, "Cosa metto oggi?", indice=1),
-            _messaggio(RuoloChat.TELA, "Ti direi questo.", indice=2),
+            _messaggio(RuoloChat.WARDROBE, "Ti direi questo.", indice=2),
         ]
         cronologia = cronologia_da_messaggi(messaggi)
         assert [turno.ruolo for turno in cronologia] == ["utente", "assistente"]
         assert cronologia[0].testo == "Cosa metto oggi?"
         assert cronologia[1].testo == "Ti direi questo."
 
-    def test_riappende_gli_id_delle_proposte_al_turno_di_tela(self):
+    def test_riappende_gli_id_delle_proposte_al_turno_di_wardrobe(self):
         # Senza gli id, «fa più freddo, cambia» non avrebbe niente a cui
         # appoggiarsi: `testo` da solo è ormai prosa libera.
         suggerimento = Suggerimento(
@@ -52,7 +52,10 @@ class TestCronologiaDaMessaggi:
         )
         messaggi = [
             _messaggio(
-                RuoloChat.TELA, "Ti direi jeans e maglietta.", indice=1, suggerimenti=[suggerimento]
+                RuoloChat.WARDROBE,
+                "Ti direi jeans e maglietta.",
+                indice=1,
+                suggerimenti=[suggerimento],
             ),
         ]
         cronologia = cronologia_da_messaggi(messaggi)
@@ -61,7 +64,7 @@ class TestCronologiaDaMessaggi:
         assert "b1" in cronologia[0].testo
 
     def test_un_turno_di_solo_testo_non_aggiunge_niente(self):
-        messaggi = [_messaggio(RuoloChat.TELA, "Figurati!", indice=1)]
+        messaggi = [_messaggio(RuoloChat.WARDROBE, "Figurati!", indice=1)]
         cronologia = cronologia_da_messaggi(messaggi)
         assert cronologia[0].testo == "Figurati!"
 

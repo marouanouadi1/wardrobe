@@ -26,7 +26,7 @@ SOGLIA_INCERTEZZA = 86
 SOGLIA_SCARTO = 60
 
 
-class ModelloTela(BaseModel):
+class ModelloWardrobe(BaseModel):
     """Base comune: nessun campo extra passa, né in ingresso né dai provider."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -110,7 +110,7 @@ class EsitoEsecuzione(StrEnum):
 
 class RuoloChat(StrEnum):
     UTENTE = "utente"
-    TELA = "tela"
+    WARDROBE = "wardrobe"
 
 
 Confidenza = Annotated[int, Field(ge=0, le=100)]
@@ -119,7 +119,7 @@ EsaColore = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
 Voto1a5 = Annotated[int, Field(ge=1, le=5)]
 
 
-class Colore(ModelloTela):
+class Colore(ModelloWardrobe):
     """Nome leggibile più esadecimale.
 
     L'hex non è un vezzo: è quello che il manichino 3D di oggi usa per tingere le
@@ -132,7 +132,7 @@ class Colore(ModelloTela):
     hex: EsaColore
 
 
-class FotoCapo(ModelloTela):
+class FotoCapo(ModelloWardrobe):
     chiave: str = Field(description="Chiave dell'oggetto su S3")
     url: str | None = Field(default=None, description="URL firmato, a vita breve")
     larghezza: int | None = None
@@ -150,7 +150,7 @@ class FotoCapo(ModelloTela):
     )
 
 
-class AnalisiVisione(ModelloTela):
+class AnalisiVisione(ModelloWardrobe):
     """Traccia di chi ha letto la foto, quando, e con quanta sicurezza."""
 
     provider: str
@@ -161,7 +161,7 @@ class AnalisiVisione(ModelloTela):
     note: str | None = None
 
 
-class Capo(ModelloTela):
+class Capo(ModelloWardrobe):
     id: str
     nome: str
     tipo: TipoCapo
@@ -195,7 +195,7 @@ class Capo(ModelloTela):
     aggiornato_il: datetime
 
 
-class CapoSintetico(ModelloTela):
+class CapoSintetico(ModelloWardrobe):
     """Il capo come lo vede il modello di suggerimento.
 
     Volutamente magro: meno token per capo significa più capi nel contesto.
@@ -213,7 +213,7 @@ class CapoSintetico(ModelloTela):
     etichette: list[str] = Field(default_factory=list)
 
 
-class LetturaCapo(ModelloTela):
+class LetturaCapo(ModelloWardrobe):
     """Quello che il modello di visione dichiara di aver letto dalla foto.
 
     Tutto opzionale per costruzione: «se un attributo non è leggibile metti
@@ -233,7 +233,7 @@ class LetturaCapo(ModelloTela):
     confidenze: dict[AttributoCapo, Confidenza] = Field(default_factory=dict)
 
 
-class Vestizione(ModelloTela):
+class Vestizione(ModelloWardrobe):
     """Chi occupa quale slot dell'avatar. I valori sono id di capo.
 
     Le chiavi sono quelle di `mannequin.setOutfit()`: non tradurle.
@@ -246,7 +246,7 @@ class Vestizione(ModelloTela):
     dress: str | None = None
 
 
-class VestizioneColori(ModelloTela):
+class VestizioneColori(ModelloWardrobe):
     """La stessa vestizione, risolta in colori: è ciò che il renderer riceve oggi.
 
     Il manichino non indossa fotografie, tinge primitive: per questo il colore
@@ -262,7 +262,7 @@ class VestizioneColori(ModelloTela):
     dress: EsaColore | None = None
 
 
-class Outfit(ModelloTela):
+class Outfit(ModelloWardrobe):
     id: str
     nome: str
     vestizione: Vestizione
@@ -273,7 +273,7 @@ class Outfit(ModelloTela):
     creato_il: datetime
 
 
-class Suggerimento(ModelloTela):
+class Suggerimento(ModelloWardrobe):
     """Una proposta dello stilista, già validata contro l'armadio vero."""
 
     titolo: str
@@ -282,7 +282,7 @@ class Suggerimento(ModelloTela):
     perche: list[str] = Field(max_length=3)
 
 
-class RispostaStilista(ModelloTela):
+class RispostaStilista(ModelloWardrobe):
     """La risposta della chat vera: prosa libera, con proposte opzionali.
 
     A differenza di `RispostaSuggerimenti` (sempre e solo una lista di
@@ -295,26 +295,26 @@ class RispostaStilista(ModelloTela):
     proposte: list[Suggerimento] = Field(default_factory=list)
 
 
-class Meteo(ModelloTela):
+class Meteo(ModelloWardrobe):
     citta: str
     temp_c: float
     condizione: str
     percepita_c: float | None = None
 
 
-class ImpegnoAgenda(ModelloTela):
+class ImpegnoAgenda(ModelloWardrobe):
     ora: str
     titolo: str
     dress_code: str | None = None
 
 
-class PreferenzeStile(ModelloTela):
+class PreferenzeStile(ModelloWardrobe):
     stili: list[str] = Field(default_factory=list)
     palette: list[str] = Field(default_factory=list)
     evita: list[str] = Field(default_factory=list)
 
 
-class ContestoSuggerimento(ModelloTela):
+class ContestoSuggerimento(ModelloWardrobe):
     """Tutto ciò che lo stilista può sapere, e nient'altro.
 
     È anche il payload che il playground mostra in chiaro: se un suggerimento
@@ -331,7 +331,7 @@ class ContestoSuggerimento(ModelloTela):
     numero_proposte: Annotated[int, Field(ge=1, le=5)] = 3
 
 
-class Profilo(ModelloTela):
+class Profilo(ModelloWardrobe):
     id: str
     nome: str
     citta: str | None = None
@@ -348,26 +348,26 @@ class Profilo(ModelloTela):
     creato_il: datetime
 
 
-class FiltroArmadio(ModelloTela):
+class FiltroArmadio(ModelloWardrobe):
     tipo: TipoCapo | None = None
     stato: StatoCapo | None = None
     solo_preferiti: bool = False
     testo: str | None = None
 
 
-class ElencoCapi(ModelloTela):
+class ElencoCapi(ModelloWardrobe):
     capi: list[Capo]
     totale: int
 
 
-class RiepilogoArmadio(ModelloTela):
+class RiepilogoArmadio(ModelloWardrobe):
     totale: int
     da_lavare: int
     dormienti: int
     valore_dormiente_eur: float | None = None
 
 
-class UploadFirmato(ModelloTela):
+class UploadFirmato(ModelloWardrobe):
     """Risposta all'app prima che carichi la foto: l'upload va diretto a S3."""
 
     chiave: str
@@ -377,12 +377,12 @@ class UploadFirmato(ModelloTela):
     scade_in_s: int
 
 
-class RichiestaUpload(ModelloTela):
+class RichiestaUpload(ModelloWardrobe):
     content_type: str
     nota: str | None = None
 
 
-class RichiestaAnalisi(ModelloTela):
+class RichiestaAnalisi(ModelloWardrobe):
     chiave_foto: str
     provider: str | None = None
     modello: str | None = None
@@ -394,7 +394,7 @@ class StatoAnalisi(StrEnum):
     FALLITA = "fallita"
 
 
-class AnalisiAvviata(ModelloTela):
+class AnalisiAvviata(ModelloWardrobe):
     """L'app riceve un identificativo e interroga lo stato: l'analisi è lenta.
 
     Tenerla asincrona è ciò che permette il caricamento in blocco di venti foto
@@ -405,14 +405,14 @@ class AnalisiAvviata(ModelloTela):
     stato: StatoAnalisi = StatoAnalisi.IN_CORSO
 
 
-class EsitoAnalisi(ModelloTela):
+class EsitoAnalisi(ModelloWardrobe):
     esecuzione_id: str
     stato: StatoAnalisi
     capo: Capo | None = None
     errore: str | None = None
 
 
-class CorrezioniCapo(ModelloTela):
+class CorrezioniCapo(ModelloWardrobe):
     """Le correzioni dell'utente, una per attributo, tutte tipizzate.
 
     Volutamente non è `dict[str, str]`: correggere il colore significa mandare
@@ -429,7 +429,7 @@ class CorrezioniCapo(ModelloTela):
     lavaggio: str | None = None
 
 
-class AggiornamentoCapo(ModelloTela):
+class AggiornamentoCapo(ModelloWardrobe):
     correzioni: CorrezioniCapo = CorrezioniCapo()
     nome: str | None = None
     preferito: bool | None = None
@@ -440,7 +440,7 @@ class AggiornamentoCapo(ModelloTela):
     appunti: str | None = None
 
 
-class NuovoCapoManuale(ModelloTela):
+class NuovoCapoManuale(ModelloWardrobe):
     """Un capo inserito a mano, senza passare dal modello di visione.
 
     Nessuna `AnalisiVisione`: un capo che non è mai stato letto da un modello
@@ -466,7 +466,7 @@ class NuovoCapoManuale(ModelloTela):
     appunti: str | None = None
 
 
-class RichiestaSuggerimenti(ModelloTela):
+class RichiestaSuggerimenti(ModelloWardrobe):
     richiesta_utente: str | None = None
     meteo: Meteo | None = None
     agenda: list[ImpegnoAgenda] = Field(default_factory=list)
@@ -475,7 +475,7 @@ class RichiestaSuggerimenti(ModelloTela):
     modello: str | None = None
 
 
-class RispostaSuggerimenti(ModelloTela):
+class RispostaSuggerimenti(ModelloWardrobe):
     suggerimenti: list[Suggerimento]
     contesto: ContestoSuggerimento
     provider: str
@@ -483,12 +483,12 @@ class RispostaSuggerimenti(ModelloTela):
     latenza_ms: int
 
 
-class MessaggioChat(ModelloTela):
+class MessaggioChat(ModelloWardrobe):
     """Un turno della chat continua con lo stilista.
 
     Persiste per utente: non è una sessione che si azzera chiudendo l'app, è
     la stessa conversazione che si riprende da dove l'ha lasciata. `testo` sul
-    turno di Tela è la prosa libera della risposta (`RispostaStilista.risposta`),
+    turno di Wardrobe è la prosa libera della risposta (`RispostaStilista.risposta`),
     quella che si mostra a schermo; `suggerimenti`, quando presenti, sono gli
     outfit proposti nello stesso turno. La cronologia rimandata al modello
     (`domain.chat.cronologia_da_messaggi`) riappende gli id di `suggerimenti`
@@ -502,33 +502,33 @@ class MessaggioChat(ModelloTela):
     creato_il: datetime
 
 
-class RichiestaMessaggioChat(ModelloTela):
+class RichiestaMessaggioChat(ModelloWardrobe):
     testo: str
     meteo: Meteo | None = None
     agenda: list[ImpegnoAgenda] = Field(default_factory=list)
 
 
-class RispostaChat(ModelloTela):
+class RispostaChat(ModelloWardrobe):
     utente: MessaggioChat
-    tela: MessaggioChat
+    wardrobe: MessaggioChat
     contesto: ContestoSuggerimento
     provider: str
     modello: str
     latenza_ms: int
 
 
-class ElencoMessaggiChat(ModelloTela):
+class ElencoMessaggiChat(ModelloWardrobe):
     messaggi: list[MessaggioChat]
 
 
-class NuovoOutfit(ModelloTela):
+class NuovoOutfit(ModelloWardrobe):
     nome: str
     vestizione: Vestizione
     occasione: str | None = None
     origine: OrigineOutfit = OrigineOutfit.MANUALE
 
 
-class VeritaAttributo(ModelloTela):
+class VeritaAttributo(ModelloWardrobe):
     """Il valore vero di un attributo di un capo campione, per il banco di
     valutazione dei modelli — non per l'uso quotidiano dell'app.
 
@@ -555,7 +555,7 @@ class VeritaAttributo(ModelloTela):
     tolleranza_hex: int = 40
 
 
-class CampioneValutazione(ModelloTela):
+class CampioneValutazione(ModelloWardrobe):
     """Un capo fotografato apposta per il banco di valutazione, con la sua
     verità nota scritta a mano — non un capo vero preso dall'armadio di
     qualcuno, e non un capo che l'app userà mai per un suggerimento.
@@ -584,7 +584,7 @@ class EsitoAttributo(StrEnum):
     NON_VALUTATO = "non_valutato"
 
 
-class GiudizioAttributo(ModelloTela):
+class GiudizioAttributo(ModelloWardrobe):
     attributo: AttributoCapo
     esito: EsitoAttributo
     atteso: str | None = None
@@ -592,7 +592,7 @@ class GiudizioAttributo(ModelloTela):
     confidenza: Confidenza | None = None
 
 
-class Calibrazione(ModelloTela):
+class Calibrazione(ModelloWardrobe):
     """Se la confidenza dichiarata dal modello è coerente con l'essere giusto.
 
     Sono i due modi in cui `SOGLIA_INCERTEZZA` e `SOGLIA_SCARTO` possono
@@ -612,7 +612,7 @@ class Calibrazione(ModelloTela):
     )
 
 
-class Valutazione(ModelloTela):
+class Valutazione(ModelloWardrobe):
     """Una riga del banco: un modello, su un campione, in un run."""
 
     id: str
@@ -630,7 +630,7 @@ class Valutazione(ModelloTela):
     errore: str | None = None
 
 
-class RigaAggregata(ModelloTela):
+class RigaAggregata(ModelloWardrobe):
     """Una riga della tabella di valutazione: tutti i campioni di un modello,
     in un run, ridotti a numeri confrontabili."""
 
@@ -649,7 +649,7 @@ class RigaAggregata(ModelloTela):
     latenza_mediana_ms: int
 
 
-class RispostaValutazioni(ModelloTela):
+class RispostaValutazioni(ModelloWardrobe):
     """GET /dev/valutazioni: la tabella aggregata di un run, più il dettaglio.
 
     `run_id` è `None` solo se il banco non ha ancora mai girato — in quel caso
@@ -661,7 +661,7 @@ class RispostaValutazioni(ModelloTela):
     valutazioni: list[Valutazione] = Field(default_factory=list)
 
 
-class ModelloImmagine(ModelloTela):
+class ModelloImmagine(ModelloWardrobe):
     """Una riga del catalogo dei modelli di generazione immagini.
 
     Non è `ModelloDisponibile`: quello porta `visione`, un campo che per un
@@ -676,7 +676,7 @@ class ModelloImmagine(ModelloTela):
     configurato: bool = False
 
 
-class RatingImmagine(ModelloTela):
+class RatingImmagine(ModelloWardrobe):
     """Il giudizio umano su un'immagine generata: 1-5, non calcolabile.
 
     A differenza della lettura di visione non esiste una verità nota da
@@ -690,7 +690,7 @@ class RatingImmagine(ModelloTela):
     note: str | None = None
 
 
-class ValutazioneImmagine(ModelloTela):
+class ValutazioneImmagine(ModelloWardrobe):
     """Una riga del banco immagini: un modello, su un campione, in un run.
 
     Nasce senza `rating`: lo scrive `scripts/genera_immagini.py` insieme a
@@ -714,7 +714,7 @@ class ValutazioneImmagine(ModelloTela):
     rating: RatingImmagine | None = None
 
 
-class RichiestaRatingImmagine(ModelloTela):
+class RichiestaRatingImmagine(ModelloWardrobe):
     run_id: str
     servizio: str
     modello: str
@@ -722,7 +722,7 @@ class RichiestaRatingImmagine(ModelloTela):
     rating: RatingImmagine
 
 
-class RispostaValutazioniImmagini(ModelloTela):
+class RispostaValutazioniImmagini(ModelloWardrobe):
     """GET /dev/immagini: il banco immagini di un run, senza aggregazione.
 
     A differenza di `RispostaValutazioni` non c'è una `RigaAggregata`: non
@@ -734,7 +734,7 @@ class RispostaValutazioniImmagini(ModelloTela):
     valutazioni: list[ValutazioneImmagine] = Field(default_factory=list)
 
 
-class ModelloDisponibile(ModelloTela):
+class ModelloDisponibile(ModelloWardrobe):
     """Una riga della lista modelli del playground."""
 
     provider: str
@@ -756,7 +756,7 @@ class ModelloDisponibile(ModelloTela):
     )
 
 
-class PresetPrompt(ModelloTela):
+class PresetPrompt(ModelloWardrobe):
     id: str
     etichetta: str
     job: JobIa
@@ -765,7 +765,7 @@ class PresetPrompt(ModelloTela):
     max_token: Annotated[int, Field(ge=1, le=32_000)] = 1200
 
 
-class RichiestaPlayground(ModelloTela):
+class RichiestaPlayground(ModelloWardrobe):
     job: JobIa
     provider: str
     modello: str
@@ -780,12 +780,12 @@ class RichiestaPlayground(ModelloTela):
     )
 
 
-class UsoToken(ModelloTela):
+class UsoToken(ModelloWardrobe):
     token_input: int = 0
     token_output: int = 0
 
 
-class EsitoPlayground(ModelloTela):
+class EsitoPlayground(ModelloWardrobe):
     ok: bool
     esito: EsitoEsecuzione
     provider: str
@@ -799,7 +799,7 @@ class EsitoPlayground(ModelloTela):
     errore: str | None = None
 
 
-class EsecuzionePlayground(ModelloTela):
+class EsecuzionePlayground(ModelloWardrobe):
     """Riga dello storico: serve a confrontare provider a distanza di giorni."""
 
     id: str

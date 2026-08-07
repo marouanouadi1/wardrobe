@@ -101,19 +101,19 @@ def invia(evento: Evento) -> Risposta:
     )
     repository().salva_messaggio_chat(utente, messaggio_utente)
 
-    messaggio_tela = MessaggioChat(
+    messaggio_wardrobe = MessaggioChat(
         id=generatore_id().nuovo(),
-        ruolo=RuoloChat.TELA,
+        ruolo=RuoloChat.WARDROBE,
         testo=risposta_stilista.risposta,
         suggerimenti=risposta_stilista.proposte,
         creato_il=adesso,
     )
-    repository().salva_messaggio_chat(utente, messaggio_tela)
+    repository().salva_messaggio_chat(utente, messaggio_wardrobe)
 
     return ok(
         RispostaChat(
             utente=messaggio_utente,
-            tela=messaggio_tela,
+            wardrobe=messaggio_wardrobe,
             contesto=contesto,
             provider=provider.nome,
             modello=risposta_llm.modello,
