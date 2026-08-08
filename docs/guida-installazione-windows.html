@@ -511,14 +511,19 @@
     <p class="premessa">Serve solo per un pezzo che porta con sé, chiamato <code>bash</code>: è quello che permette di avviare l'app con un comando solo, al Passo 12, invece di doverne scrivere due ogni volta. Non dovrai mai scrivere un comando <code>git</code> — quello resta tutto dentro GitHub Desktop, al passo successivo.</p>
     <ol>
       <li>Vai su <a href="https://git-scm.com/download/win">git-scm.com/download/win</a>: il download parte da solo</li>
-      <li>Apri il file scaricato (tipo <code>Git-2.4x.x-64-bit.exe</code>) e clicca Avanti su tutte le schermate, lasciando le impostazioni di default — non c'è nulla da cambiare</li>
-      <li>Alla fine clicca "Install", aspetta, poi "Finish" (togli la spunta a "View Release Notes" se c'è, non serve)</li>
+      <li>Apri il file scaricato (tipo <code>Git-2.4x.x-64-bit.exe</code>) e clicca Avanti fino alla schermata intitolata <strong>"Adjusting your PATH environment"</strong> (vedi il riquadro sotto — è l'unica dove serve cambiare qualcosa)</li>
+      <li>Continua con Avanti sulle schermate restanti, lasciando i valori proposti</li>
+      <li>Clicca "Install", aspetta, poi "Finish" (togli la spunta a "View Release Notes" se c'è, non serve)</li>
     </ol>
+    <div class="attenzione">
+      <span class="attenzione-titolo">La schermata dove non va lasciato il default</span>
+      <p>Su "Adjusting your PATH environment" ci sono tre opzioni. Quella già selezionata ("Git from the command line and also from 3rd-party software") aggiunge <code>git</code> ma **non** <code>bash</code>: con quella, la verifica sotto fallisce sempre. Scegli invece la <strong>terza</strong>, <strong>"Use Git and optional Unix tools from the Command Prompt"</strong> — c'è scritto in rosso che sovrascrive alcuni comandi Windows (<code>find</code>, <code>sort</code>): per questo progetto non è un problema, è esattamente quello che serve. Poi Avanti.</p>
+    </div>
     <div class="verifica">
       <span class="verifica-titolo">Verifica che abbia funzionato</span>
-      <p>Chiudi tutte le finestre PowerShell aperte, riaprine una nuova, e scrivi:</p>
+      <p>Chiudi <strong>tutte</strong> le finestre PowerShell aperte (anche quelle in cui non stavi scrivendo comandi), riaprine una nuova, e scrivi:</p>
       <div class="terminale"><div>bash --version</div></div>
-      <p>Deve rispondere con qualcosa tipo <code>GNU bash, version 5.x</code>. Se dice "non riconosciuto", riavvia il computer e riprova — a volte serve perché Windows aggiorni il PATH di sistema.</p>
+      <p>Deve rispondere con qualcosa tipo <code>GNU bash, version 5.x</code>. Se dice ancora "bash non è riconosciuto...", quasi sempre è perché alla schermata sopra è rimasta l'opzione di default: riesegui lo stesso installer (rilevando l'installazione esistente, si offre di rifare la configurazione) e scegli la terza opzione questa volta. Se anche dopo questo un riavvio del computer non basta, prova a cercare a mano <code>C:\Program Files\Git\bin\bash.exe</code> in Esplora file: se il file esiste ma non viene riconosciuto da PowerShell, il problema è solo nel PATH, non nell'installazione.</p>
     </div>
   </div>
 </div>
