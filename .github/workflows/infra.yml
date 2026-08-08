@@ -1,0 +1,90 @@
+name: infra
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra.yml"
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra.yml"
+  # Il primo rilascio gira su un VPS, non su AWS (troppo caro anche a zero
+  # traffico — vedi docs/adr): il deploy sotto non parte più da solo a ogni
+  # push su main, solo se lanciato a mano da qui, quando servirà di nuovo.
+  workflow_dispatch:
+
+concurrency:
+  group: infra-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # OIDC verso AWS: nessuna chiave statica nei secrets
+  contents: read
+
+jobs:
+  synth:
+    name: synth + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Il bundling della Lambda (build_lambda.sh) chiama `uv`: senza questo
+      # step il bundling locale fallisce e CDK cade sul fallback Docker, che
+      # non esegue lo script e produce BundlingProducedNoOutput.
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/api/uv.lock
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck --workspace @wardrobe/infra
+
+      # `cdk synth` è il test unitario dell'infrastruttura: se una policy o un
+      # riferimento fra stack è sbagliato, fallisce qui e non in deploy.
+      # Nessuna credenziale, nemmeno finta: gli stack fissano la regione e
+      # lasciano l'account agnostico, così il synth non interroga AWS.
+      - name: Synth
+        run: npm run synth --workspace @wardrobe/infra
+
+      - name: Test degli stack
+        run: npm run test --workspace @wardrobe/infra
+
+  deploy:
+    name: deploy staging
+    # Solo a mano (Actions -> infra -> Run workflow), mai più da un push
+    # automatico su main: vedi il commento su workflow_dispatch sopra.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs: [synth]
+    environment: staging
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Da configurare una volta sola: ruolo IAM con trust policy sul provider
+      # OIDC di GitHub, ristretto a questo repo. Vedi docs/adr/0002.
+      - name: Credenziali AWS via OIDC
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-south-1
+
+      - name: Deploy
+        run: npm run deploy --workspace @wardrobe/infra -- --require-approval never
+        env:
+          WARDROBE_ENV: staging
