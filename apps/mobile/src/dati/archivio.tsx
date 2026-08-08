@@ -26,7 +26,7 @@ import {
   useMemo,
   useReducer,
 } from 'react'
-import { api } from './api'
+import { RICHIEDE_ACCESSO, api, caricaTokenSalvato } from './api'
 import { perId, slotDiTipo } from './dominio'
 
 /** Un modello scelto per uno dei due lavori veri: provider + id, come nel catalogo di `/dev/modelli`. */
@@ -160,6 +160,9 @@ interface Archivio extends Stato {
   ) => Promise<void>
   chiediSuggerimenti: (richiesta?: string) => Promise<Suggerimento[]>
   avvisa: (testo: string | null) => void
+  /** Da chiamare dopo un login riuscito: il caricamento iniziale, se non
+   * c'era ancora un token, è partito vuoto di proposito. */
+  ricarica: () => Promise<void>
 }
 
 const Contesto = createContext<Archivio | null>(null)
@@ -167,38 +170,40 @@ const Contesto = createContext<Archivio | null>(null)
 export function ArchivioProvider({ children }: { children: ReactNode }) {
   const [stato, invia] = useReducer(riduci, INIZIALE)
 
-  useEffect(() => {
-    let annullato = false
-
-    async function carica() {
-      try {
-        const [elenco, outfit, profilo] = await Promise.all([
-          api.elencaCapi(),
-          api.elencaOutfit(),
-          api.profilo(),
-        ])
-        if (annullato) return
-        invia({ tipo: 'caricato', capi: elenco.capi, outfit: outfit.outfit, profilo })
-      } catch (errore) {
-        if (annullato) return
-        // Niente più fallback ai dati di esempio: con un backend vero un
-        // errore di rete non deve mai far ricomparire l'armadio finto sopra
-        // ai capi veri. Meglio un armadio vuoto con la causa in chiaro.
-        invia({ tipo: 'caricato', capi: [], outfit: [], profilo: null })
-        invia({
-          tipo: 'avviso',
-          testo: `Non riesco a raggiungere il server. (${
-            errore instanceof Error ? errore.message : 'errore sconosciuto'
-          })`,
-        })
-      }
+  const carica = useCallback(async () => {
+    // Con una build che richiede il login, un token assente non è un errore
+    // di rete: è la schermata di accesso, che l'utente sta già vedendo. Senza
+    // questo controllo la richiesta partirebbe comunque senza Authorization,
+    // fallirebbe con 422, e mostrerebbe un avviso «non riesco a raggiungere
+    // il server» fuorviante proprio mentre l'utente deve solo accedere.
+    if (RICHIEDE_ACCESSO && !(await caricaTokenSalvato())) {
+      invia({ tipo: 'caricato', capi: [], outfit: [], profilo: null })
+      return
     }
-
-    void carica()
-    return () => {
-      annullato = true
+    try {
+      const [elenco, outfit, profilo] = await Promise.all([
+        api.elencaCapi(),
+        api.elencaOutfit(),
+        api.profilo(),
+      ])
+      invia({ tipo: 'caricato', capi: elenco.capi, outfit: outfit.outfit, profilo })
+    } catch (errore) {
+      // Niente più fallback ai dati di esempio: con un backend vero un
+      // errore di rete non deve mai far ricomparire l'armadio finto sopra
+      // ai capi veri. Meglio un armadio vuoto con la causa in chiaro.
+      invia({ tipo: 'caricato', capi: [], outfit: [], profilo: null })
+      invia({
+        tipo: 'avviso',
+        testo: `Non riesco a raggiungere il server. (${
+          errore instanceof Error ? errore.message : 'errore sconosciuto'
+        })`,
+      })
     }
   }, [])
+
+  useEffect(() => {
+    void carica()
+  }, [carica])
 
   const indice = useMemo(() => perId(stato.capi), [stato.capi])
 
@@ -441,6 +446,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       salvaOutfit,
       chiediSuggerimenti,
       avvisa,
+      ricarica: carica,
     }),
     [
       stato,
@@ -463,6 +469,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       salvaOutfit,
       chiediSuggerimenti,
       avvisa,
+      carica,
     ],
   )
 

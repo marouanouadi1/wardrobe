@@ -15,6 +15,11 @@ dependencies = [
     # non ha mai usato un terminale di una variabile d'ambiente di sistema. In
     # cloud le Lambda ricevono le chiavi da CDK, non toccano questo file.
     "python-dotenv>=1.0",
+    # Login autofirmato (domain/autenticazione.py): sostituisce Cognito per la
+    # beta. Dipendenze normali, non opzionali — servono sempre, non solo in
+    # cloud.
+    "bcrypt>=4.2",
+    "pyjwt>=2.9",
 ]
 
 [project.optional-dependencies]

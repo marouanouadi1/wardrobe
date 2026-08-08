@@ -28,18 +28,33 @@ INTESTAZIONI = {
 
 
 def utente_id(evento: Evento) -> str:
-    """L'utente autenticato, dalle claim del JWT verificato da API Gateway.
+    """L'utente autenticato: dalle claim del JWT di API Gateway, da un JWT
+    autofirmato (`JWT_SECRET`, vedi `handlers/auth.py`), o dall'header
+    X-Utente se `AUTH_APERTA=1` — in quest'ordine.
 
-    L'authorizer valida firma e scadenza prima di noi: se siamo qui, `sub` è
-    attendibile. In locale accettiamo l'header X-Utente, ma solo con DEV_MODE.
+    L'authorizer di API Gateway valida firma e scadenza prima di noi: se
+    siamo qui con quelle claim, `sub` è già attendibile. `AUTH_APERTA` è un
+    interruttore distinto da DEV_MODE, che controlla altre cose (pipeline
+    inline, provider diretto): tenerli separati evita di dover scegliere fra
+    "niente pipeline inline" e "playground aperto a chiunque".
     """
     claims = evento.get("requestContext", {}).get("authorizer", {}).get("jwt", {}).get("claims", {})
     sub = claims.get("sub")
     if isinstance(sub, str) and sub:
         return sub
 
-    if os.environ.get("DEV_MODE") == "1":
-        intestazioni = {str(k).lower(): str(v) for k, v in (evento.get("headers") or {}).items()}
+    intestazioni = {str(k).lower(): str(v) for k, v in (evento.get("headers") or {}).items()}
+
+    segreto = os.environ.get("JWT_SECRET")
+    autorizzazione = intestazioni.get("authorization", "")
+    if segreto and autorizzazione.lower().startswith("bearer "):
+        from domain.autenticazione import verifica_token
+
+        sub = verifica_token(autorizzazione[7:], segreto)
+        if sub:
+            return sub
+
+    if os.environ.get("AUTH_APERTA") == "1":
         return intestazioni.get("x-utente", "demo")
 
     raise RichiestaNonValida("richiesta senza utente autenticato")

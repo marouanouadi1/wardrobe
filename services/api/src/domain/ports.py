@@ -15,6 +15,7 @@ from pydantic import Field
 from domain.models import (
     Capo,
     EsecuzionePlayground,
+    EsitoAnalisi,
     MessaggioChat,
     ModelloDisponibile,
     ModelloWardrobe,
@@ -191,6 +192,28 @@ class RepositoryArmadio(Protocol):
     def elenca_valutazioni_immagini(self, run_id: str) -> list[ValutazioneImmagine]: ...
 
     def ultimo_run_valutazione_immagine(self) -> str | None: ...
+
+    # ── esiti dell'analisi inline ──────────────────────────────────────────
+    def salva_esito_analisi(self, esito: EsitoAnalisi) -> None:
+        """Sopravvive a un riavvio del processo: a differenza di un dict in
+        memoria, il polling del client trova l'esito anche dopo un deploy."""
+        ...
+
+    def leggi_esito_analisi(self, esecuzione_id: str) -> EsitoAnalisi | None: ...
+
+
+@runtime_checkable
+class RepositoryUtenti(Protocol):
+    """Le credenziali di login: un'identità, non un armadio — porta separata
+    da `RepositoryArmadio` di proposito."""
+
+    def trova_per_email(self, email: str) -> tuple[str, str] | None:
+        """`(utente_id, hash_password)`, o `None` se l'email non esiste."""
+        ...
+
+    def crea(self, email: str, hash_password: str) -> str:
+        """Crea l'utente e restituisce il suo id."""
+        ...
 
 
 @runtime_checkable

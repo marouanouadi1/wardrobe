@@ -9,6 +9,7 @@ import pytest
 # monta il repository in memoria, e nessun test tocca AWS.
 os.environ["DEV_MODE"] = "1"
 os.environ["PLAYGROUND_ABILITATO"] = "1"
+os.environ["AUTH_APERTA"] = "1"
 
 from domain.models import (
     AnalisiVisione,
@@ -99,6 +100,7 @@ def _container_pulito():
     def svuota() -> None:
         for cache in (
             _container.repository,
+            _container.repository_utenti,
             _container.archivio_foto,
             _container.orologio,
             _container.generatore_id,

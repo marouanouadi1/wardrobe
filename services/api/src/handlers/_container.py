@@ -13,7 +13,14 @@ import os
 import uuid
 from datetime import UTC, date, datetime
 
-from domain.ports import ArchivioFoto, GeneratoreId, Orologio, RepositoryArmadio, ServizioScontorno
+from domain.ports import (
+    ArchivioFoto,
+    GeneratoreId,
+    Orologio,
+    RepositoryArmadio,
+    RepositoryUtenti,
+    ServizioScontorno,
+)
 
 
 class OrologioDiSistema:
@@ -51,8 +58,9 @@ def repository() -> RepositoryArmadio:
     api:local` dà all'app un backend vero senza toccare AWS. `DATABASE_URL`
     (Postgres via docker-compose, vedi `db:up`) è lo switch per i capi veri
     che devono sopravvivere a un riavvio — indipendente da `DEV_MODE`, che
-    resta acceso per l'header `X-Utente` in locale (vedi `archivio_foto`,
-    stesso schema di scelta indipendente dal `BUCKET_FOTO`).
+    resta acceso solo per il ramo in memoria di `archivio_foto`, stesso
+    schema di scelta indipendente dal `BUCKET_FOTO`. Il bypass di
+    autenticazione è un flag a parte (`AUTH_APERTA`, vedi `_http.py`).
     """
     if os.environ.get("DATABASE_URL"):
         from adapters.postgres import RepositoryPostgres
@@ -73,11 +81,34 @@ def repository() -> RepositoryArmadio:
 
 
 @functools.cache
+def repository_utenti() -> RepositoryUtenti:
+    """Stessa scelta di `repository()`, ma per le credenziali di login: una
+    porta separata, un'istanza separata di `RepositoryPostgres` (che
+    implementa entrambi i Protocol) o di `RepositoryInMemoria`."""
+    if os.environ.get("DATABASE_URL"):
+        from adapters.postgres import RepositoryPostgres
+
+        return RepositoryPostgres(dsn=os.environ["DATABASE_URL"])
+
+    if in_sviluppo():
+        from adapters.memory import RepositoryInMemoria
+
+        return RepositoryInMemoria()
+
+    from adapters.postgres import RepositoryPostgres
+
+    return RepositoryPostgres(
+        dsn_secret_arn=os.environ["DB_SECRET_ARN"],
+        regione=os.environ.get("AWS_REGION", "eu-south-1"),
+    )
+
+
+@functools.cache
 def archivio_foto() -> ArchivioFoto:
     """Su disco se c'è `CARTELLA_FOTO` (persistente, per usare l'app per
-    davvero), in memoria altrimenti in sviluppo (si azzera ad ogni riavvio,
-    comodo solo per provare), S3 in cloud."""
-    if in_sviluppo() and os.environ.get("CARTELLA_FOTO"):
+    davvero, in locale o su un VPS), in memoria altrimenti in sviluppo (si
+    azzera ad ogni riavvio, comodo solo per provare), S3 in cloud."""
+    if os.environ.get("CARTELLA_FOTO"):
         from adapters.filesystem import ArchivioFileSystem
 
         return ArchivioFileSystem(os.environ["CARTELLA_FOTO"])

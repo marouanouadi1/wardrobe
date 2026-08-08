@@ -51,6 +51,17 @@ def _host_locale() -> str:
     return os.environ.get("HOST_LOCALE") or _rileva_ip_lan()
 
 
+def _base_url() -> str:
+    """`BASE_URL_PUBBLICA` (es. `https://api.tuodominio.it`) quando è
+    impostata — un VPS dietro un reverse proxy HTTPS, dove l'IP LAN indovinato
+    e la porta interna non sono raggiungibili dall'app. Senza, resta il
+    comportamento di sempre per `npm run api:local` su una rete domestica."""
+    pubblica = os.environ.get("BASE_URL_PUBBLICA")
+    if pubblica:
+        return pubblica.rstrip("/")
+    return f"http://{_host_locale()}:{_porta_locale()}"
+
+
 class ArchivioFileSystem:
     def __init__(self, cartella: str) -> None:
         self._radice = Path(cartella).resolve()
@@ -65,14 +76,14 @@ class ArchivioFileSystem:
     def url_upload(self, chiave: str, content_type: str, scade_in_s: int = 900) -> UploadFirmato:
         return UploadFirmato(
             chiave=chiave,
-            url=f"http://{_host_locale()}:{_porta_locale()}/dev/foto/{chiave}",
+            url=f"{_base_url()}/dev/foto/{chiave}",
             intestazioni={"content-type": content_type},
             scade_in_s=scade_in_s,
         )
 
     def url_lettura(self, chiave: str, scade_in_s: int = 3600) -> str:
         del scade_in_s
-        return f"http://{_host_locale()}:{_porta_locale()}/dev/foto/{chiave}"
+        return f"{_base_url()}/dev/foto/{chiave}"
 
     def salva(self, chiave: str, contenuto: bytes, media_type: str) -> None:
         percorso = self._percorso(chiave)

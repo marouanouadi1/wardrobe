@@ -48,6 +48,7 @@ export default function RadiceApp() {
               animation: 'slide_from_right',
             }}
           >
+            <Stack.Screen name="accedi" options={{ animation: 'fade' }} />
             <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
             <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
             <Stack.Screen name="capo/[id]" />

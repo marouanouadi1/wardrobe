@@ -12,7 +12,10 @@ from typing import Any
 
 import pytest
 
-from handlers import capi, foto, health, outfit, playground, profilo
+from domain.errors import RichiestaNonValida
+from handlers import auth, capi, foto, health, outfit, playground, profilo
+from handlers._container import repository_utenti
+from handlers._http import utente_id
 
 
 def evento(
@@ -39,6 +42,64 @@ class TestSalute:
         risposta = health.salute(evento(), None)
         assert risposta["statusCode"] == 200
         assert corpo_di(risposta)["stato"] == "ok"
+
+
+class TestAuth:
+    def _crea_utente(self, email: str, password: str) -> None:
+        from domain.autenticazione import genera_hash
+
+        repository_utenti().crea(email, genera_hash(password))
+
+    def test_credenziali_giuste_restituiscono_un_token(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("JWT_SECRET", "segreto-di-test-lungo-abbastanza-per-hmac-sha256")
+        self._crea_utente("prova@esempio.it", "password-lunga")
+
+        risposta = auth.accedi(
+            evento(corpo={"email": "prova@esempio.it", "password": "password-lunga"}), None
+        )
+        assert risposta["statusCode"] == 200
+        assert corpo_di(risposta)["token"]
+
+    def test_password_sbagliata_e_un_401(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("JWT_SECRET", "segreto-di-test-lungo-abbastanza-per-hmac-sha256")
+        self._crea_utente("prova2@esempio.it", "password-lunga")
+
+        risposta = auth.accedi(
+            evento(corpo={"email": "prova2@esempio.it", "password": "sbagliata"}), None
+        )
+        assert risposta["statusCode"] == 401
+
+    def test_email_inesistente_e_un_401(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("JWT_SECRET", "segreto-di-test-lungo-abbastanza-per-hmac-sha256")
+
+        risposta = auth.accedi(
+            evento(corpo={"email": "fantasma@esempio.it", "password": "qualsiasi"}), None
+        )
+        assert risposta["statusCode"] == 401
+
+    def test_il_token_emesso_autentica_le_richieste_successive(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Con AUTH_APERTA spenta, solo il token — non più l'header X-Utente
+        senza verifica — deve identificare l'utente."""
+        monkeypatch.setenv("JWT_SECRET", "segreto-di-test-lungo-abbastanza-per-hmac-sha256")
+        monkeypatch.delenv("AUTH_APERTA", raising=False)
+        self._crea_utente("prova3@esempio.it", "password-lunga")
+
+        risposta = auth.accedi(
+            evento(corpo={"email": "prova3@esempio.it", "password": "password-lunga"}), None
+        )
+        token = corpo_di(risposta)["token"]
+
+        assert utente_id({"headers": {"authorization": f"Bearer {token}"}}) != "demo"
+
+    def test_senza_auth_aperta_ne_token_e_una_richiesta_non_valida(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.delenv("AUTH_APERTA", raising=False)
+
+        with pytest.raises(RichiestaNonValida):
+            utente_id({"headers": {}})
 
 
 class TestCapi:

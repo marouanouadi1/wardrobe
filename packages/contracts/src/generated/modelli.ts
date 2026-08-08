@@ -56,6 +56,7 @@ export interface Contratti {
   Colore?: Colore
   ContestoSuggerimento?: ContestoSuggerimento
   CorrezioniCapo?: CorrezioniCapo
+  Credenziali?: Credenziali
   ElencoCapi?: ElencoCapi
   ElencoMessaggiChat?: ElencoMessaggiChat
   EsecuzionePlayground?: EsecuzionePlayground
@@ -99,6 +100,7 @@ export interface Contratti {
   StatoCapo?: StatoCapo
   Suggerimento?: Suggerimento
   TipoCapo?: TipoCapo
+  TokenAccesso?: TokenAccesso
   UploadFirmato?: UploadFirmato
   UsoToken?: UsoToken
   Valutazione?: Valutazione
@@ -280,6 +282,14 @@ export interface PreferenzeStile {
   stili?: string[]
   palette?: string[]
   evita?: string[]
+}
+/**
+ * Il corpo di POST /auth/accedi. Niente self-signup: le righe in
+ * `utenti` le crea scripts/crea_utente.py, non un endpoint pubblico.
+ */
+export interface Credenziali {
+  email: string
+  password: string
 }
 export interface ElencoCapi {
   capi: Capo[]
@@ -645,6 +655,9 @@ export interface ValutazioneImmagine {
   latenza_ms: number
   errore?: string | null
   rating?: RatingImmagine | null
+}
+export interface TokenAccesso {
+  token: string
 }
 /**
  * Risposta all'app prima che carichi la foto: l'upload va diretto a S3.

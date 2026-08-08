@@ -41,6 +41,14 @@ class AccessoNegato(ErroreDominio):
     stato_http = 403
 
 
+class CredenzialiNonValide(ErroreDominio):
+    """Email inesistente o password sbagliata — stesso messaggio per
+    entrambe, per non rivelare a un tentativo di accesso quali email esistono."""
+
+    codice = "credenziali_non_valide"
+    stato_http = 401
+
+
 class LetturaNonValida(ErroreDominio):
     """Il modello di visione ha risposto qualcosa che non sappiamo usare."""
 

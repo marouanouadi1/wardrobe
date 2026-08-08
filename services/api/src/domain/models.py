@@ -382,6 +382,18 @@ class RichiestaUpload(ModelloWardrobe):
     nota: str | None = None
 
 
+class Credenziali(ModelloWardrobe):
+    """Il corpo di POST /auth/accedi. Niente self-signup: le righe in
+    `utenti` le crea scripts/crea_utente.py, non un endpoint pubblico."""
+
+    email: str
+    password: str
+
+
+class TokenAccesso(ModelloWardrobe):
+    token: str
+
+
 class RichiestaAnalisi(ModelloWardrobe):
     chiave_foto: str
     provider: str | None = None

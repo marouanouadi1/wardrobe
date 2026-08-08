@@ -9,12 +9,14 @@
 
 import Constants from 'expo-constants'
 import { File } from 'expo-file-system'
+import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
 import type {
   AggiornamentoCapo,
   AnalisiAvviata,
   Capo,
   ContestoSuggerimento,
+  Credenziali,
   ElencoCapi,
   ElencoMessaggiChat,
   EsitoAnalisi,
@@ -34,6 +36,7 @@ import type {
   RispostaSuggerimenti,
   RispostaValutazioni,
   RispostaValutazioniImmagini,
+  TokenAccesso,
   UploadFirmato,
 } from '@wardrobe/contracts'
 
@@ -68,6 +71,14 @@ function rilevaUrlSviluppo(): string | null {
  */
 export const URL_API = process.env.EXPO_PUBLIC_API_URL ?? rilevaUrlSviluppo()
 
+/**
+ * Vero solo per una build con un indirizzo esplicito (EAS contro un server
+ * vero): lì il login è obbligatorio. In sviluppo locale l'euristica
+ * automatica basta da sola, e il backend gira con `AUTH_APERTA=1` — un login
+ * lì sarebbe solo un attrito senza un vero account dietro.
+ */
+export const RICHIEDE_ACCESSO = Boolean(process.env.EXPO_PUBLIC_API_URL)
+
 export class ErroreApi extends Error {
   constructor(
     readonly stato: number,
@@ -78,11 +89,34 @@ export class ErroreApi extends Error {
   }
 }
 
+const CHIAVE_TOKEN = 'wardrobe.token'
+
 let tokenCorrente: string | null = null
 
-/** Il token di Cognito. Lo imposta il flusso di accesso. */
+/**
+ * Il token del login. Lo imposta la schermata `accedi`, e resta anche dopo
+ * che l'app si riavvia — salvato nel portachiavi del sistema, non solo in
+ * memoria. Sul web `expo-secure-store` non ha un'implementazione (il modulo
+ * nativo non esiste): la sessione lì non sopravvive a un refresh, che per
+ * l'uso da telefono di questa beta non è il caso che conta.
+ */
 export function impostaToken(token: string | null): void {
   tokenCorrente = token
+  if (Platform.OS === 'web') return
+  if (token) {
+    SecureStore.setItemAsync(CHIAVE_TOKEN, token).catch(() => undefined)
+  } else {
+    SecureStore.deleteItemAsync(CHIAVE_TOKEN).catch(() => undefined)
+  }
+}
+
+/** Da chiamare una volta all'avvio dell'app: rimette in memoria il token
+ * dell'ultima sessione, se c'è. */
+export async function caricaTokenSalvato(): Promise<string | null> {
+  if (Platform.OS === 'web') return null
+  const token = await SecureStore.getItemAsync(CHIAVE_TOKEN).catch(() => null)
+  tokenCorrente = token
+  return token
 }
 
 async function chiama<T>(
@@ -124,6 +158,12 @@ async function chiama<T>(
 
 export const api = {
   salute: () => chiama<{ stato: string; versione: string }>('/salute'),
+
+  // ── accesso ──────────────────────────────────────────────────────────────
+  auth: {
+    accedi: (credenziali: Credenziali) =>
+      chiama<TokenAccesso>('/auth/accedi', { metodo: 'POST', corpo: credenziali }),
+  },
 
   // ── armadio ──────────────────────────────────────────────────────────────
   elencaCapi: (filtro?: { tipo?: string; stato?: string; testo?: string; preferiti?: boolean }) => {

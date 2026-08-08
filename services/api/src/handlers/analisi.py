@@ -25,7 +25,6 @@ from domain.vision import crea_capo, interpreta_lettura, richiesta_analisi
 from handlers._container import (
     archivio_foto,
     generatore_id,
-    in_sviluppo,
     orologio,
     repository,
 )
@@ -34,10 +33,6 @@ from handlers._http import Evento, Risposta, corpo, endpoint, ok, parametro, ute
 
 PROVIDER_DEFAULT = os.environ.get("PROVIDER_VISIONE", "anthropic")
 MODELLO_DEFAULT = os.environ.get("MODELLO_VISIONE", "")
-
-# Gli esiti delle analisi eseguite in linea, in sviluppo. In cloud questo
-# dizionario non viene mai usato: lo stato lo conosce Step Functions.
-_ESITI_LOCALI: dict[str, EsitoAnalisi] = {}
 
 
 @endpoint
@@ -51,31 +46,38 @@ def avvia(evento: Evento) -> Risposta:
         "modello": richiesta.modello or MODELLO_DEFAULT,
     }
 
-    if in_sviluppo():
-        # In locale non esiste una state machine: i due task girano in linea,
-        # nello stesso ordine e con lo stesso codice. L'app non se ne accorge,
-        # perché la risposta ha la forma di sempre.
+    if not os.environ.get("STATE_MACHINE_ARN"):
+        # Senza una state machine (locale, o un VPS senza Step Functions) i
+        # due task girano in linea, nello stesso ordine e con lo stesso
+        # codice. L'app non se ne accorge, perché la risposta ha la forma di
+        # sempre. L'esito va su Postgres, non in un dict di processo: un
+        # riavvio del server (deploy su un VPS, non un evento raro) non deve
+        # far perdere al polling un'esecuzione già conclusa.
         esecuzione = generatore_id().nuovo()
         try:
             salvato = salva(analizza(ingresso))
-            _ESITI_LOCALI[esecuzione] = EsitoAnalisi(
-                esecuzione_id=esecuzione,
-                stato=StatoAnalisi.COMPLETATA,
-                capo=con_url(Capo.model_validate(salvato["capo"])),
+            repository().salva_esito_analisi(
+                EsitoAnalisi(
+                    esecuzione_id=esecuzione,
+                    stato=StatoAnalisi.COMPLETATA,
+                    capo=con_url(Capo.model_validate(salvato["capo"])),
+                )
             )
         except ErroreDominio as exc:
-            _ESITI_LOCALI[esecuzione] = EsitoAnalisi(
-                esecuzione_id=esecuzione, stato=StatoAnalisi.FALLITA, errore=str(exc)
+            repository().salva_esito_analisi(
+                EsitoAnalisi(esecuzione_id=esecuzione, stato=StatoAnalisi.FALLITA, errore=str(exc))
             )
         except Exception:
             # Qualunque altra eccezione (SDK del provider, rete, risposta non
             # parsabile) non deve uscire come un 500 anonimo: il dettaglio
             # resta nei log, non arriva al client.
             logging.getLogger("wardrobe").exception("analisi fallita per %s", richiesta.chiave_foto)
-            _ESITI_LOCALI[esecuzione] = EsitoAnalisi(
-                esecuzione_id=esecuzione,
-                stato=StatoAnalisi.FALLITA,
-                errore="L'analisi non è riuscita: riprova con più luce.",
+            repository().salva_esito_analisi(
+                EsitoAnalisi(
+                    esecuzione_id=esecuzione,
+                    stato=StatoAnalisi.FALLITA,
+                    errore="L'analisi non è riuscita: riprova con più luce.",
+                )
             )
         return ok(AnalisiAvviata(esecuzione_id=esecuzione), 202)
 
@@ -94,8 +96,8 @@ def stato(evento: Evento) -> Risposta:
     """GET /capi/analisi/{esecuzioneId} — l'app fa polling mentre mostra i passi."""
     esecuzione_id = parametro(evento, "esecuzioneId")
 
-    if in_sviluppo():
-        locale = _ESITI_LOCALI.get(esecuzione_id)
+    if not os.environ.get("STATE_MACHINE_ARN"):
+        locale = repository().leggi_esito_analisi(esecuzione_id)
         if locale is not None:
             return ok(locale)
 

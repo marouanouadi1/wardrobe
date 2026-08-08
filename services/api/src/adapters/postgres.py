@@ -11,6 +11,7 @@ in Python.
 from __future__ import annotations
 
 import json
+import threading
 from datetime import date
 from typing import Any
 
@@ -21,6 +22,7 @@ from psycopg.rows import dict_row
 from domain.models import (
     Capo,
     EsecuzionePlayground,
+    EsitoAnalisi,
     MessaggioChat,
     Outfit,
     PresetPrompt,
@@ -41,7 +43,12 @@ class RepositoryPostgres:
         self._dsn_diretto = dsn
         self._secret_arn = dsn_secret_arn
         self._regione = regione
-        self._connessione: psycopg.Connection[Any] | None = None
+        # Una connessione per thread, non una condivisa: su Lambda un
+        # container esegue una richiesta alla volta, ma sotto un server
+        # multi-thread (ThreadingHTTPServer di local_server.py su un VPS)
+        # due thread che eseguono cursori sulla stessa connessione psycopg in
+        # parallelo possono interferire a livello di protocollo.
+        self._locale = threading.local()
 
     # ── connessione ────────────────────────────────────────────────────────
     def _dsn(self) -> str:
@@ -57,10 +64,12 @@ class RepositoryPostgres:
         )
 
     def _conn(self) -> psycopg.Connection[Any]:
-        """Riusa la connessione fra invocazioni: su Lambda vive quanto il container."""
-        if self._connessione is None or self._connessione.closed:
-            self._connessione = psycopg.connect(self._dsn(), row_factory=dict_row, autocommit=True)
-        return self._connessione
+        """Riusa la connessione del thread corrente fra chiamate."""
+        connessione: psycopg.Connection[Any] | None = getattr(self._locale, "connessione", None)
+        if connessione is None or connessione.closed:
+            connessione = psycopg.connect(self._dsn(), row_factory=dict_row, autocommit=True)
+            self._locale.connessione = connessione
+        return connessione
 
     # ── capi ───────────────────────────────────────────────────────────────
     def elenca_capi(self, utente_id: str) -> list[Capo]:
@@ -290,3 +299,37 @@ class RepositoryPostgres:
             cur.execute("select run_id from valutazioni_immagini order by eseguita_il desc limit 1")
             riga = cur.fetchone()
             return riga["run_id"] if riga else None
+
+    # ── esiti dell'analisi inline ────────────────────────────────────────
+    def salva_esito_analisi(self, esito: EsitoAnalisi) -> None:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                """
+                insert into analisi_esiti (esecuzione_id, dati) values (%s, %s)
+                on conflict (esecuzione_id) do update set dati = excluded.dati
+                """,
+                (esito.esecuzione_id, esito.model_dump_json()),
+            )
+
+    def leggi_esito_analisi(self, esecuzione_id: str) -> EsitoAnalisi | None:
+        with self._conn().cursor() as cur:
+            cur.execute("select dati from analisi_esiti where esecuzione_id = %s", (esecuzione_id,))
+            riga = cur.fetchone()
+            return EsitoAnalisi.model_validate(riga["dati"]) if riga else None
+
+    # ── utenti (login) ────────────────────────────────────────────────────
+    def trova_per_email(self, email: str) -> tuple[str, str] | None:
+        with self._conn().cursor() as cur:
+            cur.execute("select id, hash_password from utenti where email = %s", (email,))
+            riga = cur.fetchone()
+            return (str(riga["id"]), riga["hash_password"]) if riga else None
+
+    def crea(self, email: str, hash_password: str) -> str:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                "insert into utenti (email, hash_password) values (%s, %s) returning id",
+                (email, hash_password),
+            )
+            riga = cur.fetchone()
+            assert riga is not None
+            return str(riga["id"])

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import base64
 import os
+import uuid
 from datetime import UTC, date, datetime, timedelta
 
 import httpx
@@ -23,6 +24,7 @@ from domain.models import (
     Capo,
     Colore,
     EsecuzionePlayground,
+    EsitoAnalisi,
     FotoCapo,
     MessaggioChat,
     Outfit,
@@ -228,6 +230,8 @@ class RepositoryInMemoria:
         self._chat: dict[str, list[MessaggioChat]] = {}
         self._valutazioni: dict[tuple[str, str, str, str], Valutazione] = {}
         self._valutazioni_immagini: dict[tuple[str, str, str, str], ValutazioneImmagine] = {}
+        self._esiti_analisi: dict[str, EsitoAnalisi] = {}
+        self._utenti: dict[str, tuple[str, str]] = {}  # email -> (id, hash_password)
 
     @classmethod
     def con_semi(cls, utente_id: str = "demo") -> RepositoryInMemoria:
@@ -347,3 +351,19 @@ class RepositoryInMemoria:
         if not self._valutazioni_immagini:
             return None
         return max(self._valutazioni_immagini.values(), key=lambda v: v.eseguita_il).run_id
+
+    # ── esiti dell'analisi inline ────────────────────────────────────────
+    def salva_esito_analisi(self, esito: EsitoAnalisi) -> None:
+        self._esiti_analisi[esito.esecuzione_id] = esito
+
+    def leggi_esito_analisi(self, esecuzione_id: str) -> EsitoAnalisi | None:
+        return self._esiti_analisi.get(esecuzione_id)
+
+    # ── utenti (login) ────────────────────────────────────────────────────
+    def trova_per_email(self, email: str) -> tuple[str, str] | None:
+        return self._utenti.get(email)
+
+    def crea(self, email: str, hash_password: str) -> str:
+        utente_id = uuid.uuid4().hex
+        self._utenti[email] = (utente_id, hash_password)
+        return utente_id

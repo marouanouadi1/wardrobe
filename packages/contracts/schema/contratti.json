@@ -34,6 +34,9 @@
     "CorrezioniCapo": {
       "$ref": "#/$defs/CorrezioniCapo"
     },
+    "Credenziali": {
+      "$ref": "#/$defs/Credenziali"
+    },
     "ElencoCapi": {
       "$ref": "#/$defs/ElencoCapi"
     },
@@ -162,6 +165,9 @@
     },
     "TipoCapo": {
       "$ref": "#/$defs/TipoCapo"
+    },
+    "TokenAccesso": {
+      "$ref": "#/$defs/TokenAccesso"
     },
     "UploadFirmato": {
       "$ref": "#/$defs/UploadFirmato"
@@ -735,6 +741,24 @@
         }
       },
       "title": "CorrezioniCapo",
+      "type": "object"
+    },
+    "Credenziali": {
+      "additionalProperties": false,
+      "description": "Il corpo di POST /auth/accedi. Niente self-signup: le righe in\n`utenti` le crea scripts/crea_utente.py, non un endpoint pubblico.",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "email",
+        "password"
+      ],
+      "title": "Credenziali",
       "type": "object"
     },
     "ElencoCapi": {
@@ -2323,6 +2347,19 @@
       ],
       "title": "TipoCapo",
       "type": "string"
+    },
+    "TokenAccesso": {
+      "additionalProperties": false,
+      "properties": {
+        "token": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "token"
+      ],
+      "title": "TokenAccesso",
+      "type": "object"
     },
     "UploadFirmato": {
       "additionalProperties": false,

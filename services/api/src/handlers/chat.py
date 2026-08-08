@@ -21,7 +21,7 @@ from domain.models import MessaggioChat, RichiestaMessaggioChat, RispostaChat, R
 from domain.playground import preset_effettivo
 from domain.ports import ProviderLlm
 from domain.stylist import costruisci_contesto
-from handlers._container import generatore_id, in_sviluppo, orologio, repository
+from handlers._container import generatore_id, orologio, repository
 from handlers._http import Evento, Risposta, corpo, endpoint, ok, utente_id
 
 PROVIDER_DEFAULT = os.environ.get("PROVIDER_STILISTA", "anthropic")
@@ -32,7 +32,7 @@ ID_PRESET_STILISTA = "chat-stilista"
 
 def _provider(nome: str) -> ProviderLlm:
     """Stessa scelta di `handlers.suggerimenti`: in VPC si delega al worker."""
-    if in_sviluppo():
+    if not os.environ.get("LLM_WORKER_ARN"):
         from adapters.llm.registry import provider_per_nome
 
         return provider_per_nome(nome)

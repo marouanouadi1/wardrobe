@@ -55,6 +55,7 @@ RISPOSTE = (
     models.UploadFirmato,
     models.AnalisiAvviata,
     models.EsitoAnalisi,
+    models.TokenAccesso,
     models.RispostaSuggerimenti,
     models.ModelloDisponibile,
     models.PresetPrompt,
@@ -75,6 +76,7 @@ RISPOSTE = (
 )
 
 RICHIESTE = (
+    models.Credenziali,
     models.Vestizione,
     models.NuovoOutfit,
     models.NuovoCapoManuale,

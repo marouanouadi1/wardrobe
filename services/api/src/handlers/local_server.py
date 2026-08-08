@@ -16,19 +16,28 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-os.environ.setdefault("DEV_MODE", "1")
-
 # Un file `.env` in questa cartella (services/api/.env) è più facile da
 # spiegare a chi non ha mai usato un terminale di una variabile d'ambiente di
-# sistema: si scrive con il Blocco Note e basta. Va caricato prima di
+# sistema: si scrive con il Blocco Note e basta. Va caricato prima di fissare
+# i default sotto — altrimenti un `.env` con `DEV_MODE=0` (per provare il
+# login vero in locale) non avrebbe alcun effetto, perché python-dotenv non
+# sovrascrive una variabile già presente in `os.environ` — e prima di
 # importare gli handler, perché leggono le variabili («PROVIDER_VISIONE» e
 # simili) al momento dell'import, non dentro una funzione.
 from dotenv import load_dotenv
 
 load_dotenv()
 
+os.environ.setdefault("DEV_MODE", "1")
+# Senza queste due, disattivate di proposito fuori da un ambiente di
+# sviluppo (vedi handlers/playground.py e handlers/_http.py), il playground e
+# l'accesso senza login smetterebbero di funzionare in locale.
+os.environ.setdefault("PLAYGROUND_ABILITATO", "1")
+os.environ.setdefault("AUTH_APERTA", "1")
+
 from handlers import (  # noqa: E402
     analisi,
+    auth,
     capi,
     chat,
     foto,
@@ -44,6 +53,7 @@ Handler = Callable[[dict[str, Any], Any], dict[str, Any]]
 
 ROTTE: list[tuple[str, re.Pattern[str], Handler]] = [
     ("GET", re.compile(r"^/salute$"), health.salute),
+    ("POST", re.compile(r"^/auth/accedi$"), auth.accedi),
     ("POST", re.compile(r"^/foto/upload$"), foto.upload),
     ("GET", re.compile(r"^/capi$"), capi.elenca),
     ("POST", re.compile(r"^/capi$"), capi.crea),
@@ -181,7 +191,8 @@ class Ponte(BaseHTTPRequestHandler):
 
 def main() -> None:
     porta = int(os.environ.get("PORTA", "8787"))
-    print(f"API di Wardrobe in ascolto su http://localhost:{porta} (DEV_MODE, dati in memoria)")
+    persistenza = "Postgres" if os.environ.get("DATABASE_URL") else "memoria (si azzera al riavvio)"
+    print(f"API di Wardrobe in ascolto sulla porta {porta} — capi su {persistenza}")
     ThreadingHTTPServer(("0.0.0.0", porta), Ponte).serve_forever()
 
 

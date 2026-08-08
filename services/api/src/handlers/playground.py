@@ -38,7 +38,7 @@ from handlers._http import Evento, Risposta, corpo, endpoint, ok, query, utente_
 
 
 def _controlla_accesso() -> None:
-    if os.environ.get("PLAYGROUND_ABILITATO") != "1" and not in_sviluppo():
+    if os.environ.get("PLAYGROUND_ABILITATO") != "1":
         raise AccessoNegato("il playground è disponibile solo negli ambienti interni")
 
 

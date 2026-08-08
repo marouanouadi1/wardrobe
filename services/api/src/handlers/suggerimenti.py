@@ -12,7 +12,7 @@ import os
 from domain.models import RichiestaSuggerimenti, RispostaSuggerimenti
 from domain.ports import ProviderLlm
 from domain.stylist import costruisci_contesto, interpreta_suggerimenti, richiesta_suggerimento
-from handlers._container import in_sviluppo, orologio, repository
+from handlers._container import orologio, repository
 from handlers._http import Evento, Risposta, corpo, endpoint, ok, utente_id
 
 PROVIDER_DEFAULT = os.environ.get("PROVIDER_STILISTA", "anthropic")
@@ -20,14 +20,15 @@ MODELLO_DEFAULT = os.environ.get("MODELLO_STILISTA", "")
 
 
 def _provider(nome: str) -> ProviderLlm:
-    """In cloud il modello lo chiama un'altra Lambda; in locale lo chiamiamo noi.
+    """In cloud il modello lo chiama un'altra Lambda; altrove lo chiamiamo noi.
 
     Questa funzione sta in VPC e non ha uscita su Internet: per questo delega a
-    `llm-worker`, che vive fuori (vedi docs/adr/0001). In sviluppo non c'è
-    nessuna VPC e nessun worker, quindi parliamo direttamente col provider —
-    altrimenti la feature di punta non sarebbe provabile senza un deploy.
+    `llm-worker`, che vive fuori (vedi docs/adr/0001). Senza `LLM_WORKER_ARN`
+    (locale, o un VPS senza VPC) non c'è nessun worker da invocare, quindi
+    parliamo direttamente col provider — altrimenti la feature di punta non
+    sarebbe provabile senza un deploy.
     """
-    if in_sviluppo():
+    if not os.environ.get("LLM_WORKER_ARN"):
         from adapters.llm.registry import provider_per_nome
 
         return provider_per_nome(nome)
