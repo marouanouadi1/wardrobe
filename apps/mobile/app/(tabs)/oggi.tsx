@@ -19,12 +19,6 @@ import { Avviso } from '../../src/ui/avviso'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Testata } from '../../src/ui/testata'
 
-const CONTESTO = [
-  { icona: 'sole' as const, testo: '12° · pioggia' },
-  { icona: 'calendario' as const, testo: 'Riunione 10:00' },
-  { icona: 'cartellino' as const, testo: 'Smart casual' },
-]
-
 const SCORCIATOIE = ['Ho una cena', 'Fa freddo', 'Solo capi puliti', 'Sorprendimi']
 
 export default function Oggi() {
@@ -59,34 +53,6 @@ export default function Oggi() {
         showsVerticalScrollIndicator={false}
       >
         <Avviso />
-
-        {/* Il contesto che il modello sta usando, in chiaro. Serve a fidarsi
-            della proposta: se il meteo è sbagliato, si capisce subito perché. */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: spazi.s }}
-        >
-          {CONTESTO.map((voce) => (
-            <View
-              key={voce.testo}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 8,
-                paddingVertical: 9,
-                paddingLeft: 11,
-                paddingRight: 14,
-                borderRadius: raggi.pillola,
-                backgroundColor: colori.scheda,
-                ...ombre.bassa,
-              }}
-            >
-              <Icona nome={voce.icona} misura={15} colore={colori.oliva} />
-              <Forte taglia={12.5}>{voce.testo}</Forte>
-            </View>
-          ))}
-        </ScrollView>
 
         {/* Chiedi tu: l'ingresso libero, in cima, perché la proposta automatica
             non può indovinare una cena a cui non è invitata. */}
