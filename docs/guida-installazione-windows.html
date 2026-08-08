@@ -391,7 +391,7 @@
 <div class="eyebrow">Guida per Windows</div>
 <h1 class="titolo-pagina">Guida per installare e avviare l'app su Windows e sul telefono</h1>
 <p class="intro">Questa guida non dà per scontato niente: nessuna riga di comando, nessun programma, nessun termine tecnico che non venga spiegato prima di usarlo. Se un passaggio non torna, fermati lì — il resto della guida presuppone che quel passaggio sia andato a buon fine.</p>
-<p class="cosa-faremo"><strong>Cosa faremo:</strong> installare cinque programmi sul computer (una volta sola), scaricare il progetto, preparare il database, scrivere una o più chiavi segrete in un file, installare un'app sul telefono, e poi due semplici comandi ogni volta che vuoi riaprirla — sul telefono vero, non solo nel browser.</p>
+<p class="cosa-faremo"><strong>Cosa faremo:</strong> installare sei programmi sul computer (una volta sola), scaricare il progetto, preparare il database, scrivere una o più chiavi segrete in un file, installare un'app sul telefono, e poi un comando solo ogni volta che vuoi riaprirla — sul telefono vero, non solo nel browser.</p>
 
 <div class="indice">
   <div class="indice-titolo">In questa guida</div>
@@ -401,19 +401,19 @@
       <div class="indice-voce"><span class="num">1</span><span>Installare Node.js</span></div>
       <div class="indice-voce"><span class="num">2</span><span>Installare Python</span></div>
       <div class="indice-voce"><span class="num">3</span><span>Installare uv</span></div>
-      <div class="indice-voce"><span class="num">4</span><span>Installare GitHub Desktop</span></div>
-      <div class="indice-voce"><span class="num">5</span><span>Scaricare il progetto</span></div>
-      <div class="indice-voce"><span class="num">6</span><span>Aprire il terminale nel progetto</span></div>
-      <div class="indice-voce"><span class="num">7</span><span>Installare i "pezzi" del progetto</span></div>
+      <div class="indice-voce"><span class="num">4</span><span>Installare Git per Windows</span></div>
+      <div class="indice-voce"><span class="num">5</span><span>Installare GitHub Desktop</span></div>
+      <div class="indice-voce"><span class="num">6</span><span>Scaricare il progetto</span></div>
+      <div class="indice-voce"><span class="num">7</span><span>Aprire il terminale nel progetto</span></div>
+      <div class="indice-voce"><span class="num">8</span><span>Installare i "pezzi" del progetto</span></div>
     </div>
     <div>
       <div class="indice-voce sezione"><span class="num"></span><span>Il database</span></div>
-      <div class="indice-voce"><span class="num">8</span><span>Installare e preparare Postgres</span></div>
+      <div class="indice-voce"><span class="num">9</span><span>Installare e preparare Postgres</span></div>
       <div class="indice-voce sezione"><span class="num"></span><span>Provider e API key</span></div>
-      <div class="indice-voce"><span class="num">9</span><span>Scrivere le chiavi</span></div>
-      <div class="indice-voce"><span class="num">10</span><span>Installare Expo Go sul telefono</span></div>
-      <div class="indice-voce"><span class="num">11</span><span>Avviare il "cervello" dell'app</span></div>
-      <div class="indice-voce"><span class="num">12</span><span>Avviare l'app sul telefono</span></div>
+      <div class="indice-voce"><span class="num">10</span><span>Scrivere le chiavi</span></div>
+      <div class="indice-voce"><span class="num">11</span><span>Installare Expo Go sul telefono</span></div>
+      <div class="indice-voce"><span class="num">12</span><span>Avviare tutto con un comando solo</span></div>
       <div class="indice-voce sezione"><span class="num"></span><span>Come si usa, in breve</span></div>
       <div class="indice-voce sezione"><span class="num"></span><span>Le prossime volte</span></div>
     </div>
@@ -422,17 +422,17 @@
 
 <div class="box">
   <h3>Prima di iniziare</h3>
-  <p>Due cose da darti, <strong>prima</strong> che tu arrivi al Passo 9:</p>
+  <p>Due cose da darti, <strong>prima</strong> che tu arrivi al Passo 10:</p>
   <ol>
     <li>Un invito su GitHub come collaboratore del progetto (arriva una email da GitHub — vai cliccato "Accept invitation").</li>
-    <li>Una o più "chiavi" (stringhe di lettere e numeri), mandate in privato — per messaggio, non per email in chiaro se possibile. Non farci nulla finché non arrivi al Passo 9: tienile semplicemente da parte.</li>
+    <li>Una o più "chiavi" (stringhe di lettere e numeri), mandate in privato — per messaggio, non per email in chiaro se possibile. Non farci nulla finché non arrivi al Passo 10: tienile semplicemente da parte.</li>
   </ol>
-  <p style="margin-top:14px">Ti servirà anche un <strong>telefono Android</strong>, per il Passo 10 — e che computer e telefono siano sulla <strong>stessa rete Wi-Fi</strong> quando arrivi al Passo 12 (stesso router: non funziona con i dati mobili del telefono, e non funziona se uno dei due è collegato a una VPN).</p>
+  <p style="margin-top:14px">Ti servirà anche un <strong>telefono Android</strong>, per il Passo 11 — e che computer e telefono siano sulla <strong>stessa rete Wi-Fi</strong> quando arrivi al Passo 12 (stesso router: non funziona con i dati mobili del telefono, e non funziona se uno dei due è collegato a una VPN).</p>
   <p style="margin-top:14px"><strong>Tre cose da sapere prima di provarla, per non perdere tempo a chiederti se è un bug:</strong></p>
   <ul>
     <li>Nessun modello è ancora stato interrogato davvero — questo primo giro è anche il primo collaudo reale, quindi aspettati che qualche prompt vada ritoccato dopo averlo visto rispondere.</li>
     <li>Il manichino 3D non è mai stato visto girare fuori da un browser: con questa guida lo provi per la prima volta su un telefono vero.</li>
-    <li>Non c'è ancora nessun account online: tutto gira sul computer di chi ha avviato il "cervello" dell'app (Passo 11). Con Postgres configurato al Passo 8, l'armadio sopravvive ai riavvii — ma solo restando sullo stesso computer, che deve essere acceso quando l'app viene usata.</li>
+    <li>Non c'è ancora nessun account online: tutto gira sul computer di chi ha avviato l'app (Passo 12). Con Postgres configurato al Passo 9, l'armadio sopravvive ai riavvii — ma solo restando sullo stesso computer, che deve essere acceso quando l'app viene usata.</li>
   </ul>
 </div>
 
@@ -507,6 +507,25 @@
 <div class="passo">
   <div class="passo-num">4</div>
   <div class="passo-corpo">
+    <h3>Installare Git per Windows</h3>
+    <p class="premessa">Serve solo per un pezzo che porta con sé, chiamato <code>bash</code>: è quello che permette di avviare l'app con un comando solo, al Passo 12, invece di doverne scrivere due ogni volta. Non dovrai mai scrivere un comando <code>git</code> — quello resta tutto dentro GitHub Desktop, al passo successivo.</p>
+    <ol>
+      <li>Vai su <a href="https://git-scm.com/download/win">git-scm.com/download/win</a>: il download parte da solo</li>
+      <li>Apri il file scaricato (tipo <code>Git-2.4x.x-64-bit.exe</code>) e clicca Avanti su tutte le schermate, lasciando le impostazioni di default — non c'è nulla da cambiare</li>
+      <li>Alla fine clicca "Install", aspetta, poi "Finish" (togli la spunta a "View Release Notes" se c'è, non serve)</li>
+    </ol>
+    <div class="verifica">
+      <span class="verifica-titolo">Verifica che abbia funzionato</span>
+      <p>Chiudi tutte le finestre PowerShell aperte, riaprine una nuova, e scrivi:</p>
+      <div class="terminale"><div>bash --version</div></div>
+      <p>Deve rispondere con qualcosa tipo <code>GNU bash, version 5.x</code>. Se dice "non riconosciuto", riavvia il computer e riprova — a volte serve perché Windows aggiorni il PATH di sistema.</p>
+    </div>
+  </div>
+</div>
+
+<div class="passo">
+  <div class="passo-num">5</div>
+  <div class="passo-corpo">
     <h3>Installare GitHub Desktop</h3>
     <p class="premessa">Questo è il programma con cui scarichi il progetto, senza dover imparare i comandi di Git.</p>
     <ol>
@@ -518,7 +537,7 @@
 </div>
 
 <div class="passo">
-  <div class="passo-num">5</div>
+  <div class="passo-num">6</div>
   <div class="passo-corpo">
     <h3>Scaricare il progetto</h3>
     <ol>
@@ -532,11 +551,11 @@
 </div>
 
 <div class="passo">
-  <div class="passo-num">6</div>
+  <div class="passo-num">7</div>
   <div class="passo-corpo">
     <h3>Aprire il terminale nella cartella del progetto</h3>
     <ol>
-      <li>Apri Esplora file (l'icona della cartella gialla nella barra in basso) e vai nella cartella dove hai clonato il progetto (Passo 5.4)</li>
+      <li>Apri Esplora file (l'icona della cartella gialla nella barra in basso) e vai nella cartella dove hai clonato il progetto (Passo 6.4)</li>
       <li>Tieni premuto <strong>Shift</strong> e fai <strong>clic con il tasto destro</strong> dentro la cartella (non su un file, nello spazio vuoto)</li>
       <li>Scegli "Apri finestra PowerShell qui" (o su Windows 11, semplicemente "Apri nel terminale")</li>
     </ol>
@@ -545,10 +564,10 @@
 </div>
 
 <div class="passo">
-  <div class="passo-num">7</div>
+  <div class="passo-num">8</div>
   <div class="passo-corpo">
     <h3>Installare i "pezzi" del progetto (una volta sola)</h3>
-    <p class="premessa">Nella finestra PowerShell aperta al Passo 6, scrivi ed esegui, uno alla volta (aspetta che ognuno finisca prima del successivo — il primo impiega qualche minuto):</p>
+    <p class="premessa">Nella finestra PowerShell aperta al Passo 7, scrivi ed esegui, uno alla volta (aspetta che ognuno finisca prima del successivo — il primo impiega qualche minuto):</p>
     <div class="terminale"><div>npm install</div></div>
     <div class="terminale"><div>npm run api:sync</div></div>
     <p>Se durante <code>npm install</code> vedi righe gialle "warning" o messaggi grigi, va tutto bene: sono normali, non sono errori. Un errore vero è scritto in rosso e interrompe il comando.</p>
@@ -556,7 +575,7 @@
 </div>
 
 <div class="passo">
-  <div class="passo-num">8</div>
+  <div class="passo-num">9</div>
   <div class="passo-corpo">
     <h3>Installare e preparare Postgres</h3>
     <p class="premessa">Postgres è il database vero e proprio: il posto dove l'app salva davvero i capi, gli outfit e gli utenti, così che restino lì anche dopo aver spento il computer. L'installer che scarichi da postgresql.org mette su la macchina che tiene i dati — non ha una finestra per guardarci dentro. Per quello lo stesso installer porta con sé <strong>pgAdmin 4</strong>, un programma a parte che resta sul computer e che riuserai ogni volta che vorrai vedere cosa c'è salvato.</p>
@@ -578,6 +597,10 @@
       <li>Nel campo "Database" scrivi <code>wardrobe</code>, lascia "Owner" su <code>postgres</code>, e nella scheda "Definition" controlla che "Encoding" sia <code>UTF8</code> (di solito lo è già)</li>
       <li>Clicca <strong>Save</strong></li>
     </ol>
+    <div class="attenzione">
+      <span class="attenzione-titolo">Password di <code>postgres</code> dimenticata</span>
+      <p>Capita spesso: l'installer la chiede una volta sola, veloce, e non resta scritta da nessuna parte. Se non hai ancora creato il database <code>wardrobe</code> (sei ancora a questo punto della guida), la strada più semplice è <strong>disinstallare e reinstallare</strong> — Pannello di controllo → Programmi e funzionalità → disinstalla "PostgreSQL 18" (accetta anche la rimozione della cartella dati, se proposta), poi riesegui lo stesso installer del punto 1 scrivendoti la password <strong>prima</strong> di cliccare Avanti. Se invece hai già dati da non perdere, la password si reimposta senza reinstallare modificando <code>pg_hba.conf</code> — chiedi a chi ti ha mandato questa guida.</p>
+    </div>
     <p><strong>Applicare lo schema</strong></p>
     <ol>
       <li>Clic destro sul database <code>wardrobe</code> appena creato → <strong>Query Tool</strong></li>
@@ -605,7 +628,7 @@
 </div>
 
 <div class="passo">
-  <div class="passo-num">9</div>
+  <div class="passo-num">10</div>
   <div class="passo-corpo">
     <h3>Scrivere le chiavi</h3>
     <ol>
@@ -615,7 +638,7 @@
       <li>Rinomina la copia (che si chiamerà tipo <code>.env.example - Copia</code>) in <code>.env</code> — attenzione: il nome deve essere esattamente <code>.env</code>, niente prima e niente dopo, nemmeno <code>.env.txt</code></li>
       <li>Apri <code>.env</code> con il Blocco Note (clic destro → Apri con → Blocco note)</li>
       <li>Vedrai alcune righe che finiscono con <code>=</code>, una per ogni chiave possibile (<code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>GOOGLE_API_KEY</code>, <code>FAL_KEY</code>). <strong>Compila solo le righe per cui hai ricevuto una chiave</strong>, incollandola subito dopo il segno <code>=</code> (senza spazi, senza virgolette). Le righe per cui non hai ricevuto nulla lasciale vuote così come sono: l'app funziona comunque, semplicemente quel provider resterà spento finché non gli darai una chiave.</li>
-      <li>Più in basso trova la riga <code>#DATABASE_URL=host=localhost port=5432 dbname=wardrobe user=wardrobe password=wardrobe</code>: togli il <code>#</code> iniziale e cambia <code>user</code> e <code>password</code> con quelli veri — <code>user=postgres</code> e la password scelta al Passo 8. Deve diventare una riga tipo <code>DATABASE_URL=host=localhost port=5432 dbname=wardrobe user=postgres password=LA-TUA-PASSWORD</code></li>
+      <li>Più in basso trova la riga <code>#DATABASE_URL=host=localhost port=5432 dbname=wardrobe user=wardrobe password=wardrobe</code>: togli il <code>#</code> iniziale e cambia <code>user</code> e <code>password</code> con quelli veri — <code>user=postgres</code> e la password scelta al Passo 9. Deve diventare una riga tipo <code>DATABASE_URL=host=localhost port=5432 dbname=wardrobe user=postgres password=LA-TUA-PASSWORD</code></li>
       <li>Subito sotto trova <code>#CARTELLA_FOTO=./dati/foto</code> e togli anche qui il <code>#</code> iniziale — <code>DATABASE_URL</code> da solo salva già i capi nel database, ma senza questa riga le loro foto resterebbero solo in memoria e sparirebbero a ogni riavvio</li>
       <li>Salva (Ctrl+S) e chiudi il Blocco Note.</li>
     </ol>
@@ -624,7 +647,7 @@
 </div>
 
 <div class="passo">
-  <div class="passo-num">10</div>
+  <div class="passo-num">11</div>
   <div class="passo-corpo">
     <h3>Installare Expo Go sul telefono</h3>
     <p class="premessa">L'app, mentre è in sviluppo, non gira come un'app scaricata dal Play Store: gira dentro <strong>Expo Go</strong>, un'app-contenitore gratuita che carica il progetto in tempo reale dal tuo computer. È così che si prova un'app prima che sia pronta per essere pubblicata davvero.</p>
@@ -650,41 +673,24 @@
 <span class="sottotitolo-sezione">Da qui in poi: ogni volta che riapri l'app</span>
 
 <div class="passo">
-  <div class="passo-num">11</div>
-  <div class="passo-corpo">
-    <h3>Avviare il "cervello" dell'app</h3>
-    <p class="premessa">Torna alla finestra PowerShell del Passo 6 (quella nella cartella principale <code>wardrobe</code>, non dentro <code>services\api</code>). Scrivi:</p>
-    <div class="terminale"><div>npm run api:local</div></div>
-    <p>Dopo qualche secondo deve apparire una riga tipo:</p>
-    <div class="terminale"><div class="esito">API di Wardrobe in ascolto sulla porta 8787 — capi su Postgres</div></div>
-    <p>Se invece leggi <code>capi su memoria (si azzera al riavvio)</code>, il file <code>.env</code> del Passo 9 non ha <code>DATABASE_URL</code> attiva: torna lì e controlla che quella riga non inizi più con <code>#</code>.</p>
-    <div class="attenzione">
-      <span class="attenzione-titolo">Se Windows chiede il permesso</span>
-      <p>La prima volta, Windows potrebbe far apparire una finestra <strong>"Windows Defender Firewall ha bloccato alcune funzionalità di questa app"</strong>, per Python. Spunta entrambe le caselle (reti private e reti pubbliche) e clicca <strong>"Consenti l'accesso"</strong>. Senza questo passaggio, l'API funziona sul computer ma il telefono non riuscirà a raggiungerla al Passo 12 — è quasi sempre questa la causa quando l'app resta bloccata dopo aver scattato una foto.</p>
-    </div>
-    <p style="margin-top:14px"><strong>Importante: lascia questa finestra aperta.</strong> Se la chiudi, l'app smette di funzionare. Puoi ridurla a icona, ma non chiuderla finché la stai usando.</p>
-  </div>
-</div>
-
-<div class="passo">
   <div class="passo-num">12</div>
   <div class="passo-corpo">
-    <h3>Avviare l'app sul telefono</h3>
-    <p class="premessa">Controlla prima che <strong>telefono e computer siano sulla stessa rete Wi-Fi</strong> (stesso router — non funziona se il telefono è sui dati mobili, o se uno dei due ha una VPN attiva).</p>
+    <h3>Avviare tutto con un comando solo</h3>
+    <p class="premessa">Controlla prima che <strong>telefono e computer siano sulla stessa rete Wi-Fi</strong> (stesso router — non funziona se il telefono è sui dati mobili, o se uno dei due ha una VPN attiva). Poi torna alla finestra PowerShell del Passo 7 (quella nella cartella principale <code>wardrobe</code>, non dentro <code>services\api</code>) e scrivi:</p>
+    <div class="terminale"><div>npm run dev:app</div></div>
+    <p>Un comando solo, ma fa tutto in ordine: controlla Postgres, applica le migrazioni mancanti, avvia il "cervello" dell'app (le sue righe sono marcate <code>[api]</code>), aspetta che risponda, e alla fine mostra un codice QR — da lì in poi il terminale è di Expo.</p>
     <ol>
-      <li>Apri una <strong>seconda</strong> finestra PowerShell nella stessa cartella (ripeti il Passo 6: Shift + clic destro nella cartella <code>wardrobe</code> → "Apri finestra PowerShell qui")</li>
-      <li>In questa nuova finestra scrivi:
-        <div class="terminale"><div>npm run mobile</div></div>
-      </li>
-      <li>Aspetta che nel terminale compaia un riquadro fatto di quadratini: è un codice QR.</li>
-      <li>Sul telefono, apri <strong>Expo Go</strong>, tocca "Scan QR code" nella schermata iniziale, e punta la fotocamera sul codice nel terminale.</li>
-      <li>Dopo un po' (la prima volta può metterci un minuto o due) l'app si apre da sola sul telefono.</li>
+      <li>Aspetta una riga tipo <code>API di Wardrobe in ascolto sulla porta 8787 — capi su Postgres</code> — se dice invece <code>capi su memoria (si azzera al riavvio)</code>, il <code>.env</code> del Passo 10 non ha <code>DATABASE_URL</code> attiva: fermati e controlla quella riga</li>
+      <li>Subito dopo compare un riquadro fatto di quadratini: è il codice QR</li>
+      <li>Sul telefono, apri <strong>Expo Go</strong>, tocca "Scan QR code", e punta la fotocamera sul codice nel terminale</li>
+      <li>Dopo un po' (la prima volta può metterci un minuto o due) l'app si apre da sola sul telefono</li>
     </ol>
     <div class="attenzione">
-      <span class="attenzione-titolo">Se Windows chiede di nuovo il permesso</span>
-      <p>Può apparire un secondo avviso del firewall, questa volta per Node.js: stesso trattamento del Passo 11 — spunta entrambe le caselle e clicca "Consenti l'accesso". In entrambi i casi conferma che la rete Wi-Fi risulti "Privata" e non "Pubblica" (Impostazioni → Rete e Internet → Wi-Fi → proprietà della rete): su una rete pubblica Windows blocca la connessione anche dopo aver detto "Consenti l'accesso".</p>
+      <span class="attenzione-titolo">Se Windows chiede il permesso</span>
+      <p>La prima volta possono comparire fino a due avvisi <strong>"Windows Defender Firewall ha bloccato alcune funzionalità di questa app"</strong> — uno per Python, uno per Node.js. Per entrambi: spunta sia "reti private" sia "reti pubbliche" e clicca <strong>"Consenti l'accesso"</strong>. Controlla anche che la rete Wi-Fi risulti "Privata" e non "Pubblica" (Impostazioni → Rete e Internet → Wi-Fi → proprietà della rete): su una rete pubblica Windows blocca la connessione anche dopo aver detto "Consenti l'accesso". Senza questi due, l'app parte sul computer ma il telefono non la raggiunge — è quasi sempre questa la causa quando l'app resta bloccata dopo aver scattato una foto.</p>
     </div>
-    <p style="margin-top:14px">Vuoi solo dare un'occhiata rapida dal computer, senza toccare il telefono? Nella stessa finestra puoi scrivere <code>npm run mobile:web</code> invece di <code>npm run mobile</code>: si apre una scheda del browser con l'app. Comodo per guardare in fretta, ma la fotocamera vera — e il modo in cui l'app si sentirà per davvero — si provano solo sul telefono.</p>
+    <p style="margin-top:14px"><strong>Importante: lascia questa finestra aperta</strong> finché usi l'app. Un solo <strong>Ctrl+C</strong> ferma API ed Expo insieme, in ordine, senza lasciare nulla acceso per sbaglio. Postgres invece resta acceso anche dopo: non costa nulla tenerlo su, e spegnerlo interromperebbe un'altra finestra che lo sta usando.</p>
+    <p style="margin-top:14px">Vuoi solo dare un'occhiata rapida dal computer, senza toccare il telefono? Apri due finestre invece di una — <code>npm run api:local</code> nella prima, <code>npm run mobile:web</code> nella seconda — e si apre una scheda del browser con l'app. Comodo per guardare in fretta, ma la fotocamera vera — e il modo in cui l'app si sentirà per davvero — si provano solo sul telefono.</p>
   </div>
 </div>
 
@@ -701,30 +707,29 @@
 
 <div class="box">
   <h3>Provare un provider diverso</h3>
-  <p>Con più di una chiave scritta al Passo 9, puoi scegliere quale modello legge le foto e quale propone gli outfit, senza toccare codice:</p>
+  <p>Con più di una chiave scritta al Passo 10, puoi scegliere quale modello legge le foto e quale propone gli outfit, senza toccare codice:</p>
   <ol>
     <li>Nell'app, vai su Profilo → Sviluppo → Modelli in uso</li>
-    <li>Trovi due liste separate — <strong>Lettura foto</strong> e <strong>Suggerimenti</strong> — perché sono i due lavori distinti di cui parlavamo prima del Passo 9, e puoi assegnare un provider diverso a ciascuno</li>
+    <li>Trovi due liste separate — <strong>Lettura foto</strong> e <strong>Suggerimenti</strong> — perché sono i due lavori distinti di cui parlavamo prima del Passo 10, e puoi assegnare un provider diverso a ciascuno</li>
     <li><strong>Predefinito del backend</strong> è la prima voce di ogni lista: torna a quello scritto nel <code>.env</code>, se mai vuoi annullare la scelta</li>
-    <li>Ogni modello mostra <strong>pronto</strong> o <strong>senza chiave</strong> — è la stessa cosa scritta al Passo 9: senza una riga compilata in <code>.env</code>, quel provider resta spento e sceglierlo darebbe un errore</li>
+    <li>Ogni modello mostra <strong>pronto</strong> o <strong>senza chiave</strong> — è la stessa cosa scritta al Passo 10: senza una riga compilata in <code>.env</code>, quel provider resta spento e sceglierlo darebbe un errore</li>
   </ol>
   <div class="verifica">
     <span class="verifica-titolo">Una cosa da sapere</span>
-    <p>Il <code>.env</code> si rilegge solo riavviando la finestra del Passo 11 (<code>npm run api:local</code>). Se aggiungi o cambi una chiave, chiudi quella finestra e riesegui il comando prima di aspettarti che l'app la veda.</p>
+    <p>Il <code>.env</code> si rilegge solo riavviando la finestra del Passo 12 (<code>npm run dev:app</code>, o <code>npm run api:local</code> se usi le due finestre separate). Se aggiungi o cambi una chiave, chiudi e riesegui il comando prima di aspettarti che l'app la veda.</p>
   </div>
   <p style="margin-top:16px">C'è anche una schermata <strong>Playground modelli</strong>, sempre sotto Sviluppo: è un banco di misura, non una chat — serve a confrontare un modello con un altro su latenza, costo e qualità della risposta, un test alla volta, senza spostare la scelta stabile delle due liste sopra. Lì vedrai anche <code>gpt-5.1</code> e <code>gemini-2.5-pro</code>: sono i nomi indicati nel documento di design, non ancora confermati sui listini ufficiali — se un provider risponde con un errore sul nome del modello, è il primo posto da controllare, e si corregge scrivendo <code>MODELLI_OPENAI</code> o <code>MODELLI_GOOGLE</code> nel <code>.env</code>, senza toccare codice.</p>
 </div>
 
 <div class="box">
   <h3>Le prossime volte (versione corta)</h3>
-  <p>Non serve rifare i Passi 1-10. Ogni volta che vuoi riaprire l'app:</p>
+  <p>Non serve rifare i Passi 1-11. Ogni volta che vuoi riaprire l'app:</p>
   <ol>
-    <li>Apri PowerShell nella cartella del progetto (Passo 6), scrivi <code>npm run api:local</code>, lascia la finestra aperta</li>
-    <li>Apri una seconda finestra PowerShell nella stessa cartella, scrivi <code>npm run mobile</code>, e scansiona il nuovo codice QR con Expo Go (Expo Go tiene anche una cronologia dei progetti recenti in home, ma se il computer ha cambiato indirizzo di rete dall'ultima volta, ripartire dal QR è la strada più sicura)</li>
+    <li>Apri PowerShell nella cartella del progetto (Passo 7), scrivi <code>npm run dev:app</code>, e scansiona il nuovo codice QR con Expo Go quando compare (Expo Go tiene anche una cronologia dei progetti recenti in home, ma se il computer ha cambiato indirizzo di rete dall'ultima volta, ripartire dal QR è la strada più sicura)</li>
   </ol>
   <div class="verifica">
     <span class="verifica-titolo">Una cosa da sapere</span>
-    <p>Con Postgres configurato al Passo 8, l'armadio <strong>resta quello di prima</strong> a ogni riavvio del punto 1: capi, outfit e utenti vivono nel database sul computer, non nella memoria del programma. L'unico requisito è che sia lo stesso computer — i dati non vanno da nessuna altra parte, non c'è un cloud dietro.</p>
+    <p>Con Postgres configurato al Passo 9, l'armadio <strong>resta quello di prima</strong> a ogni riavvio: capi, outfit e utenti vivono nel database sul computer, non nella memoria del programma. L'unico requisito è che sia lo stesso computer — i dati non vanno da nessuna altra parte, non c'è un cloud dietro. E se nel frattempo è arrivata una migrazione nuova con un <code>git pull</code>, <code>npm run dev:app</code> la applica da solo: non serve tornare in pgAdmin.</p>
   </div>
 </div>
 

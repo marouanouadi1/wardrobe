@@ -49,12 +49,16 @@ command -v uv >/dev/null 2>&1 || {
   exit 1
 }
 
-# Docker Desktop spento, su WSL2, dà un errore che non dice niente a nessuno.
-"${COMPOSE[@]}" version >/dev/null 2>&1 && docker info >/dev/null 2>&1 || {
-  echo "✗ Docker non risponde: quasi sempre vuol dire che Docker Desktop è spento." >&2
-  echo "  Avvialo, aspetta che l'icona diventi verde, e riprova." >&2
-  exit 1
-}
+# Docker è il modo comune di avere Postgres in locale, ma non l'unico: chi
+# non ha RAM per Docker Desktop (es. un PC da 8GB) installa Postgres nativo e
+# non ha `docker` in PATH affatto. Qui non è un errore: si salta tutto il
+# blocco Docker sotto e ci si affida al servizio nativo già avviato dal
+# sistema operativo.
+CON_DOCKER=0
+# Sotto `set -e`, un `&&` che fallisce senza un `|| ...` finale farebbe
+# uscire subito lo script proprio nel caso che deve invece gestire (Docker
+# assente): il `|| true` finale è lì apposta, non è decorativo.
+"${COMPOSE[@]}" version >/dev/null 2>&1 && docker info >/dev/null 2>&1 && CON_DOCKER=1 || true
 
 [[ -f "$RADICE/services/api/.env" ]] || {
   echo "⚠ Manca services/api/.env — copialo da .env.example e mettici la tua ANTHROPIC_API_KEY."
@@ -69,39 +73,32 @@ fi
 
 # ---------------------------------------------------------------- Postgres
 
-echo "→ Postgres"
-# --wait sfrutta l'healthcheck già scritto in docker-compose.yml (pg_isready):
-# quando questa riga ritorna, il database accetta connessioni davvero — niente
-# sleep a caso, nessuna dipendenza tipo wait-on. Il timeout è largo (120s, non
-# i 50s dell'healthcheck) perché una initdb a freddo su WSL2 può sforare.
-"${COMPOSE[@]}" up --detach --wait --wait-timeout 120 postgres || {
-  echo "✗ Postgres non è diventato pronto in tempo." >&2
-  echo "  Guarda cosa dice:  docker compose logs postgres" >&2
-  exit 1
-}
-
-# Lo schema lo applica da sé l'entrypoint di Postgres, ma SOLO alla creazione
-# del volume: un volume nato prima che la migrazione esistesse resta vuoto per
-# sempre, e l'app risponde 500 senza spiegare. Se la tabella dei capi non c'è
-# la applichiamo — è la stessa `create ... if not exists` di «npm run
-# db:migrate», quindi rieseguirla non fa danni.
-SCHEMA="$("${COMPOSE[@]}" exec -T postgres \
-  psql -U wardrobe -d wardrobe -tAc "select to_regclass('public.capi')" 2>/dev/null || true)"
-if [[ "$SCHEMA" != *capi* ]]; then
-  echo "→ schema assente: lo applico"
-  "${COMPOSE[@]}" exec -T postgres \
-    psql -U wardrobe -d wardrobe -f /docker-entrypoint-initdb.d/0001_schema.sql >/dev/null
+if [[ "$CON_DOCKER" -eq 1 ]]; then
+  echo "→ Postgres (Docker)"
+  # --wait sfrutta l'healthcheck già scritto in docker-compose.yml
+  # (pg_isready): quando questa riga ritorna, il database accetta connessioni
+  # davvero — niente sleep a caso, nessuna dipendenza tipo wait-on. Il
+  # timeout è largo (120s, non i 50s dell'healthcheck) perché una initdb a
+  # freddo su WSL2 può sforare.
+  "${COMPOSE[@]}" up --detach --wait --wait-timeout 120 postgres || {
+    echo "✗ Postgres non è diventato pronto in tempo." >&2
+    echo "  Guarda cosa dice:  docker compose logs postgres" >&2
+    exit 1
+  }
+else
+  echo "→ Postgres nativo (Docker non è disponibile: presumo un servizio Postgres già installato e avviato)"
 fi
 
-# Stessa storia per la chat continua: un volume nato prima di questa
-# migrazione non la rivede mai da solo. `create ... if not exists` la rende
-# innocua da rieseguire.
-SCHEMA_CHAT="$("${COMPOSE[@]}" exec -T postgres \
-  psql -U wardrobe -d wardrobe -tAc "select to_regclass('public.messaggi_chat')" 2>/dev/null || true)"
-if [[ "$SCHEMA_CHAT" != *messaggi_chat* ]]; then
-  echo "→ tabelle della chat assenti: le applico"
-  "${COMPOSE[@]}" exec -T postgres \
-    psql -U wardrobe -d wardrobe -f /docker-entrypoint-initdb.d/0002_chat.sql >/dev/null
+# Applica le migrazioni mancanti — funziona identico su Docker e su un
+# Postgres nativo, perché parla solo DATABASE_URL, mai docker compose. È
+# anche il modo in cui una migrazione arrivata con l'ultimo `git pull` si
+# applica da sola, invece di restare lì finché qualcuno non se ne accorge a
+# mano: ogni file è `create ... if not exists`, quindi rilanciarli tutti a
+# ogni avvio non fa danni. Se manca `.env` o `DATABASE_URL`, lo script sotto
+# non fa nulla (restano i capi in memoria, come sempre) invece di fallire.
+if [[ -f "$RADICE/services/api/.env" ]]; then
+  echo "→ Migrazioni"
+  ( cd "$RADICE/services/api" && uv run python scripts/applica_migrazioni.py ) || exit 1
 fi
 
 # ---------------------------------------------------------- livello 1: API
