@@ -32,13 +32,25 @@ prefissa() {
 }
 
 # Vero se qualcosa risponde sulla porta data (sonda TCP in bash puro: niente
-# lsof o ss da avere installati). Il `timeout` è essenziale, non decorativo: su
-# WSL2 (e su questo sandbox) un connect verso una porta CHIUSA può restare
+# lsof o ss da avere installati). Il tetto a ~1s è essenziale, non decorativo:
+# su WSL2 (e su questo sandbox) un connect verso una porta CHIUSA può restare
 # bloccato per minuti invece di fallire subito con "connection refused" —
-# verificato empiricamente. Senza il timeout, il caso comune (porta libera)
-# sarebbe anche il più lento.
+# verificato empiricamente. Il tetto è temporizzato a mano (kill -0 in loop),
+# non con il comando esterno `timeout`: su Git Bash per Windows il PATH di
+# sistema spesso mette avanti `C:\Windows\System32\timeout.exe`, che ha una
+# sintassi completamente diversa (mette in pausa, non esegue un comando) e
+# fallisce sempre — con l'effetto che questa sonda risulterebbe sempre "porta
+# chiusa" anche quando l'API è già in ascolto.
 porta_in_ascolto() {
-  timeout 1 bash -c ": </dev/tcp/127.0.0.1/$1" 2>/dev/null
+  ( exec 3<>/dev/tcp/127.0.0.1/"$1" ) 2>/dev/null &
+  local pid=$! i
+  for ((i = 0; i < 10; i++)); do
+    kill -0 "$pid" 2>/dev/null || { wait "$pid"; return $?; }
+    sleep 0.1
+  done
+  kill -9 "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+  return 1
 }
 
 # ---------------------------------------------------------------- controlli
