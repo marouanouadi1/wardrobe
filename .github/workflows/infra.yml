@@ -10,6 +10,10 @@ on:
     paths:
       - "infra/**"
       - ".github/workflows/infra.yml"
+  # Il primo rilascio gira su un VPS, non su AWS (troppo caro anche a zero
+  # traffico — vedi docs/adr): il deploy sotto non parte più da solo a ogni
+  # push su main, solo se lanciato a mano da qui, quando servirà di nuovo.
+  workflow_dispatch:
 
 concurrency:
   group: infra-${{ github.ref }}
@@ -56,7 +60,9 @@ jobs:
 
   deploy:
     name: deploy staging
-    if: github.ref == 'refs/heads/main'
+    # Solo a mano (Actions -> infra -> Run workflow), mai più da un push
+    # automatico su main: vedi il commento su workflow_dispatch sopra.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     needs: [synth]
     environment: staging

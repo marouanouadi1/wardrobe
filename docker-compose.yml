@@ -1,5 +1,8 @@
-# Solo per lo sviluppo locale: Postgres identico allo schema di Aurora. Le
-# foto restano su disco (vedi adapters/filesystem.py), non servono qui.
+# Postgres serve sia in sviluppo locale sia su un VPS di produzione. `api` e
+# `caddy` servono SOLO sul VPS: `npm run dev`/`npm run db:up` avviano sempre e
+# solo il servizio `postgres` per nome (vedi scripts/dev.sh), quindi in
+# locale questi due restano fermi anche se restano definiti qui — l'API in
+# sviluppo gira direttamente con `uv run`, non in un container.
 services:
   postgres:
     image: postgres:16-alpine
@@ -19,5 +22,55 @@ services:
       timeout: 3s
       retries: 10
 
+  # Solo VPS. Le chiavi dei provider, JWT_SECRET e BASE_URL_PUBBLICA vengono
+  # da services/api/.env (copiato da .env.example) — mai da questo file, che
+  # è versionato. I tre flag qui sotto sono invece fissati apposta, non
+  # lasciati al .env: `environment:` vince sempre su `env_file:` in Compose,
+  # quindi anche un .env dimenticato con `DEV_MODE=1` (comodo per un test
+  # rapido in locale) non può riaprire playground o bypass di autenticazione
+  # su un server pubblico.
+  api:
+    build:
+      context: ./services/api
+    container_name: wardrobe-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./services/api/.env
+    environment:
+      DEV_MODE: "0"
+      AUTH_APERTA: "0"
+      PLAYGROUND_ABILITATO: "0"
+      DATABASE_URL: "host=postgres port=5432 dbname=wardrobe user=wardrobe password=wardrobe"
+      CARTELLA_FOTO: /dati/foto
+      PORTA: "8787"
+    volumes:
+      - foto_dati:/dati/foto
+    # Niente `ports:` qui: l'unico ingresso pubblico è Caddy, in HTTPS.
+    # Pubblicare anche questa porta permetterebbe di bypassare TLS parlando
+    # in chiaro direttamente alla porta 8787.
+    expose:
+      - "8787"
+
+  # Solo VPS. Il dominio vero va scritto in ./Caddyfile prima del primo avvio.
+  caddy:
+    image: caddy:2-alpine
+    container_name: wardrobe-caddy
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
 volumes:
   postgres_data:
+  foto_dati:
+  caddy_data:
+  caddy_config:

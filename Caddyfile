@@ -1,0 +1,20 @@
+# Il reverse proxy per il backend su un VPS pubblico. Sostituisci il dominio
+# qui sotto con quello vero prima di avviare `docker compose up -d` sul
+# server: Caddy ottiene e rinnova da solo il certificato Let's Encrypt al
+# primo avvio, a patto che il DNS di questo nome punti già all'IP del VPS e
+# che le porte 80/443 siano raggiungibili da Internet.
+#
+# Non serve in sviluppo locale (`npm run dev`/`npm run api:local`): questo
+# file entra in gioco solo se avvii anche i servizi `api` e `caddy` del
+# docker-compose.yml, cosa che gli script di sviluppo non fanno mai da soli.
+api.tuodominio.it {
+	# 150s copre il caso peggiore di un'analisi foto (la vecchia Lambda
+	# `analizza` aveva un timeout di 120s) con margine: fuori da API Gateway
+	# non c'è più un limite di 29s a forzare una risposta anticipata.
+	reverse_proxy api:8787 {
+		transport http {
+			read_timeout 150s
+			write_timeout 150s
+		}
+	}
+}
