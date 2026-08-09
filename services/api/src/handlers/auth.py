@@ -1,4 +1,4 @@
-"""POST /auth/accedi — login autofirmato, sostituisce Cognito per la beta.
+"""POST /auth/accedi — login autofirmato.
 
 Niente self-signup pubblico a questa scala: gli utenti si creano con
 `scripts/crea_utente.py`. Vedi `domain/autenticazione.py` per hash e JWT.

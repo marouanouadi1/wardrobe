@@ -19,7 +19,6 @@ import os
 from domain.chat import interpreta_risposta_chat, richiesta_chat
 from domain.models import MessaggioChat, RichiestaMessaggioChat, RispostaChat, RuoloChat
 from domain.playground import preset_effettivo
-from domain.ports import ProviderLlm
 from domain.stylist import costruisci_contesto
 from handlers._container import generatore_id, orologio, repository
 from handlers._http import Evento, Risposta, corpo, endpoint, ok, utente_id
@@ -28,18 +27,6 @@ PROVIDER_DEFAULT = os.environ.get("PROVIDER_STILISTA", "anthropic")
 MODELLO_DEFAULT = os.environ.get("MODELLO_STILISTA", "")
 
 ID_PRESET_STILISTA = "chat-stilista"
-
-
-def _provider(nome: str) -> ProviderLlm:
-    """Stessa scelta di `handlers.suggerimenti`: in VPC si delega al worker."""
-    if not os.environ.get("LLM_WORKER_ARN"):
-        from adapters.llm.registry import provider_per_nome
-
-        return provider_per_nome(nome)
-
-    from adapters.llm.remoto import ProviderRemoto
-
-    return ProviderRemoto(nome_provider=nome, funzione_arn=os.environ["LLM_WORKER_ARN"])
 
 
 @endpoint
@@ -60,6 +47,8 @@ def invia(evento: Evento) -> Risposta:
     che confonderebbe il turno successivo (due «utente» consecutivi sono
     legali per ogni provider, ma è la forma che li disorienta di più).
     """
+    from adapters.llm.registry import provider_per_nome
+
     richiesta = corpo(evento, RichiestaMessaggioChat)
     utente = utente_id(evento)
 
@@ -77,7 +66,7 @@ def invia(evento: Evento) -> Risposta:
     )
 
     preset = preset_effettivo(ID_PRESET_STILISTA, repository().leggi_preset(ID_PRESET_STILISTA))
-    provider = _provider(PROVIDER_DEFAULT)
+    provider = provider_per_nome(PROVIDER_DEFAULT)
     modello = MODELLO_DEFAULT or provider.modelli()[0].id
 
     risposta_llm = provider.completa(

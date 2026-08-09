@@ -10,12 +10,10 @@ in Python.
 
 from __future__ import annotations
 
-import json
 import threading
 from datetime import date
 from typing import Any
 
-import boto3
 import psycopg
 from psycopg.rows import dict_row
 
@@ -33,41 +31,20 @@ from domain.models import (
 
 
 class RepositoryPostgres:
-    def __init__(
-        self, dsn_secret_arn: str | None = None, regione: str = "eu-south-1", dsn: str | None = None
-    ) -> None:
-        """`dsn` diretto per Postgres locale (docker-compose): salta Secrets
-        Manager, che in locale non esiste. In cloud si passa `dsn_secret_arn`."""
-        if dsn is None and dsn_secret_arn is None:
-            raise ValueError("serve dsn oppure dsn_secret_arn")
-        self._dsn_diretto = dsn
-        self._secret_arn = dsn_secret_arn
-        self._regione = regione
-        # Una connessione per thread, non una condivisa: su Lambda un
-        # container esegue una richiesta alla volta, ma sotto un server
-        # multi-thread (ThreadingHTTPServer di local_server.py su un VPS)
-        # due thread che eseguono cursori sulla stessa connessione psycopg in
-        # parallelo possono interferire a livello di protocollo.
+    def __init__(self, dsn: str) -> None:
+        self._dsn = dsn
+        # Una connessione per thread, non una condivisa: sotto un server
+        # multi-thread (ThreadingHTTPServer di local_server.py) due thread
+        # che eseguono cursori sulla stessa connessione psycopg in parallelo
+        # possono interferire a livello di protocollo.
         self._locale = threading.local()
 
     # ── connessione ────────────────────────────────────────────────────────
-    def _dsn(self) -> str:
-        if self._dsn_diretto is not None:
-            return self._dsn_diretto
-        assert self._secret_arn is not None
-        segreti = boto3.client("secretsmanager", region_name=self._regione)
-        segreto = json.loads(segreti.get_secret_value(SecretId=self._secret_arn)["SecretString"])
-        return (
-            f"host={segreto['host']} port={segreto.get('port', 5432)} "
-            f"dbname={segreto.get('dbname', 'wardrobe')} "
-            f"user={segreto['username']} password={segreto['password']} sslmode=require"
-        )
-
     def _conn(self) -> psycopg.Connection[Any]:
         """Riusa la connessione del thread corrente fra chiamate."""
         connessione: psycopg.Connection[Any] | None = getattr(self._locale, "connessione", None)
         if connessione is None or connessione.closed:
-            connessione = psycopg.connect(self._dsn(), row_factory=dict_row, autocommit=True)
+            connessione = psycopg.connect(self._dsn, row_factory=dict_row, autocommit=True)
             self._locale.connessione = connessione
         return connessione
 

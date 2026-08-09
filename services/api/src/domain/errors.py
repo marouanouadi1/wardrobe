@@ -31,6 +31,15 @@ class OutfitNonTrovato(ErroreDominio):
         self.outfit_id = outfit_id
 
 
+class AnalisiNonTrovata(ErroreDominio):
+    codice = "analisi_non_trovata"
+    stato_http = 404
+
+    def __init__(self, esecuzione_id: str) -> None:
+        super().__init__(f"Analisi {esecuzione_id} inesistente")
+        self.esecuzione_id = esecuzione_id
+
+
 class RichiestaNonValida(ErroreDominio):
     codice = "richiesta_non_valida"
     stato_http = 422

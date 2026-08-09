@@ -4,9 +4,9 @@ Serve a rispondere a una domanda sola, e a rispondere con dei numeri: quale
 modello legge meglio i tessuti, e quale stilista vale il suo costo. Per questo
 esercita i due job veri e registra latenza, token, costo ed esito.
 
-Le chiavi dei provider stanno su Secrets Manager, non nell'app: dal telefono
-arriva solo la scelta del modello. In sviluppo si può passare una chiave usa e
-getta con l'header X-Provider-Key, e solo con DEV_MODE=1.
+Le chiavi dei provider stanno nell'ambiente del server, non nell'app: dal
+telefono arriva solo la scelta del modello. In sviluppo si può passare una
+chiave usa e getta con l'header X-Provider-Key, e solo con DEV_MODE=1.
 """
 
 from __future__ import annotations

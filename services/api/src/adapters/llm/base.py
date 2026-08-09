@@ -27,8 +27,9 @@ def cronometra[T](azione: Callable[[], T]) -> tuple[T, int]:
 def chiave(nome_provider: str, variabile: str, override: str | None = None) -> str:
     """La chiave del provider, dall'ambiente o da un override di sviluppo.
 
-    In produzione la variabile viene popolata da Secrets Manager al deploy;
-    l'override esiste solo per il playground in locale.
+    In produzione la variabile viene impostata come variabile d'ambiente del
+    processo (`.env` sul server); l'override esiste solo per il playground in
+    locale.
     """
     valore = override or os.environ.get(variabile)
     if not valore:

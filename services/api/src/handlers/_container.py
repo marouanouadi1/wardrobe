@@ -1,9 +1,8 @@
 """Composition root: qui e solo qui si sceglie quale adapter usare.
 
 Sta in handlers/ e non in domain/ di proposito — è il posto dove il mondo entra.
-Le istanze sono pigre e riusate fra invocazioni: su Lambda il container vive
-quanto il container di esecuzione, ed è esattamente il comportamento che vogliamo
-per le connessioni.
+Le istanze sono pigre e riusate fra chiamate: un processo a lungo termine
+tiene aperta la stessa connessione invece di riaprirla ogni volta.
 """
 
 from __future__ import annotations
@@ -52,32 +51,23 @@ def generatore_id() -> GeneratoreId:
 
 @functools.cache
 def repository() -> RepositoryArmadio:
-    """Postgres in cloud, Postgres locale se c'è `DATABASE_URL`, altrimenti memoria.
+    """Postgres se c'è `DATABASE_URL`, altrimenti memoria.
 
     La versione in memoria è seminata con l'armadio del design: `npm run
-    api:local` dà all'app un backend vero senza toccare AWS. `DATABASE_URL`
+    api:local` dà all'app un backend vero senza toccare Postgres. `DATABASE_URL`
     (Postgres via docker-compose, vedi `db:up`) è lo switch per i capi veri
-    che devono sopravvivere a un riavvio — indipendente da `DEV_MODE`, che
-    resta acceso solo per il ramo in memoria di `archivio_foto`, stesso
-    schema di scelta indipendente dal `BUCKET_FOTO`. Il bypass di
-    autenticazione è un flag a parte (`AUTH_APERTA`, vedi `_http.py`).
+    che devono sopravvivere a un riavvio. Il bypass di autenticazione è un
+    flag a parte (`AUTH_APERTA`, vedi `_http.py`), indipendente da questa
+    scelta.
     """
     if os.environ.get("DATABASE_URL"):
         from adapters.postgres import RepositoryPostgres
 
         return RepositoryPostgres(dsn=os.environ["DATABASE_URL"])
 
-    if in_sviluppo():
-        from adapters.memory import RepositoryInMemoria
+    from adapters.memory import RepositoryInMemoria
 
-        return RepositoryInMemoria.con_semi()
-
-    from adapters.postgres import RepositoryPostgres
-
-    return RepositoryPostgres(
-        dsn_secret_arn=os.environ["DB_SECRET_ARN"],
-        regione=os.environ.get("AWS_REGION", "eu-south-1"),
-    )
+    return RepositoryInMemoria.con_semi()
 
 
 @functools.cache
@@ -90,37 +80,24 @@ def repository_utenti() -> RepositoryUtenti:
 
         return RepositoryPostgres(dsn=os.environ["DATABASE_URL"])
 
-    if in_sviluppo():
-        from adapters.memory import RepositoryInMemoria
+    from adapters.memory import RepositoryInMemoria
 
-        return RepositoryInMemoria()
-
-    from adapters.postgres import RepositoryPostgres
-
-    return RepositoryPostgres(
-        dsn_secret_arn=os.environ["DB_SECRET_ARN"],
-        regione=os.environ.get("AWS_REGION", "eu-south-1"),
-    )
+    return RepositoryInMemoria()
 
 
 @functools.cache
 def archivio_foto() -> ArchivioFoto:
     """Su disco se c'è `CARTELLA_FOTO` (persistente, per usare l'app per
-    davvero, in locale o su un VPS), in memoria altrimenti in sviluppo (si
-    azzera ad ogni riavvio, comodo solo per provare), S3 in cloud."""
+    davvero, in locale o su un VPS), in memoria altrimenti (si azzera ad ogni
+    riavvio, comodo solo per provare)."""
     if os.environ.get("CARTELLA_FOTO"):
         from adapters.filesystem import ArchivioFileSystem
 
         return ArchivioFileSystem(os.environ["CARTELLA_FOTO"])
 
-    if in_sviluppo() and not os.environ.get("BUCKET_FOTO"):
-        from adapters.memory import ArchivioInMemoria
+    from adapters.memory import ArchivioInMemoria
 
-        return ArchivioInMemoria()
-
-    from adapters.s3 import ArchivioS3
-
-    return ArchivioS3(bucket=os.environ["BUCKET_FOTO"])
+    return ArchivioInMemoria()
 
 
 @functools.cache

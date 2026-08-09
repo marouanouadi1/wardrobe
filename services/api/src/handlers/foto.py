@@ -1,7 +1,7 @@
-"""POST /foto/upload — l'app carica su S3 da sola.
+"""POST /foto/upload — l'app carica la foto da sola, senza passare dal backend.
 
-La foto non passa dalla Lambda: chiediamo un URL firmato e il telefono fa la PUT
-diretta. Motivi in docs/adr/0003.
+Chiediamo un URL firmato all'archivio configurato (`archivio_foto()`) e il
+telefono fa la PUT diretta a quello.
 """
 
 from __future__ import annotations

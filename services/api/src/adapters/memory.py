@@ -1,7 +1,7 @@
 """Repository in memoria, seminato con l'armadio del design.
 
 Esiste per una ragione pratica: `DEV_MODE=1 npm run api:local` dà all'app un
-backend vero, con dodici capi e delle foto, senza aprire un account AWS. È il
+backend vero, con dodici capi e delle foto, senza configurare nulla. È il
 modo più corto fra «ho clonato il repo» e «vedo l'armadio sul telefono».
 
 Le foto sono di Pexels (uso libero), le stesse del design. Nel prodotto vero
@@ -167,11 +167,11 @@ class ArchivioInMemoria:
         self._oggetti[chiave] = _PIXEL
         return UploadFirmato(
             chiave=chiave,
-            # In locale non c'è S3: la PUT vera dell'app atterra su una rotta
-            # di `local_server.py` che scrive nel dizionario qui sotto — vedi
-            # `scrivi()`. Senza questo, la PUT finiva su un indirizzo che il
-            # backend non rileggeva mai, e `leggi()` restituiva il pixel
-            # finto anche per foto vere.
+            # La PUT vera dell'app atterra su una rotta di `local_server.py`
+            # che scrive nel dizionario qui sotto — vedi `scrivi()`. Senza
+            # questo, la PUT finiva su un indirizzo che il backend non
+            # rileggeva mai, e `leggi()` restituiva il pixel finto anche per
+            # foto vere.
             url=f"http://localhost:{_porta_locale()}/dev/foto/{chiave}",
             intestazioni={"content-type": content_type},
             scade_in_s=scade_in_s,
@@ -186,7 +186,8 @@ class ArchivioInMemoria:
 
         `media_type` è ignorato qui (`leggi()` restituisce sempre
         «image/png» per gli oggetti caricati): in memoria non c'è un posto
-        dove tenerlo per chiave, ed è un dettaglio che conta solo per S3.
+        dove tenerlo per chiave, ed è un dettaglio che conta solo per un
+        archivio persistente (vedi `ArchivioFileSystem`).
         """
         del media_type
         self._oggetti[chiave] = contenuto

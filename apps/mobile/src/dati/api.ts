@@ -188,7 +188,7 @@ export const api = {
   firmaUpload: (contentType: string) =>
     chiama<UploadFirmato>('/foto/upload', { metodo: 'POST', corpo: { content_type: contentType } }),
   /**
-   * La PUT va diretta a S3: la foto non passa dal nostro backend.
+   * La PUT va diretta all'archivio foto: la foto non passa dal nostro backend.
    *
    * Il caricamento legge `uri` con `expo-file-system`, non con `fetch(uri).arrayBuffer()`:
    * su Android quest'ultimo può restituire in silenzio un corpo 404 "File not found" al
@@ -248,8 +248,8 @@ export const api = {
       chiama<EsitoPlayground>('/dev/playground', {
         metodo: 'POST',
         corpo: richiesta,
-        // Solo in sviluppo: permette di provare un provider senza aspettare un
-        // deploy che scriva la chiave su Secrets Manager.
+        // Solo in sviluppo: permette di provare un provider senza aspettare
+        // un riavvio del server con la chiave nell'ambiente.
         intestazioni: chiaveProvider ? { 'x-provider-key': chiaveProvider } : undefined,
       }),
     valutazioni: (run?: string) => {

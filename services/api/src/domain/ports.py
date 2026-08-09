@@ -2,7 +2,7 @@
 
 Ogni Protocol qui dentro ha almeno due implementazioni: una vera in
 `adapters/`, una finta in `tests/fakes.py`. È questa simmetria che rende i test
-del dominio istantanei e senza AWS.
+del dominio istantanei e senza rete.
 """
 
 from __future__ import annotations
@@ -89,8 +89,7 @@ class ProviderLlm(Protocol):
 
 @runtime_checkable
 class ArchivioFoto(Protocol):
-    """S3 in produzione. Su disco o in memoria in locale, a seconda di
-    `CARTELLA_FOTO`. Un dict nei test."""
+    """Su disco se c'è `CARTELLA_FOTO`, in memoria altrimenti. Un dict nei test."""
 
     def url_upload(
         self, chiave: str, content_type: str, scade_in_s: int = 900

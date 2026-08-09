@@ -1,6 +1,8 @@
 """Il pezzo di HTTP che gli handler non devono ripetere.
 
-Formato eventi: API Gateway HTTP API (payload v2).
+Formato eventi: un dict con `headers`, `pathParameters`,
+`queryStringParameters` e `body`, sintetizzato da `local_server.py` per ogni
+richiesta in arrivo.
 """
 
 from __future__ import annotations
@@ -28,21 +30,13 @@ INTESTAZIONI = {
 
 
 def utente_id(evento: Evento) -> str:
-    """L'utente autenticato: dalle claim del JWT di API Gateway, da un JWT
-    autofirmato (`JWT_SECRET`, vedi `handlers/auth.py`), o dall'header
-    X-Utente se `AUTH_APERTA=1` — in quest'ordine.
+    """L'utente autenticato: da un JWT autofirmato (`JWT_SECRET`, vedi
+    `handlers/auth.py`), o dall'header X-Utente se `AUTH_APERTA=1`.
 
-    L'authorizer di API Gateway valida firma e scadenza prima di noi: se
-    siamo qui con quelle claim, `sub` è già attendibile. `AUTH_APERTA` è un
-    interruttore distinto da DEV_MODE, che controlla altre cose (pipeline
-    inline, provider diretto): tenerli separati evita di dover scegliere fra
-    "niente pipeline inline" e "playground aperto a chiunque".
+    `AUTH_APERTA` è un interruttore distinto da DEV_MODE, che controlla altre
+    cose (pipeline inline, provider diretto): tenerli separati evita di dover
+    scegliere fra "niente pipeline inline" e "playground aperto a chiunque".
     """
-    claims = evento.get("requestContext", {}).get("authorizer", {}).get("jwt", {}).get("claims", {})
-    sub = claims.get("sub")
-    if isinstance(sub, str) and sub:
-        return sub
-
     intestazioni = {str(k).lower(): str(v) for k, v in (evento.get("headers") or {}).items()}
 
     segreto = os.environ.get("JWT_SECRET")
@@ -95,7 +89,7 @@ def ok(dati: BaseModel | list[Any] | dict[str, Any] | None, stato: int = 200) ->
 
 
 def endpoint(funzione: Callable[[Evento], Risposta]) -> Callable[[Evento, Any], Risposta]:
-    """Trasforma una funzione pura-ish in un handler Lambda.
+    """Trasforma una funzione pura-ish in un handler HTTP.
 
     Cattura gli errori di dominio e li traduce in status: il dominio non sa
     cosa sia un 404, e questo è l'unico posto che lo sa.

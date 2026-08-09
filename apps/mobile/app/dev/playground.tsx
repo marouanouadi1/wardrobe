@@ -9,10 +9,10 @@
  * Perché è scura: qui non stiamo usando il prodotto, lo stiamo misurando. Il
  * cambio di fondo è il modo più rapido per ricordarselo.
  *
- * Le chiavi dei provider non stanno nell'app. Vivono su Secrets Manager e il
- * backend le usa senza restituirle mai. In sviluppo si può passare una chiave
- * usa e getta con l'header X-Provider-Key, e serve solo per non aspettare un
- * deploy prima di provare un provider nuovo.
+ * Le chiavi dei provider non stanno nell'app. Vivono nell'ambiente del
+ * backend e il backend le usa senza restituirle mai. In sviluppo si può
+ * passare una chiave usa e getta con l'header X-Provider-Key, e serve solo
+ * per non aspettare un riavvio prima di provare un provider nuovo.
  */
 
 import type { EsecuzionePlayground, EsitoPlayground, JobIa, ModelloDisponibile, PresetPrompt } from '@wardrobe/contracts'

@@ -30,10 +30,9 @@ apps/
   mobile/            app Expo (iOS, Android, web) — 11 schermate
   web/               vuoto, ma il posto c'è
 services/api/
-  src/domain/        logica pura: zero SDK, zero AWS, testabile con pytest
-  src/handlers/      adapter Lambda sottili: evento -> domain -> risposta
-  src/adapters/      s3, postgres, step functions, provider LLM
-infra/               CDK TypeScript: 6 stack, testati
+  src/domain/        logica pura: zero SDK, testabile con pytest
+  src/handlers/      adapter sottili: evento -> domain -> risposta
+  src/adapters/      postgres, filesystem, provider LLM
 packages/contracts/  tipi TypeScript generati dai modelli Pydantic
 docs/adr/            le decisioni che valeva la pena scrivere
 ```
@@ -42,9 +41,9 @@ docs/adr/            le decisioni che valeva la pena scrivere
 
 **1. `handlers/` separato da `domain/`.** Un handler fa tre righe: legge
 l'evento, chiama una funzione pura, formatta la risposta. Tutta la logica sta in
-`domain`, che gira con pytest senza AWS, senza container e senza mock della SDK —
+`domain`, che gira con pytest senza rete, senza container e senza mock della SDK —
 106 test in un secondo. Il vincolo non è una convenzione scritta in un README:
-`pyproject.toml` vieta gli import di `boto3`, `psycopg` e `httpx` fuori da
+`pyproject.toml` vieta gli import di `psycopg` e `httpx` fuori da
 `adapters/`, e il lint fallisce se qualcuno prova.
 
 **2. I contratti sono generati, non copiati.** I modelli Pydantic in
@@ -56,15 +55,14 @@ sono generate: `SOGLIA_INCERTEZZA` vive nel dominio Python e l'app la importa,
 invece di riscrivere `86` in TypeScript.
 
 **3. CI con filtri sui path.** Ogni workflow ha `on: push: paths:`, così un
-commit su `apps/mobile` non ridispiega l'infrastruttura. È anche il motivo per cui
-questo monorepo non ha bisogno di Nx o Turborepo: tre workflow indipendenti e due
-gestori di pacchetti (npm per TypeScript, uv per Python) che convivono senza
-mediatori.
+commit su `apps/mobile` non fa girare lint e test del backend. È anche il
+motivo per cui questo monorepo non ha bisogno di Nx o Turborepo: due workflow
+indipendenti e due gestori di pacchetti (npm per TypeScript, uv per Python)
+che convivono senza mediatori.
 
-**4. `docs/adr/`.** Quattro decisioni scritte in breve — contesto, decisione,
-alternative scartate. Perché Step Functions, perché CDK invece di Terraform,
-perché l'upload va diretto su S3, e perché l'avatar deve vestire fotografie e non
-colori.
+**4. `docs/adr/`.** Le decisioni scritte in breve — contesto, decisione,
+alternative scartate — quando valeva la pena farlo. Oggi ce n'è una: perché
+l'avatar deve vestire fotografie e non colori.
 
 ## Partire
 
@@ -97,21 +95,14 @@ stesso host a cui si è già collegata per il bundle JS (lo stesso IP del QR
 code); su `mobile:web` usa l'host con cui il browser ha raggiunto la pagina
 (`window.location.hostname`). In entrambi i casi assume che l'API giri sulla
 stessa macchina — il caso comune in sviluppo. `EXPO_PUBLIC_API_URL` resta per
-sovrascriverlo esplicitamente (un backend in cloud, o quando l'euristica
-indovina l'host sbagliato).
+sovrascriverlo esplicitamente (un server remoto, tipico di una build EAS
+puntata sul VPS di produzione, o quando l'euristica indovina l'host sbagliato).
 
-`api:local` costruisce lo stesso evento payload v2 di API Gateway e chiama gli
-stessi handler: quello che provi in locale è il codice che gira in cloud, senza
-SAM e senza emulatori. Due cose girano diversamente, ed è dichiarato nel codice:
-
-- **la pipeline di analisi** in locale esegue i due task in linea invece di
-  passare da Step Functions (`handlers/analisi.py`);
-- **il suggeritore** chiama il provider direttamente, invece di delegare alla
-  Lambda `llm-worker` che in cloud vive fuori dalla VPC
-  (`handlers/suggerimenti.py`).
-
-Senza queste due deviazioni la feature di punta non sarebbe provabile prima di un
-deploy — che è il modo più sicuro per scoprire un prompt sbagliato tardi.
+`api:local` (`services/api/src/handlers/local_server.py`) è lo stesso
+processo che gira in produzione dentro il container `api` su un VPS: nessuna
+differenza fra i due, nessuna deviazione da tenere a mente. La pipeline di
+analisi (`handlers/analisi.py`) esegue le sue due fasi in linea nello stesso
+processo, ovunque giri.
 
 Per provare anche gli altri provider, oltre alle chiavi nel `.env`:
 
@@ -139,9 +130,7 @@ registro, e nessuna schermata cambia.
 | `npm run api:lint` | ruff + ruff format + mypy strict |
 | `npm run contracts:generate` | rigenera i tipi TypeScript dal backend |
 | `npm run contracts:check` | verifica che siano allineati (gira in CI) |
-| `npm run typecheck` | tsc su app, contratti e infrastruttura |
-| `npm run infra:synth` | sintetizza i template CloudFormation |
-| `npm run infra:deploy` | deploy (serve un account AWS) |
+| `npm run typecheck` | tsc su app e contratti |
 | `npm run db:up` | solo Postgres in Docker |
 | `npm run db:down` | spegne Postgres |
 | `npm run db:migrate` | riapplica lo schema (serve solo su un volume vecchio) |
@@ -154,9 +143,7 @@ registro, e nessuna schermata cambia.
 - `npm run api:lint` → ruff pulito, **mypy strict** senza errori su 34 file
 - `npm run contracts:check` → contratti allineati; verificato anche il contrario,
   rinominando un campo nel backend per vedere la CI cadere
-- `npm run typecheck` → pulito su app, contratti e infrastruttura
-- `npm run infra:synth` → 7 template, **senza credenziali AWS**; 13 test degli
-  stack passati
+- `npm run typecheck` → pulito su app e contratti
 - `expo export` → bundle **web** (3,4 MB), **iOS** e **Android** (5,4 e 5,6 MB di
   bytecode Hermes) — il bundle nativo è ciò che dimostra che three.js, expo-gl e i
   contratti si risolvono anche fuori dal browser
@@ -185,9 +172,11 @@ ricostruzione 3D, nessuno strumento per il corpo della persona: la direzione
 dell'ADR 0004 è scritta, non implementata. Quello che c'è è il manichino a
 primitive tinte.
 
-**Il deploy su AWS non è mai stato eseguito.** `cdk synth` produce i template,
-nessuno stack è stato creato, e il repository non è ancora un repository git —
-quindi i tre workflow non sono mai partiti.
+**Il deploy su un VPS pubblico non è mai stato eseguito davvero.** L'immagine
+Docker (`services/api/Dockerfile`) costruisce e gira in locale, e il
+`Caddyfile` è sintatticamente valido, ma senza un dominio vero puntato a un
+IP pubblico non si è mai visto Let's Encrypt emettere un certificato reale
+per questo progetto.
 
 **Gli id dei modelli non-Anthropic vanno confermati.** Quelli di Claude vengono
 dall'SDK ufficiale; `gpt-5.1` e `gemini-2.5-pro` sono i nomi indicati nel design e

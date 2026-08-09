@@ -18,4 +18,10 @@ config.resolver.nodeModulesPaths = [
 // copia di React: la classica schermata bianca senza errori.
 config.resolver.disableHierarchicalLookup = true
 
+// I formati 3D non sono nella lista di default di Metro: senza questa riga
+// `require('.../avatar.glb')` non risolve e il bundle fallisce. Dichiararli
+// asset è anche ciò che permette a @react-three/fiber/native di risolverli con
+// `Asset.fromModule(...).downloadAsync()` invece che come moduli JavaScript.
+config.resolver.assetExts = [...config.resolver.assetExts, 'glb', 'gltf', 'bin']
+
 module.exports = config

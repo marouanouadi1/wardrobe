@@ -57,14 +57,14 @@ oppure un servizio o SDK esterno. Questa parte è dichiarata aperta di proposito
 il requisito è fissato, il mezzo no. Il requisito basta a escludere il manichino
 generico come traguardo.
 
-### Rapporto con l'ADR 0001
+### Rapporto con la pipeline di analisi
 
-L'[ADR 0001](0001-step-functions-per-l-analisi-delle-foto.md) definisce la state
-machine dell'analisi come `[analizza] → [salva]`. Lo scontorno e la ricostruzione
-sono **passi nuovi della stessa pipeline**, non un sistema parallelo: lo scontorno
-è il candidato naturale come task prima di `analizza` (un capo già ritagliato è
-anche una foto più facile da leggere per il modello di visione), la ricostruzione
-è pesante e asincrona e sta a valle. Quell'ADR non si riscrive: questo lo estende
+`handlers/analisi.py` divide già l'analisi in due fasi, `analizza` e `salva`.
+Lo scontorno e la ricostruzione sono **passi nuovi della stessa pipeline**,
+non un sistema parallelo: lo scontorno è il candidato naturale come passo
+prima di `analizza` (un capo già ritagliato è anche una foto più facile da
+leggere per il modello di visione), la ricostruzione è pesante e asincrona e
+sta a valle. La pipeline esistente non si riscrive: questa nota la estende
 quando i due passi esisteranno.
 
 ## Conseguenze

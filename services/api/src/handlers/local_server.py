@@ -1,9 +1,9 @@
-"""Un piccolo server locale che parla come API Gateway.
+"""Il server HTTP: `npm run api:local` in sviluppo, lo stesso processo dentro
+il container `api` su un VPS in produzione — nessuna differenza fra i due.
 
-Solo sviluppo: `npm run api:local`. Costruisce lo stesso evento payload v2 che
-riceverebbero le Lambda e chiama gli stessi handler, così quello che provi in
-locale è lo stesso codice che gira in cloud — senza SAM, senza emulatori,
-senza container.
+Costruisce a mano un piccolo evento (`headers`, `pathParameters`,
+`queryStringParameters`, `body`) e chiama gli stessi handler; nessun
+framework web, solo la libreria standard.
 """
 
 from __future__ import annotations
@@ -84,9 +84,9 @@ ROTTE: list[tuple[str, re.Pattern[str], Handler]] = [
 
 # La foto viaggia come bytes grezzi, non come JSON: questa rotta sta fuori dal
 # meccanismo di `ROTTE` sopra, che decodifica sempre il corpo come stringa.
-# Serve a completare `ArchivioInMemoria.url_upload()`/`url_lettura()`: senza
-# nessun S3 in locale, la PUT vera dell'app e la GET che l'app fa per mostrare
-# la foto passano di qui.
+# Serve a completare `ArchivioInMemoria`/`ArchivioFileSystem`: la loro
+# `url_upload()`/`url_lettura()` puntano qui, e la PUT vera dell'app e la GET
+# che l'app fa per mostrare la foto passano di qui.
 _PATTERN_DEV_FOTO = re.compile(r"^/dev/foto/(?P<chiave>.+)$")
 
 
@@ -122,8 +122,8 @@ class Ponte(BaseHTTPRequestHandler):
         self.send_response(risposta.get("statusCode", 200))
         for chiave, valore in (risposta.get("headers") or {}).items():
             self.send_header(chiave, valore)
-        # L'app gira su un'origine diversa (Expo web): senza CORS in locale non
-        # si vede nulla. In cloud il CORS lo configura API Gateway.
+        # L'app gira su un'origine diversa (Expo web): senza CORS non si vede
+        # nulla.
         self.send_header("access-control-allow-origin", "*")
         self.send_header("access-control-allow-headers", "*")
         self.send_header("access-control-allow-methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS")
@@ -134,11 +134,8 @@ class Ponte(BaseHTTPRequestHandler):
     def _dev_foto_put(self, chiave: str) -> None:
         """PUT /dev/foto/{chiave} — la PUT vera dell'app, corpo grezzo (JPEG/PNG).
 
-        Questa rotta esiste solo perché in locale non c'è un S3 a cui fare la
-        PUT diretta: sia `ArchivioInMemoria` sia `ArchivioFileSystem` la usano
-        come bersaglio della loro `url_upload()`, quindi qui basta chiamare
-        `salva()` — in cloud questa rotta non esiste, e `ArchivioS3` non ci
-        passa mai.
+        Sia `ArchivioInMemoria` sia `ArchivioFileSystem` la usano come
+        bersaglio della loro `url_upload()`: qui basta chiamare `salva()`.
         """
         lunghezza = int(self.headers.get("content-length") or 0)
         contenuto = self.rfile.read(lunghezza) if lunghezza else b""

@@ -12,6 +12,7 @@ import json
 
 import pytest
 
+from adapters.llm import registry
 from fakes import ProviderFinto
 from handlers import chat, playground
 
@@ -47,7 +48,7 @@ def _risposta_modello(match: int = 88) -> str:
 
 def _monkeypatch_provider(monkeypatch: pytest.MonkeyPatch, testo: str) -> ProviderFinto:
     finto = ProviderFinto(testo)
-    monkeypatch.setattr(chat, "_provider", lambda nome: finto)
+    monkeypatch.setattr(registry, "provider_per_nome", lambda nome, chiave_override=None: finto)
     return finto
 
 

@@ -1048,7 +1048,7 @@
       "additionalProperties": false,
       "properties": {
         "chiave": {
-          "description": "Chiave dell'oggetto su S3",
+          "description": "Chiave dell'oggetto nell'archivio foto",
           "type": "string"
         },
         "url": {
@@ -2363,7 +2363,7 @@
     },
     "UploadFirmato": {
       "additionalProperties": false,
-      "description": "Risposta all'app prima che carichi la foto: l'upload va diretto a S3.",
+      "description": "Risposta all'app prima che carichi la foto: l'upload va diretto\nall'archivio foto, senza passare dal backend.",
       "properties": {
         "chiave": {
           "type": "string"

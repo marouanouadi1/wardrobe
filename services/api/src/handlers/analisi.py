@@ -1,8 +1,11 @@
-"""L'analisi di una foto: due task della state machine, due endpoint HTTP.
+"""L'analisi di una foto: due fasi, due endpoint HTTP.
 
-La divisione non è estetica. `analizza` chiama un provider su Internet e sta
-FUORI dalla VPC; `salva` scrive su Postgres e sta DENTRO. Step Functions tiene
-insieme i due pezzi, con retry sul primo. Vedi docs/adr/0001.
+La divisione non è estetica. `analizza` chiama un provider su Internet;
+`salva` scrive su Postgres. Girano in linea, nello stesso processo: la
+risposta a `POST /capi/analisi` arriva solo dopo che entrambe sono finite, ma
+mantiene comunque la forma di un avvio asincrono (202 + id, poi polling) per
+permettere il caricamento in blocco di più foto senza tenere aperte
+richieste HTTP per decine di secondi ciascuna.
 """
 
 from __future__ import annotations
@@ -12,7 +15,7 @@ import logging
 import os
 from typing import Any
 
-from domain.errors import ErroreDominio
+from domain.errors import AnalisiNonTrovata, ErroreDominio
 from domain.models import (
     AnalisiAvviata,
     Capo,
@@ -37,7 +40,7 @@ MODELLO_DEFAULT = os.environ.get("MODELLO_VISIONE", "")
 
 @endpoint
 def avvia(evento: Evento) -> Risposta:
-    """POST /capi/analisi — la foto è già su S3, qui parte la pipeline."""
+    """POST /capi/analisi — la foto è già caricata, qui parte la pipeline."""
     richiesta = corpo(evento, RichiestaAnalisi)
     ingresso = {
         "utente_id": utente_id(evento),
@@ -46,49 +49,33 @@ def avvia(evento: Evento) -> Risposta:
         "modello": richiesta.modello or MODELLO_DEFAULT,
     }
 
-    if not os.environ.get("STATE_MACHINE_ARN"):
-        # Senza una state machine (locale, o un VPS senza Step Functions) i
-        # due task girano in linea, nello stesso ordine e con lo stesso
-        # codice. L'app non se ne accorge, perché la risposta ha la forma di
-        # sempre. L'esito va su Postgres, non in un dict di processo: un
-        # riavvio del server (deploy su un VPS, non un evento raro) non deve
-        # far perdere al polling un'esecuzione già conclusa.
-        esecuzione = generatore_id().nuovo()
-        try:
-            salvato = salva(analizza(ingresso))
-            repository().salva_esito_analisi(
-                EsitoAnalisi(
-                    esecuzione_id=esecuzione,
-                    stato=StatoAnalisi.COMPLETATA,
-                    capo=con_url(Capo.model_validate(salvato["capo"])),
-                )
+    esecuzione = generatore_id().nuovo()
+    try:
+        salvato = salva(analizza(ingresso))
+        repository().salva_esito_analisi(
+            EsitoAnalisi(
+                esecuzione_id=esecuzione,
+                stato=StatoAnalisi.COMPLETATA,
+                capo=con_url(Capo.model_validate(salvato["capo"])),
             )
-        except ErroreDominio as exc:
-            repository().salva_esito_analisi(
-                EsitoAnalisi(esecuzione_id=esecuzione, stato=StatoAnalisi.FALLITA, errore=str(exc))
+        )
+    except ErroreDominio as exc:
+        repository().salva_esito_analisi(
+            EsitoAnalisi(esecuzione_id=esecuzione, stato=StatoAnalisi.FALLITA, errore=str(exc))
+        )
+    except Exception:
+        # Qualunque altra eccezione (SDK del provider, rete, risposta non
+        # parsabile) non deve uscire come un 500 anonimo: il dettaglio resta
+        # nei log, non arriva al client.
+        logging.getLogger("wardrobe").exception("analisi fallita per %s", richiesta.chiave_foto)
+        repository().salva_esito_analisi(
+            EsitoAnalisi(
+                esecuzione_id=esecuzione,
+                stato=StatoAnalisi.FALLITA,
+                errore="L'analisi non è riuscita: riprova con più luce.",
             )
-        except Exception:
-            # Qualunque altra eccezione (SDK del provider, rete, risposta non
-            # parsabile) non deve uscire come un 500 anonimo: il dettaglio
-            # resta nei log, non arriva al client.
-            logging.getLogger("wardrobe").exception("analisi fallita per %s", richiesta.chiave_foto)
-            repository().salva_esito_analisi(
-                EsitoAnalisi(
-                    esecuzione_id=esecuzione,
-                    stato=StatoAnalisi.FALLITA,
-                    errore="L'analisi non è riuscita: riprova con più luce.",
-                )
-            )
-        return ok(AnalisiAvviata(esecuzione_id=esecuzione), 202)
-
-    from adapters.stepfunctions import Orchestratore
-
-    return ok(
-        AnalisiAvviata(
-            esecuzione_id=Orchestratore(os.environ["STATE_MACHINE_ARN"]).avvia(ingresso)
-        ),
-        202,
-    )
+        )
+    return ok(AnalisiAvviata(esecuzione_id=esecuzione), 202)
 
 
 @endpoint
@@ -96,33 +83,14 @@ def stato(evento: Evento) -> Risposta:
     """GET /capi/analisi/{esecuzioneId} — l'app fa polling mentre mostra i passi."""
     esecuzione_id = parametro(evento, "esecuzioneId")
 
-    if not os.environ.get("STATE_MACHINE_ARN"):
-        locale = repository().leggi_esito_analisi(esecuzione_id)
-        if locale is not None:
-            return ok(locale)
-
-    from adapters.stepfunctions import Orchestratore
-
-    descrizione = Orchestratore(os.environ["STATE_MACHINE_ARN"]).stato(esecuzione_id)
-
-    if descrizione.stato is StatoAnalisi.COMPLETATA and descrizione.uscita:
-        capo = con_url(Capo.model_validate(descrizione.uscita["capo"]))
-        return ok(EsitoAnalisi(esecuzione_id=esecuzione_id, stato=descrizione.stato, capo=capo))
-
-    return ok(
-        EsitoAnalisi(
-            esecuzione_id=esecuzione_id, stato=descrizione.stato, errore=descrizione.errore
-        )
-    )
+    esito = repository().leggi_esito_analisi(esecuzione_id)
+    if esito is None:
+        raise AnalisiNonTrovata(esecuzione_id)
+    return ok(esito)
 
 
 def analizza(evento: dict[str, Any], _contesto: Any = None) -> dict[str, Any]:
-    """Task 1 — scontorna (se configurato), legge la foto, interroga il modello.
-
-    Nessuna VPC, nessun accesso al database: solo S3 (via VPC endpoint gateway)
-    e HTTPS verso i provider. Se un provider è lento o rifiuta, ritenta Step
-    Functions, non l'utente.
-    """
+    """Prima fase — scontorna (se configurato), legge la foto, interroga il modello."""
     from adapters.llm.registry import provider_per_nome
     from handlers._container import servizio_scontorno
 
@@ -164,10 +132,7 @@ def analizza(evento: dict[str, Any], _contesto: Any = None) -> dict[str, Any]:
 
 
 def salva(evento: dict[str, Any], _contesto: Any = None) -> dict[str, Any]:
-    """Task 2 — trasforma la lettura in capo e lo scrive.
-
-    Dentro la VPC, con accesso al database e senza uscita su Internet.
-    """
+    """Seconda fase — trasforma la lettura in capo e lo scrive."""
     from domain.models import LetturaCapo
 
     capo = crea_capo(

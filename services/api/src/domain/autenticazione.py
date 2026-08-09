@@ -1,10 +1,10 @@
 """Login autofirmato: hash delle password e JWT, senza servizi terzi.
 
-Niente Cognito: per una beta a pochi utenti un quarto fornitore non vale la
+Per una beta a pochi utenti un fornitore di identità esterno non vale la
 manutenzione in più. `bcrypt` e `pyjwt` non sono nella lista `banned-api` di
-`pyproject.toml` (che vieta solo `boto3`/`botocore`/`psycopg`/`httpx` fuori da
-`adapters/`): non sono un confine di I/O, sono calcolo puro, e possono vivere
-qui come il resto del dominio.
+`pyproject.toml` (che vieta solo `psycopg`/`httpx` fuori da `adapters/`): non
+sono un confine di I/O, sono calcolo puro, e possono vivere qui come il resto
+del dominio.
 """
 
 from __future__ import annotations

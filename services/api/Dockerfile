@@ -1,8 +1,4 @@
-# Immagine per il VPS: un processo Python always-on, non uno zip Lambda.
-# scripts/build_lambda.sh serve a tutt'altro (ARM64/manylinux, boto3 escluso
-# perché il runtime Lambda lo fornisce già) — qui boto3 va installato per
-# davvero, perché adapters/postgres.py lo importa comunque a livello di
-# modulo (il ramo Secrets Manager non gira sul VPS, ma il file sì).
+# Immagine per il VPS: un processo Python always-on.
 #
 # Da python:3.12-slim (Docker Hub) e non dall'immagine ufficiale di uv
 # (ghcr.io): un registro solo può essere bloccato da un firewall aziendale o
@@ -16,7 +12,7 @@ RUN pip install --no-cache-dir uv
 COPY pyproject.toml uv.lock ./
 COPY src ./src
 
-RUN uv sync --extra aws --no-dev
+RUN uv sync --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"
 # Senza, lo stdout bufferizzato a blocchi (non è un terminale) farebbe

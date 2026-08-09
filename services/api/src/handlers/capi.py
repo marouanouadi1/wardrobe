@@ -1,4 +1,4 @@
-"""I capi dell'armadio. Un entrypoint Lambda per verbo."""
+"""I capi dell'armadio. Un handler per verbo."""
 
 from __future__ import annotations
 

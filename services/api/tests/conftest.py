@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 import pytest
 
 # Prima di qualsiasi import degli handler: in modalità sviluppo il container
-# monta il repository in memoria, e nessun test tocca AWS.
+# monta il repository in memoria, e nessun test tocca la rete.
 os.environ["DEV_MODE"] = "1"
 os.environ["PLAYGROUND_ABILITATO"] = "1"
 os.environ["AUTH_APERTA"] = "1"
@@ -90,10 +90,11 @@ def costruisci_capo(
 def _container_pulito():
     """Ogni test parte da un armadio nuovo.
 
-    Il container usa `functools.cache` perché su Lambda l'istanza deve vivere
-    quanto il container di esecuzione. In pytest quello stesso comportamento
-    farebbe condividere il repository in memoria fra i test: uno che segna un
-    capo come «da lavare» falserebbe i conteggi di quello dopo.
+    Il container usa `functools.cache` perché in produzione l'istanza deve
+    vivere quanto il processo, per riusare la stessa connessione. In pytest
+    quello stesso comportamento farebbe condividere il repository in memoria
+    fra i test: uno che segna un capo come «da lavare» falserebbe i conteggi
+    di quello dopo.
     """
     from handlers import _container
 

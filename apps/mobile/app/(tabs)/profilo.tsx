@@ -2,8 +2,9 @@
  * Profilo: chi sei, come ti vesti, e la porta per gli strumenti interni.
  *
  * Il playground vive qui sotto «Sviluppo», visibile solo dove esiste. In
- * produzione le rotte /dev/* non sono nemmeno registrate su API Gateway, quindi
- * nascondere il pulsante non è sicurezza per oscurità: è coerenza.
+ * produzione il backend rifiuta comunque le rotte /dev/* con un 403
+ * (`PLAYGROUND_ABILITATO`, vedi handlers/playground.py), quindi nascondere
+ * il pulsante non è sicurezza per oscurità: è coerenza.
  */
 
 import { Image } from 'expo-image'
@@ -217,6 +218,29 @@ export default function Profilo() {
                 <Titolo taglia={17}>Valutazione modelli</Titolo>
                 <Corpo taglia={12} tono="tenue">
                   Accuratezza e costo del banco a dieci campioni
+                </Corpo>
+              </View>
+              <Icona nome="chevron" misura={17} colore="rgba(21,21,26,0.3)" spessore={2.4} />
+            </Toccabile>
+            <Toccabile
+              onPress={() => router.push('/dev/prova-3d')}
+              scala={0.98}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
+                padding: 18,
+                borderRadius: raggi.medio + 4,
+                backgroundColor: colori.scheda,
+                borderWidth: 1,
+                borderColor: linee.tenue,
+              }}
+            >
+              <Bolla nome="griglia" misura={40} sfondo="rgba(21,21,26,0.06)" tinta={colori.inchiostro} />
+              <View style={{ flex: 1 }}>
+                <Titolo taglia={17}>Prova 3D</Titolo>
+                <Corpo taglia={12} tono="tenue">
+                  Un corpo vero che indossa capi veri, su questo telefono
                 </Corpo>
               </View>
               <Icona nome="chevron" misura={17} colore="rgba(21,21,26,0.3)" spessore={2.4} />

@@ -77,8 +77,8 @@ export default function Carica() {
       return
     }
 
-    // URL firmato, PUT diretta a S3, poi la pipeline. La foto non passa dal
-    // nostro server — vedi docs/adr/0003.
+    // URL firmato, PUT diretta all'archivio foto, poi la pipeline. La foto
+    // non passa dal nostro server.
     setFase('analisi')
     try {
       const firma = await api.firmaUpload('image/jpeg')

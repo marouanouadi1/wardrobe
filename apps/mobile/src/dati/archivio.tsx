@@ -46,9 +46,10 @@ interface Stato {
   /**
    * La foto a figura intera per l'avatar 2D, come URI sul dispositivo.
    *
-   * Sta qui e non dentro `profilo` perché il contratto porta solo la chiave S3
-   * (`avatar_foto_chiave`), non un URL da mostrare: finché il backend non
-   * firmerà anche la lettura, la foto visibile è quella scelta sul telefono.
+   * Sta qui e non dentro `profilo` perché il contratto porta solo la chiave
+   * dell'archivio foto (`avatar_foto_chiave`), non un URL da mostrare:
+   * finché il backend non firmerà anche la lettura, la foto visibile è
+   * quella scelta sul telefono.
    */
   fotoAvatar: string | null
   /**
@@ -336,8 +337,8 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
     async (uri) => {
       invia({ tipo: 'fotoAvatar', uri })
       try {
-        // Stessa strada delle foto dei capi: URL firmato e PUT diretta a S3, la
-        // foto non passa dal nostro backend.
+        // Stessa strada delle foto dei capi: URL firmato e PUT diretta
+        // all'archivio foto, la foto non passa dal nostro backend.
         const firma = await api.firmaUpload('image/jpeg')
         await api.caricaFoto(firma, uri)
         invia({ tipo: 'fotoAvatar', uri, chiave: firma.chiave })

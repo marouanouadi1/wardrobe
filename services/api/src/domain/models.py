@@ -133,7 +133,7 @@ class Colore(ModelloWardrobe):
 
 
 class FotoCapo(ModelloWardrobe):
-    chiave: str = Field(description="Chiave dell'oggetto su S3")
+    chiave: str = Field(description="Chiave dell'oggetto nell'archivio foto")
     url: str | None = Field(default=None, description="URL firmato, a vita breve")
     larghezza: int | None = None
     altezza: int | None = None
@@ -368,7 +368,8 @@ class RiepilogoArmadio(ModelloWardrobe):
 
 
 class UploadFirmato(ModelloWardrobe):
-    """Risposta all'app prima che carichi la foto: l'upload va diretto a S3."""
+    """Risposta all'app prima che carichi la foto: l'upload va diretto
+    all'archivio foto, senza passare dal backend."""
 
     chiave: str
     url: str

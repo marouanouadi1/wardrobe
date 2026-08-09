@@ -57,6 +57,7 @@ export default function RadiceApp() {
             <Stack.Screen name="calendario" />
             <Stack.Screen name="dev/playground" options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="dev/modelli" options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="dev/prova-3d" options={{ animation: 'slide_from_bottom' }} />
           </Stack>
         </ArchivioProvider>
       </SafeAreaProvider>

@@ -1,11 +1,10 @@
-"""Foto su disco: storage locale invece di S3 — niente account cloud, niente
-container in più da tenere su.
+"""Foto su disco: storage locale, senza un servizio esterno da configurare.
 
-Pensato per usare l'app per davvero in locale, dove le foto devono
-sopravvivere al riavvio di `npm run api:local` — a differenza di
-`ArchivioInMemoria`, che le tiene in un dict e le perde ad ogni riavvio. La
-PUT/GET vera passa comunque dal bridge di `local_server.py`
-(`/dev/foto/{chiave}`): qui cambia solo dove finiscono i byte.
+Le foto devono sopravvivere a un riavvio — sia di `npm run api:local` sia del
+container `api` su un VPS — a differenza di `ArchivioInMemoria`, che le tiene
+in un dict e le perde ad ogni riavvio. La PUT/GET vera passa comunque dal
+bridge di `local_server.py` (`/dev/foto/{chiave}`): qui cambia solo dove
+finiscono i byte.
 """
 
 from __future__ import annotations

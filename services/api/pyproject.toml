@@ -1,7 +1,7 @@
 [project]
 name = "wardrobe-api"
 version = "0.1.0"
-description = "API di Wardrobe: handlers Lambda sottili sopra un domain puro"
+description = "API di Wardrobe: handlers sottili sopra un domain puro"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.12",
@@ -12,20 +12,13 @@ dependencies = [
     # sono adapter HTTP sottili, perché servono al confronto nel playground.
     "anthropic>=0.75",
     # Solo per `local_server.py`: un file .env è più facile da spiegare a chi
-    # non ha mai usato un terminale di una variabile d'ambiente di sistema. In
-    # cloud le Lambda ricevono le chiavi da CDK, non toccano questo file.
+    # non ha mai usato un terminale di una variabile d'ambiente di sistema.
     "python-dotenv>=1.0",
-    # Login autofirmato (domain/autenticazione.py): sostituisce Cognito per la
-    # beta. Dipendenze normali, non opzionali — servono sempre, non solo in
-    # cloud.
+    # Login autofirmato (domain/autenticazione.py). Dipendenze normali, non
+    # opzionali: servono sempre, non solo in produzione.
     "bcrypt>=4.2",
     "pyjwt>=2.9",
 ]
-
-[project.optional-dependencies]
-# boto3 è già nel runtime Lambda: sta qui per lo sviluppo e per mypy, e
-# scripts/build_lambda.sh lo esclude dallo zip.
-aws = ["boto3>=1.35"]
 
 [dependency-groups]
 dev = [
@@ -33,7 +26,6 @@ dev = [
     "pytest-cov>=6.0",
     "ruff>=0.9",
     "mypy>=1.14",
-    "boto3-stubs[s3,secretsmanager,stepfunctions]>=1.35",
     # Solo per scripts/campioni_da_excel.py: legge il banco di prova che
     # compilano anche i non sviluppatori, in docs/banco-di-prova-modelli.xlsx.
     "openpyxl>=3.1",
@@ -70,10 +62,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
-# Il vincolo architetturale reso eseguibile: se un import di boto3 finisce in
-# domain/, il lint fallisce. Vedi la regola per-file qui sotto.
-"boto3".msg = "boto3 solo in adapters/ — il domain resta puro"
-"botocore".msg = "botocore solo in adapters/ — il domain resta puro"
+# Il vincolo architetturale reso eseguibile: se un import di psycopg finisce
+# in domain/, il lint fallisce. Vedi la regola per-file qui sotto.
 "psycopg".msg = "psycopg solo in adapters/ — il domain resta puro"
 "httpx".msg = "httpx solo in adapters/ — il domain resta puro"
 

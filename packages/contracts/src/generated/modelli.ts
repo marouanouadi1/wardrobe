@@ -216,7 +216,7 @@ export interface Capo {
 }
 export interface FotoCapo {
   /**
-   * Chiave dell'oggetto su S3
+   * Chiave dell'oggetto nell'archivio foto
    */
   chiave: string
   /**
@@ -660,7 +660,8 @@ export interface TokenAccesso {
   token: string
 }
 /**
- * Risposta all'app prima che carichi la foto: l'upload va diretto a S3.
+ * Risposta all'app prima che carichi la foto: l'upload va diretto
+ * all'archivio foto, senza passare dal backend.
  */
 export interface UploadFirmato {
   chiave: string
