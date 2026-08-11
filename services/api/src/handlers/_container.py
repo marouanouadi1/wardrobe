@@ -51,14 +51,12 @@ def generatore_id() -> GeneratoreId:
 
 @functools.cache
 def repository() -> RepositoryArmadio:
-    """Postgres se c'è `DATABASE_URL`, altrimenti memoria.
+    """Postgres se c'è `DATABASE_URL`, altrimenti memoria — vuota, mai finta.
 
-    La versione in memoria è seminata con l'armadio del design: `npm run
-    api:local` dà all'app un backend vero senza toccare Postgres. `DATABASE_URL`
-    (Postgres via docker-compose, vedi `db:up`) è lo switch per i capi veri
-    che devono sopravvivere a un riavvio. Il bypass di autenticazione è un
-    flag a parte (`AUTH_APERTA`, vedi `_http.py`), indipendente da questa
-    scelta.
+    `DATABASE_URL` (Postgres via docker-compose, vedi `db:up`) è lo switch per
+    i capi veri che devono sopravvivere a un riavvio. Senza, in `DEV_MODE=1`,
+    l'armadio in memoria parte vuoto: comodo per provare il flusso di
+    caricamento da zero, non un sostituto di Postgres per usare l'app davvero.
     """
     if os.environ.get("DATABASE_URL"):
         from adapters.postgres import RepositoryPostgres
@@ -67,7 +65,7 @@ def repository() -> RepositoryArmadio:
 
     from adapters.memory import RepositoryInMemoria
 
-    return RepositoryInMemoria.con_semi()
+    return RepositoryInMemoria()
 
 
 @functools.cache

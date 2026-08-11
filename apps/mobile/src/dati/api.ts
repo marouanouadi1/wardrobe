@@ -27,6 +27,7 @@ import type {
   Outfit,
   PresetPrompt,
   Profilo,
+  Registrazione,
   RichiestaMessaggioChat,
   RichiestaPlayground,
   RichiestaRatingImmagine,
@@ -71,14 +72,6 @@ function rilevaUrlSviluppo(): string | null {
  */
 export const URL_API = process.env.EXPO_PUBLIC_API_URL ?? rilevaUrlSviluppo()
 
-/**
- * Vero solo per una build con un indirizzo esplicito (EAS contro un server
- * vero): lì il login è obbligatorio. In sviluppo locale l'euristica
- * automatica basta da sola, e il backend gira con `AUTH_APERTA=1` — un login
- * lì sarebbe solo un attrito senza un vero account dietro.
- */
-export const RICHIEDE_ACCESSO = Boolean(process.env.EXPO_PUBLIC_API_URL)
-
 export class ErroreApi extends Error {
   constructor(
     readonly stato: number,
@@ -119,6 +112,20 @@ export async function caricaTokenSalvato(): Promise<string | null> {
   return token
 }
 
+/**
+ * Chiamata da `SessioneProvider` quando un 401 arriva da qualunque richiesta:
+ * un token scaduto (dura 30 giorni, nessun refresh) o revocato deve riportare
+ * al login da dove si trova l'utente, non restare a mostrare per sempre
+ * «non riesco a raggiungere il server» per un problema che è invece «devi
+ * rientrare». Un modulo qui non deve importare `sessione.tsx` (dipenderebbe
+ * da React): la notifica passa da questa singola callback registrata.
+ */
+let alTokenNonValido: (() => void) | null = null
+
+export function suTokenNonValido(gestore: (() => void) | null): void {
+  alTokenNonValido = gestore
+}
+
 async function chiama<T>(
   percorso: string,
   opzioni: { metodo?: string; corpo?: unknown; intestazioni?: Record<string, string> } = {},
@@ -142,6 +149,8 @@ async function chiama<T>(
   })
 
   if (!risposta.ok) {
+    if (risposta.status === 401) alTokenNonValido?.()
+
     // Il backend risponde sempre con { errore, messaggio }: lo rispettiamo
     // invece di inventare un messaggio nostro.
     const dettaglio = await risposta.json().catch(() => ({}))
@@ -163,6 +172,10 @@ export const api = {
   auth: {
     accedi: (credenziali: Credenziali) =>
       chiama<TokenAccesso>('/auth/accedi', { metodo: 'POST', corpo: credenziali }),
+    /** L'email deve essere nell'allowlist del server (`EMAIL_AMMESSE`):
+     * senza, il backend risponde 403, allowlist vuota compresa. */
+    registrati: (registrazione: Registrazione) =>
+      chiama<TokenAccesso>('/auth/registrati', { metodo: 'POST', corpo: registrazione }),
   },
 
   // ── armadio ──────────────────────────────────────────────────────────────

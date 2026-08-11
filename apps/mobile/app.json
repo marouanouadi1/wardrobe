@@ -41,8 +41,11 @@
     "experiments": {
       "typedRoutes": true
     },
+    "owner": "marouanouadi",
     "extra": {
-      "apiUrl": "http://localhost:8787"
+      "eas": {
+        "projectId": "1063da5e-dac1-4161-91a6-5e722a8fdc00"
+      }
     }
   }
 }

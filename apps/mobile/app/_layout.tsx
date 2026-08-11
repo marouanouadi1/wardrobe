@@ -22,6 +22,7 @@ import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { ArchivioProvider } from '../src/dati/archivio'
+import { SessioneProvider } from '../src/dati/sessione'
 import { colori } from '../src/tema/tokens'
 
 export default function RadiceApp() {
@@ -39,27 +40,30 @@ export default function RadiceApp() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colori.sfondo }}>
       <SafeAreaProvider>
-        <ArchivioProvider>
-          <StatusBar style="dark" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colori.sfondo },
-              animation: 'slide_from_right',
-            }}
-          >
-            <Stack.Screen name="accedi" options={{ animation: 'fade' }} />
-            <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-            <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-            <Stack.Screen name="capo/[id]" />
-            <Stack.Screen name="suggeritore" />
-            <Stack.Screen name="outfit" />
-            <Stack.Screen name="calendario" />
-            <Stack.Screen name="dev/playground" options={{ animation: 'slide_from_bottom' }} />
-            <Stack.Screen name="dev/modelli" options={{ animation: 'slide_from_bottom' }} />
-            <Stack.Screen name="dev/prova-3d" options={{ animation: 'slide_from_bottom' }} />
-          </Stack>
-        </ArchivioProvider>
+        <SessioneProvider>
+          <ArchivioProvider>
+            <StatusBar style="dark" />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colori.sfondo },
+                animation: 'slide_from_right',
+              }}
+            >
+              <Stack.Screen name="accedi" options={{ animation: 'fade' }} />
+              <Stack.Screen name="registrati" options={{ animation: 'fade' }} />
+              <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+              <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+              <Stack.Screen name="capo/[id]" />
+              <Stack.Screen name="suggeritore" />
+              <Stack.Screen name="outfit" />
+              <Stack.Screen name="calendario" />
+              <Stack.Screen name="dev/playground" options={{ animation: 'slide_from_bottom' }} />
+              <Stack.Screen name="dev/modelli" options={{ animation: 'slide_from_bottom' }} />
+              <Stack.Screen name="dev/prova-3d" options={{ animation: 'slide_from_bottom' }} />
+            </Stack>
+          </ArchivioProvider>
+        </SessioneProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   )

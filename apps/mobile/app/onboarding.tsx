@@ -13,6 +13,8 @@ import { router } from 'expo-router'
 import { useState } from 'react'
 import { View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { api } from '../src/dati/api'
+import { useArmadio } from '../src/dati/archivio'
 import { colori, raggi, spazi } from '../src/tema/tokens'
 import { BottonePrimario, Pillola, Toccabile } from '../src/ui/base'
 import { Corpo, Etichetta, Titolo } from '../src/ui/testo'
@@ -55,8 +57,18 @@ export default function Onboarding() {
   const [stiliScelti, setStiliScelti] = useState<string[]>([])
   const bordi = useSafeAreaInsets()
   const corrente = PASSI[passo]!
+  const { profilo, ricarica } = useArmadio()
 
   async function entra() {
+    // Le tre preferenze scelte al passo 2 non erano mai salvate: si
+    // raccoglievano e si buttavano via. Il profilo esiste già (il backend lo
+    // crea vuoto al primo GET /profilo): qui si aggiornano solo gli stili.
+    if (stiliScelti.length > 0 && profilo) {
+      await api
+        .salvaProfilo({ ...profilo, preferenze: { ...profilo.preferenze, stili: stiliScelti } })
+        .then(() => ricarica())
+        .catch(() => undefined) // non è questo il momento di bloccare l'ingresso per un salvataggio andato male
+    }
     await segnaIntroVista()
     router.replace('/(tabs)/oggi')
   }

@@ -9,8 +9,12 @@ import pytest
 # monta il repository in memoria, e nessun test tocca la rete.
 os.environ["DEV_MODE"] = "1"
 os.environ["PLAYGROUND_ABILITATO"] = "1"
-os.environ["AUTH_APERTA"] = "1"
+# Non più un bypass (AUTH_APERTA è sparita): ogni test che chiama un handler
+# autenticato passa da un JWT vero, firmato con questo segreto — vedi
+# `intestazioni_utente()` sotto.
+os.environ["JWT_SECRET"] = "segreto-di-test-lungo-abbastanza-per-hmac-sha256"
 
+from domain.autenticazione import emetti_token
 from domain.models import (
     AnalisiVisione,
     AttributoCapo,
@@ -49,6 +53,13 @@ LETTURA_BUONA: dict[str, object] = {
         "lavaggio": 85,
     },
 }
+
+
+def intestazioni_utente(utente: str = "demo") -> dict[str, str]:
+    """Le intestazioni HTTP che identificano `utente` in un evento di test: un
+    JWT vero, firmato con `JWT_SECRET`, non più un header non verificato."""
+    token = emetti_token(utente, os.environ["JWT_SECRET"], ADESSO)
+    return {"authorization": f"Bearer {token}"}
 
 
 def costruisci_capo(

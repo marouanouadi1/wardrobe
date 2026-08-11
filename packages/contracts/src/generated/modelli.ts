@@ -81,6 +81,7 @@ export interface Contratti {
   PresetPrompt?: PresetPrompt
   Profilo?: Profilo
   RatingImmagine?: RatingImmagine
+  Registrazione?: Registrazione
   RichiestaAnalisi?: RichiestaAnalisi
   RichiestaMessaggioChat?: RichiestaMessaggioChat
   RichiestaPlayground?: RichiestaPlayground
@@ -284,8 +285,10 @@ export interface PreferenzeStile {
   evita?: string[]
 }
 /**
- * Il corpo di POST /auth/accedi. Niente self-signup: le righe in
- * `utenti` le crea scripts/crea_utente.py, non un endpoint pubblico.
+ * Il corpo di POST /auth/accedi. Nessun requisito sulla password: qui
+ * deve solo passare a `bcrypt.checkpw`, non essere accettabile — quello
+ * vincolo vive in `Registrazione`, non qui, altrimenti un account creato
+ * quando il minimo era più basso non potrebbe più accedere.
  */
 export interface Credenziali {
   email: string
@@ -502,6 +505,15 @@ export interface RatingImmagine {
   pulizia: number
   artefatti: number
   note?: string | null
+}
+/**
+ * Il corpo di POST /auth/registrati. L'allowlist (`EMAIL_AMMESSE`) e il
+ * hash della password li applica `handlers/auth.py`; qui c'è solo la forma
+ * del dato, non la sua ammissibilità.
+ */
+export interface Registrazione {
+  email: string
+  password: string
 }
 export interface RichiestaAnalisi {
   chiave_foto: string

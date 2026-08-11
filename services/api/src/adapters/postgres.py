@@ -17,6 +17,7 @@ from typing import Any
 import psycopg
 from psycopg.rows import dict_row
 
+from domain.errors import EmailGiaRegistrata
 from domain.models import (
     Capo,
     EsecuzionePlayground,
@@ -302,11 +303,14 @@ class RepositoryPostgres:
             return (str(riga["id"]), riga["hash_password"]) if riga else None
 
     def crea(self, email: str, hash_password: str) -> str:
-        with self._conn().cursor() as cur:
-            cur.execute(
-                "insert into utenti (email, hash_password) values (%s, %s) returning id",
-                (email, hash_password),
-            )
-            riga = cur.fetchone()
-            assert riga is not None
-            return str(riga["id"])
+        try:
+            with self._conn().cursor() as cur:
+                cur.execute(
+                    "insert into utenti (email, hash_password) values (%s, %s) returning id",
+                    (email, hash_password),
+                )
+                riga = cur.fetchone()
+                assert riga is not None
+                return str(riga["id"])
+        except psycopg.errors.UniqueViolation as exc:
+            raise EmailGiaRegistrata(email) from exc

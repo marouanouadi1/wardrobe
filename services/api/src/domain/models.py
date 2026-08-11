@@ -384,11 +384,22 @@ class RichiestaUpload(ModelloWardrobe):
 
 
 class Credenziali(ModelloWardrobe):
-    """Il corpo di POST /auth/accedi. Niente self-signup: le righe in
-    `utenti` le crea scripts/crea_utente.py, non un endpoint pubblico."""
+    """Il corpo di POST /auth/accedi. Nessun requisito sulla password: qui
+    deve solo passare a `bcrypt.checkpw`, non essere accettabile — quello
+    vincolo vive in `Registrazione`, non qui, altrimenti un account creato
+    quando il minimo era più basso non potrebbe più accedere."""
 
     email: str
     password: str
+
+
+class Registrazione(ModelloWardrobe):
+    """Il corpo di POST /auth/registrati. L'allowlist (`EMAIL_AMMESSE`) e il
+    hash della password li applica `handlers/auth.py`; qui c'è solo la forma
+    del dato, non la sua ammissibilità."""
+
+    email: str
+    password: str = Field(min_length=8)
 
 
 class TokenAccesso(ModelloWardrobe):

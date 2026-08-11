@@ -26,8 +26,9 @@ import {
   useMemo,
   useReducer,
 } from 'react'
-import { RICHIEDE_ACCESSO, api, caricaTokenSalvato } from './api'
+import { ErroreApi, api } from './api'
 import { perId, slotDiTipo } from './dominio'
+import { useSessione } from './sessione'
 
 /** Un modello scelto per uno dei due lavori veri: provider + id, come nel catalogo di `/dev/modelli`. */
 export interface SceltaModello {
@@ -170,14 +171,15 @@ const Contesto = createContext<Archivio | null>(null)
 
 export function ArchivioProvider({ children }: { children: ReactNode }) {
   const [stato, invia] = useReducer(riduci, INIZIALE)
+  const { token, pronto: sessionePronta } = useSessione()
 
   const carica = useCallback(async () => {
-    // Con una build che richiede il login, un token assente non è un errore
-    // di rete: è la schermata di accesso, che l'utente sta già vedendo. Senza
-    // questo controllo la richiesta partirebbe comunque senza Authorization,
-    // fallirebbe con 422, e mostrerebbe un avviso «non riesco a raggiungere
-    // il server» fuorviante proprio mentre l'utente deve solo accedere.
-    if (RICHIEDE_ACCESSO && !(await caricaTokenSalvato())) {
+    // Senza token non c'è niente da caricare: è la schermata di accesso, che
+    // l'utente sta già vedendo, non un errore di rete. Senza questo
+    // controllo la richiesta partirebbe comunque senza Authorization e
+    // fallirebbe con un 401 che rimanderebbe subito al login da solo — non
+    // sbagliato, ma un giro a vuoto evitabile.
+    if (!token) {
       invia({ tipo: 'caricato', capi: [], outfit: [], profilo: null })
       return
     }
@@ -193,6 +195,10 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       // errore di rete non deve mai far ricomparire l'armadio finto sopra
       // ai capi veri. Meglio un armadio vuoto con la causa in chiaro.
       invia({ tipo: 'caricato', capi: [], outfit: [], profilo: null })
+      // Un 401 qui è un token scaduto: `suTokenNonValido` (vedi
+      // `sessione.tsx`) sta già riportando al login, un avviso di «rete» lo
+      // descriverebbe come il problema sbagliato.
+      if (errore instanceof ErroreApi && errore.stato === 401) return
       invia({
         tipo: 'avviso',
         testo: `Non riesco a raggiungere il server. (${
@@ -200,11 +206,14 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
         })`,
       })
     }
-  }, [])
+  }, [token])
 
   useEffect(() => {
+    // Aspetta che la sessione abbia letto il portachiavi una volta: prima
+    // di allora `token` è sempre `null`, e caricare partirebbe a vuoto.
+    if (!sessionePronta) return
     void carica()
-  }, [carica])
+  }, [sessionePronta, carica])
 
   const indice = useMemo(() => perId(stato.capi), [stato.capi])
 

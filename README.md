@@ -27,7 +27,7 @@ Il perché sta in [`docs/adr/0004`](docs/adr/0004-l-avatar-veste-le-foto-non-i-c
 
 ```txt
 apps/
-  mobile/            app Expo (iOS, Android, web) — 11 schermate
+  mobile/            app Expo (iOS, Android, web) — 12 schermate
   web/               vuoto, ma il posto c'è
 services/api/
   src/domain/        logica pura: zero SDK, testabile con pytest
@@ -42,7 +42,7 @@ docs/adr/            le decisioni che valeva la pena scrivere
 **1. `handlers/` separato da `domain/`.** Un handler fa tre righe: legge
 l'evento, chiama una funzione pura, formatta la risposta. Tutta la logica sta in
 `domain`, che gira con pytest senza rete, senza container e senza mock della SDK —
-106 test in un secondo. Il vincolo non è una convenzione scritta in un README:
+205 test in un secondo. Il vincolo non è una convenzione scritta in un README:
 `pyproject.toml` vieta gli import di `psycopg` e `httpx` fuori da
 `adapters/`, e il lint fallisce se qualcuno prova.
 
@@ -84,11 +84,18 @@ perché il terminale resta suo. Ctrl-C ferma API e app; **Postgres resta
 acceso** — `npm run db:down` per spegnerlo. I pezzi restano usabili da soli:
 `npm run db:up` + `npm run api:local`.
 
-Nel `.env` di `services/api` (copiato da `.env.example`) servono almeno
-`ANTHROPIC_API_KEY`. `DATABASE_URL` e `CARTELLA_FOTO` sono già impostate nel
-`.env` d'esempio del progetto: sono la modalità normale, con i capi in
-Postgres e le foto su disco. Commentandole si torna alla memoria volatile, che
-non sopravvive al riavvio.
+Nel `.env` di `services/api` (copiato da `.env.example`) servono
+`ANTHROPIC_API_KEY`, `JWT_SECRET` (firma i JWT di login — una stringa lunga e
+casuale, es. `openssl rand -hex 32`) ed `EMAIL_AMMESSE` (le email a cui è
+permesso registrarsi: senza, la registrazione è chiusa a chiunque, di
+proposito). `DATABASE_URL` e `CARTELLA_FOTO` sono già impostate nel `.env`
+d'esempio del progetto: sono la modalità normale, con i capi in Postgres e le
+foto su disco. Commentandole si torna alla memoria volatile, che non
+sopravvive al riavvio — e parte vuota: non c'è più un armadio finto a
+riempirla.
+
+Il primo account si crea dall'app stessa: **Registrati**, con un'email nella
+lista di `EMAIL_AMMESSE`.
 
 L'app trova da sola l'indirizzo dell'API: su Expo Go o dev client usa lo
 stesso host a cui si è già collegata per il bundle JS (lo stesso IP del QR
@@ -126,7 +133,7 @@ registro, e nessuna schermata cambia.
 | `npm run mobile` | avvia l'app Expo |
 | `npm run mobile:web` | l'app nel browser |
 | `npm run api:local` | solo l'API (Postgres già acceso) |
-| `npm run api:test` | 106 test del dominio e degli handler |
+| `npm run api:test` | 205 test del dominio e degli handler |
 | `npm run api:lint` | ruff + ruff format + mypy strict |
 | `npm run contracts:generate` | rigenera i tipi TypeScript dal backend |
 | `npm run contracts:check` | verifica che siano allineati (gira in CI) |
@@ -139,21 +146,31 @@ registro, e nessuna schermata cambia.
 
 ### Verificato su questa macchina
 
-- `npm run api:test` → **106 test passati**
-- `npm run api:lint` → ruff pulito, **mypy strict** senza errori su 34 file
+- `npm run api:test` → **205 test passati**
+- `npm run api:lint` → ruff pulito, **mypy strict** senza errori
 - `npm run contracts:check` → contratti allineati; verificato anche il contrario,
   rinominando un campo nel backend per vedere la CI cadere
 - `npm run typecheck` → pulito su app e contratti
-- `expo export` → bundle **web** (3,4 MB), **iOS** e **Android** (5,4 e 5,6 MB di
-  bytecode Hermes) — il bundle nativo è ciò che dimostra che three.js, expo-gl e i
-  contratti si risolvono anche fuori dal browser
+- `expo export --platform web` → bundle **web** pulito, tasti Expo compresi
 - `expo lint` → nessun problema
-- API in locale interrogata con richieste vere: `/capi` restituisce i dodici capi,
-  `/suggerimenti` e `/dev/playground` rispondono **503 provider_non_configurato**
-  senza credenziali (non un 500), e `/capi/analisi` esegue la pipeline in linea
-  riportando il motivo del fallimento
+- API in locale interrogata con richieste vere: senza `EMAIL_AMMESSE` la
+  registrazione risponde **403**; con l'email in lista, **POST
+  /auth/registrati** restituisce un token e `/capi` con quel token risponde
+  con un armadio vuoto (niente più semina finta); senza token, **401**;
+  `/suggerimenti` e `/dev/playground` rispondono **503
+  provider_non_configurato** senza credenziali (non un 500), e
+  `/capi/analisi` esegue la pipeline in linea riportando il motivo del
+  fallimento
 
 ### Non verificato, e conta saperlo
+
+**Login e registrazione non sono mai stati provati su un telefono vero.**
+Verificati da riga di comando (curl) e dai test degli handler: la parte app
+— `registrati.tsx`, `accedi.tsx`, il redirect di `index.tsx`, il guard delle
+tab, il logout — ha solo passato `tsc` ed `expo lint`, non è mai stata
+toccata con un dito. Il primo giro reale (`npm run mobile`) è anche la prima
+prova del percorso completo: registrazione → armadio vuoto → primo capo
+caricato.
 
 **Nessun modello è mai stato interrogato.** Su questa macchina non c'erano
 credenziali di nessun provider, quindi il suggeritore e l'analisi delle foto sono

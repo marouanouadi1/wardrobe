@@ -9,6 +9,7 @@ del dominio.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta
 
 import bcrypt
@@ -16,6 +17,27 @@ import jwt
 
 ALGORITMO = "HS256"
 DURATA_TOKEN_GIORNI = 30
+
+_FORMATO_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def normalizza_email(email: str) -> str:
+    """Spazi e maiuscole non distinguono due account: senza questo, «A@b.it»
+    e «a@b.it» sarebbero due righe diverse in `utenti`."""
+    return email.strip().lower()
+
+
+def email_valida(email: str) -> bool:
+    """Una verifica di forma, non di consegna: basta a scartare un errore di
+    battitura, non serve `email-validator` (una dipendenza in più) per una
+    beta a pochi utenti."""
+    return bool(_FORMATO_EMAIL.match(email))
+
+
+def email_ammessa(email: str, ammesse: frozenset[str]) -> bool:
+    """`ammesse` vuota significa registrazione chiusa: nessuna email la
+    supera, di proposito — fail-closed, non fail-open."""
+    return email in ammesse
 
 
 def genera_hash(password: str) -> str:

@@ -29,8 +29,10 @@ export default function Calendario() {
   const giorniNelMese = new Date(adesso.getFullYear(), adesso.getMonth() + 1, 0).getDate()
   const oggi = adesso.getDate()
 
-  // In demo il diario non esiste ancora: ricostruiamo il mese dai capi e dalla
-  // loro data d'uso, che è l'informazione vera che abbiamo.
+  // Il backend registra ogni uso (`registra_uso`), ma non c'è ancora una rotta
+  // che lo rilegga: ricostruiamo il mese da `ultimo_uso`, un capo per giorno.
+  // Non è il diario vero — se più capi sono stati usati lo stesso giorno se ne
+  // vede solo uno — ma è l'informazione che abbiamo senza inventare nulla.
   const usiPerGiorno = new Map<number, string[]>()
   for (const capo of capi) {
     if (!capo.ultimo_uso) continue

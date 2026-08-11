@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from datetime import timedelta
 
-from conftest import ADESSO
+from conftest import ADESSO, intestazioni_utente
 from domain.models import EsitoEsecuzione, Valutazione, ValutazioneImmagine
 from handlers import playground
 from handlers._container import repository
@@ -18,7 +18,7 @@ from handlers._container import repository
 
 def _evento(*, run: str | None = None, corpo: dict[str, object] | None = None) -> dict[str, object]:
     return {
-        "headers": {"x-utente": "demo"},
+        "headers": intestazioni_utente(),
         "pathParameters": {},
         "queryStringParameters": {"run": run} if run else {},
         "body": json.dumps(corpo) if corpo is not None else "",

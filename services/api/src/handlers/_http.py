@@ -15,7 +15,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from domain.errors import ErroreDominio, RichiestaNonValida
+from domain.errors import ErroreDominio, NonAutenticato, RichiestaNonValida
 
 logger = logging.getLogger("wardrobe")
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
@@ -30,28 +30,24 @@ INTESTAZIONI = {
 
 
 def utente_id(evento: Evento) -> str:
-    """L'utente autenticato: da un JWT autofirmato (`JWT_SECRET`, vedi
-    `handlers/auth.py`), o dall'header X-Utente se `AUTH_APERTA=1`.
-
-    `AUTH_APERTA` è un interruttore distinto da DEV_MODE, che controlla altre
-    cose (pipeline inline, provider diretto): tenerli separati evita di dover
-    scegliere fra "niente pipeline inline" e "playground aperto a chiunque".
+    """L'utente autenticato: sempre e solo da un JWT valido (`JWT_SECRET`,
+    vedi `handlers/auth.py`). Nessun bypass: senza token, o con un token
+    scaduto o firmato con un altro segreto, la richiesta non ha un utente —
+    401, perché il client deve poterlo distinguere da un corpo malformato e
+    rimandare al login, non solo mostrare un errore generico.
     """
     intestazioni = {str(k).lower(): str(v) for k, v in (evento.get("headers") or {}).items()}
 
-    segreto = os.environ.get("JWT_SECRET")
+    segreto = os.environ["JWT_SECRET"]
     autorizzazione = intestazioni.get("authorization", "")
-    if segreto and autorizzazione.lower().startswith("bearer "):
+    if autorizzazione.lower().startswith("bearer "):
         from domain.autenticazione import verifica_token
 
         sub = verifica_token(autorizzazione[7:], segreto)
         if sub:
             return sub
 
-    if os.environ.get("AUTH_APERTA") == "1":
-        return intestazioni.get("x-utente", "demo")
-
-    raise RichiestaNonValida("richiesta senza utente autenticato")
+    raise NonAutenticato("richiesta senza un token valido")
 
 
 def corpo[M: BaseModel](evento: Evento, modello: type[M]) -> M:

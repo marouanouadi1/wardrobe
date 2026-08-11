@@ -58,6 +58,32 @@ class CredenzialiNonValide(ErroreDominio):
     stato_http = 401
 
 
+class NonAutenticato(ErroreDominio):
+    """Nessun JWT valido nella richiesta. Distinto da `RichiestaNonValida`
+    (422): qui il corpo può essere perfetto, manca solo chi lo firma — è
+    il segnale su cui l'app decide se rimandare al login."""
+
+    codice = "non_autenticato"
+    stato_http = 401
+
+
+class EmailGiaRegistrata(ErroreDominio):
+    codice = "email_gia_registrata"
+    stato_http = 409
+
+    def __init__(self, email: str) -> None:
+        super().__init__(f"«{email}» ha già un account")
+        self.email = email
+
+
+class RegistrazioneNonAmmessa(ErroreDominio):
+    """L'email non è nell'allowlist (`EMAIL_AMMESSE`) — o l'allowlist è vuota,
+    che significa registrazione chiusa del tutto."""
+
+    codice = "registrazione_non_ammessa"
+    stato_http = 403
+
+
 class LetturaNonValida(ErroreDominio):
     """Il modello di visione ha risposto qualcosa che non sappiamo usare."""
 

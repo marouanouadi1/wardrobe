@@ -109,6 +109,9 @@
     "RatingImmagine": {
       "$ref": "#/$defs/RatingImmagine"
     },
+    "Registrazione": {
+      "$ref": "#/$defs/Registrazione"
+    },
     "RichiestaAnalisi": {
       "$ref": "#/$defs/RichiestaAnalisi"
     },
@@ -745,7 +748,7 @@
     },
     "Credenziali": {
       "additionalProperties": false,
-      "description": "Il corpo di POST /auth/accedi. Niente self-signup: le righe in\n`utenti` le crea scripts/crea_utente.py, non un endpoint pubblico.",
+      "description": "Il corpo di POST /auth/accedi. Nessun requisito sulla password: qui\ndeve solo passare a `bcrypt.checkpw`, non essere accettabile — quello\nvincolo vive in `Registrazione`, non qui, altrimenti un account creato\nquando il minimo era più basso non potrebbe più accedere.",
       "properties": {
         "email": {
           "type": "string"
@@ -1788,6 +1791,25 @@
         "artefatti"
       ],
       "title": "RatingImmagine",
+      "type": "object"
+    },
+    "Registrazione": {
+      "additionalProperties": false,
+      "description": "Il corpo di POST /auth/registrati. L'allowlist (`EMAIL_AMMESSE`) e il\nhash della password li applica `handlers/auth.py`; qui c'è solo la forma\ndel dato, non la sua ammissibilità.",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "minLength": 8,
+          "type": "string"
+        }
+      },
+      "required": [
+        "email",
+        "password"
+      ],
+      "title": "Registrazione",
       "type": "object"
     },
     "RichiestaAnalisi": {

@@ -13,17 +13,33 @@ import json
 import pytest
 
 from adapters.llm import registry
+from conftest import costruisci_capo, intestazioni_utente
+from domain.models import TipoCapo
 from fakes import ProviderFinto
 from handlers import chat, playground
+from handlers._container import repository
 
 
 def _evento(*, corpo: dict[str, object] | None = None, utente: str = "demo") -> dict[str, object]:
     return {
-        "headers": {"x-utente": utente},
+        "headers": intestazioni_utente(utente),
         "pathParameters": {},
         "queryStringParameters": {},
         "body": json.dumps(corpo) if corpo is not None else "",
     }
+
+
+@pytest.fixture(autouse=True)
+def _capi_di_prova() -> None:
+    """Il finto LLM propone sempre gli id t1/b1/s1 (vedi `_risposta_modello`):
+    senza questi capi veri nell'armadio di «demo», `proposte_tolleranti` li
+    scarterebbe come inventati, e ogni turno arriverebbe senza proposte."""
+    for capo in (
+        costruisci_capo("t1", TipoCapo.TOP),
+        costruisci_capo("b1", TipoCapo.PANTALONI),
+        costruisci_capo("s1", TipoCapo.SCARPE),
+    ):
+        repository().salva_capo("demo", capo)
 
 
 def _corpo(risposta: dict[str, object]) -> object:

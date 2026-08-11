@@ -12,9 +12,11 @@ from typing import Any
 
 import pytest
 
-from domain.errors import RichiestaNonValida
+from conftest import ADESSO, costruisci_capo, intestazioni_utente
+from domain.errors import NonAutenticato
+from domain.models import PreferenzeStile, Profilo, StatoCapo, TipoCapo
 from handlers import auth, capi, foto, health, outfit, playground, profilo
-from handlers._container import repository_utenti
+from handlers._container import repository, repository_utenti
 from handlers._http import utente_id
 
 
@@ -26,7 +28,7 @@ def evento(
     utente: str = "demo",
 ) -> dict[str, Any]:
     return {
-        "headers": {"x-utente": utente},
+        "headers": intestazioni_utente(utente),
         "pathParameters": percorso or {},
         "queryStringParameters": query or {},
         "body": json.dumps(corpo) if corpo is not None else "",
@@ -35,6 +37,44 @@ def evento(
 
 def corpo_di(risposta: dict[str, Any]) -> Any:
     return json.loads(risposta["body"])
+
+
+@pytest.fixture(autouse=True)
+def _armadio_demo() -> None:
+    """Un armadio di test esplicito per l'utente «demo»: non più il seme di
+    produzione (rimosso da `adapters/memory.py`, vedi il piano di pulizia),
+    ma dati che vivono solo qui, con la forma che questi test si aspettano —
+    12 capi, di cui 3 da lavare, due colori noti per i test sull'outfit."""
+    capi_di_prova = [
+        costruisci_capo(
+            "t1", TipoCapo.TOP, nome="T-shirt bianca", hex_colore="#EFEBE3", preferito=True
+        ),
+        costruisci_capo("t2", TipoCapo.TOP, nome="T-shirt nera", stato=StatoCapo.DA_LAVARE),
+        costruisci_capo("t3", TipoCapo.TOP, nome="Camicia in lino", materiale="Lino 100%"),
+        costruisci_capo("t4", TipoCapo.TOP, nome="Maglione di lana"),
+        costruisci_capo(
+            "b1", TipoCapo.PANTALONI, nome="Jeans dritti", hex_colore="#46536B", preferito=True
+        ),
+        costruisci_capo("b2", TipoCapo.PANTALONI, nome="Jeans chiari", stato=StatoCapo.DA_LAVARE),
+        costruisci_capo("b3", TipoCapo.PANTALONI, nome="Pantalone cammello"),
+        costruisci_capo("b4", TipoCapo.PANTALONI, nome="Gonna nera"),
+        costruisci_capo("s1", TipoCapo.SCARPE, nome="Sneaker bianche"),
+        costruisci_capo("s2", TipoCapo.SCARPE, nome="Stivaletti neri", stato=StatoCapo.DA_LAVARE),
+        costruisci_capo("o1", TipoCapo.CAPOSPALLA, nome="Giacca di jeans"),
+        costruisci_capo("o2", TipoCapo.CAPOSPALLA, nome="Cardigan panna"),
+    ]
+    for capo in capi_di_prova:
+        repository().salva_capo("demo", capo)
+
+    repository().salva_profilo(
+        Profilo(
+            id="demo",
+            nome="Utente di prova",
+            citta="Milano",
+            preferenze=PreferenzeStile(stili=["comodo", "classico"], palette=["neutri", "terra"]),
+            creato_il=ADESSO,
+        )
+    )
 
 
 class TestSalute:
@@ -50,8 +90,7 @@ class TestAuth:
 
         repository_utenti().crea(email, genera_hash(password))
 
-    def test_credenziali_giuste_restituiscono_un_token(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setenv("JWT_SECRET", "segreto-di-test-lungo-abbastanza-per-hmac-sha256")
+    def test_credenziali_giuste_restituiscono_un_token(self):
         self._crea_utente("prova@esempio.it", "password-lunga")
 
         risposta = auth.accedi(
@@ -60,8 +99,7 @@ class TestAuth:
         assert risposta["statusCode"] == 200
         assert corpo_di(risposta)["token"]
 
-    def test_password_sbagliata_e_un_401(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setenv("JWT_SECRET", "segreto-di-test-lungo-abbastanza-per-hmac-sha256")
+    def test_password_sbagliata_e_un_401(self):
         self._crea_utente("prova2@esempio.it", "password-lunga")
 
         risposta = auth.accedi(
@@ -69,21 +107,15 @@ class TestAuth:
         )
         assert risposta["statusCode"] == 401
 
-    def test_email_inesistente_e_un_401(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.setenv("JWT_SECRET", "segreto-di-test-lungo-abbastanza-per-hmac-sha256")
-
+    def test_email_inesistente_e_un_401(self):
         risposta = auth.accedi(
             evento(corpo={"email": "fantasma@esempio.it", "password": "qualsiasi"}), None
         )
         assert risposta["statusCode"] == 401
 
-    def test_il_token_emesso_autentica_le_richieste_successive(
-        self, monkeypatch: pytest.MonkeyPatch
-    ):
-        """Con AUTH_APERTA spenta, solo il token — non più l'header X-Utente
-        senza verifica — deve identificare l'utente."""
-        monkeypatch.setenv("JWT_SECRET", "segreto-di-test-lungo-abbastanza-per-hmac-sha256")
-        monkeypatch.delenv("AUTH_APERTA", raising=False)
+    def test_il_token_emesso_autentica_le_richieste_successive(self):
+        """Solo il token — non più l'header X-Utente senza verifica, sparito
+        insieme ad AUTH_APERTA — deve identificare l'utente."""
         self._crea_utente("prova3@esempio.it", "password-lunga")
 
         risposta = auth.accedi(
@@ -93,17 +125,74 @@ class TestAuth:
 
         assert utente_id({"headers": {"authorization": f"Bearer {token}"}}) != "demo"
 
-    def test_senza_auth_aperta_ne_token_e_una_richiesta_non_valida(
-        self, monkeypatch: pytest.MonkeyPatch
-    ):
-        monkeypatch.delenv("AUTH_APERTA", raising=False)
-
-        with pytest.raises(RichiestaNonValida):
+    def test_senza_token_e_un_401(self):
+        with pytest.raises(NonAutenticato):
             utente_id({"headers": {}})
 
 
+class TestRegistrazione:
+    def test_email_ammessa_si_registra_ed_entra_subito(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("EMAIL_AMMESSE", "nuovo@esempio.it,altro@esempio.it")
+
+        risposta = auth.registra(
+            evento(corpo={"email": "nuovo@esempio.it", "password": "password-lunga"}), None
+        )
+        assert risposta["statusCode"] == 201
+        assert corpo_di(risposta)["token"]
+
+    def test_email_fuori_allowlist_e_un_403(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("EMAIL_AMMESSE", "nuovo@esempio.it")
+
+        risposta = auth.registra(
+            evento(corpo={"email": "estraneo@esempio.it", "password": "password-lunga"}), None
+        )
+        assert risposta["statusCode"] == 403
+        assert corpo_di(risposta)["errore"] == "registrazione_non_ammessa"
+
+    def test_allowlist_vuota_e_un_403(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.delenv("EMAIL_AMMESSE", raising=False)
+
+        risposta = auth.registra(
+            evento(corpo={"email": "chiunque@esempio.it", "password": "password-lunga"}), None
+        )
+        assert risposta["statusCode"] == 403
+
+    def test_email_gia_registrata_e_un_409(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("EMAIL_AMMESSE", "duplicato@esempio.it")
+        auth.registra(
+            evento(corpo={"email": "duplicato@esempio.it", "password": "password-lunga"}), None
+        )
+
+        risposta = auth.registra(
+            evento(corpo={"email": "duplicato@esempio.it", "password": "un-altra-password"}), None
+        )
+        assert risposta["statusCode"] == 409
+        assert corpo_di(risposta)["errore"] == "email_gia_registrata"
+
+    def test_password_corta_e_un_422(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("EMAIL_AMMESSE", "corta@esempio.it")
+
+        risposta = auth.registra(
+            evento(corpo={"email": "corta@esempio.it", "password": "corta"}), None
+        )
+        assert risposta["statusCode"] == 422
+
+    def test_email_normalizzata_prima_del_confronto(self, monkeypatch: pytest.MonkeyPatch):
+        """Maiuscole e spazi non devono far sembrare un'email invitata come
+        se non lo fosse, né creare due account per la stessa persona."""
+        monkeypatch.setenv("EMAIL_AMMESSE", "spazio@esempio.it")
+
+        risposta = auth.registra(
+            evento(corpo={"email": "  Spazio@Esempio.It  ", "password": "password-lunga"}), None
+        )
+        assert risposta["statusCode"] == 201
+
+        trovato = repository_utenti().trova_per_email("spazio@esempio.it")
+        assert trovato is not None
+
+
 class TestCapi:
-    def test_elenca_l_armadio_seminato(self):
+    def test_elenca_l_armadio_di_prova(self):
         risposta = capi.elenca(evento(), None)
         assert risposta["statusCode"] == 200
         dati = corpo_di(risposta)
@@ -265,7 +354,7 @@ class TestProfilo:
         dati = corpo_di(profilo.leggi(evento(utente="nuovo-utente"), None))
         assert dati["id"] == "nuovo-utente"
 
-    def test_legge_il_profilo_seminato(self):
+    def test_legge_il_profilo_di_prova(self):
         dati = corpo_di(profilo.leggi(evento(), None))
         assert dati["citta"] == "Milano"
         assert "neutri" in dati["preferenze"]["palette"]

@@ -61,16 +61,10 @@ command -v uv >/dev/null 2>&1 || {
   exit 1
 }
 
-# Docker è il modo comune di avere Postgres in locale, ma non l'unico: chi
-# non ha RAM per Docker Desktop (es. un PC da 8GB) installa Postgres nativo e
-# non ha `docker` in PATH affatto. Qui non è un errore: si salta tutto il
-# blocco Docker sotto e ci si affida al servizio nativo già avviato dal
-# sistema operativo.
-CON_DOCKER=0
-# Sotto `set -e`, un `&&` che fallisce senza un `|| ...` finale farebbe
-# uscire subito lo script proprio nel caso che deve invece gestire (Docker
-# assente): il `|| true` finale è lì apposta, non è decorativo.
-"${COMPOSE[@]}" version >/dev/null 2>&1 && docker info >/dev/null 2>&1 && CON_DOCKER=1 || true
+"${COMPOSE[@]}" version >/dev/null 2>&1 && docker info >/dev/null 2>&1 || {
+  echo "✗ Serve Docker Desktop (o un daemon Docker) in esecuzione: qui Postgres gira sempre in un container." >&2
+  exit 1
+}
 
 [[ -f "$RADICE/services/api/.env" ]] || {
   echo "⚠ Manca services/api/.env — copialo da .env.example e mettici la tua ANTHROPIC_API_KEY."
@@ -85,21 +79,17 @@ fi
 
 # ---------------------------------------------------------------- Postgres
 
-if [[ "$CON_DOCKER" -eq 1 ]]; then
-  echo "→ Postgres (Docker)"
-  # --wait sfrutta l'healthcheck già scritto in docker-compose.yml
-  # (pg_isready): quando questa riga ritorna, il database accetta connessioni
-  # davvero — niente sleep a caso, nessuna dipendenza tipo wait-on. Il
-  # timeout è largo (120s, non i 50s dell'healthcheck) perché una initdb a
-  # freddo su WSL2 può sforare.
-  "${COMPOSE[@]}" up --detach --wait --wait-timeout 120 postgres || {
-    echo "✗ Postgres non è diventato pronto in tempo." >&2
-    echo "  Guarda cosa dice:  docker compose logs postgres" >&2
-    exit 1
-  }
-else
-  echo "→ Postgres nativo (Docker non è disponibile: presumo un servizio Postgres già installato e avviato)"
-fi
+echo "→ Postgres (Docker)"
+# --wait sfrutta l'healthcheck già scritto in docker-compose.yml
+# (pg_isready): quando questa riga ritorna, il database accetta connessioni
+# davvero — niente sleep a caso, nessuna dipendenza tipo wait-on. Il
+# timeout è largo (120s, non i 50s dell'healthcheck) perché una initdb a
+# freddo su WSL2 può sforare.
+"${COMPOSE[@]}" up --detach --wait --wait-timeout 120 postgres || {
+  echo "✗ Postgres non è diventato pronto in tempo." >&2
+  echo "  Guarda cosa dice:  docker compose logs postgres" >&2
+  exit 1
+}
 
 # Applica le migrazioni mancanti — funziona identico su Docker e su un
 # Postgres nativo, perché parla solo DATABASE_URL, mai docker compose. È

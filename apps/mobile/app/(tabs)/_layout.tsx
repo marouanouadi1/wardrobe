@@ -7,9 +7,10 @@
  * del resto dell'app.
  */
 
-import { Tabs } from 'expo-router'
+import { Redirect, Tabs } from 'expo-router'
 import { View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useSessione } from '../../src/dati/sessione'
 import { colori, ombre, raggi } from '../../src/tema/tokens'
 import { Icona, type NomeIcona, Toccabile } from '../../src/ui/base'
 import { Etichetta } from '../../src/ui/testo'
@@ -24,6 +25,13 @@ const VOCI: { nome: string; etichetta: string; icona: NomeIcona; centrale?: bool
 
 export default function DisposizioneSchede() {
   const bordi = useSafeAreaInsets()
+  const { token, pronto } = useSessione()
+
+  // `index.tsx` manda già al login chi non ha un token, ma questo layout
+  // resta il vero cancello: uno schema `wardrobe://` (`app.json`) può portare
+  // qui direttamente, scavalcando quel redirect. Non decide finché la
+  // sessione non ha letto il portachiavi almeno una volta.
+  if (pronto && !token) return <Redirect href="/accedi" />
 
   return (
     <Tabs

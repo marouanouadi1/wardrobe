@@ -22,13 +22,14 @@ services:
       timeout: 3s
       retries: 10
 
-  # Solo VPS. Le chiavi dei provider, JWT_SECRET e BASE_URL_PUBBLICA vengono
-  # da services/api/.env (copiato da .env.example) — mai da questo file, che
-  # è versionato. I tre flag qui sotto sono invece fissati apposta, non
-  # lasciati al .env: `environment:` vince sempre su `env_file:` in Compose,
-  # quindi anche un .env dimenticato con `DEV_MODE=1` (comodo per un test
-  # rapido in locale) non può riaprire playground o bypass di autenticazione
-  # su un server pubblico.
+  # Solo VPS. Le chiavi dei provider, JWT_SECRET, EMAIL_AMMESSE e
+  # BASE_URL_PUBBLICA vengono da services/api/.env (copiato da .env.example)
+  # — mai da questo file, che è versionato. I due flag qui sotto sono invece
+  # fissati apposta, non lasciati al .env: `environment:` vince sempre su
+  # `env_file:` in Compose, quindi anche un .env dimenticato con `DEV_MODE=1`
+  # (comodo per un test rapido in locale) non può riaprire il playground su
+  # un server pubblico. Il login non ha più un bypass da tenere chiuso: senza
+  # un JWT valido, `handlers/_http.py` risponde sempre 401.
   api:
     build:
       context: ./services/api
@@ -41,7 +42,6 @@ services:
       - ./services/api/.env
     environment:
       DEV_MODE: "0"
-      AUTH_APERTA: "0"
       PLAYGROUND_ABILITATO: "0"
       DATABASE_URL: "host=postgres port=5432 dbname=wardrobe user=wardrobe password=wardrobe"
       CARTELLA_FOTO: /dati/foto

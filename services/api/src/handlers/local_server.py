@@ -12,6 +12,7 @@ import json
 import os
 import re
 from collections.abc import Callable
+from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -29,11 +30,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 os.environ.setdefault("DEV_MODE", "1")
-# Senza queste due, disattivate di proposito fuori da un ambiente di
-# sviluppo (vedi handlers/playground.py e handlers/_http.py), il playground e
-# l'accesso senza login smetterebbero di funzionare in locale.
+# Disattivato di proposito fuori da un ambiente di sviluppo (vedi
+# handlers/playground.py): senza, il playground smetterebbe di funzionare in
+# locale. Il login, invece, non ha più un bypass: serve sempre un JWT valido
+# (vedi handlers/_http.py), anche qui.
 os.environ.setdefault("PLAYGROUND_ABILITATO", "1")
-os.environ.setdefault("AUTH_APERTA", "1")
 
 from handlers import (  # noqa: E402
     analisi,
@@ -54,6 +55,7 @@ Handler = Callable[[dict[str, Any], Any], dict[str, Any]]
 ROTTE: list[tuple[str, re.Pattern[str], Handler]] = [
     ("GET", re.compile(r"^/salute$"), health.salute),
     ("POST", re.compile(r"^/auth/accedi$"), auth.accedi),
+    ("POST", re.compile(r"^/auth/registrati$"), auth.registra),
     ("POST", re.compile(r"^/foto/upload$"), foto.upload),
     ("GET", re.compile(r"^/capi$"), capi.elenca),
     ("POST", re.compile(r"^/capi$"), capi.crea),
@@ -86,8 +88,11 @@ ROTTE: list[tuple[str, re.Pattern[str], Handler]] = [
 # meccanismo di `ROTTE` sopra, che decodifica sempre il corpo come stringa.
 # Serve a completare `ArchivioInMemoria`/`ArchivioFileSystem`: la loro
 # `url_upload()`/`url_lettura()` puntano qui, e la PUT vera dell'app e la GET
-# che l'app fa per mostrare la foto passano di qui.
-_PATTERN_DEV_FOTO = re.compile(r"^/dev/foto/(?P<chiave>.+)$")
+# che l'app fa per mostrare la foto passano di qui. Non autenticata da un
+# token — la firma nella query string (`?scade=...&firma=...`, verificata
+# sotto) è il solo controllo: senza, chiunque conosca una chiave potrebbe
+# leggere o sovrascrivere qualunque foto sull'archivio.
+_PATTERN_FOTO = re.compile(r"^/foto/(?P<chiave>.+)$")
 
 
 class Ponte(BaseHTTPRequestHandler):
@@ -131,22 +136,42 @@ class Ponte(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(corpo)
 
-    def _dev_foto_put(self, chiave: str) -> None:
-        """PUT /dev/foto/{chiave} — la PUT vera dell'app, corpo grezzo (JPEG/PNG).
+    def _firma_valida(self, chiave: str, query: str) -> bool:
+        from domain.firma_foto import firma_valida
+
+        parametri = parse_qs(query)
+        scade = parametri.get("scade", [""])[0]
+        firma = parametri.get("firma", [""])[0]
+        if not scade.isdigit() or not firma:
+            return False
+        adesso_epoch = int(datetime.now(UTC).timestamp())
+        return firma_valida(chiave, int(scade), firma, os.environ["JWT_SECRET"], adesso_epoch)
+
+    def _foto_put(self, chiave: str, query: str) -> None:
+        """PUT /foto/{chiave}?scade=...&firma=... — la PUT vera dell'app, corpo
+        grezzo (JPEG/PNG).
 
         Sia `ArchivioInMemoria` sia `ArchivioFileSystem` la usano come
-        bersaglio della loro `url_upload()`: qui basta chiamare `salva()`.
+        bersaglio della loro `url_upload()`: qui basta chiamare `salva()`,
+        dopo aver verificato che la firma sia quella emessa da loro.
         """
+        if not self._firma_valida(chiave, query):
+            self._rispondi({"statusCode": 403, "body": json.dumps({"errore": "firma_non_valida"})})
+            return
         lunghezza = int(self.headers.get("content-length") or 0)
         contenuto = self.rfile.read(lunghezza) if lunghezza else b""
         content_type = self.headers.get("content-type") or "application/octet-stream"
         archivio_foto().salva(chiave, contenuto, content_type)
         self._rispondi({"statusCode": 204, "body": ""})
 
-    def _dev_foto_get(self, chiave: str) -> None:
-        """GET /dev/foto/{chiave} — l'app la legge per mostrare la miniatura."""
+    def _foto_get(self, chiave: str, query: str) -> None:
+        """GET /foto/{chiave}?scade=...&firma=... — l'app la legge per
+        mostrare la miniatura."""
         from domain.errors import ErroreDominio
 
+        if not self._firma_valida(chiave, query):
+            self._rispondi({"statusCode": 403, "body": json.dumps({"errore": "firma_non_valida"})})
+            return
         try:
             contenuto, media_type = archivio_foto().leggi(chiave)
         except ErroreDominio:
@@ -160,9 +185,10 @@ class Ponte(BaseHTTPRequestHandler):
         self.wfile.write(contenuto)
 
     def do_GET(self) -> None:
-        trovato = _PATTERN_DEV_FOTO.match(urlparse(self.path).path)
+        indirizzo = urlparse(self.path)
+        trovato = _PATTERN_FOTO.match(indirizzo.path)
         if trovato:
-            self._dev_foto_get(trovato.group("chiave"))
+            self._foto_get(trovato.group("chiave"), indirizzo.query)
             return
         self._instrada("GET")
 
@@ -173,9 +199,10 @@ class Ponte(BaseHTTPRequestHandler):
         self._instrada("PATCH")
 
     def do_PUT(self) -> None:
-        trovato = _PATTERN_DEV_FOTO.match(urlparse(self.path).path)
+        indirizzo = urlparse(self.path)
+        trovato = _PATTERN_FOTO.match(indirizzo.path)
         if trovato:
-            self._dev_foto_put(trovato.group("chiave"))
+            self._foto_put(trovato.group("chiave"), indirizzo.query)
             return
         self._instrada("PUT")
 
@@ -186,7 +213,39 @@ class Ponte(BaseHTTPRequestHandler):
         print(f"  {self.command} {self.path}")
 
 
+def _controlla_configurazione() -> None:
+    """`JWT_SECRET` serve sempre, anche in `DEV_MODE=1`: firma sia i token di
+    login sia le URL delle foto (`_http.py`, `firma_foto.py`), e un `.env.example`
+    che la dichiara «obbligatoria, sempre» non deve poi lasciarla passare vuota
+    in silenzio — un `JWT_SECRET=""` firmerebbe comunque, solo con una chiave
+    che chiunque conosce.
+
+    `DATABASE_URL`/`CARTELLA_FOTO` invece restano facoltative in `DEV_MODE=1`:
+    senza, il backend resta in memoria di proposito (vedi `adapters/memory.py`),
+    comodo per provare. Fuori da `DEV_MODE` un default silenzioso lì sarebbe un
+    rischio, non una comodità: un `.env` dimenticato farebbe partire un server
+    pubblico con i capi in memoria, senza dirlo a nessuno finché qualcuno non
+    se ne accorge da fuori."""
+    if not os.environ.get("JWT_SECRET"):
+        raise SystemExit(
+            "✗ Manca JWT_SECRET: senza non firmo né i token di login né le URL "
+            "delle foto. Aggiungi in services/api/.env una riga JWT_SECRET=... "
+            "con una stringa lunga e casuale — es. genera con `openssl rand "
+            "-hex 32` e incolla il risultato, il `.env` non esegue comandi."
+        )
+    if os.environ.get("DEV_MODE") != "1":
+        mancanti = [nome for nome in ("DATABASE_URL", "CARTELLA_FOTO") if not os.environ.get(nome)]
+        if mancanti:
+            variabili = ", ".join(mancanti)
+            raise SystemExit(
+                f"✗ Mancano {variabili} fuori da DEV_MODE: non parto con un "
+                "backend che tiene i capi in memoria su un ambiente che non "
+                "è di sviluppo."
+            )
+
+
 def main() -> None:
+    _controlla_configurazione()
     porta = int(os.environ.get("PORTA", "8787"))
     persistenza = "Postgres" if os.environ.get("DATABASE_URL") else "memoria (si azzera al riavvio)"
     print(f"API di Wardrobe in ascolto sulla porta {porta} — capi su {persistenza}")

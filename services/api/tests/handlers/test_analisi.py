@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from conftest import LETTURA_BUONA
+from conftest import LETTURA_BUONA, intestazioni_utente
 from domain.errors import ErroreProvider
 from fakes import ProviderFinto
 from handlers import _container, analisi
@@ -22,7 +22,7 @@ def _evento_http(
     *, corpo: dict[str, object] | None = None, percorso: dict[str, str] | None = None
 ) -> dict[str, object]:
     return {
-        "headers": {"x-utente": "demo"},
+        "headers": intestazioni_utente(),
         "pathParameters": percorso or {},
         "body": json.dumps(corpo) if corpo is not None else "",
     }

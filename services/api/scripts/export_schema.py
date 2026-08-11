@@ -77,6 +77,7 @@ RISPOSTE = (
 
 RICHIESTE = (
     models.Credenziali,
+    models.Registrazione,
     models.Vestizione,
     models.NuovoOutfit,
     models.NuovoCapoManuale,

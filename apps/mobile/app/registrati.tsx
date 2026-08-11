@@ -1,8 +1,9 @@
 /**
- * Il login: email e password, niente altro.
+ * La registrazione: email, password, conferma password.
  *
- * Chi non ha ancora un account passa da «Registrati» — l'allowlist del
- * server (`EMAIL_AMMESSE`) decide chi può crearne uno, non questa schermata.
+ * Pubblica ma non aperta: l'allowlist vive sul server (`EMAIL_AMMESSE`), non
+ * qui — questa schermata non sa in anticipo chi può registrarsi, lo scopre
+ * dalla risposta del backend, come qualunque altro errore.
  */
 
 import { router } from 'expo-router'
@@ -27,28 +28,41 @@ const stileCampo = {
   color: colori.inchiostro,
 } as const
 
-export default function Accedi() {
+/** Solo una verifica di forma, come sul backend (`domain/autenticazione.py`):
+ * basta a scartare un errore di battitura prima di scomodare la rete. */
+const FORMATO_EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+
+export default function Registrati() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [conferma, setConferma] = useState('')
   const [caricamento, setCaricamento] = useState(false)
   const [errore, setErrore] = useState<string | null>(null)
   const bordi = useSafeAreaInsets()
   const { entra } = useSessione()
 
-  const pronto = email.trim().length > 0 && password.length > 0 && !caricamento
+  const emailValida = FORMATO_EMAIL.test(email.trim())
+  const passwordValida = password.length >= 8
+  const passwordCorrispondono = password === conferma
+  const pronto = emailValida && passwordValida && passwordCorrispondono && !caricamento
 
-  async function accedi() {
+  async function registrati() {
     setErrore(null)
     setCaricamento(true)
     try {
-      const risposta = await api.auth.accedi({ email: email.trim(), password })
-      // `ArchivioProvider` osserva il token e ricarica da solo quando cambia:
-      // non serve chiamarlo qui, e farlo ora chiamerebbe comunque la sua
-      // closure di questo render, con il token ancora quello di prima.
+      const risposta = await api.auth.registrati({ email: email.trim(), password })
+      // `ArchivioProvider` osserva il token e carica l'armadio (vuoto, per un
+      // account nuovo) da solo quando cambia.
       entra(risposta.token)
       router.replace('/')
     } catch (e) {
-      setErrore(e instanceof ErroreApi ? e.message : 'Impossibile contattare il server.')
+      if (e instanceof ErroreApi && e.codice === 'registrazione_non_ammessa') {
+        setErrore('Questa email non è nella lista degli inviti: chiedi a chi gestisce il server.')
+      } else if (e instanceof ErroreApi && e.codice === 'email_gia_registrata') {
+        setErrore('C\'è già un account con questa email: prova ad accedere invece.')
+      } else {
+        setErrore(e instanceof ErroreApi ? e.message : 'Impossibile contattare il server.')
+      }
     } finally {
       setCaricamento(false)
     }
@@ -70,8 +84,8 @@ export default function Accedi() {
         }}
       >
         <View style={{ gap: spazi.xs, marginBottom: spazi.l }}>
-          <Titolo>Bentornato.</Titolo>
-          <Corpo tono="tenue">Accedi con le credenziali che ti sono state date.</Corpo>
+          <Titolo>Crea il tuo account.</Titolo>
+          <Corpo tono="tenue">Serve un invito: la tua email deve essere nella lista.</Corpo>
         </View>
 
         <View style={{ gap: spazi.s }}>
@@ -95,31 +109,49 @@ export default function Accedi() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            textContentType="password"
-            placeholder="••••••••"
+            textContentType="newPassword"
+            placeholder="almeno 8 caratteri"
+            placeholderTextColor="rgba(21,21,26,0.4)"
+            style={stileCampo}
+          />
+        </View>
+
+        <View style={{ gap: spazi.s }}>
+          <Etichetta>Conferma password</Etichetta>
+          <TextInput
+            value={conferma}
+            onChangeText={setConferma}
+            secureTextEntry
+            textContentType="newPassword"
+            placeholder="ripetila"
             placeholderTextColor="rgba(21,21,26,0.4)"
             style={stileCampo}
             onSubmitEditing={() => {
-              if (pronto) void accedi()
+              if (pronto) void registrati()
             }}
           />
+          {conferma.length > 0 && !passwordCorrispondono ? (
+            <Corpo taglia={12.5} style={{ color: colori.corallo }}>
+              Le due password non coincidono.
+            </Corpo>
+          ) : null}
         </View>
 
         {errore ? <Corpo style={{ color: colori.corallo }}>{errore}</Corpo> : null}
 
         <BottonePrimario
-          testo={caricamento ? 'Accesso in corso…' : 'Accedi'}
-          onPress={() => void accedi()}
+          testo={caricamento ? 'Creazione in corso…' : 'Crea account'}
+          onPress={() => void registrati()}
           disabilitato={!pronto}
         />
 
         <Toccabile
-          onPress={() => router.push('/registrati')}
+          onPress={() => router.back()}
           scala={0}
           style={{ alignItems: 'center', paddingVertical: 8 }}
         >
           <Corpo taglia={13.5} tono="tenue">
-            Non hai un account? <Forte taglia={13.5}>Registrati</Forte>
+            Hai già un account? <Forte taglia={13.5}>Accedi</Forte>
           </Corpo>
         </Toccabile>
       </View>
