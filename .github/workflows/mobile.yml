@@ -16,10 +16,14 @@ on:
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/mobile.yml"
+  workflow_dispatch:
 
 concurrency:
   group: mobile-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: write
 
 jobs:
   checks:
@@ -49,8 +53,8 @@ jobs:
       - name: Export web
         run: npm run build:web --workspace @wardrobe/mobile
 
-  build:
-    name: build EAS (preview)
+  release:
+    name: bump versione + build EAS + pubblica release
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs: [checks]
@@ -64,13 +68,49 @@ jobs:
 
       - run: npm ci
 
+      # Unica fonte di verità: apps/mobile/app.json (expo.version). Il commit
+      # generato qui ha [skip ci] nel messaggio apposta: tocca apps/mobile/**,
+      # che rientra nei path che fanno partire questo stesso workflow — senza
+      # [skip ci] il push sotto si rimetterebbe in coda da solo.
+      - name: Bump versione app
+        id: bump
+        run: |
+          NEW_VERSION=$(node scripts/bump-mobile-version.mjs)
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Commit + tag + push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile/app.json apps/mobile/package.json
+          git commit -m "chore(mobile): bump versione a ${{ steps.bump.outputs.version }} [skip ci]"
+          git tag "mobile-v${{ steps.bump.outputs.version }}"
+          git push origin HEAD:main --follow-tags
+
       - uses: expo/expo-github-action@v9
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      # Richiede EXPO_TOKEN nei secrets del repo. Finché non c'è, questo job
-      # va tenuto disabilitato: il gate vero sulle PR è il job `checks`.
+      # --wait fa fallire lo step (e quindi l'intero job, senza pubblicare
+      # nessuna release) se la build EAS va in errore. --json implica
+      # --non-interactive.
       - name: Build Android preview
-        run: eas build --platform android --profile preview --non-interactive --no-wait
+        id: eas
         working-directory: apps/mobile
+        run: |
+          eas build --platform android --profile preview --non-interactive --wait --json > /tmp/eas-build.json
+          cat /tmp/eas-build.json
+          BUILD_URL=$(jq -r 'if type == "array" then .[0].artifacts.buildUrl else .artifacts.buildUrl end' /tmp/eas-build.json)
+          echo "apk_url=$BUILD_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Scarica APK
+        run: curl -L -o wardrobe.apk "${{ steps.eas.outputs.apk_url }}"
+
+      - name: Pubblica GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "mobile-v${{ steps.bump.outputs.version }}" wardrobe.apk \
+            --title "Wardrobe mobile v${{ steps.bump.outputs.version }}" \
+            --notes "Build automatica da main (${{ github.sha }})."

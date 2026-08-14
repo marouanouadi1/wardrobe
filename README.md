@@ -151,6 +151,12 @@ migrazioni e le scelte deliberate (playground abilitato per il primo giro di
 prova, Postgres non raggiungibile da Internet) — è in
 [`docs/deploy.md`](docs/deploy.md).
 
+Ogni merge su `main` fa partire da sola la parte di rilascio che tocca:
+un merge sul backend rideploya l'API sul VPS, un merge sull'app fa un bump
+patch della versione, builda un nuovo APK con EAS e lo pubblica come GitHub
+Release. Dettagli in [`docs/deploy.md`](docs/deploy.md) e nei workflow
+`.github/workflows/{api,mobile}.yml`.
+
 ## Stato
 
 ### Verificato su questa macchina

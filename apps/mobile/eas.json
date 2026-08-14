@@ -6,11 +6,12 @@
   "build": {
     "preview": {
       "distribution": "internal",
+      "autoIncrement": true,
       "android": {
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "INCOLLA_QUI_L_URL_DELL_API_DOPO_IL_DEPLOY"
+        "EXPO_PUBLIC_API_URL": "https://api.ilmioarmadio.xyz"
       }
     }
   },

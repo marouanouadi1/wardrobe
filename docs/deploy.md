@@ -25,7 +25,8 @@ commit.
 
 **Il repo è privato**: niente `git clone` sul server (richiederebbe una
 chiave di deploy da gestire per un solo aggiornamento occasionale). Si manda
-la copia di lavoro via `rsync`, dal proprio computer:
+la copia di lavoro via `rsync`, dal proprio computer o, dal deploy automatico
+descritto sotto, da un runner di GitHub Actions:
 
 ```bash
 rsync -avz --exclude node_modules --exclude .venv --exclude .git --exclude .env -e ssh ./ marouan@89.167.15.22:~/wardrobe/
@@ -35,8 +36,41 @@ Questo sovrascrive il codice sul server ma **non** i due file `.env` (esclusi
 apposta): quelli restano quelli scritti a mano sul server, mai versionati,
 mai transitati da qui.
 
-Per aggiornare il server dopo una modifica al codice: si rilancia lo stesso
-`rsync`, poi `docker compose up -d --build` (sotto).
+Per aggiornare il server a mano dopo una modifica al codice: si rilancia lo
+stesso `rsync`, poi `docker compose up -d --build` (sotto). In pratica serve
+solo per un hotfix diretto sul server: il percorso normale è quello
+automatico.
+
+## Deploy automatico da CI
+
+Il job `deploy` in `.github/workflows/api.yml` fa da solo, a ogni merge su
+`main` che tocca `services/api/**` o `packages/contracts/**`, esattamente i
+passi manuali sopra: lo stesso comando `rsync` (stesse esclusioni, `.env`
+compresi) da un runner GitHub Actions, poi `docker compose up -d --build` via
+SSH, poi `curl --fail .../salute` per accorgersi subito se il deploy ha
+rotto qualcosa.
+
+Serve una chiave SSH **dedicata al deploy**, diversa da quella personale usata
+da terminale (così ruotarla o revocarla non tocca il proprio accesso
+normale):
+
+```bash
+ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/wardrobe_deploy_key -N ""
+ssh-copy-id -i ~/.ssh/wardrobe_deploy_key.pub marouan@89.167.15.22
+gh secret set VPS_SSH_KEY < ~/.ssh/wardrobe_deploy_key
+```
+
+L'host key pubblica del VPS è committata in `.github/deploy/known_hosts`
+(non è un segreto, è pensata per essere pubblica) così la CI non si fida "al
+buio" del server a ogni run. Va rigenerata solo se il server viene
+ricreato da zero (nuovo host, nuova chiave):
+
+```bash
+ssh-keyscan -H 89.167.15.22 > .github/deploy/known_hosts
+```
+
+Un push su `main` che tocca solo `apps/mobile` non fa partire questo job:
+il backend non viene mai riavviato senza motivo.
 
 ## I due `.env` sul server
 
