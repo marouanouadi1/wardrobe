@@ -85,7 +85,10 @@ jobs:
           git add apps/mobile/app.json apps/mobile/package.json
           git commit -m "chore(mobile): bump versione a ${{ steps.bump.outputs.version }} [skip ci]"
           git tag "mobile-v${{ steps.bump.outputs.version }}"
-          git push origin HEAD:main --follow-tags
+          git push origin HEAD:main
+          # --follow-tags non spinge tag lightweight come questo (serve un tag
+          # annotato, -a): push esplicito, non implicito.
+          git push origin "mobile-v${{ steps.bump.outputs.version }}"
 
       - uses: expo/expo-github-action@v9
         with:
