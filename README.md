@@ -142,6 +142,15 @@ registro, e nessuna schermata cambia.
 | `npm run db:down` | spegne Postgres |
 | `npm run db:migrate` | riapplica lo schema (serve solo su un volume vecchio) |
 
+## Produzione
+
+Un VPS, un dominio, tre container Docker (`postgres`, `api`, `caddy` per
+l'HTTPS). Il runbook completo — come ci arriva il codice (il repo è privato,
+niente `git clone` sul server), i due `.env` da scrivere a mano, avvio,
+migrazioni e le scelte deliberate (playground abilitato per il primo giro di
+prova, Postgres non raggiungibile da Internet) — è in
+[`docs/deploy.md`](docs/deploy.md).
+
 ## Stato
 
 ### Verificato su questa macchina
@@ -161,6 +170,18 @@ registro, e nessuna schermata cambia.
   provider_non_configurato** senza credenziali (non un 500), e
   `/capi/analisi` esegue la pipeline in linea riportando il motivo del
   fallimento
+
+### Verificato sul VPS di produzione
+
+- Deploy vero su Hetzner (Ubuntu 24.04, Docker), dominio vero
+  (`ilmioarmadio.xyz`) e certificato Let's Encrypt emesso da Caddy al primo
+  avvio — non solo un `Caddyfile` sintatticamente valido mai avviato
+  davvero. Dettagli in [`docs/deploy.md`](docs/deploy.md).
+- `GET /salute`, `POST /auth/registrati` e la firma delle URL delle foto
+  (`BASE_URL_PUBBLICA`, verificato leggendo il campo `url` di **POST
+  /foto/upload**: comincia per `https://api.ilmioarmadio.xyz`, non per un IP
+  interno) provati con richieste vere contro il server pubblico, non solo in
+  locale.
 
 ### Non verificato, e conta saperlo
 
@@ -188,12 +209,6 @@ in nessun caso.
 ricostruzione 3D, nessuno strumento per il corpo della persona: la direzione
 dell'ADR 0004 è scritta, non implementata. Quello che c'è è il manichino a
 primitive tinte.
-
-**Il deploy su un VPS pubblico non è mai stato eseguito davvero.** L'immagine
-Docker (`services/api/Dockerfile`) costruisce e gira in locale, e il
-`Caddyfile` è sintatticamente valido, ma senza un dominio vero puntato a un
-IP pubblico non si è mai visto Let's Encrypt emettere un certificato reale
-per questo progetto.
 
 **Gli id dei modelli non-Anthropic vanno confermati.** Quelli di Claude vengono
 dall'SDK ufficiale; `gpt-5.1` e `gemini-2.5-pro` sono i nomi indicati nel design e

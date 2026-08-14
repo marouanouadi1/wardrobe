@@ -9,10 +9,21 @@ services:
     container_name: wardrobe-postgres
     environment:
       POSTGRES_USER: wardrobe
-      POSTGRES_PASSWORD: wardrobe
+      # "wardrobe" resta il default per npm run dev/db:up — Postgres in
+      # locale non è mai raggiungibile da fuori questa macchina, quindi non
+      # è un rischio. Su un VPS, dove la porta è raggiungibile da Internet,
+      # un .env nella radice del repo (mai versionato, vedi .env.example) con
+      # POSTGRES_PASSWORD=<qualcosa di lungo e casuale> sovrascrive questo
+      # default — vale sia qui sia nel DATABASE_URL del servizio api sotto.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wardrobe}
       POSTGRES_DB: wardrobe
     ports:
-      - "5432:5432"
+      # Solo loopback: su un VPS, "5432:5432" senza host resterebbe
+      # raggiungibile da Internet anche con ufw attivo — Docker scrive le sue
+      # regole iptables prima di quelle di ufw, che quindi non lo vedrebbe
+      # mai. Il client Postgres locale (npm run dev/db:up) si collega
+      # comunque a "localhost", quindi qui non cambia nulla in sviluppo.
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./services/api/migrations:/docker-entrypoint-initdb.d:ro
@@ -24,12 +35,16 @@ services:
 
   # Solo VPS. Le chiavi dei provider, JWT_SECRET, EMAIL_AMMESSE e
   # BASE_URL_PUBBLICA vengono da services/api/.env (copiato da .env.example)
-  # — mai da questo file, che è versionato. I due flag qui sotto sono invece
+  # — mai da questo file, che è versionato. I flag qui sotto sono invece
   # fissati apposta, non lasciati al .env: `environment:` vince sempre su
   # `env_file:` in Compose, quindi anche un .env dimenticato con `DEV_MODE=1`
-  # (comodo per un test rapido in locale) non può riaprire il playground su
-  # un server pubblico. Il login non ha più un bypass da tenere chiuso: senza
-  # un JWT valido, `handlers/_http.py` risponde sempre 401.
+  # non può far partire un backend in memoria su un server pubblico. Il login
+  # non ha più un bypass da tenere chiuso: senza un JWT valido,
+  # `handlers/_http.py` risponde sempre 401. `PLAYGROUND_ABILITATO: "1"` è
+  # una scelta deliberata per questo primo giro di prova a due persone (tu e
+  # chi lo testa con te, entrambi dietro il login): da riportare a "0" alla
+  # prima build destinata a chiunque altro, perché gli endpoint /dev/*
+  # spendono sulle chiavi LLM.
   api:
     build:
       context: ./services/api
@@ -42,8 +57,8 @@ services:
       - ./services/api/.env
     environment:
       DEV_MODE: "0"
-      PLAYGROUND_ABILITATO: "0"
-      DATABASE_URL: "host=postgres port=5432 dbname=wardrobe user=wardrobe password=wardrobe"
+      PLAYGROUND_ABILITATO: "1"
+      DATABASE_URL: "host=postgres port=5432 dbname=wardrobe user=wardrobe password=${POSTGRES_PASSWORD:-wardrobe}"
       CARTELLA_FOTO: /dati/foto
       PORTA: "8787"
     volumes:

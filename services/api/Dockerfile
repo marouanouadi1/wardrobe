@@ -11,6 +11,12 @@ RUN pip install --no-cache-dir uv
 
 COPY pyproject.toml uv.lock ./
 COPY src ./src
+# scripts/applica_migrazioni.py serve dopo il primo deploy, quando il volume
+# di Postgres non è più vuoto: docker-entrypoint-initdb.d (vedi
+# docker-compose.yml) gira solo su un volume nuovo, non su un aggiornamento.
+# Si lancia con `docker compose exec api python scripts/applica_migrazioni.py`.
+COPY scripts ./scripts
+COPY migrations ./migrations
 
 RUN uv sync --no-dev
 
