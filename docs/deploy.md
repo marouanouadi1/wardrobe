@@ -72,6 +72,41 @@ ssh-keyscan -H 89.167.15.22 > .github/deploy/known_hosts
 Un push su `main` che tocca solo `apps/mobile` non fa partire questo job:
 il backend non viene mai riavviato senza motivo.
 
+## Deploy automatico dell'app mobile
+
+Il job `release` in `.github/workflows/mobile.yml` fa, a ogni merge su `main`
+che tocca `apps/mobile/**` o `packages/contracts/**`, questi passi in
+sequenza:
+
+1. bump del patch semver con `scripts/bump-mobile-version.mjs` (unica fonte
+   di verità: `apps/mobile/app.json`, `expo.version`);
+2. commit di quel bump direttamente su `main`, con `[skip ci]` nel messaggio
+   (altrimenti il commit stesso, toccando `apps/mobile/**`, farebbe ripartire
+   questo stesso workflow) e un tag `mobile-v<versione>` — pushato
+   esplicitamente (`git push origin <tag>`), non con `--follow-tags`: quel
+   flag pubblica solo tag *annotati*, e `git tag` senza `-a` crea un tag
+   *lightweight* che altrimenti resterebbe solo sul runner;
+3. `eas build --platform android --profile preview --wait --json`: aspetta
+   davvero il risultato (a differenza di `--no-wait`, che lasciava la build
+   a girare "da qualche parte" senza nessun artefatto recuperabile in CI);
+4. download dell'APK e pubblicazione come **GitHub Release**, tag
+   `mobile-v<versione>` — è lì che si trova l'ultimo APK da passare al socio
+   di test per il sideload, non più buildato a mano da terminale.
+
+`apps/mobile/eas.json` ha `"autoIncrement": true` sul profilo `preview`: EAS
+alza da sola il `versionCode` Android a ogni build, cosa diversa dal patch
+bump sopra (quello è il numero di versione umano, `0.1.x`; l'altro è il
+contatore interno che permette ad Android di installare l'APK nuovo sopra il
+vecchio senza disinstallare).
+
+Serve `EXPO_TOKEN` nei secrets del repo (Access Token da expo.dev → Account
+settings). Per testare la pipeline senza aspettare un merge vero, entrambi i
+workflow hanno anche `workflow_dispatch`: si lancia a mano da main dalla tab
+Actions di GitHub.
+
+Un push su `main` che tocca solo `services/api` non fa partire questo job:
+niente bump, niente build, niente release se l'app non è cambiata.
+
 ## I due `.env` sul server
 
 Non uno: **due**, con scopi diversi, entrambi da scrivere a mano sul server
