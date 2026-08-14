@@ -6,6 +6,7 @@
  * sbagliata e poi salterebbe, e quel salto è la prima impressione.
  */
 
+import * as Sentry from '@sentry/react-native'
 import {
   BricolageGrotesque_400Regular,
   BricolageGrotesque_600SemiBold,
@@ -22,10 +23,15 @@ import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { ArchivioProvider } from '../src/dati/archivio'
+import { avviaSegnalazioni } from '../src/dati/segnalazioni'
 import { SessioneProvider } from '../src/dati/sessione'
 import { colori } from '../src/tema/tokens'
 
-export default function RadiceApp() {
+// Fuori dal componente apposta: `Sentry.init` vuole girare una volta sola,
+// prima del primo render, non a ogni montaggio della radice.
+avviaSegnalazioni()
+
+function RadiceApp() {
   const [caratteriPronti] = useFonts({
     BricolageGrotesque_400Regular,
     BricolageGrotesque_600SemiBold,
@@ -68,3 +74,8 @@ export default function RadiceApp() {
     </GestureHandlerRootView>
   )
 }
+
+// `Sentry.wrap` non è decorativo: è ciò che monta il modulo di segnalazione
+// nell'albero. Senza, `showFeedbackWidget()` non ha nulla da mostrare e il
+// tap sul pulsante nel profilo non apre niente.
+export default Sentry.wrap(RadiceApp)

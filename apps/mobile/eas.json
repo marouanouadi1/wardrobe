@@ -11,7 +11,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.ilmioarmadio.xyz"
+        "EXPO_PUBLIC_API_URL": "https://api.ilmioarmadio.xyz",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://c1f7d4d0ae5d97c33d55011cf1a2f5ac@o4511910545784832.ingest.de.sentry.io/4511910555811920"
       }
     }
   },

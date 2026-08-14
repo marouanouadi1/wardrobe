@@ -17,6 +17,7 @@ import { Alert, ScrollView, View } from 'react-native'
 import { URL_API } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
 import { dormiente } from '../../src/dati/dominio'
+import { apriSegnalazione, segnalazioniAttive } from '../../src/dati/segnalazioni'
 import { useSessione } from '../../src/dati/sessione'
 import { colori, linee, raggi, spazi } from '../../src/tema/tokens'
 import { Bolla, BottoneSecondario, Icona, Scheda, Toccabile } from '../../src/ui/base'
@@ -158,6 +159,36 @@ export default function Profilo() {
             style={{ flex: 1 }}
           />
         </View>
+
+        {/* Sta qui e non dietro le voci di «Sviluppo» perché non è uno
+            strumento interno: è la porta di chi sta provando l'app e trova
+            qualcosa che non torna. Sparisce solo se manca il DSN, cioè se non
+            c'è nessun posto dove far arrivare la segnalazione. */}
+        {segnalazioniAttive ? (
+          <Toccabile
+            onPress={apriSegnalazione}
+            scala={0.98}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 14,
+              padding: 18,
+              borderRadius: raggi.medio + 4,
+              backgroundColor: colori.scheda,
+              borderWidth: 1,
+              borderColor: linee.tenue,
+            }}
+          >
+            <Bolla nome="cartellino" misura={40} sfondo="rgba(21,21,26,0.06)" tinta={colori.inchiostro} />
+            <View style={{ flex: 1 }}>
+              <Titolo taglia={17}>Segnala un problema</Titolo>
+              <Corpo taglia={12} tono="tenue">
+                Scrivi cosa non va e allega uno screenshot
+              </Corpo>
+            </View>
+            <Icona nome="chevron" misura={17} colore="rgba(21,21,26,0.3)" spessore={2.4} />
+          </Toccabile>
+        ) : null}
 
         <BottoneSecondario
           testo="Esci"
