@@ -123,13 +123,14 @@ POSTGRES_PASSWORD=<openssl rand -hex 24>
 ```
 
 **`~/wardrobe/services/api/.env`** — le chiavi vere dell'applicazione (vedi
-`services/api/.env.example`). Sul server servono solo queste quattro:
+`services/api/.env.example`). Sul server servono queste cinque:
 
 ```
 ANTHROPIC_API_KEY=...
 JWT_SECRET=<openssl rand -hex 32 — diverso da quello di sviluppo locale>
 EMAIL_AMMESSE=<le email a cui è permesso registrarsi, separate da virgole>
 BASE_URL_PUBBLICA=https://api.ilmioarmadio.xyz
+FAL_KEY=...
 ```
 
 `DATABASE_URL` e `CARTELLA_FOTO` **non vanno scritte qui**:
@@ -151,6 +152,26 @@ curl -X POST https://api.ilmioarmadio.xyz/foto/upload \
 
 Il campo `"url"` nella risposta deve iniziare con
 `https://api.ilmioarmadio.xyz/foto/...`.
+
+`FAL_KEY` è un sintomo silenzioso di un altro tipo: a differenza delle altre
+quattro, la sua assenza non impedisce al backend di partire né fa fallire
+niente — il backend parte, l'analisi riesce, i capi si salvano, e le foto
+restano con lo sfondo originale, senza un solo errore nei log
+(`servizio_scontorno()` in `_container.py` torna semplicemente `None`, di
+proposito: provare l'app non deve dipendere da una seconda chiave oltre a
+quella del provider di visione). Si verifica così:
+
+```bash
+docker compose exec -T api sh -c "env | grep -c FAL_KEY"   # deve dare 1
+docker compose logs api | grep -i scontorn                 # una riga di warning se fal.ai rifiuta
+docker compose exec -T api find /dati/foto -name "*-scontornata" | head -1
+```
+
+**Attenzione dopo aver aggiunto o cambiato `FAL_KEY` a un server già in piedi**:
+`docker compose restart` **non** rilegge `env_file:`, e la decisione
+scontorno-sì/no è messa in cache nel processo (`@functools.cache` su
+`servizio_scontorno()`). Serve `docker compose up -d api` per far ripartire
+il container da zero, non un semplice restart.
 
 ## Avvio e aggiornamento
 
