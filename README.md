@@ -105,6 +105,12 @@ stessa macchina — il caso comune in sviluppo. `EXPO_PUBLIC_API_URL` resta per
 sovrascriverlo esplicitamente (un server remoto, tipico di una build EAS
 puntata sul VPS di produzione, o quando l'euristica indovina l'host sbagliato).
 
+Il pulsante «Segnala un problema» nel Profilo (modulo di feedback di Sentry)
+compare solo se `EXPO_PUBLIC_SENTRY_DSN` è impostata: copia
+[`apps/mobile/.env.example`](apps/mobile/.env.example) in `.env.local` per
+provarlo con `npm run mobile`. Senza, l'app funziona lo stesso e il pulsante
+resta nascosto.
+
 `api:local` (`services/api/src/handlers/local_server.py`) è lo stesso
 processo che gira in produzione dentro il container `api` su un VPS: nessuna
 differenza fra i due, nessuna deviazione da tenere a mente. La pipeline di
