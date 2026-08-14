@@ -1,0 +1,51 @@
+name: Segnalazione dall'app
+description: Qualcosa non funziona o non torna nell'app Wardrobe
+labels: ["segnalazione"]
+body:
+  - type: textarea
+    id: cosa-non-va
+    attributes:
+      label: Cosa non va
+      description: Descrivi cosa hai visto, con parole tue
+      placeholder: "Es: ho caricato una foto di una maglietta e l'app si è chiusa"
+    validations:
+      required: true
+
+  - type: textarea
+    id: passi
+    attributes:
+      label: Come si riproduce
+      description: Cosa hai fatto, passo per passo, prima che succedesse
+      placeholder: |
+        1. Ho aperto l'app
+        2. Ho premuto su...
+        3. ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Foto o screenshot
+      description: Se puoi, allega uno screenshot o una foto dello schermo (trascinalo qui o incollalo)
+    validations:
+      required: false
+
+  - type: input
+    id: versione
+    attributes:
+      label: Versione dell'app
+      description: La trovi nelle impostazioni dell'app, oppure nel nome del file APK installato
+      placeholder: "Es: 0.1.1"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: dispositivo
+    attributes:
+      label: Dispositivo
+      options:
+        - Android
+        - Altro
+    validations:
+      required: false
