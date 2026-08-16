@@ -170,7 +170,8 @@ export default function Onboarding() {
           <BottonePrimario
             testo={corrente.azione}
             freccia
-            style={{ backgroundColor: colori.scheda, marginTop: spazi.m }}
+            chiaro
+            style={{ marginTop: spazi.m }}
             onPress={() => (passo < PASSI.length - 1 ? setPasso(passo + 1) : void entra())}
           />
 
