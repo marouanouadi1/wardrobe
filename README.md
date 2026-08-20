@@ -27,7 +27,7 @@ Il perché sta in [`docs/adr/0004`](docs/adr/0004-l-avatar-veste-le-foto-non-i-c
 
 ```txt
 apps/
-  mobile/            app Expo (iOS, Android, web) — 12 schermate
+  mobile/            app Expo (iOS, Android, web) — 13 schermate
   web/               vuoto, ma il posto c'è
 services/api/
   src/domain/        logica pura: zero SDK, testabile con pytest
@@ -42,7 +42,7 @@ docs/adr/            le decisioni che valeva la pena scrivere
 **1. `handlers/` separato da `domain/`.** Un handler fa tre righe: legge
 l'evento, chiama una funzione pura, formatta la risposta. Tutta la logica sta in
 `domain`, che gira con pytest senza rete, senza container e senza mock della SDK —
-205 test in un secondo. Il vincolo non è una convenzione scritta in un README:
+213 test in un secondo. Il vincolo non è una convenzione scritta in un README:
 `pyproject.toml` vieta gli import di `psycopg` e `httpx` fuori da
 `adapters/`, e il lint fallisce se qualcuno prova.
 
@@ -109,7 +109,12 @@ Il pulsante «Segnala un problema» nel Profilo (modulo di feedback di Sentry)
 compare solo se `EXPO_PUBLIC_SENTRY_DSN` è impostata: copia
 [`apps/mobile/.env.example`](apps/mobile/.env.example) in `.env.local` per
 provarlo con `npm run mobile`. Senza, l'app funziona lo stesso e il pulsante
-resta nascosto.
+resta nascosto. Chi segnala non ha accesso a Sentry per vedere che fine ha
+fatto: ogni invio riuscito lascia anche una copia nel backend, visibile da
+«Profilo → Le mie segnalazioni» con il suo stato (Ricevuta/In
+lavorazione/Risolta). Chi è nell'allowlist `EMAIL_AMMINISTRATORI` (email
+separate da virgole, vuota di default — nessun amministratore) vede lì le
+segnalazioni di tutti, non solo le proprie, e può cambiarne lo stato.
 
 `api:local` (`services/api/src/handlers/local_server.py`) è lo stesso
 processo che gira in produzione dentro il container `api` su un VPS: nessuna
@@ -139,7 +144,7 @@ registro, e nessuna schermata cambia.
 | `npm run mobile` | avvia l'app Expo |
 | `npm run mobile:web` | l'app nel browser |
 | `npm run api:local` | solo l'API (Postgres già acceso) |
-| `npm run api:test` | 205 test del dominio e degli handler |
+| `npm run api:test` | 213 test del dominio e degli handler |
 | `npm run api:lint` | ruff + ruff format + mypy strict |
 | `npm run contracts:generate` | rigenera i tipi TypeScript dal backend |
 | `npm run contracts:check` | verifica che siano allineati (gira in CI) |
@@ -167,7 +172,7 @@ Release. Dettagli in [`docs/deploy.md`](docs/deploy.md) e nei workflow
 
 ### Verificato su questa macchina
 
-- `npm run api:test` → **205 test passati**
+- `npm run api:test` → **213 test passati**
 - `npm run api:lint` → ruff pulito, **mypy strict** senza errori
 - `npm run contracts:check` → contratti allineati; verificato anche il contrario,
   rinominando un campo nel backend per vedere la CI cadere

@@ -45,6 +45,15 @@ class RichiestaNonValida(ErroreDominio):
     stato_http = 422
 
 
+class SegnalazioneNonTrovata(ErroreDominio):
+    codice = "segnalazione_non_trovata"
+    stato_http = 404
+
+    def __init__(self, segnalazione_id: str) -> None:
+        super().__init__(f"Segnalazione {segnalazione_id} inesistente")
+        self.segnalazione_id = segnalazione_id
+
+
 class AccessoNegato(ErroreDominio):
     codice = "accesso_negato"
     stato_http = 403

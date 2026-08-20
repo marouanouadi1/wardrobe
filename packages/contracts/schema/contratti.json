@@ -7,6 +7,9 @@
     "AggiornamentoCapo": {
       "$ref": "#/$defs/AggiornamentoCapo"
     },
+    "AggiornamentoSegnalazione": {
+      "$ref": "#/$defs/AggiornamentoSegnalazione"
+    },
     "AnalisiAvviata": {
       "$ref": "#/$defs/AnalisiAvviata"
     },
@@ -42,6 +45,9 @@
     },
     "ElencoMessaggiChat": {
       "$ref": "#/$defs/ElencoMessaggiChat"
+    },
+    "ElencoSegnalazioni": {
+      "$ref": "#/$defs/ElencoSegnalazioni"
     },
     "EsecuzionePlayground": {
       "$ref": "#/$defs/EsecuzionePlayground"
@@ -84,6 +90,9 @@
     },
     "ModelloDisponibile": {
       "$ref": "#/$defs/ModelloDisponibile"
+    },
+    "NuovaSegnalazione": {
+      "$ref": "#/$defs/NuovaSegnalazione"
     },
     "NuovoCapoManuale": {
       "$ref": "#/$defs/NuovoCapoManuale"
@@ -151,6 +160,9 @@
     "RuoloChat": {
       "$ref": "#/$defs/RuoloChat"
     },
+    "Segnalazione": {
+      "$ref": "#/$defs/Segnalazione"
+    },
     "SlotAvatar": {
       "$ref": "#/$defs/SlotAvatar"
     },
@@ -162,6 +174,9 @@
     },
     "StatoCapo": {
       "$ref": "#/$defs/StatoCapo"
+    },
+    "StatoSegnalazione": {
+      "$ref": "#/$defs/StatoSegnalazione"
     },
     "Suggerimento": {
       "$ref": "#/$defs/Suggerimento"
@@ -253,6 +268,19 @@
         }
       },
       "title": "AggiornamentoCapo",
+      "type": "object"
+    },
+    "AggiornamentoSegnalazione": {
+      "additionalProperties": false,
+      "properties": {
+        "stato": {
+          "$ref": "#/$defs/StatoSegnalazione"
+        }
+      },
+      "required": [
+        "stato"
+      ],
+      "title": "AggiornamentoSegnalazione",
       "type": "object"
     },
     "AnalisiAvviata": {
@@ -798,6 +826,25 @@
         "messaggi"
       ],
       "title": "ElencoMessaggiChat",
+      "type": "object"
+    },
+    "ElencoSegnalazioni": {
+      "additionalProperties": false,
+      "properties": {
+        "segnalazioni": {
+          "items": {
+            "$ref": "#/$defs/Segnalazione"
+          },
+          "type": "array"
+        },
+        "amministratore": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "segnalazioni"
+      ],
+      "title": "ElencoSegnalazioni",
       "type": "object"
     },
     "EsecuzionePlayground": {
@@ -1433,6 +1480,20 @@
         "visione"
       ],
       "title": "ModelloDisponibile",
+      "type": "object"
+    },
+    "NuovaSegnalazione": {
+      "additionalProperties": false,
+      "properties": {
+        "testo": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "testo"
+      ],
+      "title": "NuovaSegnalazione",
       "type": "object"
     },
     "NuovoCapoManuale": {
@@ -2284,6 +2345,41 @@
       "title": "RuoloChat",
       "type": "string"
     },
+    "Segnalazione": {
+      "additionalProperties": false,
+      "description": "La copia che l'app tiene di una segnalazione già inviata a Sentry\n(vedi `apps/mobile/src/dati/segnalazioni.ts`, `apriSegnalazione()`).\n\nSentry resta il canale che avvisa chi lavora sull'app; questa riga è\nquello che permette a chi ha segnalato — che a Sentry non ha accesso —\ndi vedere che è arrivata e a che punto è.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "utente_id": {
+          "type": "string"
+        },
+        "testo": {
+          "type": "string"
+        },
+        "stato": {
+          "$ref": "#/$defs/StatoSegnalazione"
+        },
+        "creata_il": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "aggiornata_il": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "utente_id",
+        "testo",
+        "creata_il",
+        "aggiornata_il"
+      ],
+      "title": "Segnalazione",
+      "type": "object"
+    },
     "SlotAvatar": {
       "description": "Le cinque posizioni che l'avatar sa vestire.\n\nI valori coincidono con le chiavi di `mannequin.setOutfit()`.",
       "enum": [
@@ -2324,6 +2420,15 @@
         "in_lavaggio"
       ],
       "title": "StatoCapo",
+      "type": "string"
+    },
+    "StatoSegnalazione": {
+      "enum": [
+        "ricevuta",
+        "in_lavorazione",
+        "risolta"
+      ],
+      "title": "StatoSegnalazione",
       "type": "string"
     },
     "Suggerimento": {

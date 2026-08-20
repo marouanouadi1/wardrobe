@@ -113,6 +113,12 @@ class RuoloChat(StrEnum):
     WARDROBE = "wardrobe"
 
 
+class StatoSegnalazione(StrEnum):
+    RICEVUTA = "ricevuta"
+    IN_LAVORAZIONE = "in_lavorazione"
+    RISOLTA = "risolta"
+
+
 Confidenza = Annotated[int, Field(ge=0, le=100)]
 Percentuale = Annotated[int, Field(ge=0, le=100)]
 EsaColore = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
@@ -543,6 +549,40 @@ class RispostaChat(ModelloWardrobe):
 
 class ElencoMessaggiChat(ModelloWardrobe):
     messaggi: list[MessaggioChat]
+
+
+class Segnalazione(ModelloWardrobe):
+    """La copia che l'app tiene di una segnalazione già inviata a Sentry
+    (vedi `apps/mobile/src/dati/segnalazioni.ts`, `apriSegnalazione()`).
+
+    Sentry resta il canale che avvisa chi lavora sull'app; questa riga è
+    quello che permette a chi ha segnalato — che a Sentry non ha accesso —
+    di vedere che è arrivata e a che punto è.
+    """
+
+    id: str
+    utente_id: str
+    testo: str
+    stato: StatoSegnalazione = StatoSegnalazione.RICEVUTA
+    creata_il: datetime
+    aggiornata_il: datetime
+
+
+class NuovaSegnalazione(ModelloWardrobe):
+    testo: str = Field(min_length=1)
+
+
+class AggiornamentoSegnalazione(ModelloWardrobe):
+    stato: StatoSegnalazione
+
+
+class ElencoSegnalazioni(ModelloWardrobe):
+    segnalazioni: list[Segnalazione]
+    # Chi è nell'allowlist EMAIL_AMMINISTRATORI vede le segnalazioni di tutti
+    # (non solo le proprie) e può cambiarne lo stato: l'app usa questo flag
+    # per decidere se mostrare i controlli di stato, invece di indovinarlo
+    # confrontando gli utente_id delle righe.
+    amministratore: bool = False
 
 
 class NuovoOutfit(ModelloWardrobe):

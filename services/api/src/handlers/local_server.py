@@ -46,6 +46,7 @@ from handlers import (  # noqa: E402
     outfit,
     playground,
     profilo,
+    segnalazioni,
     suggerimenti,
 )
 from handlers._container import archivio_foto  # noqa: E402
@@ -73,6 +74,9 @@ ROTTE: list[tuple[str, re.Pattern[str], Handler]] = [
     ("GET", re.compile(r"^/outfit/(?P<outfitId>[^/]+)/colori$"), outfit.colori),
     ("GET", re.compile(r"^/profilo$"), profilo.leggi),
     ("PUT", re.compile(r"^/profilo$"), profilo.aggiorna),
+    ("POST", re.compile(r"^/segnalazioni$"), segnalazioni.crea),
+    ("GET", re.compile(r"^/segnalazioni$"), segnalazioni.elenca),
+    ("PATCH", re.compile(r"^/segnalazioni/(?P<segnalazioneId>[^/]+)$"), segnalazioni.aggiorna),
     ("GET", re.compile(r"^/dev/modelli$"), playground.modelli),
     ("GET", re.compile(r"^/dev/preset$"), playground.preset),
     ("POST", re.compile(r"^/dev/preset$"), playground.salva_preset),

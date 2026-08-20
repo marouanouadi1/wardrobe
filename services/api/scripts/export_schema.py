@@ -73,6 +73,8 @@ RISPOSTE = (
     models.RatingImmagine,
     models.ValutazioneImmagine,
     models.RispostaValutazioniImmagini,
+    models.Segnalazione,
+    models.ElencoSegnalazioni,
 )
 
 RICHIESTE = (
@@ -93,6 +95,8 @@ RICHIESTE = (
     models.RichiestaPlayground,
     models.RichiestaMessaggioChat,
     models.RichiestaRatingImmagine,
+    models.NuovaSegnalazione,
+    models.AggiornamentoSegnalazione,
 )
 
 ENUM = (
@@ -107,6 +111,7 @@ ENUM = (
     ("StatoAnalisi", models.StatoAnalisi),
     ("RuoloChat", models.RuoloChat),
     ("EsitoAttributo", models.EsitoAttributo),
+    ("StatoSegnalazione", models.StatoSegnalazione),
 )
 
 COSTANTI = {

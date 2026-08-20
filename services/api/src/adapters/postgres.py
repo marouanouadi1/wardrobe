@@ -26,6 +26,7 @@ from domain.models import (
     Outfit,
     PresetPrompt,
     Profilo,
+    Segnalazione,
     Valutazione,
     ValutazioneImmagine,
 )
@@ -314,3 +315,46 @@ class RepositoryPostgres:
                 return str(riga["id"])
         except psycopg.errors.UniqueViolation as exc:
             raise EmailGiaRegistrata(email) from exc
+
+    def trova_email(self, utente_id: str) -> str | None:
+        with self._conn().cursor() as cur:
+            cur.execute("select email from utenti where id = %s", (utente_id,))
+            riga = cur.fetchone()
+            return str(riga["email"]) if riga else None
+
+    # ── segnalazioni ───────────────────────────────────────────────────────
+    def salva_segnalazione(self, segnalazione: Segnalazione) -> Segnalazione:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                """
+                insert into segnalazioni (id, utente_id, creata_il, dati)
+                values (%s, %s, %s, %s)
+                on conflict (id) do update set dati = excluded.dati
+                """,
+                (
+                    segnalazione.id,
+                    segnalazione.utente_id,
+                    segnalazione.creata_il,
+                    segnalazione.model_dump_json(),
+                ),
+            )
+        return segnalazione
+
+    def leggi_segnalazione(self, segnalazione_id: str) -> Segnalazione | None:
+        with self._conn().cursor() as cur:
+            cur.execute("select dati from segnalazioni where id = %s", (segnalazione_id,))
+            riga = cur.fetchone()
+            return Segnalazione.model_validate(riga["dati"]) if riga else None
+
+    def elenca_segnalazioni(self, utente_id: str) -> list[Segnalazione]:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                "select dati from segnalazioni where utente_id = %s order by creata_il desc",
+                (utente_id,),
+            )
+            return [Segnalazione.model_validate(r["dati"]) for r in cur.fetchall()]
+
+    def elenca_tutte_segnalazioni(self) -> list[Segnalazione]:
+        with self._conn().cursor() as cur:
+            cur.execute("select dati from segnalazioni order by creata_il desc")
+            return [Segnalazione.model_validate(r["dati"]) for r in cur.fetchall()]

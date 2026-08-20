@@ -8,6 +8,7 @@
 export type TipoCapo = 'top' | 'pantaloni' | 'scarpe' | 'capospalla' | 'abito' | 'accessorio'
 export type Stagione = 'primavera' | 'estate' | 'autunno' | 'inverno' | 'mezza_stagione' | 'tutto_lanno'
 export type StatoCapo = 'pulito' | 'da_lavare' | 'in_lavaggio'
+export type StatoSegnalazione = 'ricevuta' | 'in_lavorazione' | 'risolta'
 export type StatoAnalisi = 'in_corso' | 'completata' | 'fallita'
 /**
  * Gli attributi che il modello di visione legge dalla foto.
@@ -47,6 +48,7 @@ export type OrigineOutfit = 'manuale' | 'ia' | 'suggerito_modificato'
  */
 export interface Contratti {
   AggiornamentoCapo?: AggiornamentoCapo
+  AggiornamentoSegnalazione?: AggiornamentoSegnalazione
   AnalisiAvviata?: AnalisiAvviata
   AnalisiVisione?: AnalisiVisione
   AttributoCapo?: AttributoCapo
@@ -59,6 +61,7 @@ export interface Contratti {
   Credenziali?: Credenziali
   ElencoCapi?: ElencoCapi
   ElencoMessaggiChat?: ElencoMessaggiChat
+  ElencoSegnalazioni?: ElencoSegnalazioni
   EsecuzionePlayground?: EsecuzionePlayground
   EsitoAnalisi?: EsitoAnalisi
   EsitoAttributo?: EsitoAttributo
@@ -73,6 +76,7 @@ export interface Contratti {
   MessaggioChat?: MessaggioChat
   Meteo?: Meteo
   ModelloDisponibile?: ModelloDisponibile
+  NuovaSegnalazione?: NuovaSegnalazione
   NuovoCapoManuale?: NuovoCapoManuale
   NuovoOutfit?: NuovoOutfit
   OrigineOutfit?: OrigineOutfit
@@ -95,10 +99,12 @@ export interface Contratti {
   RispostaValutazioni?: RispostaValutazioni
   RispostaValutazioniImmagini?: RispostaValutazioniImmagini
   RuoloChat?: RuoloChat
+  Segnalazione?: Segnalazione
   SlotAvatar?: SlotAvatar
   Stagione?: Stagione
   StatoAnalisi?: StatoAnalisi
   StatoCapo?: StatoCapo
+  StatoSegnalazione?: StatoSegnalazione
   Suggerimento?: Suggerimento
   TipoCapo?: TipoCapo
   TokenAccesso?: TokenAccesso
@@ -144,6 +150,9 @@ export interface CorrezioniCapo {
 export interface Colore {
   nome: string
   hex: string
+}
+export interface AggiornamentoSegnalazione {
+  stato: StatoSegnalazione
 }
 /**
  * L'app riceve un identificativo e interroga lo stato: l'analisi è lenta.
@@ -343,6 +352,26 @@ export interface Vestizione {
   shoes?: string | null
   dress?: string | null
 }
+export interface ElencoSegnalazioni {
+  segnalazioni: Segnalazione[]
+  amministratore?: boolean
+}
+/**
+ * La copia che l'app tiene di una segnalazione già inviata a Sentry
+ * (vedi `apps/mobile/src/dati/segnalazioni.ts`, `apriSegnalazione()`).
+ *
+ * Sentry resta il canale che avvisa chi lavora sull'app; questa riga è
+ * quello che permette a chi ha segnalato — che a Sentry non ha accesso —
+ * di vedere che è arrivata e a che punto è.
+ */
+export interface Segnalazione {
+  id: string
+  utente_id: string
+  testo: string
+  stato?: StatoSegnalazione
+  creata_il: string
+  aggiornata_il: string
+}
 /**
  * Riga dello storico: serve a confrontare provider a distanza di giorni.
  */
@@ -431,6 +460,9 @@ export interface ModelloDisponibile {
    * Falso sui modelli che hanno rimosso il parametro e rifiutano la richiesta con 400. In un banco di prova una manopola che non fa niente è peggio di una manopola assente: da lì si traggono conclusioni sbagliate.
    */
   accetta_temperatura?: boolean
+}
+export interface NuovaSegnalazione {
+  testo: string
 }
 /**
  * Un capo inserito a mano, senza passare dal modello di visione.
