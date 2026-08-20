@@ -195,8 +195,30 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add services/api/pyproject.toml services/api/uv.lock
           git commit -m "chore(api): bump versione a ${{ steps.bump.outputs.version }} [skip ci]"
+          # Fino a ieri su main pushava un job solo; ora sono due (questo
+          # e il job release di mobile.yml), e un merge che tocca i
+          # path di entrambi li fa partire insieme: il secondo ad arrivare
+          # trova main avanti di un commit e senza rebase il push verrebbe
+          # rifiutato. I due job toccano file disgiunti, quindi il rebase non
+          # ha conflitti da risolvere.
+          #
+          # Il tag si crea dopo il push, non prima: un rebase riscrive il
+          # commit, e un tag creato prima resterebbe appeso a un commit che su
+          # main non esiste.
+          pushato=no
+          for tentativo in 1 2 3; do
+            if git push origin HEAD:main; then pushato=si; break; fi
+            echo "main è andato avanti, rebase e riprovo ($tentativo/3)"
+            git pull --rebase origin main
+          done
+          # Senza questo controllo il `for` uscirebbe con lo stato dell'ultimo
+          # comando (il rebase, che riesce) e lo step passerebbe senza aver
+          # pushato niente.
+          if [ "$pushato" != si ]; then
+            echo "::error::Il bump non è arrivato su main dopo 3 tentativi"
+            exit 1
+          fi
           git tag "api-v${{ steps.bump.outputs.version }}"
-          git push origin HEAD:main
           # Tag lightweight (git tag senza -a): --follow-tags non lo pubblica,
           # serve un push esplicito. Stessa nota in mobile.yml.
           git push origin "api-v${{ steps.bump.outputs.version }}"
