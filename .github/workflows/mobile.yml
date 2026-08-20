@@ -89,11 +89,18 @@ jobs:
           NEW_VERSION=$(node scripts/bump-versione.mjs mobile)
           echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
+      # package-lock.json registra anche la versione dei workspace, e il bump da
+      # solo lo lascia indietro: prima di questo passo il lock diceva 0.1.4 con
+      # app.json già a 0.1.5. `npm ci` non protesta, ma è un altro numero che
+      # mente. Su un bump di sola versione cambia esattamente quelle righe.
+      - name: Riallinea package-lock.json
+        run: npm install --package-lock-only --ignore-scripts
+
       - name: Commit + tag + push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/mobile/app.json apps/mobile/package.json
+          git add apps/mobile/app.json apps/mobile/package.json package-lock.json
           git commit -m "chore(mobile): bump versione a ${{ steps.bump.outputs.version }} [skip ci]"
           git tag "mobile-v${{ steps.bump.outputs.version }}"
           git push origin HEAD:main

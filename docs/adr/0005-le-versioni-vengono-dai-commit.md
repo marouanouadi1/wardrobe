@@ -90,6 +90,10 @@ produzione sarebbe una bugia scritta nella storia.
 - `mobile.yml` e `api.yml` fanno il checkout con `fetch-depth: 0`: senza storia
   e senza tag la scansione non vede niente e rilascerebbe sempre un patch,
   silenziosamente.
+- I due lockfile registrano anche la versione del progetto: i job di rilascio
+  rifanno `uv lock` e `npm install --package-lock-only` dopo il bump. Non è
+  pignoleria — `package-lock.json` diceva `0.1.4` con `app.json` già a `0.1.5`,
+  cioè lo stesso difetto in piccolo.
 - Il campo `version` è stato rimosso dal `package.json` della radice e da
   `packages/contracts`: erano fermi a `0.1.0` da sempre, nessuno script li
   leggeva e npm non li richiede per un pacchetto `private`. Un numero che non si
