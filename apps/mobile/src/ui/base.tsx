@@ -182,6 +182,7 @@ export function BottonePrimario({
   onPress,
   freccia,
   citron,
+  chiaro,
   disabilitato,
   style,
 }: {
@@ -190,6 +191,8 @@ export function BottonePrimario({
   freccia?: boolean
   /** Solo per le azioni che eseguono l'IA: vedi la regola in tokens.ts. */
   citron?: boolean
+  /** Sfondo chiaro (per pulsanti su foto scure): testo scuro invece che crema. */
+  chiaro?: boolean
   disabilitato?: boolean
   style?: ViewStyle
 }) {
@@ -197,10 +200,12 @@ export function BottonePrimario({
     ? 'rgba(21,21,26,0.08)'
     : citron
       ? colori.citron
-      : colori.inchiostro
+      : chiaro
+        ? colori.scheda
+        : colori.inchiostro
   const inchiostro = disabilitato
     ? 'rgba(21,21,26,0.4)'
-    : citron
+    : citron || chiaro
       ? colori.inchiostro
       : colori.crema
 
