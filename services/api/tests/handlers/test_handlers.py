@@ -8,6 +8,8 @@ nessun handler stia nascondendo logica.
 from __future__ import annotations
 
 import json
+import tomllib
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -82,6 +84,17 @@ class TestSalute:
         risposta = health.salute(evento(), None)
         assert risposta["statusCode"] == 200
         assert corpo_di(risposta)["stato"] == "ok"
+
+    def test_riporta_la_versione_di_pyproject(self):
+        """Il campo `versione` è quello che il deploy confronta per sapere se il
+        VPS sta servendo il codice appena rilasciato. Se il packaging si rompe e
+        i metadati non sono leggibili, `health.py` ripiega su "dev" e questo
+        test cade — che è esattamente la regressione da intercettare.
+        """
+        pyproject = Path(__file__).parents[2] / "pyproject.toml"
+        attesa = tomllib.loads(pyproject.read_text())["project"]["version"]
+
+        assert corpo_di(health.salute(evento(), None))["versione"] == attesa
 
 
 class TestAuth:
