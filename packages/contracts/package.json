@@ -1,6 +1,5 @@
 {
   "name": "@wardrobe/contracts",
-  "version": "0.1.0",
   "private": true,
   "description": "Tipi condivisi, generati dai modelli Pydantic del backend",
   "type": "module",

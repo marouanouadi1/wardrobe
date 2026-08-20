@@ -47,8 +47,27 @@ Il job `deploy` in `.github/workflows/api.yml` fa da solo, a ogni merge su
 `main` che tocca `services/api/**` o `packages/contracts/**`, esattamente i
 passi manuali sopra: lo stesso comando `rsync` (stesse esclusioni, `.env`
 compresi) da un runner GitHub Actions, poi `docker compose up -d --build` via
-SSH, poi `curl --fail .../salute` per accorgersi subito se il deploy ha
-rotto qualcosa.
+SSH. Intorno a quei due passi c'è il versionamento:
+
+1. **bump della versione** in `services/api/pyproject.toml` con
+   `scripts/bump-versione.mjs api`. Il livello non è fisso: viene dedotto dai
+   conventional commit dall'ultimo tag `api-v*` (vedi
+   [`docs/adr/0005`](adr/0005-le-versioni-vengono-dai-commit.md)). Segue un
+   `uv lock`, perché `uv.lock` registra anche la versione del progetto stesso e
+   altrimenti resterebbe indietro per sempre. Qui i file vengono solo scritti,
+   così l'albero che parte col `rsync` porta già la versione nuova;
+2. `rsync` + `docker compose up -d --build`, come sopra;
+3. **verifica della versione servita**: `GET /salute` riporta la versione dai
+   metadati del pacchetto installato, e il job confronta quel valore con la
+   versione appena rilasciata. Prima qui c'era solo un `curl --fail`: un rsync
+   andato a metà, o un `up` che riusava l'immagine vecchia, passavano
+   inosservati perché l'endpoint rispondeva comunque;
+4. **commit + tag `api-v<versione>`**, pushati per ultimi, a deploy verificato.
+   Se qualcosa sopra è andato storto il rilascio non lascia traccia su `main` e
+   il tentativo successivo riparte dallo stesso numero: un tag su una versione
+   che non è mai andata in produzione sarebbe una bugia scritta nella storia.
+   `[skip ci]` nel messaggio perché il commit tocca `services/api/**`, che è nei
+   path che fanno partire questo stesso workflow.
 
 Serve una chiave SSH **dedicata al deploy**, diversa da quella personale usata
 da terminale (così ruotarla o revocarla non tocca il proprio accesso
@@ -78,8 +97,13 @@ Il job `release` in `.github/workflows/mobile.yml` fa, a ogni merge su `main`
 che tocca `apps/mobile/**` o `packages/contracts/**`, questi passi in
 sequenza:
 
-1. bump del patch semver con `scripts/bump-mobile-version.mjs` (unica fonte
-   di verità: `apps/mobile/app.json`, `expo.version`);
+1. bump semver con `scripts/bump-versione.mjs mobile` (unica fonte di verità:
+   `apps/mobile/app.json`, `expo.version`). Il **livello** — major, minor o
+   patch — viene dedotto dai conventional commit dall'ultimo tag `mobile-v*`,
+   contando solo quelli che toccano `apps/mobile` o `packages/contracts`: un
+   `feat:` solo backend non alza il minor dell'app. Il formato dei titoli è
+   imposto da `.github/workflows/pr-title.yml`, e il ragionamento sta in
+   [`docs/adr/0005`](adr/0005-le-versioni-vengono-dai-commit.md);
 2. commit di quel bump direttamente su `main`, con `[skip ci]` nel messaggio
    (altrimenti il commit stesso, toccando `apps/mobile/**`, farebbe ripartire
    questo stesso workflow) e un tag `mobile-v<versione>` — pushato
@@ -94,10 +118,15 @@ sequenza:
    di test per il sideload, non più buildato a mano da terminale.
 
 `apps/mobile/eas.json` ha `"autoIncrement": true` sul profilo `preview`: EAS
-alza da sola il `versionCode` Android a ogni build, cosa diversa dal patch
-bump sopra (quello è il numero di versione umano, `0.1.x`; l'altro è il
+alza da sola il `versionCode` Android a ogni build, cosa diversa dal bump
+semver sopra (quello è il numero di versione umano, `0.1.x`; l'altro è il
 contatore interno che permette ad Android di installare l'APK nuovo sopra il
 vecchio senza disinstallare).
+
+Entrambi i job di rilascio fanno il checkout con `fetch-depth: 0`: la scelta
+del livello legge i commit dall'ultimo tag, e col default di
+`actions/checkout` (profondità 1, nessun tag scaricato) rilascerebbero sempre
+un patch senza dirlo.
 
 Serve `EXPO_TOKEN` nei secrets del repo (Access Token da expo.dev → Account
 settings). Per testare la pipeline senza aspettare un merge vero, entrambi i

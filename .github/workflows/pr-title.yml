@@ -1,0 +1,56 @@
+name: pr-title
+
+# Nessun filtro sui path: il formato del titolo è una regola del repo, non di
+# una sottocartella (una PR di sole docs deve rispettarla come le altre).
+#
+# Senza questo check il bump per livello di scripts/bump-versione.mjs sarebbe
+# teatro: un titolo non conventional finisce in "patch" per default, cioè
+# esattamente il comportamento che si voleva lasciare indietro. I merge di
+# questo repo non sono squash, quindi il titolo della PR finisce nel corpo del
+# merge commit — è lì che lo script lo va a leggere.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-title-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  formato:
+    name: titolo conventional
+    runs-on: ubuntu-latest
+    steps:
+      # Dieci righe di bash invece di una action dal marketplace: la regola è
+      # leggibile qui dentro e non c'è una dipendenza in più da aggiornare.
+      - name: Controlla il titolo della PR
+        # Il titolo arriva da `env`, non interpolato dentro lo script: `${{ }}`
+        # in un `run:` è sostituzione testuale *prima* che la shell parta, e il
+        # titolo di una PR è testo arbitrario — backtick e $(...) compresi.
+        env:
+          TITOLO: ${{ github.event.pull_request.title }}
+        run: |
+          REGEX='^(feat|fix|chore|docs|refactor|test|perf|build|ci|revert)(\([a-z0-9-]+\))?!?: .+'
+          if [[ "$TITOLO" =~ $REGEX ]]; then
+            echo "ok: $TITOLO"
+            exit 0
+          fi
+          echo "::error::Titolo non conventional: «$TITOLO»"
+          cat <<'AIUTO'
+          Il titolo della PR decide il livello di bump della versione, quindi
+          deve essere un conventional commit:
+
+              <tipo>[(ambito)][!]: <descrizione>
+
+          Tipi ammessi: feat fix chore docs refactor test perf build ci revert
+          `feat` alza il minor, tutto il resto il patch, un `!` (o un
+          "BREAKING CHANGE:" nel corpo) segnala una rottura.
+
+          Esempi:
+              feat(mobile): schermata delle segnalazioni
+              fix(api): 401 invece di 500 senza token
+          AIUTO
+          exit 1

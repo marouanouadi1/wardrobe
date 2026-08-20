@@ -1,7 +1,6 @@
 {
   "name": "wardrobe",
   "private": true,
-  "version": "0.1.0",
   "description": "Wardrobe — armadio digitale: app Expo, API Python su un VPS",
   "workspaces": [
     "apps/*",
