@@ -22,6 +22,7 @@ from domain.models import (
     Outfit,
     PresetPrompt,
     Profilo,
+    Segnalazione,
     UploadFirmato,
     UsoToken,
     Valutazione,
@@ -200,6 +201,23 @@ class RepositoryArmadio(Protocol):
 
     def leggi_esito_analisi(self, esecuzione_id: str) -> EsitoAnalisi | None: ...
 
+    # ── segnalazioni ────────────────────────────────────────────────────────
+    def salva_segnalazione(self, segnalazione: Segnalazione) -> Segnalazione:
+        """Idempotente su `id`: la stessa riga che nasce con POST /segnalazioni
+        viene aggiornata da PATCH /segnalazioni/{id}, non duplicata."""
+        ...
+
+    def leggi_segnalazione(self, segnalazione_id: str) -> Segnalazione | None: ...
+
+    def elenca_segnalazioni(self, utente_id: str) -> list[Segnalazione]:
+        """Le segnalazioni di un solo utente, più recenti prima."""
+        ...
+
+    def elenca_tutte_segnalazioni(self) -> list[Segnalazione]:
+        """Ogni segnalazione, di ogni utente: solo l'amministratore la chiama
+        (vedi `handlers/segnalazioni.py`)."""
+        ...
+
 
 @runtime_checkable
 class RepositoryUtenti(Protocol):
@@ -212,6 +230,12 @@ class RepositoryUtenti(Protocol):
 
     def crea(self, email: str, hash_password: str) -> str:
         """Crea l'utente e restituisce il suo id."""
+        ...
+
+    def trova_email(self, utente_id: str) -> str | None:
+        """L'inverso di `crea`: serve solo a riconoscere l'amministratore
+        (vedi `handlers/segnalazioni.py`) contro `EMAIL_AMMINISTRATORI`, la
+        sola cosa per cui l'id da solo non basta."""
         ...
 
 

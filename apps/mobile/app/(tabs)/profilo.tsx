@@ -190,6 +190,35 @@ export default function Profilo() {
           </Toccabile>
         ) : null}
 
+        {/* Indipendente da `segnalazioniAttive`: legge dal nostro backend,
+            non da Sentry, quindi resta utile anche in una build senza DSN —
+            mostra quello che è già stato segnalato in passato. È la risposta
+            a chi segnala e non ha, come noi, accesso a Sentry per vedere se
+            e come la segnalazione è stata presa in carico. */}
+        <Toccabile
+          onPress={() => router.push('/segnalazioni')}
+          scala={0.98}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 14,
+            padding: 18,
+            borderRadius: raggi.medio + 4,
+            backgroundColor: colori.scheda,
+            borderWidth: 1,
+            borderColor: linee.tenue,
+          }}
+        >
+          <Bolla nome="griglia" misura={40} sfondo="rgba(21,21,26,0.06)" tinta={colori.inchiostro} />
+          <View style={{ flex: 1 }}>
+            <Titolo taglia={17}>Le mie segnalazioni</Titolo>
+            <Corpo taglia={12} tono="tenue">
+              Cosa hai segnalato, e a che punto è
+            </Corpo>
+          </View>
+          <Icona nome="chevron" misura={17} colore="rgba(21,21,26,0.3)" spessore={2.4} />
+        </Toccabile>
+
         <BottoneSecondario
           testo="Esci"
           onPress={chiediDiUscire}

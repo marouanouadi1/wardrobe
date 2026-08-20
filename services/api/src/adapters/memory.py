@@ -21,6 +21,7 @@ from domain.models import (
     Outfit,
     PresetPrompt,
     Profilo,
+    Segnalazione,
     UploadFirmato,
     Valutazione,
     ValutazioneImmagine,
@@ -96,6 +97,7 @@ class RepositoryInMemoria:
         self._valutazioni_immagini: dict[tuple[str, str, str, str], ValutazioneImmagine] = {}
         self._esiti_analisi: dict[str, EsitoAnalisi] = {}
         self._utenti: dict[str, tuple[str, str]] = {}  # email -> (id, hash_password)
+        self._segnalazioni: dict[str, Segnalazione] = {}
 
     # ── capi ───────────────────────────────────────────────────────────────
     def elenca_capi(self, utente_id: str) -> list[Capo]:
@@ -208,3 +210,24 @@ class RepositoryInMemoria:
         utente_id = uuid.uuid4().hex
         self._utenti[email] = (utente_id, hash_password)
         return utente_id
+
+    def trova_email(self, utente_id: str) -> str | None:
+        for email, (id_utente, _) in self._utenti.items():
+            if id_utente == utente_id:
+                return email
+        return None
+
+    # ── segnalazioni ────────────────────────────────────────────────────────
+    def salva_segnalazione(self, segnalazione: Segnalazione) -> Segnalazione:
+        self._segnalazioni[segnalazione.id] = segnalazione
+        return segnalazione
+
+    def leggi_segnalazione(self, segnalazione_id: str) -> Segnalazione | None:
+        return self._segnalazioni.get(segnalazione_id)
+
+    def elenca_segnalazioni(self, utente_id: str) -> list[Segnalazione]:
+        trovate = [s for s in self._segnalazioni.values() if s.utente_id == utente_id]
+        return sorted(trovate, key=lambda s: s.creata_il, reverse=True)
+
+    def elenca_tutte_segnalazioni(self) -> list[Segnalazione]:
+        return sorted(self._segnalazioni.values(), key=lambda s: s.creata_il, reverse=True)

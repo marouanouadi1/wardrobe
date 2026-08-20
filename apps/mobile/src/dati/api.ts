@@ -13,15 +13,18 @@ import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
 import type {
   AggiornamentoCapo,
+  AggiornamentoSegnalazione,
   AnalisiAvviata,
   Capo,
   ContestoSuggerimento,
   Credenziali,
   ElencoCapi,
   ElencoMessaggiChat,
+  ElencoSegnalazioni,
   EsitoAnalisi,
   EsitoPlayground,
   ModelloDisponibile,
+  NuovaSegnalazione,
   NuovoCapoManuale,
   NuovoOutfit,
   Outfit,
@@ -37,6 +40,7 @@ import type {
   RispostaSuggerimenti,
   RispostaValutazioni,
   RispostaValutazioniImmagini,
+  Segnalazione,
   TokenAccesso,
   UploadFirmato,
 } from '@wardrobe/contracts'
@@ -248,6 +252,20 @@ export const api = {
   // ── profilo ─────────────────────────────────────────────────────────────
   profilo: () => chiama<Profilo>('/profilo'),
   salvaProfilo: (profilo: Profilo) => chiama<Profilo>('/profilo', { metodo: 'PUT', corpo: profilo }),
+
+  // ── segnalazioni ────────────────────────────────────────────────────────
+  segnalazioni: {
+    /** La copia che il backend tiene di quanto `apriSegnalazione()` ha già
+     * inviato a Sentry — vedi `dati/segnalazioni.ts`. */
+    crea: (nuova: NuovaSegnalazione) =>
+      chiama<Segnalazione>('/segnalazioni', { metodo: 'POST', corpo: nuova }),
+    /** Le proprie, o tutte con `amministratore: true` se l'email di chi
+     * chiama è nell'allowlist del backend (EMAIL_AMMINISTRATORI). */
+    elenca: () => chiama<ElencoSegnalazioni>('/segnalazioni'),
+    /** Riservata all'amministratore: chiunque altro riceve un 403. */
+    aggiorna: (id: string, modifica: AggiornamentoSegnalazione) =>
+      chiama<Segnalazione>(`/segnalazioni/${id}`, { metodo: 'PATCH', corpo: modifica }),
+  },
 
   // ── playground, solo interno ────────────────────────────────────────────
   dev: {

@@ -15,7 +15,7 @@ import pytest
 from conftest import ADESSO, costruisci_capo, intestazioni_utente
 from domain.errors import NonAutenticato
 from domain.models import PreferenzeStile, Profilo, StatoCapo, TipoCapo
-from handlers import auth, capi, foto, health, outfit, playground, profilo
+from handlers import auth, capi, foto, health, outfit, playground, profilo, segnalazioni
 from handlers._container import repository, repository_utenti
 from handlers._http import utente_id
 
@@ -394,3 +394,90 @@ class TestPlayground:
         )
         assert risposta["statusCode"] == 503
         assert corpo_di(risposta)["errore"] == "provider_non_configurato"
+
+
+class TestSegnalazioni:
+    def _registra(self, email: str) -> str:
+        """Un utente vero, con un'email in `repository_utenti`: serve perché
+        `_e_amministratore` risale dall'id all'email — un `utente_id` di
+        comodo come "demo" non basta qui."""
+        from domain.autenticazione import genera_hash
+
+        return repository_utenti().crea(email, genera_hash("password-lunga"))
+
+    def test_crea_nasce_ricevuta_e_legata_a_chi_segnala(self):
+        utente = self._registra("cugino@esempio.it")
+        risposta = segnalazioni.crea(
+            evento(corpo={"testo": "l'app si è chiusa caricando una foto"}, utente=utente), None
+        )
+        assert risposta["statusCode"] == 201
+        dati = corpo_di(risposta)
+        assert dati["stato"] == "ricevuta"
+        assert dati["utente_id"] == utente
+
+    def test_elenca_vede_solo_le_proprie_senza_essere_amministratore(self):
+        io = self._registra("io@esempio.it")
+        altro = self._registra("altro@esempio.it")
+        segnalazioni.crea(evento(corpo={"testo": "problema mio"}, utente=io), None)
+        segnalazioni.crea(evento(corpo={"testo": "problema di un altro"}, utente=altro), None)
+
+        dati = corpo_di(segnalazioni.elenca(evento(utente=io), None))
+        assert dati["amministratore"] is False
+        assert [s["testo"] for s in dati["segnalazioni"]] == ["problema mio"]
+
+    def test_elenca_amministratore_vede_tutte(self, monkeypatch: pytest.MonkeyPatch):
+        admin = self._registra("admin@esempio.it")
+        altro = self._registra("cugino@esempio.it")
+        monkeypatch.setenv("EMAIL_AMMINISTRATORI", "admin@esempio.it")
+        segnalazioni.crea(evento(corpo={"testo": "problema mio"}, utente=admin), None)
+        segnalazioni.crea(evento(corpo={"testo": "problema del cugino"}, utente=altro), None)
+
+        dati = corpo_di(segnalazioni.elenca(evento(utente=admin), None))
+        assert dati["amministratore"] is True
+        assert {s["testo"] for s in dati["segnalazioni"]} == {"problema mio", "problema del cugino"}
+
+    def test_aggiorna_senza_essere_amministratore_e_un_403(self):
+        utente = self._registra("cugino2@esempio.it")
+        creata = corpo_di(
+            segnalazioni.crea(evento(corpo={"testo": "problema"}, utente=utente), None)
+        )
+
+        risposta = segnalazioni.aggiorna(
+            evento(
+                corpo={"stato": "risolta"},
+                percorso={"segnalazioneId": creata["id"]},
+                utente=utente,
+            ),
+            None,
+        )
+        assert risposta["statusCode"] == 403
+
+    def test_aggiorna_da_amministratore_cambia_lo_stato(self, monkeypatch: pytest.MonkeyPatch):
+        admin = self._registra("admin2@esempio.it")
+        monkeypatch.setenv("EMAIL_AMMINISTRATORI", "admin2@esempio.it")
+        creata = corpo_di(
+            segnalazioni.crea(evento(corpo={"testo": "problema"}, utente=admin), None)
+        )
+
+        risposta = segnalazioni.aggiorna(
+            evento(
+                corpo={"stato": "in_lavorazione"},
+                percorso={"segnalazioneId": creata["id"]},
+                utente=admin,
+            ),
+            None,
+        )
+        assert risposta["statusCode"] == 200
+        assert corpo_di(risposta)["stato"] == "in_lavorazione"
+
+    def test_aggiorna_una_segnalazione_inesistente_e_un_404(self, monkeypatch: pytest.MonkeyPatch):
+        admin = self._registra("admin3@esempio.it")
+        monkeypatch.setenv("EMAIL_AMMINISTRATORI", "admin3@esempio.it")
+
+        risposta = segnalazioni.aggiorna(
+            evento(
+                corpo={"stato": "risolta"}, percorso={"segnalazioneId": "fantasma"}, utente=admin
+            ),
+            None,
+        )
+        assert risposta["statusCode"] == 404

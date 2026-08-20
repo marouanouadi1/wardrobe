@@ -66,5 +66,10 @@
     "mancante",
     "inventato",
     "non_valutato"
+  ],
+  "StatoSegnalazione": [
+    "ricevuta",
+    "in_lavorazione",
+    "risolta"
   ]
 }
