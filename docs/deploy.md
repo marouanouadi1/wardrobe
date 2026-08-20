@@ -47,7 +47,7 @@ Il job `deploy` in `.github/workflows/api.yml` fa da solo, a ogni merge su
 `main` che tocca `services/api/**` o `packages/contracts/**`, esattamente i
 passi manuali sopra: lo stesso comando `rsync` (stesse esclusioni, `.env`
 compresi) da un runner GitHub Actions, poi `docker compose up -d --build` via
-SSH. Intorno a quei due passi c'è il versionamento:
+SSH. Intorno a quei due passi c'è il versionamento e le migrazioni:
 
 1. **bump della versione** in `services/api/pyproject.toml` con
    `scripts/bump-versione.mjs api`. Il livello non è fisso: viene dedotto dai
@@ -57,12 +57,16 @@ SSH. Intorno a quei due passi c'è il versionamento:
    altrimenti resterebbe indietro per sempre. Qui i file vengono solo scritti,
    così l'albero che parte col `rsync` porta già la versione nuova;
 2. `rsync` + `docker compose up -d --build`, come sopra;
-3. **verifica della versione servita**: `GET /salute` riporta la versione dai
+3. **`docker compose exec -T api python scripts/applica_migrazioni.py`**: ogni
+   migrazione arrivata con quel merge, applicata da sola — non serve più
+   lanciarla a mano (vedi sotto). Idempotente ("create ... if not exists" in
+   ogni file), quindi girare anche senza migrazioni nuove non fa danni;
+4. **verifica della versione servita**: `GET /salute` riporta la versione dai
    metadati del pacchetto installato, e il job confronta quel valore con la
    versione appena rilasciata. Prima qui c'era solo un `curl --fail`: un rsync
    andato a metà, o un `up` che riusava l'immagine vecchia, passavano
    inosservati perché l'endpoint rispondeva comunque;
-4. **commit + tag `api-v<versione>`**, pushati per ultimi, a deploy verificato.
+5. **commit + tag `api-v<versione>`**, pushati per ultimi, a deploy verificato.
    Se qualcosa sopra è andato storto il rilascio non lascia traccia su `main` e
    il tentativo successivo riparte dallo stesso numero: un tag su una versione
    che non è mai andata in produzione sarebbe una bugia scritta nella storia.
@@ -212,7 +216,11 @@ docker compose logs -f api      # aspetta "API di Wardrobe in ascolto...", poi C
 
 **Migrazioni**: sul primissimo avvio le applica da sola Postgres
 (`docker-entrypoint-initdb.d`, che gira solo su un volume vuoto). Per una
-migrazione arrivata *dopo* che il volume esiste già, va applicata a mano:
+migrazione arrivata *dopo* che il volume esiste già, il deploy automatico da
+CI (sopra) la applica da sola a ogni run — idempotente, "create ... if not
+exists" in ogni file. Serve a mano solo seguendo il percorso manuale di
+aggiornamento (`rsync` + `docker compose up -d --build` da terminale, non da
+CI):
 
 ```bash
 docker compose exec api python scripts/applica_migrazioni.py

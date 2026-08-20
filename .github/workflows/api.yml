@@ -166,6 +166,15 @@ jobs:
         run: ssh marouan@89.167.15.22 'cd ~/wardrobe && docker compose up -d --build'
         working-directory: .
 
+      # Idempotente (ogni file è "create ... if not exists", vedi
+      # scripts/applica_migrazioni.py): girare ad ogni deploy, anche quando
+      # non c'è una migrazione nuova, non fa danni. `-T` disattiva la
+      # pseudo-tty, che altrimenti fallirebbe in un contesto non interattivo
+      # come questo.
+      - name: Applica migrazioni
+        run: ssh marouan@89.167.15.22 'cd ~/wardrobe && docker compose exec -T api python scripts/applica_migrazioni.py'
+        working-directory: .
+
       # Non più solo "risponde": GET /salute riporta la versione dai metadati
       # del pacchetto, quindi qui si verifica che il container ricostruito stia
       # servendo *questo* rilascio. Prima di questo confronto un rsync andato a
