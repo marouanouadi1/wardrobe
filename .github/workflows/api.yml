@@ -21,6 +21,10 @@ concurrency:
   group: api-${{ github.ref }}
   cancel-in-progress: true
 
+# Serve al job `deploy`, che pusha il commit di bump e il tag api-v*.
+permissions:
+  contents: write
+
 defaults:
   run:
     working-directory: services/api
@@ -85,12 +89,53 @@ jobs:
         working-directory: .
 
   deploy:
-    name: deploy su VPS
+    name: bump versione + deploy su VPS
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs: [quality, contracts]
     steps:
+      # fetch-depth: 0 perché lo script di bump sceglie il livello leggendo i
+      # commit dall'ultimo tag api-v*: col default (profondità 1, nessun tag)
+      # non vedrebbe niente.
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # Node serve solo per lo script di bump, condiviso con il workflow
+      # mobile: la logica dei conventional commit sta scritta in un posto solo.
+      # Niente `cache: npm`: qui non si installa nulla, lo script di bump usa
+      # solo moduli built-in di Node.
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      # uv serve solo per rifare il lock dopo il bump (sotto).
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/api/uv.lock
+
+      # Unica fonte di verità: la `version` di services/api/pyproject.toml. Da
+      # lì finisce nei metadati del pacchetto installato dal Dockerfile, ed è
+      # quella che GET /salute riporta — vedi lo step di verifica in fondo.
+      #
+      # Qui i file vengono solo *scritti*: il commit e il tag arrivano in
+      # fondo, a deploy verificato. Un tag api-v0.2.0 su una versione che non è
+      # mai andata in produzione sarebbe una bugia scritta nella storia.
+      - name: Bump versione api
+        id: bump
+        run: |
+          NUOVA=$(node scripts/bump-versione.mjs api)
+          echo "version=$NUOVA" >> "$GITHUB_OUTPUT"
+        working-directory: .
+
+      # uv.lock registra anche la versione del progetto stesso: senza questo
+      # resterebbe indietro per sempre, ed è esattamente il tipo di numero che
+      # mente che questo giro doveva togliere. `uv lock` dopo un bump di sola
+      # versione cambia quella riga e nient'altro — non è un aggiornamento
+      # delle dipendenze mascherato dentro un commit di rilascio.
+      - name: Riallinea uv.lock
+        run: uv lock
 
       # Chiave dedicata al deploy da CI (non quella personale usata da
       # terminale): vedi docs/deploy.md per come è stata generata e installata
@@ -121,8 +166,38 @@ jobs:
         run: ssh marouan@89.167.15.22 'cd ~/wardrobe && docker compose up -d --build'
         working-directory: .
 
-      - name: Verifica salute
+      # Non più solo "risponde": GET /salute riporta la versione dai metadati
+      # del pacchetto, quindi qui si verifica che il container ricostruito stia
+      # servendo *questo* rilascio. Prima di questo confronto un rsync andato a
+      # metà, o un `docker compose up` che riusava l'immagine vecchia, passavano
+      # inosservati: l'endpoint rispondeva comunque.
+      - name: Verifica salute e versione servita
+        env:
+          ATTESA: ${{ steps.bump.outputs.version }}
         run: |
+          set -o pipefail
           sleep 5
-          curl --fail https://api.ilmioarmadio.xyz/salute
+          SERVITA=$(curl --fail --silent https://api.ilmioarmadio.xyz/salute | jq -r .versione)
+          echo "/salute riporta: $SERVITA (atteso: $ATTESA)"
+          if [ "$SERVITA" != "$ATTESA" ]; then
+            echo "::error::Il VPS serve la versione $SERVITA, non la $ATTESA appena rilasciata"
+            exit 1
+          fi
+        working-directory: .
+
+      # In fondo, non in cima: se qualcosa sopra è andato storto il rilascio non
+      # lascia traccia su main e il prossimo tentativo riparte dallo stesso
+      # numero. [skip ci] perché il commit tocca services/api/**, che è nei path
+      # che fanno partire questo stesso workflow.
+      - name: Commit + tag + push della versione
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add services/api/pyproject.toml services/api/uv.lock
+          git commit -m "chore(api): bump versione a ${{ steps.bump.outputs.version }} [skip ci]"
+          git tag "api-v${{ steps.bump.outputs.version }}"
+          git push origin HEAD:main
+          # Tag lightweight (git tag senza -a): --follow-tags non lo pubblica,
+          # serve un push esplicito. Stessa nota in mobile.yml.
+          git push origin "api-v${{ steps.bump.outputs.version }}"
         working-directory: .

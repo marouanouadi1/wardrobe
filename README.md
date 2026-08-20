@@ -162,11 +162,17 @@ migrazioni e le scelte deliberate (playground abilitato per il primo giro di
 prova, Postgres non raggiungibile da Internet) — è in
 [`docs/deploy.md`](docs/deploy.md).
 
-Ogni merge su `main` fa partire da sola la parte di rilascio che tocca:
-un merge sul backend rideploya l'API sul VPS, un merge sull'app fa un bump
-patch della versione, builda un nuovo APK con EAS e lo pubblica come GitHub
-Release. Dettagli in [`docs/deploy.md`](docs/deploy.md) e nei workflow
-`.github/workflows/{api,mobile}.yml`.
+Ogni merge su `main` fa partire da sola la parte di rilascio che tocca: un
+merge sul backend rideploya l'API sul VPS e verifica che `/salute` risponda con
+la versione appena rilasciata, un merge sull'app builda un nuovo APK con EAS e
+lo pubblica come GitHub Release.
+
+Il numero di versione **non conta i merge**: il livello (major, minor, patch)
+viene dedotto dai conventional commit dall'ultimo tag, e il titolo delle PR è
+verificato in CI perché quella deduzione abbia qualcosa da leggere. Il perché
+sta in [`docs/adr/0005`](docs/adr/0005-le-versioni-vengono-dai-commit.md), i
+dettagli operativi in [`docs/deploy.md`](docs/deploy.md) e nei workflow
+`.github/workflows/{api,mobile,pr-title}.yml`.
 
 ## Stato
 

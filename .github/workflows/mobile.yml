@@ -59,7 +59,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [checks]
     steps:
+      # fetch-depth: 0 non è un lusso: scripts/bump-versione.mjs sceglie il
+      # livello leggendo i commit dall'ultimo tag mobile-v*, e col default
+      # (profondità 1, nessun tag) non vedrebbe niente — rilasciando sempre un
+      # patch senza che nessuno se ne accorga.
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v6
         with:
@@ -68,14 +74,19 @@ jobs:
 
       - run: npm ci
 
-      # Unica fonte di verità: apps/mobile/app.json (expo.version). Il commit
-      # generato qui ha [skip ci] nel messaggio apposta: tocca apps/mobile/**,
-      # che rientra nei path che fanno partire questo stesso workflow — senza
-      # [skip ci] il push sotto si rimetterebbe in coda da solo.
+      # Unica fonte di verità: apps/mobile/app.json (expo.version). Il livello
+      # (major/minor/patch) non è fisso: lo script lo deduce dai conventional
+      # commit dall'ultimo tag mobile-v*, contando solo quelli che toccano
+      # apps/mobile e packages/contracts — una feature solo backend non alza il
+      # minor dell'app. Vedi docs/adr/0005.
+      #
+      # Il commit generato qui ha [skip ci] nel messaggio apposta: tocca
+      # apps/mobile/**, che rientra nei path che fanno partire questo stesso
+      # workflow — senza [skip ci] il push sotto si rimetterebbe in coda da solo.
       - name: Bump versione app
         id: bump
         run: |
-          NEW_VERSION=$(node scripts/bump-mobile-version.mjs)
+          NEW_VERSION=$(node scripts/bump-versione.mjs mobile)
           echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Commit + tag + push
