@@ -61,6 +61,17 @@ ROTTE: list[tuple[str, re.Pattern[str], Handler]] = [
     ("POST", re.compile(r"^/suggerimenti$"), suggerimenti.proponi),
     ("GET", re.compile(r"^/chat$"), chat.elenca),
     ("POST", re.compile(r"^/chat$"), chat.invia),
+    ("GET", re.compile(r"^/chat/conversazioni$"), chat.elenca_conversazioni),
+    (
+        "GET",
+        re.compile(r"^/chat/conversazioni/(?P<conversazioneId>[^/]+)$"),
+        chat.leggi_conversazione,
+    ),
+    (
+        "DELETE",
+        re.compile(r"^/chat/conversazioni/(?P<conversazioneId>[^/]+)$"),
+        chat.elimina_conversazione,
+    ),
     ("POST", re.compile(r"^/capi/analisi$"), analisi.avvia),
     ("GET", re.compile(r"^/capi/analisi/(?P<esecuzioneId>[^/]+)$"), analisi.stato),
     ("GET", re.compile(r"^/outfit$"), outfit.elenca),
@@ -186,6 +197,9 @@ class Ponte(BaseHTTPRequestHandler):
 
     def do_PATCH(self) -> None:
         self._instrada("PATCH")
+
+    def do_DELETE(self) -> None:
+        self._instrada("DELETE")
 
     def do_PUT(self) -> None:
         indirizzo = urlparse(self.path)

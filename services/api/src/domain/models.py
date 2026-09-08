@@ -496,15 +496,14 @@ class RispostaSuggerimenti(ModelloWardrobe):
 
 
 class MessaggioChat(ModelloWardrobe):
-    """Un turno della chat continua con lo stilista.
+    """Un turno di una conversazione con lo stilista.
 
-    Persiste per utente: non è una sessione che si azzera chiudendo l'app, è
-    la stessa conversazione che si riprende da dove l'ha lasciata. `testo` sul
-    turno di Wardrobe è la prosa libera della risposta (`RispostaStilista.risposta`),
-    quella che si mostra a schermo; `suggerimenti`, quando presenti, sono gli
-    outfit proposti nello stesso turno. La cronologia rimandata al modello
-    (`domain.chat.cronologia_da_messaggi`) riappende gli id di `suggerimenti`
-    al testo, perché il modello non li perda al turno successivo.
+    `testo` sul turno di Wardrobe è la prosa libera della risposta
+    (`RispostaStilista.risposta`), quella che si mostra a schermo;
+    `suggerimenti`, quando presenti, sono gli outfit proposti nello stesso
+    turno. La cronologia rimandata al modello (`domain.chat.cronologia_da_messaggi`)
+    riappende gli id di `suggerimenti` al testo, perché il modello non li
+    perda al turno successivo.
     """
 
     id: str
@@ -514,15 +513,49 @@ class MessaggioChat(ModelloWardrobe):
     creato_il: datetime
 
 
+class ConversazioneChat(ModelloWardrobe):
+    """Un contenitore di turni: da quando la chat ha smesso di essere una
+    sola sessione continua per utente (vedi docs/adr/0006).
+
+    Rispecchia esattamente le colonne di `conversazioni_chat` — niente qui
+    dentro che l'adapter debba inventare per poterla salvare. `turni` e
+    `anteprima`, che servono solo all'elenco, vivono in
+    `VoceElencoConversazioni`, non qui.
+    """
+
+    id: str
+    titolo: str
+    creata_il: datetime
+    ultimo_turno_il: datetime
+
+
+class VoceElencoConversazioni(ModelloWardrobe):
+    """`ConversazioneChat` più ciò che solo l'elenco calcola — un aggregato
+    su `messaggi_chat`, non colonne proprie di `conversazioni_chat`."""
+
+    conversazione: ConversazioneChat
+    turni: int
+    anteprima: str
+
+
+class ElencoConversazioniChat(ModelloWardrobe):
+    conversazioni: list[VoceElencoConversazioni]
+
+
 class RichiestaMessaggioChat(ModelloWardrobe):
     testo: str
     meteo: Meteo | None = None
     agenda: list[ImpegnoAgenda] = Field(default_factory=list)
+    conversazione_id: str | None = Field(
+        default=None,
+        description="Assente: apre una conversazione nuova, col titolo dedotto dal messaggio.",
+    )
 
 
 class RispostaChat(ModelloWardrobe):
     utente: MessaggioChat
     wardrobe: MessaggioChat
+    conversazione: ConversazioneChat
     contesto: ContestoSuggerimento
     provider: str
     modello: str
@@ -531,6 +564,7 @@ class RispostaChat(ModelloWardrobe):
 
 class ElencoMessaggiChat(ModelloWardrobe):
     messaggi: list[MessaggioChat]
+    conversazione: ConversazioneChat | None = None
 
 
 class Segnalazione(ModelloWardrobe):

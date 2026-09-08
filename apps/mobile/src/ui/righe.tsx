@@ -18,6 +18,7 @@ export function RigaNavigabile({
   titolo,
   sottotitolo,
   onPress,
+  onPressaLungo,
   su = 'chiaro',
   bordo,
 }: {
@@ -25,6 +26,9 @@ export function RigaNavigabile({
   titolo: string
   sottotitolo: string
   onPress?: () => void
+  /** Un'azione secondaria sulla stessa riga — es. eliminare, nell'elenco delle
+   * conversazioni — senza aggiungere un'icona che non fa parte del set. */
+  onPressaLungo?: () => void
   su?: 'chiaro' | 'scuro'
   /** Un bordo sottile invece del solo fondo — le righe «di servizio» di Profilo. */
   bordo?: boolean
@@ -33,6 +37,7 @@ export function RigaNavigabile({
   return (
     <Toccabile
       onPress={onPress}
+      onLongPress={onPressaLungo}
       scala={0.98}
       style={{
         flexDirection: 'row',

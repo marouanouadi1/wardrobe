@@ -62,6 +62,7 @@ RISPOSTE = (
     models.MessaggioChat,
     models.RispostaChat,
     models.ElencoMessaggiChat,
+    models.ElencoConversazioniChat,
     models.Segnalazione,
     models.ElencoSegnalazioni,
 )

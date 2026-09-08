@@ -8,30 +8,34 @@
  * dove sei senza una barra di navigazione tradizionale.
  */
 
-import { router } from 'expo-router'
 import { Image } from 'expo-image'
+import { router } from 'expo-router'
 import type { ReactNode } from 'react'
+import { useRef } from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, View, type ViewStyle } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colori, linee, raggi, spazi } from '../tema/tokens'
-import { Icona, Toccabile } from './base'
+import { BottoneIndietro, Icona, Toccabile } from './base'
 import { Corpo, Titolo } from './testo'
 
 export function Testata({
   occhiello,
   titolo,
   indietro,
+  onIndietro,
   fotoProfilo,
   su,
 }: {
   occhiello: string
   titolo: string
   indietro?: boolean
+  /** Cosa fare al tocco: assente = `router.back()`, come sempre. Serve solo
+   * a chi ha bisogno di tornare a un passo, non a una schermata (l'intro). */
+  onIndietro?: () => void
   fotoProfilo?: string | null
   su?: 'chiaro' | 'scuro'
 }) {
   const bordi = useSafeAreaInsets()
-  const scura = su === 'scuro'
 
   return (
     <View
@@ -44,22 +48,7 @@ export function Testata({
         gap: spazi.m,
       }}
     >
-      {indietro ? (
-        <Toccabile
-          onPress={() => router.back()}
-          scala={0.92}
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: raggi.pillola,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: scura ? 'rgba(247,244,239,0.1)' : linee.tenue,
-          }}
-        >
-          <Icona nome="indietro" misura={17} colore={scura ? colori.crema : colori.inchiostro} spessore={2.2} />
-        </Toccabile>
-      ) : null}
+      {indietro ? <BottoneIndietro onPress={onIndietro} su={su} /> : null}
 
       <View style={{ flex: 1, minWidth: 0 }}>
         <Corpo taglia={11.5} tono="tenue" su={su}>
@@ -108,34 +97,50 @@ export function Schermata({
   occhiello,
   titolo,
   indietro,
+  onIndietro,
   fotoProfilo,
   su,
   tab,
+  ancoraInFondo,
   children,
   contentStyle,
 }: {
   occhiello: string
   titolo: string
   indietro?: boolean
+  onIndietro?: () => void
   fotoProfilo?: string | null
   su?: 'chiaro' | 'scuro'
   /** Sotto la barra galleggiante: il `paddingBottom` le lascia spazio. */
   tab?: boolean
+  /** Ancora la vista in fondo quando il contenuto cresce: la chat, dove
+   * l'ultimo messaggio deve restare visibile senza uno scroll manuale. */
+  ancoraInFondo?: boolean
   children: ReactNode
   contentStyle?: ViewStyle
 }) {
   const bordi = useSafeAreaInsets()
   const paddingBottom = tab ? Math.max(bordi.bottom, 10) + 6 + 48 + 8 : 60
+  const scrollRef = useRef<ScrollView>(null)
 
   return (
     <View style={{ flex: 1, backgroundColor: su === 'scuro' ? colori.inchiostro : undefined }}>
-      <Testata occhiello={occhiello} titolo={titolo} indietro={indietro} fotoProfilo={fotoProfilo} su={su} />
+      <Testata
+        occhiello={occhiello}
+        titolo={titolo}
+        indietro={indietro}
+        onIndietro={onIndietro}
+        fotoProfilo={fotoProfilo}
+        su={su}
+      />
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           { paddingHorizontal: spazi.xl, paddingBottom, gap: spazi.l },
           contentStyle,
         ]}
         showsVerticalScrollIndicator={false}
+        onContentSizeChange={ancoraInFondo ? () => scrollRef.current?.scrollToEnd({ animated: true }) : undefined}
       >
         {children}
       </ScrollView>

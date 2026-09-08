@@ -12,6 +12,7 @@ from domain.chat import (
     cronologia_da_messaggi,
     interpreta_risposta_chat,
     richiesta_chat,
+    titolo_da_primo_messaggio,
 )
 from domain.errors import ErroreDominio, SuggerimentoNonValido
 from domain.models import Capo, MessaggioChat, RuoloChat, Suggerimento, Vestizione
@@ -100,6 +101,24 @@ class TestRichiestaChat:
         assert len(richiesta.cronologia) == 1
         assert richiesta.cronologia[0].testo == "Cosa metto oggi?"
         assert "capi_disponibili" in richiesta.prompt
+
+
+class TestTitoloDaPrimoMessaggio:
+    def test_un_messaggio_corto_diventa_il_titolo_cosi_com_e(self):
+        assert titolo_da_primo_messaggio("Cosa metto oggi?") == "Cosa metto oggi?"
+
+    def test_un_messaggio_vuoto_ha_un_titolo_di_ripiego(self):
+        assert titolo_da_primo_messaggio("   ") == "Nuova conversazione"
+
+    def test_un_messaggio_lungo_si_tronca_su_un_confine_di_parola(self):
+        testo = "Cena fuori stasera con un tempo incerto, forse pioggia, forse no"
+        titolo = titolo_da_primo_messaggio(testo)
+        assert titolo.endswith("…")
+        assert not titolo[:-1].endswith(" ")
+        assert len(titolo) <= 41  # 40 caratteri più l'ellissi
+
+    def test_gli_spazi_ripetuti_si_normalizzano(self):
+        assert titolo_da_primo_messaggio("Cosa   metto\noggi?") == "Cosa metto oggi?"
 
 
 class TestInterpretaRispostaChat:

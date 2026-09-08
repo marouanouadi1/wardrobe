@@ -11,11 +11,12 @@
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import { useState } from 'react'
-import { View } from 'react-native'
+import { useEffect, useState } from 'react'
+import { BackHandler, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { segnaIntroVista } from '../src/dati/intro'
 import { colori, linee, raggi, spazi } from '../src/tema/tokens'
-import { BottonePrimario, Toccabile } from '../src/ui/base'
+import { BottoneIndietro, BottonePrimario, Toccabile } from '../src/ui/base'
 import { Corpo, Etichetta, Titolo } from '../src/ui/testo'
 
 const PASSI = [
@@ -47,6 +48,25 @@ export default function Intro() {
   const corrente = PASSI[passo]!
   const ultimo = passo === PASSI.length - 1
 
+  // Il tasto indietro hardware di Android: senza questo, al secondo passo
+  // esce dall'app invece di tornare al primo — non c'è un gesto predittivo
+  // a cui appoggiarsi (`app.json` ha `predictiveBackGestureEnabled: false`).
+  useEffect(() => {
+    if (passo === 0) return
+    const sottoscrizione = BackHandler.addEventListener('hardwareBackPress', () => {
+      setPasso((precedente) => Math.max(0, precedente - 1))
+      return true
+    })
+    return () => sottoscrizione.remove()
+  }, [passo])
+
+  function entra() {
+    // Segna l'intro come vista prima di entrare, in entrambe le uscite:
+    // senza, `index.tsx` la rimostra a ogni apertura senza token.
+    void segnaIntroVista()
+    router.push('/accedi')
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colori.sfondo }}>
       <Image
@@ -71,25 +91,34 @@ export default function Intro() {
           paddingHorizontal: 24,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Titolo taglia={22}>wardrobe</Titolo>
-          <View
-            style={{ width: 6, height: 6, borderRadius: raggi.pillola, backgroundColor: colori.ambra }}
-          />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
+          {passo > 0 ? <BottoneIndietro onPress={() => setPasso(passo - 1)} /> : null}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Titolo taglia={22}>wardrobe</Titolo>
+            <View
+              style={{ width: 6, height: 6, borderRadius: raggi.pillola, backgroundColor: colori.ambra }}
+            />
+          </View>
         </View>
 
         <View style={{ marginTop: 'auto', gap: spazi.m }}>
           <View style={{ flexDirection: 'row', gap: 5 }}>
             {PASSI.map((_, indice) => (
-              <View
+              <Toccabile
                 key={indice}
+                scala={0}
+                haptic={false}
+                hitSlop={8}
+                onPress={indice < passo ? () => setPasso(indice) : undefined}
                 style={{
                   height: 3,
                   borderRadius: raggi.pillola,
                   width: indice === passo ? 26 : 10,
                   backgroundColor: indice === passo ? colori.ambra : linee.chiara,
                 }}
-              />
+              >
+                <View />
+              </Toccabile>
             ))}
           </View>
 
@@ -121,14 +150,10 @@ export default function Intro() {
             testo={corrente.azione}
             freccia
             style={{ marginTop: spazi.m }}
-            onPress={() => (ultimo ? router.push('/accedi') : setPasso(passo + 1))}
+            onPress={() => (ultimo ? entra() : setPasso(passo + 1))}
           />
 
-          <Toccabile
-            onPress={() => router.push('/accedi')}
-            scala={0}
-            style={{ alignItems: 'center', paddingVertical: 8 }}
-          >
+          <Toccabile onPress={entra} scala={0} style={{ alignItems: 'center', paddingVertical: 8 }}>
             <Corpo taglia={13.5} tono="tenue">
               Ho già un account
             </Corpo>

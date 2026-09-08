@@ -15,12 +15,14 @@ from domain.errors import EmailGiaRegistrata, ErroreDominio
 from domain.firma_foto import firma_foto
 from domain.models import (
     Capo,
+    ConversazioneChat,
     EsitoAnalisi,
     MessaggioChat,
     Outfit,
     Profilo,
     Segnalazione,
     UploadFirmato,
+    VoceElencoConversazioni,
 )
 
 
@@ -86,7 +88,10 @@ class RepositoryInMemoria:
         self._outfit: dict[str, dict[str, Outfit]] = {}
         self._profili: dict[str, Profilo] = {}
         self._usi: set[tuple[str, str, date]] = set()
-        self._chat: dict[str, list[MessaggioChat]] = {}
+        # Chiave (utente_id, conversazione_id): un dizionario solo non basta
+        # più, dalla decisione di ADR 0006 di avere più conversazioni per utente.
+        self._chat: dict[tuple[str, str], list[MessaggioChat]] = {}
+        self._conversazioni: dict[str, dict[str, ConversazioneChat]] = {}
         self._esiti_analisi: dict[str, EsitoAnalisi] = {}
         self._utenti: dict[str, tuple[str, str]] = {}  # email -> (id, hash_password)
         self._segnalazioni: dict[str, Segnalazione] = {}
@@ -126,13 +131,45 @@ class RepositoryInMemoria:
         for capo_id in capo_ids:
             self._usi.add((utente_id, capo_id, giorno))
 
-    # ── chat ───────────────────────────────────────────────────────────────
-    def elenca_messaggi_chat(self, utente_id: str, limite: int = 200) -> list[MessaggioChat]:
-        return self._chat.get(utente_id, [])[-limite:]
+    # ── chat: conversazioni ──────────────────────────────────────────────────
+    def elenca_messaggi_chat(
+        self, utente_id: str, conversazione_id: str, limite: int = 200
+    ) -> list[MessaggioChat]:
+        return self._chat.get((utente_id, conversazione_id), [])[-limite:]
 
-    def salva_messaggio_chat(self, utente_id: str, messaggio: MessaggioChat) -> MessaggioChat:
-        self._chat.setdefault(utente_id, []).append(messaggio)
+    def salva_messaggio_chat(
+        self, utente_id: str, conversazione_id: str, messaggio: MessaggioChat
+    ) -> MessaggioChat:
+        self._chat.setdefault((utente_id, conversazione_id), []).append(messaggio)
         return messaggio
+
+    def elenca_conversazioni_chat(self, utente_id: str) -> list[VoceElencoConversazioni]:
+        voci = []
+        for conversazione in self._conversazioni.get(utente_id, {}).values():
+            messaggi = self._chat.get((utente_id, conversazione.id), [])
+            voci.append(
+                VoceElencoConversazioni(
+                    conversazione=conversazione,
+                    turni=len(messaggi),
+                    anteprima=messaggi[-1].testo if messaggi else "",
+                )
+            )
+        return sorted(voci, key=lambda v: v.conversazione.ultimo_turno_il, reverse=True)
+
+    def leggi_conversazione_chat(
+        self, utente_id: str, conversazione_id: str
+    ) -> ConversazioneChat | None:
+        return self._conversazioni.get(utente_id, {}).get(conversazione_id)
+
+    def salva_conversazione_chat(
+        self, utente_id: str, conversazione: ConversazioneChat
+    ) -> ConversazioneChat:
+        self._conversazioni.setdefault(utente_id, {})[conversazione.id] = conversazione
+        return conversazione
+
+    def elimina_conversazione_chat(self, utente_id: str, conversazione_id: str) -> None:
+        self._conversazioni.get(utente_id, {}).pop(conversazione_id, None)
+        self._chat.pop((utente_id, conversazione_id), None)
 
     # ── esiti dell'analisi inline ────────────────────────────────────────
     def salva_esito_analisi(self, esito: EsitoAnalisi) -> None:

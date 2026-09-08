@@ -14,6 +14,7 @@ from pydantic import Field
 
 from domain.models import (
     Capo,
+    ConversazioneChat,
     EsitoAnalisi,
     MessaggioChat,
     ModelloDisponibile,
@@ -23,6 +24,7 @@ from domain.models import (
     Segnalazione,
     UploadFirmato,
     UsoToken,
+    VoceElencoConversazioni,
 )
 
 
@@ -137,11 +139,39 @@ class RepositoryArmadio(Protocol):
 
     def registra_uso(self, utente_id: str, capo_ids: list[str], giorno: date) -> None: ...
 
-    def elenca_messaggi_chat(self, utente_id: str, limite: int = 200) -> list[MessaggioChat]:
-        """La chat continua di un utente, in ordine cronologico. Una sola, non a sessioni."""
+    def elenca_messaggi_chat(
+        self, utente_id: str, conversazione_id: str, limite: int = 200
+    ) -> list[MessaggioChat]:
+        """I turni di una conversazione, in ordine cronologico."""
         ...
 
-    def salva_messaggio_chat(self, utente_id: str, messaggio: MessaggioChat) -> MessaggioChat: ...
+    def salva_messaggio_chat(
+        self, utente_id: str, conversazione_id: str, messaggio: MessaggioChat
+    ) -> MessaggioChat: ...
+
+    def elenca_conversazioni_chat(self, utente_id: str) -> list[VoceElencoConversazioni]:
+        """Le conversazioni di un utente, dalla più recente."""
+        ...
+
+    def leggi_conversazione_chat(
+        self, utente_id: str, conversazione_id: str
+    ) -> ConversazioneChat | None:
+        """`None` se non esiste o non è di questo utente: le due cose non si
+        distinguono al chiamante, per non rivelare l'id di una conversazione
+        altrui."""
+        ...
+
+    def salva_conversazione_chat(
+        self, utente_id: str, conversazione: ConversazioneChat
+    ) -> ConversazioneChat:
+        """Idempotente su `id`: crea la prima volta, aggiorna `ultimo_turno_il`
+        le successive."""
+        ...
+
+    def elimina_conversazione_chat(self, utente_id: str, conversazione_id: str) -> None:
+        """Porta via anche i suoi turni: nessuna riga di `messaggi_chat` resta
+        orfana."""
+        ...
 
     # ── esiti dell'analisi inline ──────────────────────────────────────────
     def salva_esito_analisi(self, esito: EsitoAnalisi) -> None:

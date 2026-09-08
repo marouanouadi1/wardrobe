@@ -1,10 +1,15 @@
 /**
- * Aggiungere un capo: scatta, guarda cosa ha capito, salva.
+ * Aggiungere un capo: scatta o scegli, guarda la coda, analizza.
  *
- * La schermata mostra i passi dell'analisi uno per uno mentre avvengono. Non è
- * decorazione: l'attesa di un modello di visione è di secondi, e vedere «sto
- * leggendo l'etichetta di lavaggio» rende quei secondi comprensibili invece che
- * sospetti. Ed è anche il momento in cui l'utente capisce cosa sa fare l'app.
+ * «Scatta» e «Dalla galleria» accumulano in una coda — non partono subito:
+ * chi ha appena scaricato l'app ha un armadio pieno, non un capo, e prima
+ * c'erano due percorsi separati per dirlo (un bottone «Dalla galleria» che
+ * prendeva una foto sola, un secondo bottone che ne prendeva fino a venti)
+ * più un terzo che non copriva affatto la fotocamera. Una foto sola in coda
+ * si comporta come sempre: analisi con la checklist, poi il dettaglio per
+ * confermare cosa il modello ha letto. Più foto insieme vanno a un capo per
+ * volta, e finiscono in armadio via via che il modello finisce — senza
+ * fermarsi alla prima che fallisce.
  */
 
 import * as ImagePicker from 'expo-image-picker'
@@ -19,6 +24,7 @@ import { PALETTE_COLORI, TIPI_CAPO } from '../../src/dati/dominio'
 import { conta } from '../../src/dati/formato'
 import { ETICHETTE, colori, linee, ombre, raggi, spazi, velo } from '../../src/tema/tokens'
 import { BottonePrimario, BottoneSecondario, Campo, Icona, Pillola, Toccabile } from '../../src/ui/base'
+import { MiniaturaFoto } from '../../src/ui/capi'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Schermata } from '../../src/ui/guscio'
 import type { TipoCapo } from '@wardrobe/contracts'
@@ -33,16 +39,36 @@ const PASSI = [
 
 type Fase = 'scatta' | 'analisi' | 'manuale'
 
-/** Quante foto si possono mandare in una volta, come nel design. */
+/** Quante foto si possono scegliere in un colpo solo dalla galleria — il
+ * limite di `selectionLimit`, non più scritto anche nell'etichetta di un
+ * bottone: il numero non dice a nessuno cosa succederà dopo. */
 const LIMITE_BLOCCO = 20
+
+interface FotoInCoda {
+  /** Un id proprio, non l'uri: scegliere la stessa foto due volte dalla
+   * galleria (due giri separati) darebbe due uri identici, e con l'uri come
+   * chiave togliere una delle due toglierebbe entrambe. */
+  id: string
+  uri: string
+}
+
+let contatoreFoto = 0
 
 export default function Carica() {
   const { avvisa, creaCapoManuale, registraCapo } = useArmadio()
   const [fase, setFase] = useState<Fase>('scatta')
   const [passo, setPasso] = useState(0)
   const [foto, setFoto] = useState<string | null>(null)
-  /** Quante foto restano da mandare nell'analisi in blocco. */
-  const [inBlocco, setInBlocco] = useState<number | null>(null)
+  /** Le foto scattate o scelte, in attesa di «Analizza»: si può togliere
+   * quella sbagliata prima di partire, cosa che il vecchio bottone «20 in
+   * blocco» — diretto in analisi appena scelte le foto — non permetteva. */
+  const [coda, setCoda] = useState<FotoInCoda[]>([])
+  const [analizzandoCoda, setAnalizzandoCoda] = useState(false)
+  const [progressoCoda, setProgressoCoda] = useState<{
+    totale: number
+    riuscite: number
+    fallite: number
+  } | null>(null)
   // Il percorso «a mano»: prima di fidarsi del modello, o quando lo scontorno
   // e la lettura automatica non bastano, l'utente compila lui i tre campi
   // che servono perché il capo esista (nome, tipo, colore).
@@ -51,36 +77,56 @@ export default function Carica() {
   const [coloreManuale, setColoreManuale] = useState(0)
   const [salvandoManuale, setSalvandoManuale] = useState(false)
 
-  async function scegliFoto(dallaFotocamera: boolean, percorso: 'auto' | 'manuale' = 'auto') {
-    const permesso = dallaFotocamera
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync()
+  async function scattaUnaFoto() {
+    const permesso = await ImagePicker.requestCameraPermissionsAsync()
     if (!permesso.granted) {
       avvisa('Senza accesso alla fotocamera non posso leggere il capo.')
       return
     }
-
-    const esito = dallaFotocamera
-      ? await ImagePicker.launchCameraAsync({ quality: 0.8 })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.8, mediaTypes: ['images'] })
+    const esito = await ImagePicker.launchCameraAsync({ quality: 0.8 })
     if (esito.canceled || !esito.assets[0]) return
-
-    setFoto(esito.assets[0].uri)
-    // Un tentativo nuovo parte pulito: l'avviso del tentativo precedente non
-    // deve restare appeso sopra «Sto guardando il capo» (o sul modulo a mano).
     avvisa(null)
+    // Si può toccare «Scatta» di nuovo per il capo successivo: è
+    // l'acquisizione multipla dalla fotocamera che prima non esisteva.
+    setCoda((precedente) => [
+      ...precedente,
+      { id: `foto-${(contatoreFoto += 1)}`, uri: esito.assets[0]!.uri },
+    ])
+  }
 
-    if (percorso === 'manuale') {
-      setFase('manuale')
+  async function scegliDallaGalleria() {
+    const permesso = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!permesso.granted) {
+      avvisa('Senza accesso alle foto non posso leggere i capi.')
       return
     }
+    const esito = await ImagePicker.launchImageLibraryAsync({
+      quality: 0.8,
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: LIMITE_BLOCCO,
+    })
+    if (esito.canceled || esito.assets.length === 0) return
+    avvisa(null)
+    setCoda((precedente) => [
+      ...precedente,
+      ...esito.assets.map((scatto) => ({ id: `foto-${(contatoreFoto += 1)}`, uri: scatto.uri })),
+    ])
+  }
 
-    // URL firmato, PUT diretta all'archivio foto, poi la pipeline. La foto
-    // non passa dal nostro server.
+  function rimuoviDallaCoda(id: string) {
+    setCoda((precedente) => precedente.filter((f) => f.id !== id))
+  }
+
+  /** Una sola foto in coda: il percorso di sempre, invariato — analisi con
+   * la checklist, poi il dettaglio per confermare gli attributi letti. */
+  async function analizzaUnaFoto(uri: string) {
+    setCoda([])
+    setFoto(uri)
     setFase('analisi')
     try {
       const firma = await api.firmaUpload('image/jpeg')
-      await api.caricaFoto(firma, esito.assets[0].uri)
+      await api.caricaFoto(firma, uri)
       const avviata = await api.avviaAnalisi(firma.chiave)
 
       for (let tentativo = 0; tentativo < 40; tentativo += 1) {
@@ -113,45 +159,69 @@ export default function Carica() {
   }
 
   /**
-   * L'analisi in blocco: chi ha appena scaricato l'app ha un armadio pieno, non
-   * un capo. Non c'è una coda nell'app — ogni foto parte per conto suo e i capi
-   * compaiono in armadio quando il modello ha finito, uno alla volta.
+   * Più foto in coda: una analisi per volta, ognuna con le sue tre chiamate
+   * (upload, avvio, stato). Il backend le esegue in linea
+   * (`handlers/analisi.py`), quindi `statoAnalisi` risponde già «completata»
+   * alla prima chiamata — niente polling qui, e ogni capo entra in armadio
+   * (`registraCapo`) appena la sua foto finisce, uno alla volta, senza
+   * aspettare le altre e senza riavviare l'app per vederlo.
+   *
+   * Una foto che fallisce non ferma le successive: diventa un conteggio nel
+   * messaggio finale, non un'interruzione a metà coda.
    */
-  async function analizzaInBlocco() {
+  async function analizzaCoda(uris: string[]) {
+    setAnalizzandoCoda(true)
+    let riuscite = 0
+    let fallite = 0
+    setProgressoCoda({ totale: uris.length, riuscite, fallite })
+
+    for (const uri of uris) {
+      try {
+        const firma = await api.firmaUpload('image/jpeg')
+        await api.caricaFoto(firma, uri)
+        const avviata = await api.avviaAnalisi(firma.chiave)
+        const stato = await api.statoAnalisi(avviata.esecuzione_id)
+        if (stato.stato === 'completata' && stato.capo) {
+          registraCapo(stato.capo)
+          riuscite += 1
+        } else {
+          fallite += 1
+        }
+      } catch {
+        fallite += 1
+      }
+      setProgressoCoda({ totale: uris.length, riuscite, fallite })
+    }
+
+    avvisa(
+      `${conta(riuscite, 'capo aggiunto', 'capi aggiunti')}` +
+        (fallite > 0 ? `, ${conta(fallite, 'non riuscito', 'non riusciti')}` : ''),
+    )
+    setCoda([])
+    setProgressoCoda(null)
+    setAnalizzandoCoda(false)
+    if (riuscite > 0) router.push('/(tabs)/armadio')
+  }
+
+  function analizza() {
+    if (coda.length === 0 || analizzandoCoda) return
+    if (coda.length === 1) void analizzaUnaFoto(coda[0]!.uri)
+    else void analizzaCoda(coda.map((f) => f.uri))
+  }
+
+  /** Prima di fidarsi del modello: una foto sola, dritta al modulo a mano —
+   * non passa dalla coda, non ha senso metterla in fila con le altre. */
+  async function avviaManuale() {
     const permesso = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!permesso.granted) {
-      avvisa('Senza accesso alle foto non posso leggere i capi.')
+      avvisa('Senza accesso alle foto non posso leggere il capo.')
       return
     }
-
-    const esito = await ImagePicker.launchImageLibraryAsync({
-      quality: 0.8,
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      selectionLimit: LIMITE_BLOCCO,
-    })
-    if (esito.canceled || esito.assets.length === 0) return
-
+    const esito = await ImagePicker.launchImageLibraryAsync({ quality: 0.8, mediaTypes: ['images'] })
+    if (esito.canceled || !esito.assets[0]) return
     avvisa(null)
-    let avviate = 0
-    setInBlocco(esito.assets.length)
-    try {
-      for (const scatto of esito.assets) {
-        const firma = await api.firmaUpload('image/jpeg')
-        await api.caricaFoto(firma, scatto.uri)
-        await api.avviaAnalisi(firma.chiave)
-        avviate += 1
-        setInBlocco(esito.assets.length - avviate)
-      }
-      avvisa(`${conta(avviate, 'capo', 'capi')} in analisi: li trovi in armadio appena il modello ha finito.`)
-      router.push('/(tabs)/armadio')
-    } catch (errore) {
-      avvisa(
-        `${conta(avviate, 'foto inviata', 'foto inviate')} su ${esito.assets.length}, poi si è fermato: ${messaggioDiErrore(errore, 'caricamento non riuscito')}`,
-      )
-    } finally {
-      setInBlocco(null)
-    }
+    setFoto(esito.assets[0].uri)
+    setFase('manuale')
   }
 
   /** Inserisce il capo a mano: nessuna pipeline, nessuna confidenza da correggere dopo. */
@@ -221,34 +291,52 @@ export default function Carica() {
             </LinearGradient>
           </View>
 
-          <BottonePrimario testo="Scatta" icona="fotocamera" onPress={() => void scegliFoto(true)} />
-
-          <View style={{ flexDirection: 'row', gap: 9 }}>
-            <BottoneSecondario
-              testo="Dalla galleria"
-              onPress={() => void scegliFoto(false)}
-              style={{ flex: 1 }}
-            />
-            <BottoneSecondario
-              testo={`${LIMITE_BLOCCO} in blocco`}
-              onPress={() => void analizzaInBlocco()}
-              style={{ flex: 1 }}
-            />
-          </View>
-
-          {inBlocco !== null ? (
-            <Corpo taglia={12.5} tono="tenue" style={{ textAlign: 'center' }}>
-              {inBlocco === 0
-                ? "Ci siamo, apro l'armadio…"
-                : `Sto avviando l'analisi · ${conta(inBlocco, 'capo', 'capi')} da mandare`}
-            </Corpo>
+          {!analizzandoCoda ? (
+            <View style={{ flexDirection: 'row', gap: 9 }}>
+              <BottonePrimario
+                testo="Scatta"
+                icona="fotocamera"
+                style={{ flex: 1 }}
+                onPress={() => void scattaUnaFoto()}
+              />
+              <BottoneSecondario testo="Dalla galleria" style={{ flex: 1 }} onPress={() => void scegliDallaGalleria()} />
+            </View>
           ) : null}
 
-          <Toccabile onPress={() => void scegliFoto(false, 'manuale')} scala={0} style={{ alignItems: 'center' }}>
-            <Forte taglia={12.5} colore={colori.inchiostro} style={{ textDecorationLine: 'underline' }}>
-              Preferisco inserirlo a mano
-            </Forte>
-          </Toccabile>
+          {coda.length > 0 ? (
+            <View style={{ gap: spazi.s }}>
+              <Etichetta taglia={11} tono="debole">
+                {conta(coda.length, 'capo in coda', 'capi in coda')}
+              </Etichetta>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spazi.s }}>
+                {coda.map((voce) => (
+                  <MiniaturaFoto
+                    key={voce.id}
+                    uri={voce.uri}
+                    onRimuovi={analizzandoCoda ? undefined : () => rimuoviDallaCoda(voce.id)}
+                  />
+                ))}
+              </View>
+              <BottonePrimario
+                testo={`Analizza ${conta(coda.length, 'capo', 'capi')}`}
+                caricando={analizzandoCoda}
+                onPress={analizza}
+              />
+              {progressoCoda ? (
+                <Corpo taglia={12.5} tono="tenue" style={{ textAlign: 'center' }}>
+                  {`Sto analizzando · ${progressoCoda.riuscite + progressoCoda.fallite} di ${progressoCoda.totale}`}
+                </Corpo>
+              ) : null}
+            </View>
+          ) : null}
+
+          {!analizzandoCoda ? (
+            <Toccabile onPress={() => void avviaManuale()} scala={0} style={{ alignItems: 'center' }}>
+              <Forte taglia={12.5} colore={colori.inchiostro} style={{ textDecorationLine: 'underline' }}>
+                Preferisco inserirlo a mano
+              </Forte>
+            </Toccabile>
+          ) : null}
 
           <Corpo taglia={11} tono="debole" style={{ textAlign: 'center', paddingHorizontal: spazi.m }}>
             {

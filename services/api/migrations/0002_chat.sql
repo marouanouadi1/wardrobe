@@ -1,7 +1,9 @@
 -- La chat continua dello stilista.
 --
--- Una riga per turno, non una tabella "conversazioni": non esistono chat
--- multiple in Wardrobe, solo quella dell'utente che continua.
+-- Una riga per turno. Nata come «una chat continua per utente, non chat
+-- multiple»: quella scelta è stata ribaltata da 0009_conversazioni_chat.sql,
+-- che aggiunge il contenitore `conversazioni_chat` e una `conversazione_id`
+-- qui sotto — vedi docs/adr/0006-lo-storico-della-chat.md per il perché.
 
 create table if not exists messaggi_chat (
     id          text primary key,

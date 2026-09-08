@@ -45,6 +45,15 @@ class RichiestaNonValida(ErroreDominio):
     stato_http = 422
 
 
+class ConversazioneNonTrovata(ErroreDominio):
+    codice = "conversazione_non_trovata"
+    stato_http = 404
+
+    def __init__(self, conversazione_id: str) -> None:
+        super().__init__(f"Conversazione {conversazione_id} inesistente")
+        self.conversazione_id = conversazione_id
+
+
 class SegnalazioneNonTrovata(ErroreDominio):
     codice = "segnalazione_non_trovata"
     stato_http = 404

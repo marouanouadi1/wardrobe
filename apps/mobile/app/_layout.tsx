@@ -66,6 +66,7 @@ function RadiceApp() {
                 <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
                 <Stack.Screen name="capo/[id]" />
                 <Stack.Screen name="suggeritore" />
+                <Stack.Screen name="chat" />
                 <Stack.Screen name="outfit" />
                 <Stack.Screen name="calendario" />
                 <Stack.Screen name="segnalazioni" />

@@ -18,6 +18,7 @@ import type {
   Capo,
   Credenziali,
   ElencoCapi,
+  ElencoConversazioniChat,
   ElencoMessaggiChat,
   ElencoSegnalazioni,
   EsitoAnalisi,
@@ -242,11 +243,21 @@ export const api = {
   suggerimenti: (richiesta: RichiestaSuggerimenti) =>
     chiama<RispostaSuggerimenti>('/suggerimenti', { metodo: 'POST', corpo: richiesta }),
 
-  // ── chat continua ────────────────────────────────────────────────────────
+  // ── chat: conversazioni ──────────────────────────────────────────────────
   chat: {
+    /** L'ultima conversazione, con i suoi messaggi. Vuota se non ce n'è ancora nessuna. */
     elenca: () => chiama<ElencoMessaggiChat>('/chat'),
     invia: (richiesta: RichiestaMessaggioChat) =>
       chiama<RispostaChat>('/chat', { metodo: 'POST', corpo: richiesta }),
+    /** Le conversazioni passate, dalla più recente. */
+    conversazioni: () => chiama<ElencoConversazioniChat>('/chat/conversazioni'),
+    /** I messaggi di una conversazione specifica. */
+    messaggi: (conversazioneId: string) =>
+      chiama<ElencoMessaggiChat>(`/chat/conversazioni/${encodeURIComponent(conversazioneId)}`),
+    elimina: (conversazioneId: string) =>
+      chiama<void>(`/chat/conversazioni/${encodeURIComponent(conversazioneId)}`, {
+        metodo: 'DELETE',
+      }),
   },
 
   elencaOutfit: () => chiama<{ outfit: Outfit[] }>('/outfit'),

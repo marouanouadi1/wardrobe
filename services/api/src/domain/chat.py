@@ -17,6 +17,11 @@ from domain.stylist import payload_contesto, proposte_tolleranti
 from domain.vision import estrai_json
 from domain.wardrobe import ids_vestizione
 
+# Quante battute del primo messaggio finiscono nel titolo dell'elenco delle
+# conversazioni: abbastanza per riconoscerla a colpo d'occhio, poco perché è
+# una riga sola in `RigaNavigabile`.
+LUNGHEZZA_TITOLO = 40
+
 # Oltre questo numero di turni tagliamo la coda più vecchia: la memoria della
 # chat serve a non perdere il filo di stamattina, non a ricordare tutto
 # l'anno, e ogni turno in più è contesto pagato a ogni messaggio successivo.
@@ -117,6 +122,25 @@ def richiesta_chat(
         max_token=max_token,
         forza_json=True,
     )
+
+
+def titolo_da_primo_messaggio(testo: str) -> str:
+    """Il titolo di una conversazione nuova: dedotto dal primo messaggio
+    dell'utente, non chiesto al modello — un titolo non merita una chiamata
+    al provider tutta sua.
+
+    Tronca su un confine di parola per non spezzare a metà, e aggiunge «…»
+    solo quando ha davvero tagliato qualcosa.
+    """
+    pulito = " ".join(testo.split())
+    if len(pulito) <= LUNGHEZZA_TITOLO:
+        return pulito or "Nuova conversazione"
+
+    troncato = pulito[:LUNGHEZZA_TITOLO]
+    ultimo_spazio = troncato.rfind(" ")
+    if ultimo_spazio > 0:
+        troncato = troncato[:ultimo_spazio]
+    return f"{troncato}…"
 
 
 def interpreta_risposta_chat(testo: str, capi: list[Capo]) -> RispostaStilista:

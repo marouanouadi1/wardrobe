@@ -12,9 +12,13 @@
  */
 
 import * as Haptics from 'expo-haptics'
+import { router } from 'expo-router'
 import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Platform,
   Pressable,
   type PressableProps,
@@ -502,6 +506,64 @@ export function BollaChat({ daUtente, children }: { daUtente: boolean; children:
   )
 }
 
+/**
+ * I puntini che dicono «lo stilista sta scrivendo»: tre bolle in ambra, che
+ * pulsano una dopo l'altra. L'ambra è corretta qui — è la regola di
+ * `tema/tokens.ts`: questo è il modello che parla, non un'azione dell'utente.
+ *
+ * `Animated`, non Reanimated: tre puntini non hanno bisogno di un worklet, e
+ * restano fuori dall'override legato alla versione della SDK di Expo.
+ */
+export function PuntiniAttesa() {
+  // `useState` con inizializzatore, non `useRef(...).current`: leggere un ref
+  // durante il render è quello che `react-hooks/refs` segnala — i tre
+  // `Animated.Value` restano comunque le stesse istanze a ogni render, senza
+  // mai passare da `setValori`.
+  const [valori] = useState(() => [0, 1, 2].map(() => new Animated.Value(0.3)))
+
+  useEffect(() => {
+    const animazioni = valori.map((valore, indice) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(indice * 160),
+          Animated.timing(valore, {
+            toValue: 1,
+            duration: 380,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(valore, {
+            toValue: 0.3,
+            duration: 380,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.delay((valori.length - 1 - indice) * 160),
+        ]),
+      ),
+    )
+    animazioni.forEach((animazione) => animazione.start())
+    return () => animazioni.forEach((animazione) => animazione.stop())
+  }, [valori])
+
+  return (
+    <View style={{ flexDirection: 'row', gap: 5, paddingVertical: 3 }}>
+      {valori.map((valore, indice) => (
+        <Animated.View
+          key={indice}
+          style={{
+            width: 7,
+            height: 7,
+            borderRadius: raggi.pillola,
+            backgroundColor: colori.ambra,
+            opacity: valore,
+          }}
+        />
+      ))}
+    </View>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────
 // Icone
 // ─────────────────────────────────────────────────────────────
@@ -622,6 +684,36 @@ export function BottoneTondo({
   return (
     <Toccabile onPress={onPress} scala={0.9} style={{ borderRadius: raggi.pillola }}>
       <Bolla nome={nome} sfondo={sfondo} colore={colore} misura={misura} misuraIcona={misuraIcona} bordo={bordo} />
+    </Toccabile>
+  )
+}
+
+/**
+ * Il bottone indietro: prima viveva solo dentro `Testata` (`ui/guscio.tsx`),
+ * sempre cablato a `router.back()`. Estratto qui perché `intro.tsx` ne ha
+ * bisogno con un `onPress` diverso — tornare al passo precedente, non alla
+ * schermata precedente — e la regola del progetto è che una forma nuova si
+ * aggiunge alle primitive, non si riscrive inline in una schermata.
+ *
+ * L'ambra qui sarebbe sbagliata: è un'azione dell'utente, non il modello che
+ * parla (la regola di `tema/tokens.ts`) — resta `linee.tenue`, come sempre.
+ */
+export function BottoneIndietro({ onPress, su }: { onPress?: () => void; su?: 'chiaro' | 'scuro' }) {
+  const scura = su === 'scuro'
+  return (
+    <Toccabile
+      onPress={onPress ?? (() => router.back())}
+      scala={0.92}
+      style={{
+        width: 38,
+        height: 38,
+        borderRadius: raggi.pillola,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: scura ? 'rgba(247,244,239,0.1)' : linee.tenue,
+      }}
+    >
+      <Icona nome="indietro" misura={17} colore={scura ? colori.crema : colori.inchiostro} spessore={2.2} />
     </Toccabile>
   )
 }

@@ -20,11 +20,13 @@ from psycopg.rows import dict_row
 from domain.errors import EmailGiaRegistrata
 from domain.models import (
     Capo,
+    ConversazioneChat,
     EsitoAnalisi,
     MessaggioChat,
     Outfit,
     Profilo,
     Segnalazione,
+    VoceElencoConversazioni,
 )
 
 
@@ -142,33 +144,121 @@ class RepositoryPostgres:
                 [(utente_id, capo_id, giorno) for capo_id in capo_ids],
             )
 
-    # ── chat continua ──────────────────────────────────────────────────────
-    def elenca_messaggi_chat(self, utente_id: str, limite: int = 200) -> list[MessaggioChat]:
+    # ── chat: conversazioni ──────────────────────────────────────────────────
+    def elenca_messaggi_chat(
+        self, utente_id: str, conversazione_id: str, limite: int = 200
+    ) -> list[MessaggioChat]:
         with self._conn().cursor() as cur:
             cur.execute(
                 """
                 select dati from (
                     select dati, creato_il from messaggi_chat
-                    where utente_id = %s
+                    where utente_id = %s and conversazione_id = %s
                     order by creato_il desc
                     limit %s
                 ) recenti
                 order by creato_il asc
                 """,
-                (utente_id, limite),
+                (utente_id, conversazione_id, limite),
             )
             return [MessaggioChat.model_validate(r["dati"]) for r in cur.fetchall()]
 
-    def salva_messaggio_chat(self, utente_id: str, messaggio: MessaggioChat) -> MessaggioChat:
+    def salva_messaggio_chat(
+        self, utente_id: str, conversazione_id: str, messaggio: MessaggioChat
+    ) -> MessaggioChat:
         with self._conn().cursor() as cur:
             cur.execute(
                 """
-                insert into messaggi_chat (id, utente_id, creato_il, dati)
-                values (%s, %s, %s, %s)
+                insert into messaggi_chat (id, utente_id, creato_il, dati, conversazione_id)
+                values (%s, %s, %s, %s, %s)
                 """,
-                (messaggio.id, utente_id, messaggio.creato_il, messaggio.model_dump_json()),
+                (
+                    messaggio.id,
+                    utente_id,
+                    messaggio.creato_il,
+                    messaggio.model_dump_json(),
+                    conversazione_id,
+                ),
             )
         return messaggio
+
+    def elenca_conversazioni_chat(self, utente_id: str) -> list[VoceElencoConversazioni]:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                """
+                select c.id, c.titolo, c.creata_il, c.ultimo_turno_il,
+                       coalesce(m.turni, 0) as turni,
+                       coalesce(m.anteprima, '') as anteprima
+                  from conversazioni_chat c
+                  left join lateral (
+                      select count(*) as turni,
+                             (array_agg(dati ->> 'testo' order by creato_il desc))[1] as anteprima
+                        from messaggi_chat
+                       where conversazione_id = c.id
+                  ) m on true
+                 where c.utente_id = %s
+                 order by c.ultimo_turno_il desc
+                """,
+                (utente_id,),
+            )
+            return [
+                VoceElencoConversazioni(
+                    conversazione=ConversazioneChat(
+                        id=r["id"],
+                        titolo=r["titolo"],
+                        creata_il=r["creata_il"],
+                        ultimo_turno_il=r["ultimo_turno_il"],
+                    ),
+                    turni=r["turni"],
+                    anteprima=r["anteprima"],
+                )
+                for r in cur.fetchall()
+            ]
+
+    def leggi_conversazione_chat(
+        self, utente_id: str, conversazione_id: str
+    ) -> ConversazioneChat | None:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                "select id, titolo, creata_il, ultimo_turno_il from conversazioni_chat"
+                " where id = %s and utente_id = %s",
+                (conversazione_id, utente_id),
+            )
+            riga = cur.fetchone()
+            return ConversazioneChat.model_validate(dict(riga)) if riga else None
+
+    def salva_conversazione_chat(
+        self, utente_id: str, conversazione: ConversazioneChat
+    ) -> ConversazioneChat:
+        with self._conn().cursor() as cur:
+            cur.execute(
+                """
+                insert into conversazioni_chat (id, utente_id, titolo, creata_il, ultimo_turno_il)
+                values (%s, %s, %s, %s, %s)
+                on conflict (id) do update set
+                    titolo = excluded.titolo,
+                    ultimo_turno_il = excluded.ultimo_turno_il
+                """,
+                (
+                    conversazione.id,
+                    utente_id,
+                    conversazione.titolo,
+                    conversazione.creata_il,
+                    conversazione.ultimo_turno_il,
+                ),
+            )
+        return conversazione
+
+    def elimina_conversazione_chat(self, utente_id: str, conversazione_id: str) -> None:
+        with self._conn().transaction(), self._conn().cursor() as cur:
+            cur.execute(
+                "delete from messaggi_chat where conversazione_id = %s and utente_id = %s",
+                (conversazione_id, utente_id),
+            )
+            cur.execute(
+                "delete from conversazioni_chat where id = %s and utente_id = %s",
+                (conversazione_id, utente_id),
+            )
 
     # ── esiti dell'analisi inline ────────────────────────────────────────
     def salva_esito_analisi(self, esito: EsitoAnalisi) -> None:

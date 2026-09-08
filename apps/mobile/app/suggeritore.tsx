@@ -7,14 +7,13 @@
  * come si raccoglie il contesto.
  */
 
-import type { MessaggioChat, Suggerimento } from '@wardrobe/contracts'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import type { Suggerimento } from '@wardrobe/contracts'
 import { Image } from 'expo-image'
-import { useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ScrollView, View } from 'react-native'
-import { api, messaggioDiErrore } from '../src/dati/api'
 import { useArmadio, useVestiEVai } from '../src/dati/archivio'
+import { type SceltaConversazione, useChat } from '../src/dati/chat'
 import { capiDiVestizione, fotoDaMostrare } from '../src/dati/dominio'
 import { colori, linee, ombre, raggi, spazi } from '../src/tema/tokens'
 import {
@@ -24,11 +23,13 @@ import {
   BottonePrimario,
   BottoneSecondario,
   Pillola,
+  PuntiniAttesa,
   Scheda,
   Segmenti,
+  Toccabile,
 } from '../src/ui/base'
 import { Schermata } from '../src/ui/guscio'
-import { Corpo, Forte, Titolo } from '../src/ui/testo'
+import { Corpo, Etichetta, Forte, Titolo } from '../src/ui/testo'
 
 type Modo = 'proposte' | 'chat' | 'guidato'
 
@@ -45,14 +46,6 @@ const DOMANDE = [
 ] as const
 
 const SPUNTI = ['Cosa metto stasera?', 'Fa più freddo, cambia', 'Solo capi puliti', 'Qualcosa che non uso mai']
-
-/** La cronologia della chat, tenuta anche sul telefono: se il backend non
- * risponde, l'ultima conversazione letta resta visibile invece di sparire. */
-const CHIAVE_CACHE_CHAT = 'wardrobe.chat-cache'
-
-function salvaInCache(messaggi: MessaggioChat[]): void {
-  AsyncStorage.setItem(CHIAVE_CACHE_CHAT, JSON.stringify(messaggi)).catch(() => undefined)
-}
 
 /** «Provalo» + «Salva»: la coppia di azioni che chiude ogni proposta, sia
  * nella scheda piena (proposte) sia in linea dentro la bolla (chat). */
@@ -78,79 +71,45 @@ function AzioniProposta({
 }
 
 export default function Suggeritore() {
-  const parametri = useLocalSearchParams<{ chiedi?: string }>()
+  const parametri = useLocalSearchParams<{ chiedi?: string; conversazione?: string }>()
   const { suggerimenti, indice, salvaOutfit, chiediSuggerimenti, avvisa } = useArmadio()
   const vestiEVai = useVestiEVai()
   const [modo, setModo] = useState<Modo>(parametri.chiedi ? 'chat' : 'proposte')
-  const [bozza, setBozza] = useState('')
   const [risposte, setRisposte] = useState<Record<string, string>>({})
   const [generato, setGenerato] = useState(false)
   const [salvati, setSalvati] = useState<string[]>([])
-  const [inCorso, setInCorso] = useState(false)
-  const [conversazione, setConversazione] = useState<MessaggioChat[]>([])
-  const [storiaCaricata, setStoriaCaricata] = useState(false)
 
-  // La chat è continua, non una sessione che si azzera aprendo lo schermo:
-  // riprende dalla cronologia vera salvata sul backend, mai da un messaggio
-  // di benvenuto inventato.
-  useEffect(() => {
-    void (async () => {
-      try {
-        const { messaggi } = await api.chat.elenca()
-        setConversazione(messaggi)
-        salvaInCache(messaggi)
-      } catch {
-        // Il backend non risponde: meglio l'ultima cronologia letta sul
-        // telefono che una chat vuota in silenzio, come se non si fosse
-        // mai scritto niente.
-        const salvata = await AsyncStorage.getItem(CHIAVE_CACHE_CHAT).catch(() => null)
-        if (salvata) {
-          try {
-            setConversazione(JSON.parse(salvata) as MessaggioChat[])
-          } catch {
-            // Cache corrotta: ignorata, la chat riparte vuota.
-          }
-        }
-      } finally {
-        setStoriaCaricata(true)
-      }
-    })()
-  }, [])
-
-  async function invia(testo: string) {
-    const pulito = testo.trim()
-    if (!pulito || inCorso) return
-    setBozza('')
-    setInCorso(true)
-    try {
-      const risposta = await api.chat.invia({ testo: pulito })
-      setConversazione((precedenti) => {
-        const aggiornata = [...precedenti, risposta.utente, risposta.wardrobe]
-        salvaInCache(aggiornata)
-        return aggiornata
-      })
-    } catch (errore) {
-      avvisa(messaggioDiErrore(errore, 'Il messaggio non è arrivato allo stilista'))
-    } finally {
-      setInCorso(false)
-    }
-  }
+  // Quale conversazione aprire: quella passata dall'elenco (`chat.tsx`, il
+  // parametro `conversazione`), o l'ultima di default — lo stesso
+  // comportamento di sempre. «Nuova», sotto, la sposta su `{ tipo: 'nuova' }`
+  // senza una nuova navigazione.
+  const [sceltaChat, setSceltaChat] = useState<SceltaConversazione>(
+    parametri.conversazione ? { tipo: 'id', id: parametri.conversazione } : { tipo: 'ultima' },
+  )
+  const {
+    messaggi: conversazione,
+    conversazione: conversazioneAttuale,
+    caricamento: storiaInCaricamento,
+    inAttesa,
+    bozza,
+    setBozza,
+    invia,
+  } = useChat(sceltaChat, avvisa)
 
   // Se la domanda arrivava da «Oggi», il suggeritore la gira al modello una
   // volta sola, come un messaggio in chat vero e proprio — dopo aver caricato
   // la cronologia, altrimenti finirebbe davanti ai messaggi precedenti.
   //
-  // Il timeout non è un vezzo: sposta l'invio (e le sue setState) fuori dal
-  // corpo sincrono dell'effetto, in una callback vera e propria — è la
-  // differenza che chiede react-hooks/set-state-in-effect.
+  // Il timeout non è un vezzo: sposta l'invio fuori dal corpo sincrono
+  // dell'effetto — è la differenza che chiede react-hooks/set-state-in-effect.
   useEffect(() => {
-    if (!storiaCaricata) return
+    if (storiaInCaricamento) return
     const chiesto = parametri.chiedi?.trim()
     if (!chiesto) return
     const id = setTimeout(() => void invia(chiesto), 0)
     return () => clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parametri.chiedi, storiaCaricata])
+  }, [parametri.chiedi, storiaInCaricamento])
 
   const complete = DOMANDE.every((domanda) => risposte[domanda.chiave])
 
@@ -166,7 +125,7 @@ export default function Suggeritore() {
   }
 
   return (
-    <Schermata occhiello="Il tuo stilista" titolo="Chiedi a Wardrobe" indietro>
+    <Schermata occhiello="Il tuo stilista" titolo="Chiedi a Wardrobe" indietro ancoraInFondo={modo === 'chat'}>
       <Segmenti voci={MODI} scelta={modo} onScegli={setModo} />
 
       {modo === 'proposte'
@@ -245,7 +204,27 @@ export default function Suggeritore() {
 
       {modo === 'chat' ? (
         <>
-          {storiaCaricata && conversazione.length === 0 && !inCorso ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
+            <Etichetta taglia={11} tono="tenue" style={{ flex: 1 }} numberOfLines={1}>
+              {conversazioneAttuale?.titolo ?? 'Nuova conversazione'}
+            </Etichetta>
+            <Toccabile onPress={() => router.push('/chat')} scala={0} style={{ paddingVertical: 4 }}>
+              <Corpo taglia={12.5} tono="medio" style={{ textDecorationLine: 'underline' }}>
+                Storico
+              </Corpo>
+            </Toccabile>
+            <Toccabile
+              onPress={() => setSceltaChat({ tipo: 'nuova' })}
+              scala={0}
+              style={{ paddingVertical: 4 }}
+            >
+              <Corpo taglia={12.5} tono="medio" style={{ textDecorationLine: 'underline' }}>
+                Nuova
+              </Corpo>
+            </Toccabile>
+          </View>
+
+          {!storiaInCaricamento && conversazione.length === 0 && !inAttesa ? (
             <Corpo taglia={13} tono="debole" style={{ textAlign: 'center' }}>
               {"Scrivi per iniziare: questa chat resta qui anche se chiudi l'app."}
             </Corpo>
@@ -254,55 +233,59 @@ export default function Suggeritore() {
           <View style={{ gap: 11 }}>
             {conversazione.map((messaggio) => {
               const daUtente = messaggio.ruolo === 'utente'
+              // Il turno appena inviato, ancora in volo verso il server: un
+              // filo più trasparente, è la sola differenza — l'eco è già lì,
+              // non manca più nulla da aspettare per vederlo.
+              const inVolo = messaggio.id.startsWith('bozza-')
               return (
                 <BollaChat key={messaggio.id} daUtente={daUtente}>
-                  {daUtente ? (
-                    <Corpo taglia={14} su="scuro">
-                      {messaggio.testo}
-                    </Corpo>
-                  ) : (
-                    // La risposta vera dello stilista: prima la prosa —
-                    // c'è sempre — poi le proposte, solo quando ci sono.
-                    <>
-                      <Corpo taglia={14}>{messaggio.testo}</Corpo>
-                      {messaggio.suggerimenti?.map((proposta) => (
-                        <View key={proposta.titolo} style={{ gap: spazi.s }}>
-                          <Forte taglia={14}>{`${proposta.titolo} · ${proposta.match}%`}</Forte>
-                          {proposta.perche.map((motivo) => (
-                            <Corpo key={motivo} taglia={13} tono="medio">
-                              {`— ${motivo}`}
-                            </Corpo>
-                          ))}
-                          <View style={{ marginTop: spazi.xs }}>
-                            <AzioniProposta {...provaEsalva(proposta)} />
+                  <View style={{ opacity: inVolo ? 0.6 : 1, gap: spazi.s }}>
+                    {daUtente ? (
+                      <Corpo taglia={14} su="scuro">
+                        {messaggio.testo}
+                      </Corpo>
+                    ) : (
+                      // La risposta vera dello stilista: prima la prosa —
+                      // c'è sempre — poi le proposte, solo quando ci sono.
+                      <>
+                        <Corpo taglia={14}>{messaggio.testo}</Corpo>
+                        {messaggio.suggerimenti?.map((proposta) => (
+                          <View key={proposta.titolo} style={{ gap: spazi.s }}>
+                            <Forte taglia={14}>{`${proposta.titolo} · ${proposta.match}%`}</Forte>
+                            {proposta.perche.map((motivo) => (
+                              <Corpo key={motivo} taglia={13} tono="medio">
+                                {`— ${motivo}`}
+                              </Corpo>
+                            ))}
+                            <View style={{ marginTop: spazi.xs }}>
+                              <AzioniProposta {...provaEsalva(proposta)} />
+                            </View>
                           </View>
-                        </View>
-                      ))}
-                    </>
-                  )}
+                        ))}
+                      </>
+                    )}
+                  </View>
                 </BollaChat>
               )
             })}
 
-            {inCorso ? (
+            {inAttesa ? (
               <BollaChat daUtente={false}>
-                <Corpo taglia={14} tono="debole">
-                  Sto pensando…
-                </Corpo>
+                <PuntiniAttesa />
               </BollaChat>
             ) : null}
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
             {SPUNTI.map((spunto) => (
-              <Pillola key={spunto} testo={spunto} onPress={() => invia(spunto)} />
+              <Pillola key={spunto} testo={spunto} onPress={() => void invia(spunto)} />
             ))}
           </ScrollView>
 
           <BarraChiedi
             valore={bozza}
             onCambia={setBozza}
-            onInvia={() => invia(bozza)}
+            onInvia={() => void invia()}
             placeholder="Cena fuori, e fa freddo…"
           />
         </>

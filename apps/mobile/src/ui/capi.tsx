@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { View } from 'react-native'
 import { fotoDaMostrare } from '../dati/dominio'
 import { ETICHETTE, colori, ombre, raggi } from '../tema/tokens'
-import { Badge, Toccabile } from './base'
+import { Badge, BottoneTondo, Toccabile } from './base'
 import { Corpo, Etichetta, Forte, Titolo } from './testo'
 
 export function CapoInGriglia({ capo, onPress }: { capo: Capo; onPress: () => void }) {
@@ -87,6 +87,52 @@ export function Miniatura({
         {capo.nome}
       </Forte>
     </Toccabile>
+  )
+}
+
+/**
+ * Una foto ancora in coda, prima dell'analisi: la miniatura più la ✕ per
+ * toglierla. Non prende un `Capo` — a differenza di `Miniatura` — perché a
+ * questo punto non esiste ancora: solo un uri locale, appena scattato o
+ * scelto dalla galleria. Usata dal riepilogo di `(tabs)/carica.tsx` prima di
+ * «Analizza».
+ */
+export function MiniaturaFoto({
+  uri,
+  onRimuovi,
+  misura = 92,
+}: {
+  uri: string
+  /** Assente: niente ✕ — la foto è già in analisi, toglierla ora non farebbe niente. */
+  onRimuovi?: () => void
+  misura?: number
+}) {
+  return (
+    <View style={{ width: misura }}>
+      <Image
+        source={{ uri }}
+        style={{
+          width: misura,
+          height: misura,
+          borderRadius: raggi.medio,
+          backgroundColor: colori.sfondo,
+        }}
+        contentFit="cover"
+      />
+      {onRimuovi ? (
+        <View style={{ position: 'absolute', top: -6, right: -6 }}>
+          <BottoneTondo
+            nome="chiudi"
+            onPress={onRimuovi}
+            misura={26}
+            misuraIcona={13}
+            sfondo={colori.inchiostro}
+            colore={colori.crema}
+            bordo={colori.sfondo}
+          />
+        </View>
+      ) : null}
+    </View>
   )
 }
 

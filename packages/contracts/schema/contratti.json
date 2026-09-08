@@ -31,6 +31,9 @@
     "ContestoSuggerimento": {
       "$ref": "#/$defs/ContestoSuggerimento"
     },
+    "ConversazioneChat": {
+      "$ref": "#/$defs/ConversazioneChat"
+    },
     "CorrezioniCapo": {
       "$ref": "#/$defs/CorrezioniCapo"
     },
@@ -39,6 +42,9 @@
     },
     "ElencoCapi": {
       "$ref": "#/$defs/ElencoCapi"
+    },
+    "ElencoConversazioniChat": {
+      "$ref": "#/$defs/ElencoConversazioniChat"
     },
     "ElencoMessaggiChat": {
       "$ref": "#/$defs/ElencoMessaggiChat"
@@ -156,6 +162,9 @@
     },
     "VestizioneColori": {
       "$ref": "#/$defs/VestizioneColori"
+    },
+    "VoceElencoConversazioni": {
+      "$ref": "#/$defs/VoceElencoConversazioni"
     }
   },
   "$defs": {
@@ -623,6 +632,34 @@
       "title": "ContestoSuggerimento",
       "type": "object"
     },
+    "ConversazioneChat": {
+      "additionalProperties": false,
+      "description": "Un contenitore di turni: da quando la chat ha smesso di essere una\nsola sessione continua per utente (vedi docs/adr/0006).\n\nRispecchia esattamente le colonne di `conversazioni_chat` — niente qui\ndentro che l'adapter debba inventare per poterla salvare. `turni` e\n`anteprima`, che servono solo all'elenco, vivono in\n`VoceElencoConversazioni`, non qui.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "titolo": {
+          "type": "string"
+        },
+        "creata_il": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "ultimo_turno_il": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "titolo",
+        "creata_il",
+        "ultimo_turno_il"
+      ],
+      "title": "ConversazioneChat",
+      "type": "object"
+    },
     "CorrezioniCapo": {
       "additionalProperties": false,
       "description": "Le correzioni dell'utente, una per attributo, tutte tipizzate.\n\nVolutamente non è `dict[str, str]`: correggere il colore significa mandare\nnome più hex, e il tipo deve stare nell'enum. Un dizionario di stringhe\nfarebbe passare «maglietta» come tipo e lo scopriremmo sull'avatar.",
@@ -739,6 +776,22 @@
       "title": "ElencoCapi",
       "type": "object"
     },
+    "ElencoConversazioniChat": {
+      "additionalProperties": false,
+      "properties": {
+        "conversazioni": {
+          "items": {
+            "$ref": "#/$defs/VoceElencoConversazioni"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "conversazioni"
+      ],
+      "title": "ElencoConversazioniChat",
+      "type": "object"
+    },
     "ElencoMessaggiChat": {
       "additionalProperties": false,
       "properties": {
@@ -747,6 +800,16 @@
             "$ref": "#/$defs/MessaggioChat"
           },
           "type": "array"
+        },
+        "conversazione": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConversazioneChat"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -1056,7 +1119,7 @@
     },
     "MessaggioChat": {
       "additionalProperties": false,
-      "description": "Un turno della chat continua con lo stilista.\n\nPersiste per utente: non è una sessione che si azzera chiudendo l'app, è\nla stessa conversazione che si riprende da dove l'ha lasciata. `testo` sul\nturno di Wardrobe è la prosa libera della risposta (`RispostaStilista.risposta`),\nquella che si mostra a schermo; `suggerimenti`, quando presenti, sono gli\noutfit proposti nello stesso turno. La cronologia rimandata al modello\n(`domain.chat.cronologia_da_messaggi`) riappende gli id di `suggerimenti`\nal testo, perché il modello non li perda al turno successivo.",
+      "description": "Un turno di una conversazione con lo stilista.\n\n`testo` sul turno di Wardrobe è la prosa libera della risposta\n(`RispostaStilista.risposta`), quella che si mostra a schermo;\n`suggerimenti`, quando presenti, sono gli outfit proposti nello stesso\nturno. La cronologia rimandata al modello (`domain.chat.cronologia_da_messaggi`)\nriappende gli id di `suggerimenti` al testo, perché il modello non li\nperda al turno successivo.",
       "properties": {
         "id": {
           "type": "string"
@@ -1553,6 +1616,17 @@
             "$ref": "#/$defs/ImpegnoAgenda"
           },
           "type": "array"
+        },
+        "conversazione_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Assente: apre una conversazione nuova, col titolo dedotto dal messaggio."
         }
       },
       "required": [
@@ -1682,6 +1756,9 @@
         "wardrobe": {
           "$ref": "#/$defs/MessaggioChat"
         },
+        "conversazione": {
+          "$ref": "#/$defs/ConversazioneChat"
+        },
         "contesto": {
           "$ref": "#/$defs/ContestoSuggerimento"
         },
@@ -1698,6 +1775,7 @@
       "required": [
         "utente",
         "wardrobe",
+        "conversazione",
         "contesto",
         "provider",
         "modello",
@@ -2052,6 +2130,28 @@
         }
       },
       "title": "VestizioneColori",
+      "type": "object"
+    },
+    "VoceElencoConversazioni": {
+      "additionalProperties": false,
+      "description": "`ConversazioneChat` più ciò che solo l'elenco calcola — un aggregato\nsu `messaggi_chat`, non colonne proprie di `conversazioni_chat`.",
+      "properties": {
+        "conversazione": {
+          "$ref": "#/$defs/ConversazioneChat"
+        },
+        "turni": {
+          "type": "integer"
+        },
+        "anteprima": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "conversazione",
+        "turni",
+        "anteprima"
+      ],
+      "title": "VoceElencoConversazioni",
       "type": "object"
     }
   }

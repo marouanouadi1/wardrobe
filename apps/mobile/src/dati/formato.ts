@@ -28,3 +28,21 @@ export function formattaMeseAnno(data: Date): string {
   const testo = data.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
   return testo.charAt(0).toUpperCase() + testo.slice(1)
 }
+
+function stessoGiorno(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+/** «Oggi», «Ieri», altrimenti «12 marzo»: il giorno di una data, relativo a
+ * adesso — l'elenco delle conversazioni e i separatori nella chat. */
+export function giornoRelativo(iso: string): string {
+  const data = new Date(iso)
+  const adesso = new Date()
+  if (stessoGiorno(data, adesso)) return 'Oggi'
+
+  const ieri = new Date(adesso)
+  ieri.setDate(ieri.getDate() - 1)
+  if (stessoGiorno(data, ieri)) return 'Ieri'
+
+  return data.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })
+}

@@ -39,9 +39,11 @@ export interface Contratti {
   CapoSintetico?: CapoSintetico
   Colore?: Colore
   ContestoSuggerimento?: ContestoSuggerimento
+  ConversazioneChat?: ConversazioneChat
   CorrezioniCapo?: CorrezioniCapo
   Credenziali?: Credenziali
   ElencoCapi?: ElencoCapi
+  ElencoConversazioniChat?: ElencoConversazioniChat
   ElencoMessaggiChat?: ElencoMessaggiChat
   ElencoSegnalazioni?: ElencoSegnalazioni
   EsitoAnalisi?: EsitoAnalisi
@@ -81,6 +83,7 @@ export interface Contratti {
   UsoToken?: UsoToken
   Vestizione?: Vestizione
   VestizioneColori?: VestizioneColori
+  VoceElencoConversazioni?: VoceElencoConversazioni
 }
 export interface AggiornamentoCapo {
   correzioni?: CorrezioniCapo
@@ -244,6 +247,21 @@ export interface PreferenzeStile {
   evita?: string[]
 }
 /**
+ * Un contenitore di turni: da quando la chat ha smesso di essere una
+ * sola sessione continua per utente (vedi docs/adr/0006).
+ *
+ * Rispecchia esattamente le colonne di `conversazioni_chat` — niente qui
+ * dentro che l'adapter debba inventare per poterla salvare. `turni` e
+ * `anteprima`, che servono solo all'elenco, vivono in
+ * `VoceElencoConversazioni`, non qui.
+ */
+export interface ConversazioneChat {
+  id: string
+  titolo: string
+  creata_il: string
+  ultimo_turno_il: string
+}
+/**
  * Il corpo di POST /auth/accedi. Nessun requisito sulla password: qui
  * deve solo passare a `bcrypt.checkpw`, non essere accettabile — quello
  * vincolo vive in `Registrazione`, non qui, altrimenti un account creato
@@ -257,19 +275,31 @@ export interface ElencoCapi {
   capi: Capo[]
   totale: number
 }
-export interface ElencoMessaggiChat {
-  messaggi: MessaggioChat[]
+export interface ElencoConversazioniChat {
+  conversazioni: VoceElencoConversazioni[]
 }
 /**
- * Un turno della chat continua con lo stilista.
+ * `ConversazioneChat` più ciò che solo l'elenco calcola — un aggregato
+ * su `messaggi_chat`, non colonne proprie di `conversazioni_chat`.
+ */
+export interface VoceElencoConversazioni {
+  conversazione: ConversazioneChat
+  turni: number
+  anteprima: string
+}
+export interface ElencoMessaggiChat {
+  messaggi: MessaggioChat[]
+  conversazione?: ConversazioneChat | null
+}
+/**
+ * Un turno di una conversazione con lo stilista.
  *
- * Persiste per utente: non è una sessione che si azzera chiudendo l'app, è
- * la stessa conversazione che si riprende da dove l'ha lasciata. `testo` sul
- * turno di Wardrobe è la prosa libera della risposta (`RispostaStilista.risposta`),
- * quella che si mostra a schermo; `suggerimenti`, quando presenti, sono gli
- * outfit proposti nello stesso turno. La cronologia rimandata al modello
- * (`domain.chat.cronologia_da_messaggi`) riappende gli id di `suggerimenti`
- * al testo, perché il modello non li perda al turno successivo.
+ * `testo` sul turno di Wardrobe è la prosa libera della risposta
+ * (`RispostaStilista.risposta`), quella che si mostra a schermo;
+ * `suggerimenti`, quando presenti, sono gli outfit proposti nello stesso
+ * turno. La cronologia rimandata al modello (`domain.chat.cronologia_da_messaggi`)
+ * riappende gli id di `suggerimenti` al testo, perché il modello non li
+ * perda al turno successivo.
  */
 export interface MessaggioChat {
   id: string
@@ -446,6 +476,10 @@ export interface RichiestaMessaggioChat {
   testo: string
   meteo?: Meteo | null
   agenda?: ImpegnoAgenda[]
+  /**
+   * Assente: apre una conversazione nuova, col titolo dedotto dal messaggio.
+   */
+  conversazione_id?: string | null
 }
 export interface RichiestaSuggerimenti {
   richiesta_utente?: string | null
@@ -468,6 +502,7 @@ export interface RiepilogoArmadio {
 export interface RispostaChat {
   utente: MessaggioChat
   wardrobe: MessaggioChat
+  conversazione: ConversazioneChat
   contesto: ContestoSuggerimento
   provider: string
   modello: string
