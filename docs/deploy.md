@@ -220,12 +220,6 @@ docker compose exec api python scripts/applica_migrazioni.py
 
 ## Scelte deliberate, da ricordare al prossimo giro
 
-- **`PLAYGROUND_ABILITATO: "1"`** in `docker-compose.yml` (blocco
-  `environment:` del servizio `api`, non nel `.env`): scelta apposta per
-  questo primo giro di prova a due persone, entrambe dietro login e
-  nell'allowlist di `EMAIL_AMMESSE`. Gli endpoint `/dev/*` spendono sulle
-  chiavi LLM — da riportare a `"0"` alla prima build destinata a chiunque
-  altro.
 - **Postgres non è raggiungibile da Internet**: `ports: ["127.0.0.1:5432:5432"]`,
   non `"5432:5432"`. Un binding senza l'host `127.0.0.1` resterebbe
   raggiungibile dall'esterno anche con `ufw` attivo — Docker scrive le sue
