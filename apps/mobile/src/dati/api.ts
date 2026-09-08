@@ -1,10 +1,10 @@
 /**
  * Il client dell'API. Tipizzato dai contratti generati dal backend.
  *
- * Nessun tipo scritto a mano qui dentro: `Capo`, `ElencoCapi`,
- * `RichiestaPlayground` e compagnia arrivano da `@wardrobe/contracts`, che è la
- * proiezione TypeScript dei modelli Pydantic. Se il backend rinomina un campo,
- * il rosso appare qui — al momento della build, non in produzione.
+ * Nessun tipo scritto a mano qui dentro: `Capo`, `ElencoCapi` e compagnia
+ * arrivano da `@wardrobe/contracts`, che è la proiezione TypeScript dei
+ * modelli Pydantic. Se il backend rinomina un campo, il rosso appare qui —
+ * al momento della build, non in produzione.
  */
 
 import Constants from 'expo-constants'
@@ -16,30 +16,22 @@ import type {
   AggiornamentoSegnalazione,
   AnalisiAvviata,
   Capo,
-  ContestoSuggerimento,
   Credenziali,
   ElencoCapi,
   ElencoMessaggiChat,
   ElencoSegnalazioni,
   EsitoAnalisi,
-  EsitoPlayground,
-  ModelloDisponibile,
   NuovaSegnalazione,
   NuovoCapoManuale,
   NuovoOutfit,
   Outfit,
-  PresetPrompt,
   Profilo,
   Registrazione,
   RichiestaMessaggioChat,
-  RichiestaPlayground,
-  RichiestaRatingImmagine,
   RichiestaSuggerimenti,
   RiepilogoArmadio,
   RispostaChat,
   RispostaSuggerimenti,
-  RispostaValutazioni,
-  RispostaValutazioniImmagini,
   Segnalazione,
   TokenAccesso,
   UploadFirmato,
@@ -238,15 +230,10 @@ export const api = {
     }
     return firma.chiave
   },
-  /**
-   * `scelta` viene da «Profilo → Sviluppo → Modelli in uso»; `undefined` (il
-   * predefinito) lascia decidere al backend, cioè `PROVIDER_VISIONE` /
-   * `MODELLO_VISIONE` nel `.env`.
-   */
-  avviaAnalisi: (chiaveFoto: string, scelta?: { provider?: string; modello?: string } | null) =>
+  avviaAnalisi: (chiaveFoto: string) =>
     chiama<AnalisiAvviata>('/capi/analisi', {
       metodo: 'POST',
-      corpo: { chiave_foto: chiaveFoto, provider: scelta?.provider, modello: scelta?.modello },
+      corpo: { chiave_foto: chiaveFoto },
     }),
   statoAnalisi: (esecuzioneId: string) =>
     chiama<EsitoAnalisi>(`/capi/analisi/${encodeURIComponent(esecuzioneId)}`),
@@ -281,31 +268,5 @@ export const api = {
     /** Riservata all'amministratore: chiunque altro riceve un 403. */
     aggiorna: (id: string, modifica: AggiornamentoSegnalazione) =>
       chiama<Segnalazione>(`/segnalazioni/${id}`, { metodo: 'PATCH', corpo: modifica }),
-  },
-
-  // ── playground, solo interno ────────────────────────────────────────────
-  dev: {
-    modelli: () => chiama<ModelloDisponibile[]>('/dev/modelli'),
-    preset: () => chiama<PresetPrompt[]>('/dev/preset'),
-    salvaPreset: (preset: PresetPrompt) =>
-      chiama<PresetPrompt>('/dev/preset', { metodo: 'POST', corpo: preset }),
-    contesto: () => chiama<ContestoSuggerimento>('/dev/contesto'),
-    storico: () => chiama<import('@wardrobe/contracts').EsecuzionePlayground[]>('/dev/playground/storico'),
-    esegui: (richiesta: RichiestaPlayground, chiaveProvider?: string) =>
-      chiama<EsitoPlayground>('/dev/playground', {
-        metodo: 'POST',
-        corpo: richiesta,
-        // Solo in sviluppo: permette di provare un provider senza aspettare
-        // un riavvio del server con la chiave nell'ambiente.
-        intestazioni: chiaveProvider ? { 'x-provider-key': chiaveProvider } : undefined,
-      }),
-    valutazioni: (run?: string) => chiama<RispostaValutazioni>(conQuery('/dev/valutazioni', { run })),
-    immagini: (run?: string) =>
-      chiama<RispostaValutazioniImmagini>(conQuery('/dev/immagini', { run })),
-    votaImmagine: (richiesta: RichiestaRatingImmagine) =>
-      chiama<import('@wardrobe/contracts').ValutazioneImmagine>('/dev/immagini', {
-        metodo: 'POST',
-        corpo: richiesta,
-      }),
   },
 }

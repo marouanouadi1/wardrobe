@@ -2,8 +2,8 @@
 
 È il provider di riferimento del progetto e l'unico con un SDK vero come
 dipendenza: retry, errori tipizzati e structured output li fa lui. Gli altri
-provider sono adapter HTTP sottili, perché servono al confronto nel playground,
-non a reggere la produzione.
+provider sono adapter HTTP sottili — aggiungerne uno costa un file in questa
+cartella più una riga nel registro, non una schermata (vedi `registry.py`).
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ NOME = "anthropic"
 VARIABILE_CHIAVE = "ANTHROPIC_API_KEY"
 
 # Prezzi di listino in dollari per milione di token (input, output).
-# Anthropic fattura in dollari: la conversione in euro la fa il registro, così
-# il tasso sta in un posto solo.
+# Anthropic fattura in dollari; nessun punto del prodotto li converte in euro
+# oggi (lo faceva il playground, rimosso).
 PREZZI_USD: dict[str, tuple[float, float]] = {
     "claude-opus-5": (5.0, 25.0),
     "claude-sonnet-5": (3.0, 15.0),
@@ -32,9 +32,10 @@ PREZZI_USD: dict[str, tuple[float, float]] = {
 }
 
 # Su questi modelli `temperature` è stato rimosso e la richiesta viene
-# rifiutata con 400. La temperatura del playground quindi non li raggiunge:
-# l'equivalente è `output_config.effort`, che regola la profondità del
-# ragionamento — non la casualità. Non facciamo finta che siano la stessa cosa.
+# rifiutata con 400: la temperatura passata in `RichiestaLlm` non li
+# raggiunge mai (vedi `completa()` sotto). L'equivalente è
+# `output_config.effort`, che regola la profondità del ragionamento — non la
+# casualità. Non facciamo finta che siano la stessa cosa.
 SENZA_TEMPERATURA = frozenset({"claude-opus-5", "claude-sonnet-5", "claude-opus-4-8"})
 
 

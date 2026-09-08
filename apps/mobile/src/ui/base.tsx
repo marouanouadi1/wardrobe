@@ -318,10 +318,10 @@ export function BottonePrimario({
 }) {
   const spento = disabilitato || caricando
   // La palette «spento» è solo per il chiaro: un bottone `ambra`/`inchiostro`
-  // su schermata scura che passa `caricando` (es. Playground) non deve
-  // schiarirsi verso quel grigio, o sparisce sul fondo inchiostro. `caricando`
-  // da solo blocca il tocco (sopra) e mostra lo spinner (sotto); il fondo
-  // resta quello di `disabilitato`.
+  // su una schermata scura che passa `caricando` non deve schiarirsi verso
+  // quel grigio, o sparisce sul fondo inchiostro. `caricando` da solo blocca
+  // il tocco (sopra) e mostra lo spinner (sotto); il fondo resta quello di
+  // `disabilitato`.
   const sfondo = disabilitato
     ? 'rgba(21,21,26,0.08)'
     : ambra
@@ -388,7 +388,7 @@ export function BottoneSecondario({
   icona?: NomeIcona
   caricando?: boolean
   /** Il colore del contorno, di norma `linee.chiara` — es. `colori.ambra`
-   * per un'azione che resta un contorno ma segnala l'IA (playground). */
+   * per un'azione che resta un contorno ma segnala l'IA. */
   bordo?: string
   style?: StyleProp<ViewStyle>
 }) {

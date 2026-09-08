@@ -69,10 +69,6 @@ function RadiceApp() {
                 <Stack.Screen name="outfit" />
                 <Stack.Screen name="calendario" />
                 <Stack.Screen name="segnalazioni" />
-                <Stack.Screen name="dev/playground" options={{ animation: 'slide_from_bottom' }} />
-                <Stack.Screen name="dev/modelli" options={{ animation: 'slide_from_bottom' }} />
-                <Stack.Screen name="dev/valutazioni" options={{ animation: 'slide_from_bottom' }} />
-                <Stack.Screen name="dev/prova-3d" options={{ animation: 'slide_from_bottom' }} />
               </Stack>
               <Avviso />
             </View>

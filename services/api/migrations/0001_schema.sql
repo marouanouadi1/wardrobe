@@ -47,13 +47,3 @@ create table if not exists usi (
 );
 
 create index if not exists usi_giorno_idx on usi (utente_id, giorno desc);
-
--- Storico del playground: serve a confrontare provider a distanza di giorni,
--- non a servire l'app. Non è per utente: è uno strumento interno.
-create table if not exists playground_esecuzioni (
-    id          text primary key,
-    eseguita_il timestamptz not null default now(),
-    dati        jsonb       not null
-);
-
-create index if not exists playground_recenti_idx on playground_esecuzioni (eseguita_il desc);

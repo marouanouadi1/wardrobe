@@ -1,17 +1,11 @@
 """La chat vera dello stilista: stesso armadio di /suggerimenti, ma con
 memoria e con la voce.
 
-Non è un job a sé (vedi `domain.models.JobIa`): usa lo stesso contesto dello
-stilista, ma un contratto di risposta diverso. `/suggerimenti` deve sempre
-tornare una lista di outfit; la chat deve poter anche solo *rispondere* —
-«fa più freddo? non granché» non è un outfit, ed è comunque una risposta
-valida. Per questo la risposta ha sempre un campo "risposta" in prosa libera,
-e "proposte" solo quando proporne uno è la cosa giusta da fare.
-
-Il preset (system prompt, temperatura, max token) non è una costante: arriva
-da chi chiama, che l'ha già letto — di fabbrica o salvato dal playground — con
-`domain.playground.preset_effettivo`. Tenerlo fuori da qui evita a questo
-modulo di dipendere dal repository.
+Non usa lo stesso contratto di risposta di `/suggerimenti`: quella rotta deve
+sempre tornare una lista di outfit, la chat deve poter anche solo
+*rispondere* — «fa più freddo? non granché» non è un outfit, ed è comunque
+una risposta valida. Per questo la risposta ha sempre un campo "risposta" in
+prosa libera, e "proposte" solo quando proporne uno è la cosa giusta da fare.
 """
 
 from __future__ import annotations
@@ -27,6 +21,12 @@ from domain.wardrobe import ids_vestizione
 # chat serve a non perdere il filo di stamattina, non a ricordare tutto
 # l'anno, e ogni turno in più è contesto pagato a ogni messaggio successivo.
 MASSIMO_TURNI_CRONOLOGIA = 20
+
+# Stessi valori del preset "chat-stilista" che viveva nel playground, prima
+# che la selezione a UI del prompt/temperatura/max token venisse rimossa: il
+# prompt si cambia ora solo con un deploy.
+TEMPERATURA_CHAT = 0.5
+MAX_TOKEN_CHAT = 1400
 
 SYSTEM_PROMPT_CHAT = """\
 Sei lo stilista personale di Wardrobe. Parli italiano, dai del tu, sei breve.

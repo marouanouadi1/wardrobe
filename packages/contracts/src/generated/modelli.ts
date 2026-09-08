@@ -24,23 +24,6 @@ export type AttributoCapo = 'tipo' | 'colore' | 'materiale' | 'fantasia' | 'stag
  */
 export type SlotAvatar = 'top' | 'bottom' | 'outer' | 'shoes' | 'dress'
 export type RuoloChat = 'utente' | 'wardrobe'
-/**
- * I due lavori veri che l'IA fa nel prodotto.
- *
- * Il playground esercita questi, non una chat generica: così provare un
- * provider nuovo significa aggiungere un adapter, mai toccare una schermata.
- */
-export type JobIa = 'analisi_capo' | 'suggerimento'
-export type EsitoEsecuzione = 'ok' | 'vago' | 'errore'
-/**
- * Il verdetto su un singolo attributo di un singolo campione.
- *
- * Sei stati, non un booleano «giusto/sbagliato»: `NON_VALUTATO` e
- * `INVENTATO` sono informazione a sé, non un modo di dire «sbagliato» — il
- * primo dice che il campione non permette di giudicare, il secondo che il
- * modello ha risposto dove la risposta giusta era tacere.
- */
-export type EsitoAttributo = 'esatto' | 'vicino' | 'sbagliato' | 'mancante' | 'inventato' | 'non_valutato'
 export type OrigineOutfit = 'manuale' | 'ia' | 'suggerito_modificato'
 
 /**
@@ -52,7 +35,6 @@ export interface Contratti {
   AnalisiAvviata?: AnalisiAvviata
   AnalisiVisione?: AnalisiVisione
   AttributoCapo?: AttributoCapo
-  Calibrazione?: Calibrazione
   Capo?: Capo
   CapoSintetico?: CapoSintetico
   Colore?: Colore
@@ -62,16 +44,10 @@ export interface Contratti {
   ElencoCapi?: ElencoCapi
   ElencoMessaggiChat?: ElencoMessaggiChat
   ElencoSegnalazioni?: ElencoSegnalazioni
-  EsecuzionePlayground?: EsecuzionePlayground
   EsitoAnalisi?: EsitoAnalisi
-  EsitoAttributo?: EsitoAttributo
-  EsitoEsecuzione?: EsitoEsecuzione
-  EsitoPlayground?: EsitoPlayground
   FiltroArmadio?: FiltroArmadio
   FotoCapo?: FotoCapo
-  GiudizioAttributo?: GiudizioAttributo
   ImpegnoAgenda?: ImpegnoAgenda
-  JobIa?: JobIa
   LetturaCapo?: LetturaCapo
   MessaggioChat?: MessaggioChat
   Meteo?: Meteo
@@ -82,22 +58,15 @@ export interface Contratti {
   OrigineOutfit?: OrigineOutfit
   Outfit?: Outfit
   PreferenzeStile?: PreferenzeStile
-  PresetPrompt?: PresetPrompt
   Profilo?: Profilo
-  RatingImmagine?: RatingImmagine
   Registrazione?: Registrazione
   RichiestaAnalisi?: RichiestaAnalisi
   RichiestaMessaggioChat?: RichiestaMessaggioChat
-  RichiestaPlayground?: RichiestaPlayground
-  RichiestaRatingImmagine?: RichiestaRatingImmagine
   RichiestaSuggerimenti?: RichiestaSuggerimenti
   RichiestaUpload?: RichiestaUpload
   RiepilogoArmadio?: RiepilogoArmadio
-  RigaAggregata?: RigaAggregata
   RispostaChat?: RispostaChat
   RispostaSuggerimenti?: RispostaSuggerimenti
-  RispostaValutazioni?: RispostaValutazioni
-  RispostaValutazioniImmagini?: RispostaValutazioniImmagini
   RuoloChat?: RuoloChat
   Segnalazione?: Segnalazione
   SlotAvatar?: SlotAvatar
@@ -110,8 +79,6 @@ export interface Contratti {
   TokenAccesso?: TokenAccesso
   UploadFirmato?: UploadFirmato
   UsoToken?: UsoToken
-  Valutazione?: Valutazione
-  ValutazioneImmagine?: ValutazioneImmagine
   Vestizione?: Vestizione
   VestizioneColori?: VestizioneColori
 }
@@ -176,23 +143,6 @@ export interface AnalisiVisione {
   }
   corretti_a_mano?: AttributoCapo[]
   note?: string | null
-}
-/**
- * Se la confidenza dichiarata dal modello è coerente con l'essere giusto.
- *
- * Sono i due modi in cui `SOGLIA_INCERTEZZA` e `SOGLIA_SCARTO` possono
- * sbagliare per un modello specifico: `sicuri_e_sbagliati` è il danno
- * peggiore (l'app mostra come affidabile un attributo che non lo è),
- * `timidi_e_giusti` è lo spreco opposto (`applica_soglie` butta via un
- * dato buono).
- */
-export interface Calibrazione {
-  sicuri_e_sbagliati?: number
-  timidi_e_giusti?: number
-  /**
-   * Media delle confidenze meno accuratezza·100. Positivo: il modello si sopravvaluta.
-   */
-  scarto_confidenza?: number | null
 }
 export interface Capo {
   id: string
@@ -264,8 +214,8 @@ export interface CapoSintetico {
 /**
  * Tutto ciò che lo stilista può sapere, e nient'altro.
  *
- * È anche il payload che il playground mostra in chiaro: se un suggerimento
- * esce strano, si guarda qui prima di dare la colpa al modello.
+ * Se un suggerimento esce strano, è questo il payload da guardare prima di
+ * dare la colpa al modello.
  */
 export interface ContestoSuggerimento {
   capi_disponibili: CapoSintetico[]
@@ -372,43 +322,17 @@ export interface Segnalazione {
   creata_il: string
   aggiornata_il: string
 }
-/**
- * Riga dello storico: serve a confrontare provider a distanza di giorni.
- */
-export interface EsecuzionePlayground {
-  id: string
-  eseguita_il: string
-  job: JobIa
-  provider: string
-  modello: string
-  temperatura: number
-  latenza_ms: number
-  costo_eur?: number | null
-  esito: EsitoEsecuzione
-  preset?: string | null
-}
 export interface EsitoAnalisi {
   esecuzione_id: string
   stato: StatoAnalisi
   capo?: Capo | null
   errore?: string | null
 }
-export interface EsitoPlayground {
-  ok: boolean
-  esito: EsitoEsecuzione
-  provider: string
-  modello: string
-  latenza_ms: number
-  uso?: UsoToken | null
-  costo_eur?: number | null
+export interface FiltroArmadio {
+  tipo?: TipoCapo | null
+  stato?: StatoCapo | null
+  solo_preferiti?: boolean
   testo?: string | null
-  lettura?: LetturaCapo | null
-  suggerimenti?: Suggerimento[]
-  errore?: string | null
-}
-export interface UsoToken {
-  token_input?: number
-  token_output?: number
 }
 /**
  * Quello che il modello di visione dichiara di aver letto dalla foto.
@@ -431,21 +355,8 @@ export interface LetturaCapo {
     [k: string]: number
   }
 }
-export interface FiltroArmadio {
-  tipo?: TipoCapo | null
-  stato?: StatoCapo | null
-  solo_preferiti?: boolean
-  testo?: string | null
-}
-export interface GiudizioAttributo {
-  attributo: AttributoCapo
-  esito: EsitoAttributo
-  atteso?: string | null
-  ottenuto?: string | null
-  confidenza?: number | null
-}
 /**
- * Una riga della lista modelli del playground.
+ * Una riga del catalogo dei modelli di un provider — `ProviderLlm.modelli()`.
  */
 export interface ModelloDisponibile {
   provider: string
@@ -505,14 +416,6 @@ export interface Outfit {
   ultimo_uso?: string | null
   creato_il: string
 }
-export interface PresetPrompt {
-  id: string
-  etichetta: string
-  job: JobIa
-  system_prompt: string
-  temperatura?: number
-  max_token?: number
-}
 export interface Profilo {
   id: string
   nome: string
@@ -524,19 +427,6 @@ export interface Profilo {
    */
   avatar_foto_chiave?: string | null
   creato_il: string
-}
-/**
- * Il giudizio umano su un'immagine generata: 1-5, non calcolabile.
- *
- * A differenza della lettura di visione non esiste una verità nota da
- * confrontare — «pulito» e «fedele al colore» li giudica solo un occhio,
- * dalla schermata di valutazione.
- */
-export interface RatingImmagine {
-  fedelta_colore: number
-  pulizia: number
-  artefatti: number
-  note?: string | null
 }
 /**
  * Il corpo di POST /auth/registrati. L'allowlist (`EMAIL_AMMESSE`) e il
@@ -557,29 +447,6 @@ export interface RichiestaMessaggioChat {
   meteo?: Meteo | null
   agenda?: ImpegnoAgenda[]
 }
-export interface RichiestaPlayground {
-  job: JobIa
-  provider: string
-  modello: string
-  system_prompt?: string | null
-  temperatura?: number
-  max_token?: number
-  /**
-   * Obbligatoria per il job analisi_capo
-   */
-  chiave_foto?: string | null
-  /**
-   * Obbligatorio per il job suggerimento
-   */
-  contesto?: ContestoSuggerimento | null
-}
-export interface RichiestaRatingImmagine {
-  run_id: string
-  servizio: string
-  modello: string
-  campione_id: string
-  rating: RatingImmagine
-}
 export interface RichiestaSuggerimenti {
   richiesta_utente?: string | null
   meteo?: Meteo | null
@@ -598,27 +465,6 @@ export interface RiepilogoArmadio {
   dormienti: number
   valore_dormiente_eur?: number | null
 }
-/**
- * Una riga della tabella di valutazione: tutti i campioni di un modello,
- * in un run, ridotti a numeri confrontabili.
- */
-export interface RigaAggregata {
-  provider: string
-  modello: string
-  campioni: number
-  accuratezza_media: number
-  esatti_per_attributo?: {
-    [k: string]: number
-  }
-  tasso_vago: number
-  tasso_errore: number
-  inventati: number
-  sicuri_e_sbagliati: number
-  timidi_e_giusti: number
-  scarto_confidenza?: number | null
-  costo_medio_eur?: number | null
-  latenza_mediana_ms: number
-}
 export interface RispostaChat {
   utente: MessaggioChat
   wardrobe: MessaggioChat
@@ -633,72 +479,6 @@ export interface RispostaSuggerimenti {
   provider: string
   modello: string
   latenza_ms: number
-}
-/**
- * GET /dev/valutazioni: la tabella aggregata di un run, più il dettaglio.
- *
- * `run_id` è `None` solo se il banco non ha ancora mai girato — in quel caso
- * le due liste sono vuote, non un errore: non c'è ancora niente da mostrare.
- */
-export interface RispostaValutazioni {
-  run_id?: string | null
-  righe?: RigaAggregata[]
-  valutazioni?: Valutazione[]
-}
-/**
- * Una riga del banco: un modello, su un campione, in un run.
- */
-export interface Valutazione {
-  id: string
-  run_id: string
-  eseguita_il: string
-  campione_id: string
-  provider: string
-  modello: string
-  latenza_ms: number
-  costo_eur?: number | null
-  esito: EsitoEsecuzione
-  accuratezza?: number
-  giudizi?: GiudizioAttributo[]
-  calibrazione?: Calibrazione
-  errore?: string | null
-}
-/**
- * GET /dev/immagini: il banco immagini di un run, senza aggregazione.
- *
- * A differenza di `RispostaValutazioni` non c'è una `RigaAggregata`: non
- * esiste un punteggio calcolabile da aggregare, solo rating umani — la
- * schermata di valutazione mostra la lista, non una tabella riassuntiva.
- */
-export interface RispostaValutazioniImmagini {
-  run_id?: string | null
-  valutazioni?: ValutazioneImmagine[]
-}
-/**
- * Una riga del banco immagini: un modello, su un campione, in un run.
- *
- * Nasce senza `rating`: lo scrive `scripts/genera_immagini.py` insieme a
- * `chiave_immagine`, `costo_eur` e `latenza_ms` (o `errore`, se il servizio
- * ha fallito). Il rating arriva dopo, dalla schermata di valutazione — due
- * scritture sulla stessa riga (vedi `salva_valutazione_immagine`), non due
- * tabelle.
- */
-export interface ValutazioneImmagine {
-  id: string
-  run_id: string
-  eseguita_il: string
-  campione_id: string
-  servizio: string
-  modello: string
-  chiave_immagine?: string | null
-  /**
-   * URL firmato, riempito solo in lettura
-   */
-  url?: string | null
-  costo_eur?: number | null
-  latenza_ms: number
-  errore?: string | null
-  rating?: RatingImmagine | null
 }
 export interface TokenAccesso {
   token: string
@@ -715,6 +495,10 @@ export interface UploadFirmato {
     [k: string]: string
   }
   scade_in_s: number
+}
+export interface UsoToken {
+  token_input?: number
+  token_output?: number
 }
 /**
  * La stessa vestizione, risolta in colori: è ciò che il renderer riceve oggi.

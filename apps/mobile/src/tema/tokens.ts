@@ -4,9 +4,9 @@
  * Una regola sopra tutte, e vale la pena scriverla qui perché è l'unica che
  * l'utente impara senza accorgersene: **l'ambra è dell'intelligenza
  * artificiale**. Compare dove parla il modello — il match di un suggerimento,
- * il badge «letto dalla foto», il pulsante che esegue una prova nel playground —
- * e in nessun altro posto. Un pulsante «Salva» in questo colore romperebbe
- * l'associazione, e con essa il modo in cui l'occhio orienta la schermata.
+ * il badge «letto dalla foto» — e in nessun altro posto. Un pulsante «Salva»
+ * in questo colore romperebbe l'associazione, e con essa il modo in cui
+ * l'occhio orienta la schermata.
  *
  * Era un giallo citron: sostituito con l'ambra perché troppo acceso, restando
  * comunque un colore che nessun capo in foto ha mai — non si confonde mai con
@@ -29,13 +29,9 @@ export const colori = {
   /** Ambra scura: leggibile su ambraTenue. */
   ambraMedio: '#A66E1D',
   ambraScuro: '#8A5A12',
-  /** Ambra chiara: leggibile su fondo scuro (esiti «vago» del playground). */
-  ambraChiaro: '#FFD08B',
   /** Corallo: attenzione, incertezza, capi da lavare. */
   corallo: '#FF6A45',
   coralloTenue: '#FFE3DA',
-  /** Corallo chiaro: leggibile su fondo scuro (esiti «errore» del playground). */
-  coralloChiaro: '#FFB39B',
   /** La pelle del manichino a primitive tinte (`docs/adr/0004`). */
   pelle: '#E7DFD2',
 } as const
@@ -111,23 +107,10 @@ export const ombre = {
   },
 } as const
 
-/**
- * Le velature di crema sulle schermate scure (`src/dev/`): prima erano
- * quattro costanti quasi identiche — `CREMA_TENUE`, `FONDO_CAMPO`,
- * `FONDO_RIGA`, `FONDO_CHIP` — ridichiarate in ogni file con valori che
- * divergevano di un soffio l'uno dall'altro senza un motivo.
- */
 export const superfici = {
   suScuro: {
-    /** Il fondo di un campo di testo o di una riga. */
-    campo: 'rgba(247,244,239,0.06)',
-    /** Il bordo di un campo di testo — coincide con `linee.scura`. */
-    bordoCampo: 'rgba(247,244,239,0.16)',
-    /** Il fondo, un filo più chiaro, di una riga di storico o di un chip. */
+    /** Il fondo, un filo più chiaro dell'inchiostro, di una riga su fondo scuro. */
     riga: 'rgba(247,244,239,0.05)',
-    chip: 'rgba(247,244,239,0.07)',
-    /** Il fondo di una voce non selezionata in un selettore a righe. */
-    debole: 'rgba(247,244,239,0.04)',
   },
 } as const
 

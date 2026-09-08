@@ -99,8 +99,8 @@ def costruisci_contesto(
 def payload_contesto(contesto: ContestoSuggerimento) -> str:
     """Il contesto come lo vede il modello, indentato per essere leggibile.
 
-    È esattamente ciò che il playground mostra sotto «Contesto iniettato»: se un
-    suggerimento esce strano, si guarda questo prima di incolpare il modello.
+    Se un suggerimento esce strano, si guarda questo prima di incolpare il
+    modello.
     """
     return contesto.model_dump_json(indent=2, exclude_none=True)
 

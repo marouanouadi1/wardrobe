@@ -30,11 +30,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 os.environ.setdefault("DEV_MODE", "1")
-# Disattivato di proposito fuori da un ambiente di sviluppo (vedi
-# handlers/playground.py): senza, il playground smetterebbe di funzionare in
-# locale. Il login, invece, non ha più un bypass: serve sempre un JWT valido
-# (vedi handlers/_http.py), anche qui.
-os.environ.setdefault("PLAYGROUND_ABILITATO", "1")
 
 from handlers import (  # noqa: E402
     analisi,
@@ -44,7 +39,6 @@ from handlers import (  # noqa: E402
     foto,
     health,
     outfit,
-    playground,
     profilo,
     segnalazioni,
     suggerimenti,
@@ -77,15 +71,6 @@ ROTTE: list[tuple[str, re.Pattern[str], Handler]] = [
     ("POST", re.compile(r"^/segnalazioni$"), segnalazioni.crea),
     ("GET", re.compile(r"^/segnalazioni$"), segnalazioni.elenca),
     ("PATCH", re.compile(r"^/segnalazioni/(?P<segnalazioneId>[^/]+)$"), segnalazioni.aggiorna),
-    ("GET", re.compile(r"^/dev/modelli$"), playground.modelli),
-    ("GET", re.compile(r"^/dev/preset$"), playground.preset),
-    ("POST", re.compile(r"^/dev/preset$"), playground.salva_preset),
-    ("GET", re.compile(r"^/dev/contesto$"), playground.contesto),
-    ("GET", re.compile(r"^/dev/playground/storico$"), playground.storico),
-    ("POST", re.compile(r"^/dev/playground$"), playground.esegui_test),
-    ("GET", re.compile(r"^/dev/valutazioni$"), playground.valutazioni),
-    ("GET", re.compile(r"^/dev/immagini$"), playground.immagini),
-    ("POST", re.compile(r"^/dev/immagini$"), playground.vota_immagine),
 ]
 
 # La foto viaggia come bytes grezzi, non come JSON: questa rotta sta fuori dal

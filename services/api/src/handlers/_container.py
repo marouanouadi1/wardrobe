@@ -35,10 +35,6 @@ class IdCasuali:
         return uuid.uuid4().hex
 
 
-def in_sviluppo() -> bool:
-    return os.environ.get("DEV_MODE") == "1"
-
-
 @functools.cache
 def orologio() -> Orologio:
     return OrologioDiSistema()

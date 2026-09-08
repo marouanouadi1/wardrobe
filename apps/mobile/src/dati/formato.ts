@@ -1,7 +1,6 @@
 /**
  * Le poche formattazioni che tornavano uguali in più schermate: il singolare
- * e il plurale scritti a mano, l'euro che distingue «zero» da «non lo
- * sappiamo», una percentuale, una data.
+ * e il plurale scritti a mano, una data.
  */
 
 /** «capo» o «capi», secondo `n` — la sola parola, per infilarla in una frase. */
@@ -12,18 +11,6 @@ export function parola(n: number, singolare: string, pluraleForma: string): stri
 /** «1 capo» / «5 capi»: il conteggio con la parola giusta già incollata. */
 export function conta(n: number, singolare: string, pluraleForma: string): string {
   return `${n} ${parola(n, singolare, pluraleForma)}`
-}
-
-/**
- * `null`/assente non è «costa zero»: è «non lo sappiamo», e va mostrato
- * diverso da uno zero vero — vedi `domain.adapters.llm.registry._con_prezzi`.
- */
-export function euro(valore: number | null | undefined): string {
-  return valore === null || valore === undefined ? '—' : `${valore.toFixed(4)} €`
-}
-
-export function percentuale(valore: number): string {
-  return `${Math.round(valore * 100)}%`
 }
 
 /** «8 set, 14:30»: la data di una segnalazione. */

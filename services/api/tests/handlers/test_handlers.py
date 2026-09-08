@@ -17,7 +17,7 @@ import pytest
 from conftest import ADESSO, costruisci_capo, intestazioni_utente
 from domain.errors import NonAutenticato
 from domain.models import PreferenzeStile, Profilo, StatoCapo, TipoCapo
-from handlers import auth, capi, foto, health, outfit, playground, profilo, segnalazioni
+from handlers import auth, capi, foto, health, outfit, profilo, segnalazioni
 from handlers._container import repository, repository_utenti
 from handlers._http import utente_id
 
@@ -371,42 +371,6 @@ class TestProfilo:
         dati = corpo_di(profilo.leggi(evento(), None))
         assert dati["citta"] == "Milano"
         assert "neutri" in dati["preferenze"]["palette"]
-
-
-class TestPlayground:
-    def test_elenca_i_modelli_con_la_spia_configurato(self):
-        modelli = corpo_di(playground.modelli(evento(), None))
-        assert modelli
-        assert {"provider", "id", "configurato"} <= set(modelli[0])
-
-    def test_elenca_i_due_preset(self):
-        preset = corpo_di(playground.preset(evento(), None))
-        assert {p["job"] for p in preset} == {"analisi_capo", "suggerimento"}
-
-    def test_mostra_il_contesto_iniettato(self):
-        contesto = corpo_di(playground.contesto(evento(), None))
-        # I capi in lavatrice non sono fra i disponibili, ma il modello sa che
-        # esistono: è la differenza fra una proposta e una proposta che convince.
-        assert len(contesto["capi_disponibili"]) == 9
-        assert len(contesto["in_lavaggio"]) == 3
-
-    def test_lo_storico_parte_vuoto(self):
-        assert corpo_di(playground.storico(evento(), None)) == []
-
-    def test_un_provider_sconosciuto_e_un_400(self):
-        risposta = playground.esegui_test(
-            evento(corpo={"job": "suggerimento", "provider": "inventato", "modello": "x"}), None
-        )
-        assert risposta["statusCode"] == 400
-        assert corpo_di(risposta)["errore"] == "provider_sconosciuto"
-
-    def test_un_provider_senza_chiave_e_un_503(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-        risposta = playground.esegui_test(
-            evento(corpo={"job": "suggerimento", "provider": "openai", "modello": "gpt-5.1"}), None
-        )
-        assert risposta["statusCode"] == 503
-        assert corpo_di(risposta)["errore"] == "provider_non_configurato"
 
 
 class TestSegnalazioni:

@@ -14,19 +14,15 @@ from pydantic import Field
 
 from domain.models import (
     Capo,
-    EsecuzionePlayground,
     EsitoAnalisi,
     MessaggioChat,
     ModelloDisponibile,
     ModelloWardrobe,
     Outfit,
-    PresetPrompt,
     Profilo,
     Segnalazione,
     UploadFirmato,
     UsoToken,
-    Valutazione,
-    ValutazioneImmagine,
 )
 
 
@@ -38,8 +34,8 @@ class ImmagineLlm(ModelloWardrobe):
 class MessaggioLlm(ModelloWardrobe):
     """Un turno già avvenuto di una conversazione, da rimandare al modello.
 
-    Serve solo alla chat vera: i due job del playground restano one-shot e non
-    la valorizzano mai.
+    Serve solo alla chat vera: l'analisi foto e i suggerimenti restano
+    one-shot e non la valorizzano mai.
     """
 
     ruolo: Literal["utente", "assistente"]
@@ -122,21 +118,6 @@ class ServizioScontorno(Protocol):
 
 
 @runtime_checkable
-class ServizioGenerazioneImmagini(Protocol):
-    """Rigenera o pulisce la foto di un capo: mai una persona.
-
-    È il servizio che il banco immagini valuta (`scripts/genera_immagini.py`)
-    — scope deciso apposta, vedi `tests/fixtures/campioni/GUIDA.md`: nessun
-    virtual try-on, solo il capo.
-    """
-
-    def genera(self, contenuto: bytes, media_type: str, istruzioni: str, modello: str) -> bytes:
-        """Restituisce l'immagine risultato. Solleva `ErroreProvider` se il
-        servizio non torna con un'immagine."""
-        ...
-
-
-@runtime_checkable
 class RepositoryArmadio(Protocol):
     def elenca_capi(self, utente_id: str) -> list[Capo]: ...
 
@@ -156,42 +137,11 @@ class RepositoryArmadio(Protocol):
 
     def registra_uso(self, utente_id: str, capo_ids: list[str], giorno: date) -> None: ...
 
-    def storico_playground(self, limite: int = 20) -> list[EsecuzionePlayground]: ...
-
-    def salva_esecuzione_playground(self, esecuzione: EsecuzionePlayground) -> None: ...
-
-    def leggi_preset(self, preset_id: str) -> PresetPrompt | None:
-        """`None` se non è mai stato salvato: il chiamante ricade sul default di fabbrica."""
-        ...
-
-    def salva_preset(self, preset: PresetPrompt) -> PresetPrompt: ...
-
     def elenca_messaggi_chat(self, utente_id: str, limite: int = 200) -> list[MessaggioChat]:
         """La chat continua di un utente, in ordine cronologico. Una sola, non a sessioni."""
         ...
 
     def salva_messaggio_chat(self, utente_id: str, messaggio: MessaggioChat) -> MessaggioChat: ...
-
-    def salva_valutazione(self, valutazione: Valutazione) -> None:
-        """Idempotente su (run_id, provider, modello, campione_id): rilanciare lo
-        stesso modello sullo stesso campione dentro un run aggiorna la riga."""
-        ...
-
-    def elenca_valutazioni(self, run_id: str) -> list[Valutazione]: ...
-
-    def ultimo_run_valutazione(self) -> str | None:
-        """Il `run_id` più recente, o `None` se il banco non ha mai girato."""
-        ...
-
-    def salva_valutazione_immagine(self, valutazione: ValutazioneImmagine) -> None:
-        """Idempotente su (run_id, servizio, modello, campione_id): lo script
-        che genera l'immagine e la schermata che scrive il rating aggiornano
-        la stessa riga, non ne creano due."""
-        ...
-
-    def elenca_valutazioni_immagini(self, run_id: str) -> list[ValutazioneImmagine]: ...
-
-    def ultimo_run_valutazione_immagine(self) -> str | None: ...
 
     # ── esiti dell'analisi inline ──────────────────────────────────────────
     def salva_esito_analisi(self, esito: EsitoAnalisi) -> None:

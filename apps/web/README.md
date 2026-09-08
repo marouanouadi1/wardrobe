@@ -17,10 +17,7 @@ Quando servirà qualcosa che l'app non è:
 
 - **una landing page** indicizzabile (l'app esportata da Expo non lo è bene);
 - **un pannello interno** per l'assistenza, con tabelle e viste dense che su
-  React Native Web costano più di quanto rendono;
-- **una dashboard di valutazione dei modelli** più seria del playground: grafici
-  di latenza e costo per provider nel tempo, sopra la tabella
-  `playground_esecuzioni`.
+  React Native Web costano più di quanto rendono.
 
 Il candidato naturale è Next.js: `packages/contracts` è già consumabile così
 com'è, e il workflow `mobile.yml` si duplica in `web.yml` cambiando i path del
