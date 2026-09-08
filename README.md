@@ -27,7 +27,7 @@ Il perché sta in [`docs/adr/0004`](docs/adr/0004-l-avatar-veste-le-foto-non-i-c
 
 ```txt
 apps/
-  mobile/            app Expo (iOS, Android, web) — 13 schermate
+  mobile/            app Expo (iOS, Android, web) — 15 schermate, più 4 strumenti interni sotto app/dev/
   web/               vuoto, ma il posto c'è
 services/api/
   src/domain/        logica pura: zero SDK, testabile con pytest
@@ -144,7 +144,7 @@ registro, e nessuna schermata cambia.
 | `npm run mobile` | avvia l'app Expo |
 | `npm run mobile:web` | l'app nel browser |
 | `npm run api:local` | solo l'API (Postgres già acceso) |
-| `npm run api:test` | 213 test del dominio e degli handler |
+| `npm run api:test` | 214 test del dominio e degli handler |
 | `npm run api:lint` | ruff + ruff format + mypy strict |
 | `npm run contracts:generate` | rigenera i tipi TypeScript dal backend |
 | `npm run contracts:check` | verifica che siano allineati (gira in CI) |
@@ -178,7 +178,7 @@ dettagli operativi in [`docs/deploy.md`](docs/deploy.md) e nei workflow
 
 ### Verificato su questa macchina
 
-- `npm run api:test` → **213 test passati**
+- `npm run api:test` → **214 test passati**
 - `npm run api:lint` → ruff pulito, **mypy strict** senza errori
 - `npm run contracts:check` → contratti allineati; verificato anche il contrario,
   rinominando un campo nel backend per vedere la CI cadere
@@ -223,15 +223,20 @@ gestito. Il primo `ANTHROPIC_API_KEY` esportato è anche il primo vero collaudo
 delle due feature di punta — aspettati di ritoccare i prompt in
 `domain/vision.py` e `domain/stylist.py` dopo averli visti all'opera.
 
-**Il manichino 3D non è mai stato visto girare.** Compila ed è dentro i bundle
-nativi, ma serve un dispositivo o un simulatore. Se WebGL non parte, un confine
-di errore passa al manichino piatto: la funzione «vedi come ti sta» non si perde
-in nessun caso.
+**L'avatar spedito è 2D, non 3D.** La scheda «Avatar» (`app/(tabs)/avatar.tsx`) disegna una
+sagoma SVG tinta dai colori letti dalle foto dei capi — nessun WebGL, nessun confine d'errore da
+attraversare: è il ripiego dichiarato dall'ADR 0004, non un fallback di un manichino 3D che non
+è mai partito. Il manichino 3D che veste foto vere esiste solo come strumento interno
+(`src/dev/Prova3D.tsx`, dietro «Profilo → Sviluppo → Prova 3D»), e non è mai stato visto girare
+fuori da questa macchina: compila ed è dentro i bundle nativi, ma serve un dispositivo o un
+simulatore.
 
-**Dell'avatar vero non c'è ancora niente.** Nessun modello di scontorno, nessuna
-ricostruzione 3D, nessuno strumento per il corpo della persona: la direzione
-dell'ADR 0004 è scritta, non implementata. Quello che c'è è il manichino a
-primitive tinte.
+**Dell'avatar vero c'è un primo pezzo, solo lato backend.**
+`services/api/src/adapters/scontorno/fal_provider.py` scontorna la foto di un capo — un passo
+facoltativo, vedi `handlers/analisi.py` — e `adapters/imagegen/google_nano_banana.py` è un
+secondo tentativo, per la generazione d'immagine. Nessuno dei due è ancora collegato a una
+ricostruzione 3D o a un corpo fedele alla persona: la direzione dell'ADR 0004 resta scritta, non
+implementata per intero. Quello che l'utente vede oggi è il manichino a primitive tinte, in 2D.
 
 **Gli id dei modelli non-Anthropic vanno confermati.** Quelli di Claude vengono
 dall'SDK ufficiale; `gpt-5.1` e `gemini-2.5-pro` sono i nomi indicati nel design e
