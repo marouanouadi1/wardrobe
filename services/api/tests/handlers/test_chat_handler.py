@@ -1,9 +1,8 @@
 """La chat vera: un handler sottile sopra domain.chat, con memoria per utente.
 
-Non riverifica le regole dello stilista (già coperte da test_stylist.py e
-test_playground.py): verifica che i due turni si salvino, che la cronologia
-arrivi davvero al provider al messaggio successivo, e che il preset salvato
-nel playground sia quello che la chat usa.
+Non riverifica le regole dello stilista (già coperte da test_stylist.py):
+verifica che i due turni si salvino e che la cronologia arrivi davvero al
+provider al messaggio successivo.
 """
 
 from __future__ import annotations
@@ -14,9 +13,10 @@ import pytest
 
 from adapters.llm import registry
 from conftest import costruisci_capo, intestazioni_utente
+from domain.chat import SYSTEM_PROMPT_CHAT, TEMPERATURA_CHAT
 from domain.models import TipoCapo
 from fakes import ProviderFinto
-from handlers import chat, playground
+from handlers import chat
 from handlers._container import repository
 
 
@@ -103,26 +103,13 @@ class TestChat:
         chat.invia(_evento(corpo={"testo": "Ciao"}, utente="a"), None)
         assert _corpo(chat.elenca(_evento(utente="b"), None))["messaggi"] == []
 
-    def test_usa_il_prompt_salvato_nel_playground(self, monkeypatch: pytest.MonkeyPatch):
+    def test_usa_il_prompt_e_la_temperatura_di_dominio(self, monkeypatch: pytest.MonkeyPatch):
         finto = _monkeypatch_provider(monkeypatch, _risposta_modello())
-        playground.salva_preset(
-            _evento(
-                corpo={
-                    "id": "chat-stilista",
-                    "etichetta": "Chat stilista",
-                    "job": "suggerimento",
-                    "system_prompt": "Prompt di prova salvato dal playground.",
-                    "temperatura": 0.1,
-                    "max_token": 500,
-                }
-            ),
-            None,
-        )
 
         chat.invia(_evento(corpo={"testo": "Ciao"}), None)
 
-        assert finto.richieste[-1].system == "Prompt di prova salvato dal playground."
-        assert finto.richieste[-1].temperatura == 0.1
+        assert finto.richieste[-1].system == SYSTEM_PROMPT_CHAT
+        assert finto.richieste[-1].temperatura == TEMPERATURA_CHAT
 
     def test_una_risposta_senza_proposte_e_comunque_una_risposta_valida(
         self, monkeypatch: pytest.MonkeyPatch

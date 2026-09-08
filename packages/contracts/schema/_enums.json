@@ -41,15 +41,6 @@
     "ia",
     "suggerito_modificato"
   ],
-  "JobIa": [
-    "analisi_capo",
-    "suggerimento"
-  ],
-  "EsitoEsecuzione": [
-    "ok",
-    "vago",
-    "errore"
-  ],
   "StatoAnalisi": [
     "in_corso",
     "completata",
@@ -58,14 +49,6 @@
   "RuoloChat": [
     "utente",
     "wardrobe"
-  ],
-  "EsitoAttributo": [
-    "esatto",
-    "vicino",
-    "sbagliato",
-    "mancante",
-    "inventato",
-    "non_valutato"
   ],
   "StatoSegnalazione": [
     "ricevuta",

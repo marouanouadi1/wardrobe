@@ -8,7 +8,6 @@ import pytest
 # Prima di qualsiasi import degli handler: in modalità sviluppo il container
 # monta il repository in memoria, e nessun test tocca la rete.
 os.environ["DEV_MODE"] = "1"
-os.environ["PLAYGROUND_ABILITATO"] = "1"
 # Non più un bypass (AUTH_APERTA è sparita): ogni test che chiama un handler
 # autenticato passa da un JWT vero, firmato con questo segreto — vedi
 # `intestazioni_utente()` sotto.
@@ -30,9 +29,8 @@ from domain.wardrobe import slot_da_tipo
 ADESSO = datetime(2026, 7, 24, 9, 30, tzinfo=UTC)
 OGGI = ADESSO.date()
 
-# Una lettura del modello di visione fatta bene: la usano sia i test della
-# visione sia quelli del playground, e sta qui perché un test non deve
-# importare un altro test.
+# Una lettura del modello di visione fatta bene: sta qui perché un test non
+# deve importare un altro test.
 LETTURA_BUONA: dict[str, object] = {
     "tipo": "top",
     "sottotipo": "camicia",

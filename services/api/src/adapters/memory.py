@@ -15,16 +15,12 @@ from domain.errors import EmailGiaRegistrata, ErroreDominio
 from domain.firma_foto import firma_foto
 from domain.models import (
     Capo,
-    EsecuzionePlayground,
     EsitoAnalisi,
     MessaggioChat,
     Outfit,
-    PresetPrompt,
     Profilo,
     Segnalazione,
     UploadFirmato,
-    Valutazione,
-    ValutazioneImmagine,
 )
 
 
@@ -90,11 +86,7 @@ class RepositoryInMemoria:
         self._outfit: dict[str, dict[str, Outfit]] = {}
         self._profili: dict[str, Profilo] = {}
         self._usi: set[tuple[str, str, date]] = set()
-        self._playground: list[EsecuzionePlayground] = []
-        self._preset: dict[str, PresetPrompt] = {}
         self._chat: dict[str, list[MessaggioChat]] = {}
-        self._valutazioni: dict[tuple[str, str, str, str], Valutazione] = {}
-        self._valutazioni_immagini: dict[tuple[str, str, str, str], ValutazioneImmagine] = {}
         self._esiti_analisi: dict[str, EsitoAnalisi] = {}
         self._utenti: dict[str, tuple[str, str]] = {}  # email -> (id, hash_password)
         self._segnalazioni: dict[str, Segnalazione] = {}
@@ -129,69 +121,18 @@ class RepositoryInMemoria:
         self._profili[profilo.id] = profilo
         return profilo
 
-    # ── uso e playground ───────────────────────────────────────────────────
+    # ── uso ────────────────────────────────────────────────────────────────
     def registra_uso(self, utente_id: str, capo_ids: list[str], giorno: date) -> None:
         for capo_id in capo_ids:
             self._usi.add((utente_id, capo_id, giorno))
 
-    def storico_playground(self, limite: int = 20) -> list[EsecuzionePlayground]:
-        return sorted(self._playground, key=lambda e: e.eseguita_il, reverse=True)[:limite]
-
-    def salva_esecuzione_playground(self, esecuzione: EsecuzionePlayground) -> None:
-        self._playground.append(esecuzione)
-
-    # ── preset e chat ──────────────────────────────────────────────────────
-    def leggi_preset(self, preset_id: str) -> PresetPrompt | None:
-        return self._preset.get(preset_id)
-
-    def salva_preset(self, preset: PresetPrompt) -> PresetPrompt:
-        self._preset[preset.id] = preset
-        return preset
-
+    # ── chat ───────────────────────────────────────────────────────────────
     def elenca_messaggi_chat(self, utente_id: str, limite: int = 200) -> list[MessaggioChat]:
         return self._chat.get(utente_id, [])[-limite:]
 
     def salva_messaggio_chat(self, utente_id: str, messaggio: MessaggioChat) -> MessaggioChat:
         self._chat.setdefault(utente_id, []).append(messaggio)
         return messaggio
-
-    # ── banco di valutazione ───────────────────────────────────────────────
-    def salva_valutazione(self, valutazione: Valutazione) -> None:
-        chiave = (
-            valutazione.run_id,
-            valutazione.provider,
-            valutazione.modello,
-            valutazione.campione_id,
-        )
-        self._valutazioni[chiave] = valutazione
-
-    def elenca_valutazioni(self, run_id: str) -> list[Valutazione]:
-        trovate = [v for v in self._valutazioni.values() if v.run_id == run_id]
-        return sorted(trovate, key=lambda v: v.eseguita_il)
-
-    def ultimo_run_valutazione(self) -> str | None:
-        if not self._valutazioni:
-            return None
-        return max(self._valutazioni.values(), key=lambda v: v.eseguita_il).run_id
-
-    # ── banco immagini ───────────────────────────────────────────────────
-    def salva_valutazione_immagine(self, valutazione: ValutazioneImmagine) -> None:
-        chiave = (
-            valutazione.run_id,
-            valutazione.servizio,
-            valutazione.modello,
-            valutazione.campione_id,
-        )
-        self._valutazioni_immagini[chiave] = valutazione
-
-    def elenca_valutazioni_immagini(self, run_id: str) -> list[ValutazioneImmagine]:
-        trovate = [v for v in self._valutazioni_immagini.values() if v.run_id == run_id]
-        return sorted(trovate, key=lambda v: v.eseguita_il)
-
-    def ultimo_run_valutazione_immagine(self) -> str | None:
-        if not self._valutazioni_immagini:
-            return None
-        return max(self._valutazioni_immagini.values(), key=lambda v: v.eseguita_il).run_id
 
     # ── esiti dell'analisi inline ────────────────────────────────────────
     def salva_esito_analisi(self, esito: EsitoAnalisi) -> None:

@@ -20,15 +20,11 @@ from psycopg.rows import dict_row
 from domain.errors import EmailGiaRegistrata
 from domain.models import (
     Capo,
-    EsecuzionePlayground,
     EsitoAnalisi,
     MessaggioChat,
     Outfit,
-    PresetPrompt,
     Profilo,
     Segnalazione,
-    Valutazione,
-    ValutazioneImmagine,
 )
 
 
@@ -146,40 +142,6 @@ class RepositoryPostgres:
                 [(utente_id, capo_id, giorno) for capo_id in capo_ids],
             )
 
-    # ── playground ─────────────────────────────────────────────────────────
-    def storico_playground(self, limite: int = 20) -> list[EsecuzionePlayground]:
-        with self._conn().cursor() as cur:
-            cur.execute(
-                "select dati from playground_esecuzioni order by eseguita_il desc limit %s",
-                (limite,),
-            )
-            return [EsecuzionePlayground.model_validate(r["dati"]) for r in cur.fetchall()]
-
-    def salva_esecuzione_playground(self, esecuzione: EsecuzionePlayground) -> None:
-        with self._conn().cursor() as cur:
-            cur.execute(
-                "insert into playground_esecuzioni (id, eseguita_il, dati) values (%s, %s, %s)",
-                (esecuzione.id, esecuzione.eseguita_il, esecuzione.model_dump_json()),
-            )
-
-    # ── preset del playground ────────────────────────────────────────────────
-    def leggi_preset(self, preset_id: str) -> PresetPrompt | None:
-        with self._conn().cursor() as cur:
-            cur.execute("select dati from preset_prompt where id = %s", (preset_id,))
-            riga = cur.fetchone()
-            return PresetPrompt.model_validate(riga["dati"]) if riga else None
-
-    def salva_preset(self, preset: PresetPrompt) -> PresetPrompt:
-        with self._conn().cursor() as cur:
-            cur.execute(
-                """
-                insert into preset_prompt (id, dati) values (%s, %s)
-                on conflict (id) do update set dati = excluded.dati, aggiornato_il = now()
-                """,
-                (preset.id, preset.model_dump_json()),
-            )
-        return preset
-
     # ── chat continua ──────────────────────────────────────────────────────
     def elenca_messaggi_chat(self, utente_id: str, limite: int = 200) -> list[MessaggioChat]:
         with self._conn().cursor() as cur:
@@ -207,77 +169,6 @@ class RepositoryPostgres:
                 (messaggio.id, utente_id, messaggio.creato_il, messaggio.model_dump_json()),
             )
         return messaggio
-
-    # ── banco di valutazione ──────────────────────────────────────────────
-    def salva_valutazione(self, valutazione: Valutazione) -> None:
-        with self._conn().cursor() as cur:
-            cur.execute(
-                """
-                insert into valutazioni (run_id, provider, modello, campione_id, eseguita_il, dati)
-                values (%s, %s, %s, %s, %s, %s)
-                on conflict (run_id, provider, modello, campione_id) do update set
-                    eseguita_il = excluded.eseguita_il,
-                    dati = excluded.dati
-                """,
-                (
-                    valutazione.run_id,
-                    valutazione.provider,
-                    valutazione.modello,
-                    valutazione.campione_id,
-                    valutazione.eseguita_il,
-                    valutazione.model_dump_json(),
-                ),
-            )
-
-    def elenca_valutazioni(self, run_id: str) -> list[Valutazione]:
-        with self._conn().cursor() as cur:
-            cur.execute(
-                "select dati from valutazioni where run_id = %s order by eseguita_il asc",
-                (run_id,),
-            )
-            return [Valutazione.model_validate(r["dati"]) for r in cur.fetchall()]
-
-    def ultimo_run_valutazione(self) -> str | None:
-        with self._conn().cursor() as cur:
-            cur.execute("select run_id from valutazioni order by eseguita_il desc limit 1")
-            riga = cur.fetchone()
-            return riga["run_id"] if riga else None
-
-    # ── banco immagini ────────────────────────────────────────────────────
-    def salva_valutazione_immagine(self, valutazione: ValutazioneImmagine) -> None:
-        with self._conn().cursor() as cur:
-            cur.execute(
-                """
-                insert into valutazioni_immagini
-                    (run_id, servizio, modello, campione_id, eseguita_il, dati)
-                values (%s, %s, %s, %s, %s, %s)
-                on conflict (run_id, servizio, modello, campione_id) do update set
-                    eseguita_il = excluded.eseguita_il,
-                    dati = excluded.dati
-                """,
-                (
-                    valutazione.run_id,
-                    valutazione.servizio,
-                    valutazione.modello,
-                    valutazione.campione_id,
-                    valutazione.eseguita_il,
-                    valutazione.model_dump_json(),
-                ),
-            )
-
-    def elenca_valutazioni_immagini(self, run_id: str) -> list[ValutazioneImmagine]:
-        with self._conn().cursor() as cur:
-            cur.execute(
-                "select dati from valutazioni_immagini where run_id = %s order by eseguita_il asc",
-                (run_id,),
-            )
-            return [ValutazioneImmagine.model_validate(r["dati"]) for r in cur.fetchall()]
-
-    def ultimo_run_valutazione_immagine(self) -> str | None:
-        with self._conn().cursor() as cur:
-            cur.execute("select run_id from valutazioni_immagini order by eseguita_il desc limit 1")
-            riga = cur.fetchone()
-            return riga["run_id"] if riga else None
 
     # ── esiti dell'analisi inline ────────────────────────────────────────
     def salva_esito_analisi(self, esito: EsitoAnalisi) -> None:

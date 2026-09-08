@@ -91,23 +91,6 @@ class OrigineOutfit(StrEnum):
     SUGGERITO_MODIFICATO = "suggerito_modificato"
 
 
-class JobIa(StrEnum):
-    """I due lavori veri che l'IA fa nel prodotto.
-
-    Il playground esercita questi, non una chat generica: così provare un
-    provider nuovo significa aggiungere un adapter, mai toccare una schermata.
-    """
-
-    ANALISI_CAPO = "analisi_capo"
-    SUGGERIMENTO = "suggerimento"
-
-
-class EsitoEsecuzione(StrEnum):
-    OK = "ok"
-    VAGO = "vago"
-    ERRORE = "errore"
-
-
 class RuoloChat(StrEnum):
     UTENTE = "utente"
     WARDROBE = "wardrobe"
@@ -122,7 +105,6 @@ class StatoSegnalazione(StrEnum):
 Confidenza = Annotated[int, Field(ge=0, le=100)]
 Percentuale = Annotated[int, Field(ge=0, le=100)]
 EsaColore = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
-Voto1a5 = Annotated[int, Field(ge=1, le=5)]
 
 
 class Colore(ModelloWardrobe):
@@ -323,8 +305,8 @@ class PreferenzeStile(ModelloWardrobe):
 class ContestoSuggerimento(ModelloWardrobe):
     """Tutto ciò che lo stilista può sapere, e nient'altro.
 
-    È anche il payload che il playground mostra in chiaro: se un suggerimento
-    esce strano, si guarda qui prima di dare la colpa al modello.
+    Se un suggerimento esce strano, è questo il payload da guardare prima di
+    dare la colpa al modello.
     """
 
     capi_disponibili: list[CapoSintetico]
@@ -592,214 +574,8 @@ class NuovoOutfit(ModelloWardrobe):
     origine: OrigineOutfit = OrigineOutfit.MANUALE
 
 
-class VeritaAttributo(ModelloWardrobe):
-    """Il valore vero di un attributo di un capo campione, per il banco di
-    valutazione dei modelli — non per l'uso quotidiano dell'app.
-
-    Tre stati, non uno solo:
-    - un valore atteso: `attesi` (e i suoi sinonimi accettati in `vicini`,
-      per non punire un modello per una differenza lessicale — «panna» ed
-      «écru» sono la stessa risposta);
-    - un'assenza attesa (`assente=True`): qui `null` è la risposta *giusta*,
-      non un buco — es. il lavaggio quando l'etichetta non è nella foto;
-    - non presente affatto in `CampioneValutazione.verita` per quell'attributo:
-      non è deducibile dalla foto (es. il materiale senza etichetta
-      leggibile). Diverso da `assente`: qui non sappiamo se il modello ha
-      ragione o torto, quindi non lo giudichiamo.
-
-    Il colore ha una quarta via, `hex` + `tolleranza_hex`: il verdetto si
-    decide sulla distanza RGB, non sul nome — è quello che l'avatar consuma
-    davvero, ed evita il pantano dei sinonimi italiani del colore.
-    """
-
-    attesi: list[str] = Field(default_factory=list)
-    vicini: list[str] = Field(default_factory=list)
-    assente: bool = False
-    hex: EsaColore | None = None
-    tolleranza_hex: int = 40
-
-
-class CampioneValutazione(ModelloWardrobe):
-    """Un capo fotografato apposta per il banco di valutazione, con la sua
-    verità nota scritta a mano — non un capo vero preso dall'armadio di
-    qualcuno, e non un capo che l'app userà mai per un suggerimento.
-    """
-
-    id: str
-    descrizione: str
-    foto: str = Field(description="Nome del file dentro tests/fixtures/campioni/foto/")
-    verita: dict[AttributoCapo, VeritaAttributo] = Field(default_factory=dict)
-
-
-class EsitoAttributo(StrEnum):
-    """Il verdetto su un singolo attributo di un singolo campione.
-
-    Sei stati, non un booleano «giusto/sbagliato»: `NON_VALUTATO` e
-    `INVENTATO` sono informazione a sé, non un modo di dire «sbagliato» — il
-    primo dice che il campione non permette di giudicare, il secondo che il
-    modello ha risposto dove la risposta giusta era tacere.
-    """
-
-    ESATTO = "esatto"
-    VICINO = "vicino"
-    SBAGLIATO = "sbagliato"
-    MANCANTE = "mancante"
-    INVENTATO = "inventato"
-    NON_VALUTATO = "non_valutato"
-
-
-class GiudizioAttributo(ModelloWardrobe):
-    attributo: AttributoCapo
-    esito: EsitoAttributo
-    atteso: str | None = None
-    ottenuto: str | None = None
-    confidenza: Confidenza | None = None
-
-
-class Calibrazione(ModelloWardrobe):
-    """Se la confidenza dichiarata dal modello è coerente con l'essere giusto.
-
-    Sono i due modi in cui `SOGLIA_INCERTEZZA` e `SOGLIA_SCARTO` possono
-    sbagliare per un modello specifico: `sicuri_e_sbagliati` è il danno
-    peggiore (l'app mostra come affidabile un attributo che non lo è),
-    `timidi_e_giusti` è lo spreco opposto (`applica_soglie` butta via un
-    dato buono).
-    """
-
-    sicuri_e_sbagliati: int = 0
-    timidi_e_giusti: int = 0
-    scarto_confidenza: float | None = Field(
-        default=None,
-        description=(
-            "Media delle confidenze meno accuratezza·100. Positivo: il modello si sopravvaluta."
-        ),
-    )
-
-
-class Valutazione(ModelloWardrobe):
-    """Una riga del banco: un modello, su un campione, in un run."""
-
-    id: str
-    run_id: str
-    eseguita_il: datetime
-    campione_id: str
-    provider: str
-    modello: str
-    latenza_ms: int
-    costo_eur: float | None = None
-    esito: EsitoEsecuzione
-    accuratezza: float = 0.0
-    giudizi: list[GiudizioAttributo] = Field(default_factory=list)
-    calibrazione: Calibrazione = Calibrazione()
-    errore: str | None = None
-
-
-class RigaAggregata(ModelloWardrobe):
-    """Una riga della tabella di valutazione: tutti i campioni di un modello,
-    in un run, ridotti a numeri confrontabili."""
-
-    provider: str
-    modello: str
-    campioni: int
-    accuratezza_media: float
-    esatti_per_attributo: dict[AttributoCapo, float] = Field(default_factory=dict)
-    tasso_vago: float
-    tasso_errore: float
-    inventati: int
-    sicuri_e_sbagliati: int
-    timidi_e_giusti: int
-    scarto_confidenza: float | None = None
-    costo_medio_eur: float | None = None
-    latenza_mediana_ms: int
-
-
-class RispostaValutazioni(ModelloWardrobe):
-    """GET /dev/valutazioni: la tabella aggregata di un run, più il dettaglio.
-
-    `run_id` è `None` solo se il banco non ha ancora mai girato — in quel caso
-    le due liste sono vuote, non un errore: non c'è ancora niente da mostrare.
-    """
-
-    run_id: str | None = None
-    righe: list[RigaAggregata] = Field(default_factory=list)
-    valutazioni: list[Valutazione] = Field(default_factory=list)
-
-
-class ModelloImmagine(ModelloWardrobe):
-    """Una riga del catalogo dei modelli di generazione immagini.
-
-    Non è `ModelloDisponibile`: quello porta `visione`, un campo che per un
-    modello che genera immagini non ha senso, e il costo è per immagine, non
-    per milione di token — un'unità diversa merita un modello a sé.
-    """
-
-    servizio: str
-    id: str
-    etichetta: str
-    costo_eur_immagine: float | None = None
-    configurato: bool = False
-
-
-class RatingImmagine(ModelloWardrobe):
-    """Il giudizio umano su un'immagine generata: 1-5, non calcolabile.
-
-    A differenza della lettura di visione non esiste una verità nota da
-    confrontare — «pulito» e «fedele al colore» li giudica solo un occhio,
-    dalla schermata di valutazione.
-    """
-
-    fedelta_colore: Voto1a5
-    pulizia: Voto1a5
-    artefatti: Voto1a5
-    note: str | None = None
-
-
-class ValutazioneImmagine(ModelloWardrobe):
-    """Una riga del banco immagini: un modello, su un campione, in un run.
-
-    Nasce senza `rating`: lo scrive `scripts/genera_immagini.py` insieme a
-    `chiave_immagine`, `costo_eur` e `latenza_ms` (o `errore`, se il servizio
-    ha fallito). Il rating arriva dopo, dalla schermata di valutazione — due
-    scritture sulla stessa riga (vedi `salva_valutazione_immagine`), non due
-    tabelle.
-    """
-
-    id: str
-    run_id: str
-    eseguita_il: datetime
-    campione_id: str
-    servizio: str
-    modello: str
-    chiave_immagine: str | None = None
-    url: str | None = Field(default=None, description="URL firmato, riempito solo in lettura")
-    costo_eur: float | None = None
-    latenza_ms: int
-    errore: str | None = None
-    rating: RatingImmagine | None = None
-
-
-class RichiestaRatingImmagine(ModelloWardrobe):
-    run_id: str
-    servizio: str
-    modello: str
-    campione_id: str
-    rating: RatingImmagine
-
-
-class RispostaValutazioniImmagini(ModelloWardrobe):
-    """GET /dev/immagini: il banco immagini di un run, senza aggregazione.
-
-    A differenza di `RispostaValutazioni` non c'è una `RigaAggregata`: non
-    esiste un punteggio calcolabile da aggregare, solo rating umani — la
-    schermata di valutazione mostra la lista, non una tabella riassuntiva.
-    """
-
-    run_id: str | None = None
-    valutazioni: list[ValutazioneImmagine] = Field(default_factory=list)
-
-
 class ModelloDisponibile(ModelloWardrobe):
-    """Una riga della lista modelli del playground."""
+    """Una riga del catalogo dei modelli di un provider — `ProviderLlm.modelli()`."""
 
     provider: str
     id: str
@@ -820,59 +596,6 @@ class ModelloDisponibile(ModelloWardrobe):
     )
 
 
-class PresetPrompt(ModelloWardrobe):
-    id: str
-    etichetta: str
-    job: JobIa
-    system_prompt: str
-    temperatura: Annotated[float, Field(ge=0, le=2)] = 0.4
-    max_token: Annotated[int, Field(ge=1, le=32_000)] = 1200
-
-
-class RichiestaPlayground(ModelloWardrobe):
-    job: JobIa
-    provider: str
-    modello: str
-    system_prompt: str | None = None
-    temperatura: Annotated[float, Field(ge=0, le=2)] = 0.4
-    max_token: Annotated[int, Field(ge=1, le=32_000)] = 1200
-    chiave_foto: str | None = Field(
-        default=None, description="Obbligatoria per il job analisi_capo"
-    )
-    contesto: ContestoSuggerimento | None = Field(
-        default=None, description="Obbligatorio per il job suggerimento"
-    )
-
-
 class UsoToken(ModelloWardrobe):
     token_input: int = 0
     token_output: int = 0
-
-
-class EsitoPlayground(ModelloWardrobe):
-    ok: bool
-    esito: EsitoEsecuzione
-    provider: str
-    modello: str
-    latenza_ms: int
-    uso: UsoToken | None = None
-    costo_eur: float | None = None
-    testo: str | None = None
-    lettura: LetturaCapo | None = None
-    suggerimenti: list[Suggerimento] = Field(default_factory=list)
-    errore: str | None = None
-
-
-class EsecuzionePlayground(ModelloWardrobe):
-    """Riga dello storico: serve a confrontare provider a distanza di giorni."""
-
-    id: str
-    eseguita_il: datetime
-    job: JobIa
-    provider: str
-    modello: str
-    temperatura: float
-    latenza_ms: int
-    costo_eur: float | None = None
-    esito: EsitoEsecuzione
-    preset: str | None = None

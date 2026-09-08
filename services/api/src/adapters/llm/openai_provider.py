@@ -24,14 +24,12 @@ MODELLI_DEFAULT = ("gpt-5.1", "gpt-5-mini")
 
 # Prezzi di listino in dollari per milione di token (input, output).
 # Verificati il 2026-08-07 sul listino OpenAI. Sono numeri che invecchiano:
-# quando `MODELLI_OPENAI` introduce un id nuovo, qui manca e il costo torna
-# None (vedi `domain.playground.calcola_costo`) — che è la risposta onesta,
-# non zero.
+# quando `MODELLI_OPENAI` introduce un id nuovo, qui manca — nessun punto del
+# prodotto li converte in euro oggi (lo faceva il playground, rimosso).
 #
 # Il tier di input "cached" (0.125 su gpt-5.1, 0.025 su gpt-5-mini) non è
-# modellato: nel banco di valutazione ogni chiamata è indipendente, non c'è
-# mai un prefisso ripetuto da cachare, e un terzo prezzo per un caso che non
-# si presenta sarebbe precisione finta.
+# modellato: un terzo prezzo per un caso che qui non si presenta mai sarebbe
+# precisione finta.
 PREZZI_USD: dict[str, tuple[float, float]] = {
     "gpt-5.1": (1.25, 10.0),
     "gpt-5-mini": (0.25, 2.0),

@@ -40,11 +40,7 @@ services:
   # `env_file:` in Compose, quindi anche un .env dimenticato con `DEV_MODE=1`
   # non può far partire un backend in memoria su un server pubblico. Il login
   # non ha più un bypass da tenere chiuso: senza un JWT valido,
-  # `handlers/_http.py` risponde sempre 401. `PLAYGROUND_ABILITATO: "1"` è
-  # una scelta deliberata per questo primo giro di prova a due persone (tu e
-  # chi lo testa con te, entrambi dietro il login): da riportare a "0" alla
-  # prima build destinata a chiunque altro, perché gli endpoint /dev/*
-  # spendono sulle chiavi LLM.
+  # `handlers/_http.py` risponde sempre 401.
   api:
     build:
       context: ./services/api
@@ -57,7 +53,6 @@ services:
       - ./services/api/.env
     environment:
       DEV_MODE: "0"
-      PLAYGROUND_ABILITATO: "1"
       DATABASE_URL: "host=postgres port=5432 dbname=wardrobe user=wardrobe password=${POSTGRES_PASSWORD:-wardrobe}"
       CARTELLA_FOTO: /dati/foto
       PORTA: "8787"

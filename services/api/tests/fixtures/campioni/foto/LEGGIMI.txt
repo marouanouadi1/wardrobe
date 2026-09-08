@@ -1,2 +1,0 @@
-Metti qui le 10 foto: c01.jpg, c02.jpg, ... c10.jpg.
-Vedi ../GUIDA.md per cosa fotografare e ../ESEMPIO.md per come compilare campioni.json.

@@ -5,28 +5,26 @@ ogni messaggio si aggiunge a una cronologia persistita per utente, il modello
 la rivede prima di rispondere, e può rispondere a parole — non solo con una
 lista di outfit. Una chat per utente, continua — non ci sono sessioni da
 aprire o chiudere.
-
-Il system prompt non è una costante: è quello effettivo
-(`domain.playground.preset_effettivo`) del preset "chat-stilista", che
-riflette l'ultima versione salvata nel playground. Cambiare il prompt lì
-cambia anche questa chat, senza deploy.
 """
 
 from __future__ import annotations
 
 import os
 
-from domain.chat import interpreta_risposta_chat, richiesta_chat
+from domain.chat import (
+    MAX_TOKEN_CHAT,
+    SYSTEM_PROMPT_CHAT,
+    TEMPERATURA_CHAT,
+    interpreta_risposta_chat,
+    richiesta_chat,
+)
 from domain.models import MessaggioChat, RichiestaMessaggioChat, RispostaChat, RuoloChat
-from domain.playground import preset_effettivo
 from domain.stylist import costruisci_contesto
 from handlers._container import generatore_id, orologio, repository
 from handlers._http import Evento, Risposta, corpo, endpoint, ok, utente_id
 
 PROVIDER_DEFAULT = os.environ.get("PROVIDER_STILISTA", "anthropic")
 MODELLO_DEFAULT = os.environ.get("MODELLO_STILISTA", "")
-
-ID_PRESET_STILISTA = "chat-stilista"
 
 
 @endpoint
@@ -65,7 +63,6 @@ def invia(evento: Evento) -> Risposta:
         richiesta_utente=richiesta.testo,
     )
 
-    preset = preset_effettivo(ID_PRESET_STILISTA, repository().leggi_preset(ID_PRESET_STILISTA))
     provider = provider_per_nome(PROVIDER_DEFAULT)
     modello = MODELLO_DEFAULT or provider.modelli()[0].id
 
@@ -74,9 +71,9 @@ def invia(evento: Evento) -> Risposta:
             contesto,
             precedenti,
             modello,
-            system_prompt=preset.system_prompt,
-            temperatura=preset.temperatura,
-            max_token=preset.max_token,
+            system_prompt=SYSTEM_PROMPT_CHAT,
+            temperatura=TEMPERATURA_CHAT,
+            max_token=MAX_TOKEN_CHAT,
         )
     )
     risposta_stilista = interpreta_risposta_chat(risposta_llm.testo, capi)
