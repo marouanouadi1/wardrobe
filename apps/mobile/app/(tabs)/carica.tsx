@@ -13,13 +13,12 @@ import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { ScrollView, TextInput, View } from 'react-native'
+import { ScrollView, View } from 'react-native'
 import { api } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
 import { PALETTE_COLORI } from '../../src/dati/dominio'
 import { ETICHETTE, colori, linee, ombre, raggi, spazi } from '../../src/tema/tokens'
-import { BottonePrimario, BottoneSecondario, Icona, Pillola, Toccabile } from '../../src/ui/base'
-import { Avviso } from '../../src/ui/avviso'
+import { BottonePrimario, BottoneSecondario, Campo, Icona, Pillola, Toccabile } from '../../src/ui/base'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Testata } from '../../src/ui/testata'
 
@@ -195,8 +194,6 @@ export default function Carica() {
         contentContainerStyle={{ paddingHorizontal: spazi.xl, paddingBottom: 130, gap: spazi.l }}
         showsVerticalScrollIndicator={false}
       >
-        <Avviso />
-
         {fase === 'scatta' ? (
           <>
             <View
@@ -307,7 +304,7 @@ export default function Carica() {
               <Titolo taglia={24} style={{ flex: 1 }}>
                 Sto guardando il capo
               </Titolo>
-              <Forte taglia={13} colore={colori.oliva}>
+              <Forte taglia={13} colore={colori.ambraMedio}>
                 {Math.round((passo / PASSI.length) * 100)}%
               </Forte>
             </View>
@@ -318,7 +315,7 @@ export default function Carica() {
                   height: 6,
                   borderRadius: 99,
                   width: `${(passo / PASSI.length) * 100}%`,
-                  backgroundColor: colori.citron,
+                  backgroundColor: colori.ambra,
                 }}
               />
             </View>
@@ -352,7 +349,7 @@ export default function Carica() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         backgroundColor: fatto
-                          ? colori.citron
+                          ? colori.ambra
                           : inCorso
                             ? 'rgba(215,244,92,0.55)'
                             : 'rgba(21,21,26,0.12)',
@@ -423,7 +420,7 @@ export default function Carica() {
                       borderRadius: raggi.pillola,
                       backgroundColor: voce.hex,
                       borderWidth: indice === coloreManuale ? 3 : 1,
-                      borderColor: indice === coloreManuale ? colori.citron : linee.chiara,
+                      borderColor: indice === coloreManuale ? colori.ambra : linee.chiara,
                     }}
                   >
                     <View />
@@ -435,28 +432,12 @@ export default function Carica() {
               </Corpo>
             </View>
 
-            <View style={{ gap: spazi.s }}>
-              <Etichetta taglia={11} tono="debole">
-                Nome (facoltativo)
-              </Etichetta>
-              <TextInput
-                value={nomeManuale}
-                onChangeText={setNomeManuale}
-                placeholder={`${ETICHETTE.tipo[tipoManuale]} ${PALETTE_COLORI[coloreManuale]!.nome.toLowerCase()}`}
-                placeholderTextColor="rgba(21,21,26,0.35)"
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  borderRadius: raggi.medio - 4,
-                  borderWidth: 1,
-                  borderColor: linee.chiara,
-                  backgroundColor: colori.scheda,
-                  fontFamily: 'Manrope_500Medium',
-                  fontSize: 14,
-                  color: colori.inchiostro,
-                }}
-              />
-            </View>
+            <Campo
+              etichetta="Nome (facoltativo)"
+              value={nomeManuale}
+              onChangeText={setNomeManuale}
+              placeholder={`${ETICHETTE.tipo[tipoManuale]} ${PALETTE_COLORI[coloreManuale]!.nome.toLowerCase()}`}
+            />
 
             <BottonePrimario
               testo={salvandoManuale ? 'Salvo…' : "Salva nell'armadio"}

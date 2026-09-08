@@ -8,6 +8,7 @@
  */
 
 import type { MessaggioChat } from '@wardrobe/contracts'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
@@ -45,6 +46,14 @@ const DOMANDE = [
 
 const SPUNTI = ['Cosa metto stasera?', 'Fa più freddo, cambia', 'Solo capi puliti', 'Qualcosa che non uso mai']
 
+/** La cronologia della chat, tenuta anche sul telefono: se il backend non
+ * risponde, l'ultima conversazione letta resta visibile invece di sparire. */
+const CHIAVE_CACHE_CHAT = 'wardrobe.chat-cache'
+
+function salvaInCache(messaggi: MessaggioChat[]): void {
+  AsyncStorage.setItem(CHIAVE_CACHE_CHAT, JSON.stringify(messaggi)).catch(() => undefined)
+}
+
 export default function Suggeritore() {
   const parametri = useLocalSearchParams<{ chiedi?: string }>()
   const { suggerimenti, indice, vesti, salvaOutfit, chiediSuggerimenti, avvisa } = useArmadio()
@@ -65,8 +74,19 @@ export default function Suggeritore() {
       try {
         const { messaggi } = await api.chat.elenca()
         setConversazione(messaggi)
+        salvaInCache(messaggi)
       } catch {
-        // Storia non disponibile: la chat resta usabile, riparte vuota.
+        // Il backend non risponde: meglio l'ultima cronologia letta sul
+        // telefono che una chat vuota in silenzio, come se non si fosse
+        // mai scritto niente.
+        const salvata = await AsyncStorage.getItem(CHIAVE_CACHE_CHAT).catch(() => null)
+        if (salvata) {
+          try {
+            setConversazione(JSON.parse(salvata) as MessaggioChat[])
+          } catch {
+            // Cache corrotta: ignorata, la chat riparte vuota.
+          }
+        }
       } finally {
         setStoriaCaricata(true)
       }
@@ -80,7 +100,11 @@ export default function Suggeritore() {
     setInCorso(true)
     try {
       const risposta = await api.chat.invia({ testo: pulito })
-      setConversazione((precedenti) => [...precedenti, risposta.utente, risposta.wardrobe])
+      setConversazione((precedenti) => {
+        const aggiornata = [...precedenti, risposta.utente, risposta.wardrobe]
+        salvaInCache(aggiornata)
+        return aggiornata
+      })
     } catch (errore) {
       avvisa(errore instanceof Error ? errore.message : 'Il messaggio non è arrivato allo stilista')
     } finally {
@@ -171,7 +195,7 @@ export default function Suggeritore() {
                               height: 5,
                               borderRadius: 99,
                               marginTop: 7,
-                              backgroundColor: colori.citron,
+                              backgroundColor: colori.ambra,
                             }}
                           />
                           <Corpo taglia={13} tono="medio" style={{ flex: 1 }}>
@@ -252,13 +276,38 @@ export default function Suggeritore() {
                       <>
                         <Corpo taglia={14}>{messaggio.testo}</Corpo>
                         {messaggio.suggerimenti?.map((proposta) => (
-                          <View key={proposta.titolo} style={{ gap: 4 }}>
+                          <View key={proposta.titolo} style={{ gap: spazi.s }}>
                             <Forte taglia={14}>{`${proposta.titolo} · ${proposta.match}%`}</Forte>
                             {proposta.perche.map((motivo) => (
                               <Corpo key={motivo} taglia={13} tono="medio">
                                 {`— ${motivo}`}
                               </Corpo>
                             ))}
+                            <View style={{ flexDirection: 'row', gap: spazi.s, marginTop: spazi.xs }}>
+                              <BottonePrimario
+                                testo="Provalo"
+                                style={{ flex: 1 }}
+                                onPress={() => {
+                                  vesti(proposta.vestizione)
+                                  router.push('/(tabs)/avatar')
+                                }}
+                              />
+                              <BottoneSecondario
+                                testo={salvati.includes(proposta.titolo) ? 'Salvato' : 'Salva'}
+                                style={{ paddingHorizontal: 18 }}
+                                onPress={
+                                  salvati.includes(proposta.titolo)
+                                    ? undefined
+                                    : () => {
+                                        setSalvati((precedenti) => [...precedenti, proposta.titolo])
+                                        void salvaOutfit(proposta.titolo, {
+                                          vestizione: proposta.vestizione,
+                                          origine: 'ia',
+                                        })
+                                      }
+                                }
+                              />
+                            </View>
                           </View>
                         ))}
                       </>
@@ -322,7 +371,7 @@ export default function Suggeritore() {
                   width: 44,
                   height: 44,
                   borderRadius: raggi.pillola,
-                  backgroundColor: colori.citron,
+                  backgroundColor: colori.ambra,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
@@ -356,7 +405,7 @@ export default function Suggeritore() {
 
             <BottonePrimario
               testo={complete ? 'Trova il mio outfit' : 'Rispondi alle tre domande'}
-              citron={complete}
+              ambra={complete}
               disabilitato={!complete}
               onPress={() => {
                 setGenerato(true)

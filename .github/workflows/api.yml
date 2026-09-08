@@ -195,9 +195,32 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add services/api/pyproject.toml services/api/uv.lock
           git commit -m "chore(api): bump versione a ${{ steps.bump.outputs.version }} [skip ci]"
-          git tag "api-v${{ steps.bump.outputs.version }}"
-          git push origin HEAD:main
+
+          TAG="api-v${{ steps.bump.outputs.version }}"
+          git tag "$TAG"
+
+          # mobile.yml pusha su main negli stessi minuti quando una PR tocca
+          # anche packages/contracts: se il push arriva su una base ormai
+          # superata viene rifiutato (non-fast-forward). Ci si riallinea con
+          # un rebase e si riprova, spostando il tag sul commit riscritto —
+          # altrimenti il tag resterebbe puntato a un commit fuori da main.
+          TENTATIVI=5
+          for i in $(seq 1 $TENTATIVI); do
+            if git push origin HEAD:main; then
+              break
+            fi
+            if [ "$i" -eq "$TENTATIVI" ]; then
+              echo "::error::Push su main rifiutato dopo $TENTATIVI tentativi"
+              exit 1
+            fi
+            echo "Push rifiutato (tentativo $i/$TENTATIVI), riallineo con rebase..."
+            sleep $((i * 5))
+            git fetch origin main
+            git rebase origin/main
+            git tag -f "$TAG"
+          done
+
           # Tag lightweight (git tag senza -a): --follow-tags non lo pubblica,
           # serve un push esplicito. Stessa nota in mobile.yml.
-          git push origin "api-v${{ steps.bump.outputs.version }}"
+          git push origin "$TAG"
         working-directory: .

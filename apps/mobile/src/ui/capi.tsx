@@ -1,5 +1,6 @@
 /**
- * I capi, nelle tre forme in cui il design li mostra: appeso, griglia, elenco.
+ * I capi, nelle forme in cui il design li mostra: griglia, e le miniature
+ * più piccole (suggerimenti, selettore dell'avatar).
  *
  * Il colore del capo fa da sfondo sotto la foto. Non è un dettaglio estetico:
  * mentre la foto arriva dalla rete, l'utente vede già il colore giusto, e
@@ -10,8 +11,8 @@ import type { Capo } from '@wardrobe/contracts'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { View } from 'react-native'
-import { fotoDaMostrare, quandoUsato } from '../dati/dominio'
-import { ETICHETTE, colori, linee, ombre, raggi, spazi } from '../tema/tokens'
+import { fotoDaMostrare } from '../dati/dominio'
+import { ETICHETTE, colori, ombre, raggi } from '../tema/tokens'
 import { Toccabile } from './base'
 import { Corpo, Etichetta, Forte, Titolo } from './testo'
 
@@ -32,76 +33,6 @@ function BadgeDaLavare() {
         da lavare
       </Etichetta>
     </View>
-  )
-}
-
-/** La gruccia: due tratti sopra il capo, come nella vista «appeso». */
-function Gruccia() {
-  return (
-    <View
-      style={{
-        width: 26,
-        height: 22,
-        alignSelf: 'center',
-        marginBottom: -5,
-        borderWidth: 2.5,
-        borderBottomWidth: 0,
-        borderColor: 'rgba(238,232,219,0.85)',
-        borderTopLeftRadius: 99,
-        borderTopRightRadius: 99,
-        zIndex: 2,
-      }}
-    />
-  )
-}
-
-export function CapoAppeso({
-  capo,
-  inclinazione,
-  onPress,
-}: {
-  capo: Capo
-  inclinazione: string
-  onPress: () => void
-}) {
-  return (
-    <Toccabile onPress={onPress} scala={0.97} style={{ width: 132 }}>
-      <Gruccia />
-      <View
-        style={{
-          borderTopLeftRadius: 6,
-          borderTopRightRadius: 6,
-          borderBottomLeftRadius: 18,
-          borderBottomRightRadius: 18,
-          overflow: 'hidden',
-          backgroundColor: capo.colore.hex,
-          transform: [{ rotate: inclinazione }],
-          ...ombre.alta,
-        }}
-      >
-        <Image
-          source={{ uri: fotoDaMostrare(capo) }}
-          style={{ width: 132, height: 178 }}
-          contentFit="cover"
-          transition={200}
-        />
-        <LinearGradient
-          colors={['rgba(255,255,255,0.16)', 'rgba(255,255,255,0)', 'rgba(0,0,0,0.3)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ position: 'absolute', inset: 0 }}
-        />
-        {capo.stato !== 'pulito' ? <BadgeDaLavare /> : null}
-      </View>
-      <View style={{ paddingTop: 9, paddingHorizontal: 2 }}>
-        <Forte taglia={12} colore="#F1E9DC">
-          {capo.nome}
-        </Forte>
-        <Corpo taglia={10.5} colore="rgba(241,233,220,0.45)">
-          {capo.colore.nome}
-        </Corpo>
-      </View>
-    </Toccabile>
   )
 }
 
@@ -135,41 +66,6 @@ export function CapoInGriglia({ capo, onPress }: { capo: Capo; onPress: () => vo
         </Corpo>
       </LinearGradient>
       {capo.stato !== 'pulito' ? <BadgeDaLavare /> : null}
-    </Toccabile>
-  )
-}
-
-export function CapoInElenco({ capo, onPress }: { capo: Capo; onPress: () => void }) {
-  return (
-    <Toccabile
-      onPress={onPress}
-      scala={0.99}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 13,
-        padding: 10,
-        borderRadius: raggi.medio,
-        backgroundColor: colori.scheda,
-        ...ombre.bassa,
-      }}
-    >
-      <Image
-        source={{ uri: fotoDaMostrare(capo) }}
-        style={{ width: 50, height: 62, borderRadius: raggi.piccolo, backgroundColor: capo.colore.hex }}
-        contentFit="cover"
-        transition={200}
-      />
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Titolo taglia={15.5}>{capo.nome}</Titolo>
-        <Corpo taglia={12} tono="tenue">
-          {ETICHETTE.tipo[capo.tipo]} · {capo.colore.nome}
-          {capo.brand ? ` · ${capo.brand}` : ''}
-        </Corpo>
-      </View>
-      <Corpo taglia={11} tono="debole">
-        {quandoUsato(capo.ultimo_uso)}
-      </Corpo>
     </Toccabile>
   )
 }
@@ -243,10 +139,4 @@ export function Attributo({
       </Forte>
     </Toccabile>
   )
-}
-
-export const INCLINAZIONI = ['-1.4deg', '1.1deg', '-0.6deg', '1.7deg'] as const
-
-export function separatore() {
-  return <View style={{ height: 1, backgroundColor: linee.tenue, marginVertical: spazi.s }} />
 }

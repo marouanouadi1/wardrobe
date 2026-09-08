@@ -8,7 +8,7 @@ module.exports = [
     // react-three-fiber non usa elementi DOM: `<mesh position={...}>` e
     // `<sphereGeometry args={...}>` sono componenti three.js, e la regola sulle
     // proprietà sconosciute è scritta per l'HTML.
-    files: ['src/avatar/Manichino3D.tsx', 'app/dev/prova-3d.tsx'],
+    files: ['src/dev/Prova3D.tsx'],
     rules: {
       'react/no-unknown-property': 'off',
       // Il ciclo di disegno di three.js non è un render di React: mutare lo

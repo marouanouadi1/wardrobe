@@ -12,7 +12,8 @@ import {
   Platform,
   Pressable,
   type PressableProps,
-  StyleSheet,
+  TextInput,
+  type TextInputProps,
   View,
   type ViewStyle,
 } from 'react-native'
@@ -52,6 +53,50 @@ export function Toccabile({ children, style, scala = 0.97, haptic = true, ...pro
     >
       {children}
     </Pressable>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// Campi
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Il campo di testo del design: unico, dove prima erano quattro varianti
+ * quasi identiche (accedi, registrati, il correttore del capo, l'inserimento
+ * manuale) che divergevano solo per una svista — un padding qui, uno sfondo
+ * là. `etichetta` è opzionale perché il correttore del capo non ne ha una.
+ */
+export function Campo({
+  etichetta,
+  style,
+  ...props
+}: TextInputProps & { etichetta?: string; style?: ViewStyle | ViewStyle[] }) {
+  const campo = (
+    <TextInput
+      placeholderTextColor="rgba(21,21,26,0.4)"
+      {...props}
+      style={[
+        {
+          paddingHorizontal: 16,
+          paddingVertical: 14,
+          borderRadius: raggi.piccolo,
+          borderWidth: 1,
+          borderColor: linee.chiara,
+          backgroundColor: colori.scheda,
+          fontFamily: 'Manrope_500Medium',
+          fontSize: 15,
+          color: colori.inchiostro,
+        },
+        style,
+      ]}
+    />
+  )
+  if (!etichetta) return campo
+  return (
+    <View style={{ gap: spazi.s }}>
+      <Etichetta>{etichetta}</Etichetta>
+      {campo}
+    </View>
   )
 }
 
@@ -102,7 +147,7 @@ export function Pillola({
   onPress?: () => void
   scura?: boolean
 }) {
-  const sfondoAttivo = scura ? colori.citron : colori.inchiostro
+  const sfondoAttivo = scura ? colori.ambra : colori.inchiostro
   const testoAttivo = scura ? colori.inchiostro : colori.crema
   return (
     <Toccabile
@@ -181,7 +226,7 @@ export function BottonePrimario({
   testo,
   onPress,
   freccia,
-  citron,
+  ambra,
   chiaro,
   disabilitato,
   style,
@@ -190,7 +235,7 @@ export function BottonePrimario({
   onPress?: () => void
   freccia?: boolean
   /** Solo per le azioni che eseguono l'IA: vedi la regola in tokens.ts. */
-  citron?: boolean
+  ambra?: boolean
   /** Sfondo chiaro (per pulsanti su foto scure): testo scuro invece che crema. */
   chiaro?: boolean
   disabilitato?: boolean
@@ -198,14 +243,14 @@ export function BottonePrimario({
 }) {
   const sfondo = disabilitato
     ? 'rgba(21,21,26,0.08)'
-    : citron
-      ? colori.citron
+    : ambra
+      ? colori.ambra
       : chiaro
         ? colori.scheda
         : colori.inchiostro
   const inchiostro = disabilitato
     ? 'rgba(21,21,26,0.4)'
-    : citron || chiaro
+    : ambra || chiaro
       ? colori.inchiostro
       : colori.crema
 
@@ -241,7 +286,7 @@ export function BottoneSecondario({
   testo: string
   onPress?: () => void
   /**
-   * Il fondo quando il pulsante è un interruttore già acceso. Non è mai citron:
+   * Il fondo quando il pulsante è un interruttore già acceso. Non è mai ambra:
    * questo pulsante non parla per l'IA — vedi la regola in tokens.ts.
    */
   riempimento?: string
@@ -270,7 +315,7 @@ export function BottoneSecondario({
   )
 }
 
-/** Il badge del match, l'unico posto oltre ai pulsanti IA dove sta il citron. */
+/** Il badge del match, l'unico posto oltre ai pulsanti IA dove sta l'ambra. */
 export function BadgeIa({ testo, tenue }: { testo: string; tenue?: boolean }) {
   return (
     <View
@@ -282,19 +327,15 @@ export function BadgeIa({ testo, tenue }: { testo: string; tenue?: boolean }) {
         paddingHorizontal: 11,
         paddingVertical: 6,
         borderRadius: raggi.pillola,
-        backgroundColor: tenue ? colori.citronTenue : colori.citron,
+        backgroundColor: tenue ? colori.ambraTenue : colori.ambra,
       }}
     >
       <Icona nome="scintilla" misura={12} colore={colori.inchiostro} spessore={2.4} />
-      <Etichetta taglia={10.5} colore={tenue ? colori.olivaScuro : colori.inchiostro}>
+      <Etichetta taglia={10.5} colore={tenue ? colori.ambraScuro : colori.inchiostro}>
         {testo}
       </Etichetta>
     </View>
   )
-}
-
-export function Riga({ children, gap = spazi.s, style }: { children: ReactNode; gap?: number; style?: ViewStyle }) {
-  return <View style={[{ flexDirection: 'row', alignItems: 'center', gap }, style]}>{children}</View>
 }
 
 export function Vuoto({ titolo, spiegazione }: { titolo: string; spiegazione: string }) {
@@ -373,7 +414,7 @@ export function Icona({
 /** Un cerchio con un'icona dentro: la scorciatoia visiva più usata nel design. */
 export function Bolla({
   nome,
-  sfondo = colori.citron,
+  sfondo = colori.ambra,
   tinta = colori.inchiostro,
   misura = 34,
 }: {
@@ -397,8 +438,3 @@ export function Bolla({
     </View>
   )
 }
-
-export const stiliComuni = StyleSheet.create({
-  schermata: { flex: 1, backgroundColor: colori.sfondo },
-  contenuto: { paddingHorizontal: spazi.xl, paddingBottom: 120, gap: spazi.l },
-})

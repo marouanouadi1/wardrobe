@@ -9,22 +9,29 @@
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ScrollView, TextInput, View } from 'react-native'
 import { capiDiVestizione } from '../../src/dati/dominio'
 import { useArmadio } from '../../src/dati/archivio'
 import { colori, linee, ombre, raggi, spazi } from '../../src/tema/tokens'
 import { BadgeIa, Bolla, BottoneSecondario, Icona, Scheda, Toccabile } from '../../src/ui/base'
-import { Avviso } from '../../src/ui/avviso'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Testata } from '../../src/ui/testata'
 
 const SCORCIATOIE = ['Ho una cena', 'Fa freddo', 'Solo capi puliti', 'Sorprendimi']
 
 export default function Oggi() {
-  const { suggerimenti, indice, profilo, vesti } = useArmadio()
+  const { suggerimenti, indice, profilo, vesti, chiediSuggerimenti } = useArmadio()
   const [domanda, setDomanda] = useState('')
   const [scartati, setScartati] = useState<string[]>([])
+
+  // Al primo avvio la proposta non c'è ancora: nessuno l'ha mai chiesta.
+  // Senza questo effetto la schermata che risponde alla domanda per cui
+  // esiste l'app si apre muta, con solo la barra «chiedi tu» in cima.
+  useEffect(() => {
+    if (suggerimenti.length === 0) void chiediSuggerimenti()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const vivi = suggerimenti.filter((s) => !scartati.includes(s.titolo))
   const principale = vivi[0] ?? suggerimenti[0]
@@ -52,8 +59,6 @@ export default function Oggi() {
         contentContainerStyle={{ paddingHorizontal: spazi.xl, paddingBottom: 130, gap: spazi.l }}
         showsVerticalScrollIndicator={false}
       >
-        <Avviso />
-
         {/* Chiedi tu: l'ingresso libero, in cima, perché la proposta automatica
             non può indovinare una cena a cui non è invitata. */}
         <View
@@ -68,7 +73,7 @@ export default function Oggi() {
             ...ombre.scheda,
           }}
         >
-          <Icona nome="scintilla" misura={17} colore={colori.oliva} />
+          <Icona nome="scintilla" misura={17} colore={colori.ambraMedio} />
           <TextInput
             value={domanda}
             onChangeText={setDomanda}
@@ -84,7 +89,7 @@ export default function Oggi() {
               width: 42,
               height: 42,
               borderRadius: raggi.pillola,
-              backgroundColor: colori.citron,
+              backgroundColor: colori.ambra,
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -196,7 +201,7 @@ export default function Oggi() {
                 Altre due strade
               </Titolo>
               <Toccabile onPress={() => router.push('/suggeritore')} scala={0}>
-                <Forte taglia={13} colore={colori.oliva}>
+                <Forte taglia={13} colore={colori.ambraMedio}>
                   Chiedi tu →
                 </Forte>
               </Toccabile>

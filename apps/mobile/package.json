@@ -15,7 +15,6 @@
   "dependencies": {
     "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
     "@expo-google-fonts/manrope": "^0.4.2",
-    "@expo/ui": "~57.0.11",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-three/fiber": "^9.6.1",
     "@sentry/react-native": "~7.11.0",

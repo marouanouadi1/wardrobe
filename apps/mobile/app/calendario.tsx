@@ -111,28 +111,23 @@ export default function Calendario() {
 
         {/* La scheda che chiude il cerchio: dai capi fermi nasce la ragione per
             cui l'app suggerisce anche cose che non sceglieresti. */}
-        <Scheda scura imbottitura={20} style={{ gap: spazi.s }}>
+        <Scheda imbottitura={20} style={{ backgroundColor: colori.ambraTenue, gap: spazi.s }}>
           <BadgeIa testo="dormono in fondo" />
-          <Titolo taglia={25} colore={colori.scheda}>
+          <Titolo taglia={25}>
             {dormienti.length === 1
               ? '1 capo fermo da più di sei mesi'
               : `${dormienti.length} capi fermi da più di sei mesi`}
           </Titolo>
-          <Corpo taglia={13.5} colore="rgba(255,253,249,0.75)">
+          <Corpo taglia={13.5} tono="medio">
             {'Se vuoi te ne infilo qualcuno negli outfit della settimana, senza che tu debba pensarci.'}
           </Corpo>
           <View style={{ flexDirection: 'row', gap: spazi.s, marginTop: spazi.s }}>
             <BottonePrimario
               testo="Rimettili in gioco"
-              citron
               style={{ flex: 1 }}
               onPress={() => router.push('/suggeritore')}
             />
-            <BottoneSecondario
-              testo="Non ora"
-              onPress={() => router.back()}
-              style={{ borderColor: 'rgba(255,253,249,0.28)' }}
-            />
+            <BottoneSecondario testo="Non ora" onPress={() => router.back()} />
           </View>
         </Scheda>
 

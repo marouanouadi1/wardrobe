@@ -8,25 +8,13 @@
 
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { KeyboardAvoidingView, Platform, TextInput, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ErroreApi, api } from '../src/dati/api'
 import { useSessione } from '../src/dati/sessione'
-import { colori, linee, raggi, spazi } from '../src/tema/tokens'
-import { BottonePrimario, Toccabile } from '../src/ui/base'
-import { Corpo, Etichetta, Forte, Titolo } from '../src/ui/testo'
-
-const stileCampo = {
-  paddingHorizontal: 16,
-  paddingVertical: 14,
-  borderRadius: raggi.piccolo,
-  borderWidth: 1,
-  borderColor: linee.chiara,
-  backgroundColor: colori.scheda,
-  fontFamily: 'Manrope_500Medium',
-  fontSize: 15,
-  color: colori.inchiostro,
-} as const
+import { colori, spazi } from '../src/tema/tokens'
+import { BottonePrimario, Campo, Toccabile } from '../src/ui/base'
+import { Corpo, Forte, Titolo } from '../src/ui/testo'
 
 /** Solo una verifica di forma, come sul backend (`domain/autenticazione.py`):
  * basta a scartare un errore di battitura prima di scomodare la rete. */
@@ -88,44 +76,34 @@ export default function Registrati() {
           <Corpo tono="tenue">Serve un invito: la tua email deve essere nella lista.</Corpo>
         </View>
 
-        <View style={{ gap: spazi.s }}>
-          <Etichetta>Email</Etichetta>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            textContentType="emailAddress"
-            placeholder="nome@esempio.it"
-            placeholderTextColor="rgba(21,21,26,0.4)"
-            style={stileCampo}
-          />
-        </View>
+        <Campo
+          etichetta="Email"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          textContentType="emailAddress"
+          placeholder="nome@esempio.it"
+        />
+
+        <Campo
+          etichetta="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          textContentType="newPassword"
+          placeholder="almeno 8 caratteri"
+        />
 
         <View style={{ gap: spazi.s }}>
-          <Etichetta>Password</Etichetta>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            textContentType="newPassword"
-            placeholder="almeno 8 caratteri"
-            placeholderTextColor="rgba(21,21,26,0.4)"
-            style={stileCampo}
-          />
-        </View>
-
-        <View style={{ gap: spazi.s }}>
-          <Etichetta>Conferma password</Etichetta>
-          <TextInput
+          <Campo
+            etichetta="Conferma password"
             value={conferma}
             onChangeText={setConferma}
             secureTextEntry
             textContentType="newPassword"
             placeholder="ripetila"
-            placeholderTextColor="rgba(21,21,26,0.4)"
-            style={stileCampo}
             onSubmitEditing={() => {
               if (pronto) void registrati()
             }}

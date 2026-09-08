@@ -2,11 +2,15 @@
  * I token del design di Wardrobe.
  *
  * Una regola sopra tutte, e vale la pena scriverla qui perché è l'unica che
- * l'utente impara senza accorgersene: **il citron è dell'intelligenza
+ * l'utente impara senza accorgersene: **l'ambra è dell'intelligenza
  * artificiale**. Compare dove parla il modello — il match di un suggerimento,
  * il badge «letto dalla foto», il pulsante che esegue una prova nel playground —
- * e in nessun altro posto. Un pulsante «Salva» verde acido romperebbe
+ * e in nessun altro posto. Un pulsante «Salva» in questo colore romperebbe
  * l'associazione, e con essa il modo in cui l'occhio orienta la schermata.
+ *
+ * Era un giallo citron: sostituito con l'ambra perché troppo acceso, restando
+ * comunque un colore che nessun capo in foto ha mai — non si confonde mai con
+ * un colore di tessuto vero.
  */
 
 export const colori = {
@@ -18,20 +22,16 @@ export const colori = {
   scheda: '#FFFDF9',
   /** Lo sfondo dell'app. */
   sfondo: '#F2EEE7',
-  /** Citron: solo IA. */
-  citron: '#D7F45C',
-  /** Citron tenue, per i fondi delle etichette di match. */
-  citronTenue: '#EFF6D2',
-  /** Verde oliva scuro: leggibile su citronTenue. */
-  oliva: '#8A7B2E',
-  olivaScuro: '#5F6B1E',
+  /** Ambra: solo IA. */
+  ambra: '#F5B324',
+  /** Ambra tenue, per i fondi delle etichette di match. */
+  ambraTenue: '#FBE9C6',
+  /** Ambra scura: leggibile su ambraTenue. */
+  ambraMedio: '#A66E1D',
+  ambraScuro: '#8A5A12',
   /** Corallo: attenzione, incertezza, capi da lavare. */
   corallo: '#FF6A45',
   coralloTenue: '#FFE3DA',
-  /** L'interno dell'armadio, per la vista «appeso». */
-  armadioAlto: '#2A2521',
-  armadioBasso: '#1A1715',
-  asta: '#B9AE99',
 } as const
 
 export const testoSu = {

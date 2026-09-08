@@ -34,9 +34,5 @@
   "overrides": {
     "typescript": "~6.0.3",
     "react-native-worklets": "0.10.1"
-  },
-  "allowScripts": {
-    "esbuild@0.28.1": true,
-    "unrs-resolver@1.12.2": true
   }
 }

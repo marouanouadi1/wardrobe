@@ -45,11 +45,15 @@ export default function Profilo() {
     ])
   }
 
-  // Solo «Outfit salvati» porta da qualche parte: le altre non hanno ancora
-  // una schermata di modifica, quindi restano valori in sola lettura, senza
-  // un chevron che promette un tap che non fa nulla.
+  // «Stile» e «Outfit salvati» portano a una schermata; le altre due non
+  // hanno ancora un modo di modificarle, quindi restano in sola lettura,
+  // senza un chevron che promette un tap che non fa nulla.
   const preferenze = [
-    { chiave: 'Stile', valore: profilo?.preferenze?.stili?.join(', ') || 'da impostare' },
+    {
+      chiave: 'Stile',
+      valore: profilo?.preferenze?.stili?.join(', ') || 'da impostare',
+      vai: () => router.push('/preferenze'),
+    },
     { chiave: 'Palette', valore: profilo?.preferenze?.palette?.join(', ') || 'da impostare' },
     { chiave: 'Evita', valore: profilo?.preferenze?.evita?.join(', ') || '—' },
     { chiave: 'Città', valore: profilo?.citta ?? 'da impostare' },
@@ -90,7 +94,7 @@ export default function Profilo() {
         <View style={{ flexDirection: 'row', gap: 9 }}>
           {[
             { numero: String(capi.length), etichetta: 'capi', sfondo: colori.scheda, tinta: colori.inchiostro },
-            { numero: String(outfit.length), etichetta: 'outfit', sfondo: colori.citron, tinta: colori.inchiostro },
+            { numero: String(outfit.length), etichetta: 'outfit', sfondo: colori.ambra, tinta: colori.inchiostro },
             { numero: String(dormienti.length), etichetta: 'fermi', sfondo: colori.inchiostro, tinta: colori.crema },
           ].map((voce) => (
             <View
@@ -155,7 +159,7 @@ export default function Profilo() {
           />
           <BottoneSecondario
             testo="Rivedi l'intro"
-            onPress={() => router.push('/onboarding')}
+            onPress={() => router.push('/intro')}
             style={{ flex: 1 }}
           />
         </View>
@@ -228,7 +232,7 @@ export default function Profilo() {
 
         {PLAYGROUND_VISIBILE ? (
           <>
-            <Etichetta taglia={11} colore={colori.oliva} style={{ marginTop: spazi.m }}>
+            <Etichetta taglia={11} colore={colori.ambraMedio} style={{ marginTop: spazi.m }}>
               Sviluppo · solo interno
             </Etichetta>
             <Toccabile
@@ -252,7 +256,7 @@ export default function Profilo() {
                   Quale provider legge le foto e propone gli outfit
                 </Corpo>
               </View>
-              <Icona nome="chevron" misura={17} colore={colori.citron} spessore={2.4} />
+              <Icona nome="chevron" misura={17} colore={colori.ambra} spessore={2.4} />
             </Toccabile>
             <Toccabile
               onPress={() => router.push('/dev/playground')}

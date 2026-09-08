@@ -24,12 +24,6 @@ __pycache__/
 build/
 *.egg-info/
 
-# cdk
-infra/cdk.out/
-infra/*.d.ts
-infra/*.js
-!infra/jest.config.js
-
 # ambiente
 .env
 .env.*

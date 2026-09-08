@@ -1,5 +1,5 @@
 /**
- * La barra in basso: pillola scura galleggiante, con il «+» in citron al centro.
+ * La barra in basso: pillola scura galleggiante, con il «+» in ambra al centro.
  *
  * È scritta a mano invece di usare quella di sistema perché la forma — una
  * pillola staccata dal fondo, cinque voci di cui una circolare al centro — è
@@ -72,7 +72,7 @@ export default function DisposizioneSchede() {
                     justifyContent: 'center',
                     gap: 3,
                     backgroundColor: voce.centrale
-                      ? colori.citron
+                      ? colori.ambra
                       : attiva
                         ? 'rgba(247,244,239,0.14)'
                         : 'transparent',

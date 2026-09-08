@@ -57,8 +57,13 @@ LETTURA_BUONA: dict[str, object] = {
 
 def intestazioni_utente(utente: str = "demo") -> dict[str, str]:
     """Le intestazioni HTTP che identificano `utente` in un evento di test: un
-    JWT vero, firmato con `JWT_SECRET`, non più un header non verificato."""
-    token = emetti_token(utente, os.environ["JWT_SECRET"], ADESSO)
+    JWT vero, firmato con `JWT_SECRET`, non più un header non verificato.
+
+    Emesso con l'ora reale, non `ADESSO`: `ADESSO` è fissa nel passato per
+    rendere deterministica la logica di dominio (capi dormienti, ecc.), ma un
+    token con `iat`/`exp` calcolati su quella data scade per davvero quando
+    l'orologio reale la supera di 30 giorni — è già successo una volta."""
+    token = emetti_token(utente, os.environ["JWT_SECRET"], datetime.now(UTC))
     return {"authorization": f"Bearer {token}"}
 
 

@@ -14,11 +14,11 @@ import type { AttributoCapo, Capo, Stagione, TipoCapo } from '@wardrobe/contract
 import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
-import { ScrollView, TextInput, View } from 'react-native'
+import { ScrollView, View } from 'react-native'
 import { useArmadio } from '../../src/dati/archivio'
 import { PALETTE_COLORI, attributiIncerti, fotoDaMostrare, quandoUsato } from '../../src/dati/dominio'
 import { ETICHETTE, colori, linee, ombre, raggi, spazi } from '../../src/tema/tokens'
-import { BadgeIa, BottonePrimario, BottoneSecondario, Icona, Pillola, Scheda, Toccabile, Vuoto } from '../../src/ui/base'
+import { BadgeIa, BottonePrimario, BottoneSecondario, Campo, Icona, Pillola, Scheda, Toccabile, Vuoto } from '../../src/ui/base'
 import { Attributo, Miniatura } from '../../src/ui/capi'
 import { Corpo, Forte, Titolo } from '../../src/ui/testo'
 import { Testata } from '../../src/ui/testata'
@@ -51,18 +51,6 @@ const STAGIONI: Stagione[] = [
   'mezza_stagione',
   'tutto_lanno',
 ]
-
-const stileCampoTesto = {
-  paddingHorizontal: 14,
-  paddingVertical: 11,
-  borderRadius: raggi.piccolo,
-  borderWidth: 1,
-  borderColor: linee.chiara,
-  backgroundColor: colori.sfondo,
-  fontFamily: 'Manrope_500Medium',
-  fontSize: 13.5,
-  color: colori.inchiostro,
-} as const
 
 export default function DettaglioCapo() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -198,7 +186,7 @@ export default function DettaglioCapo() {
 
           {/* Due interruttori: l'etichetta dice l'azione quando sono spenti e
               conferma lo stato quando sono accesi. Il corallo è per il bucato,
-              mai il citron: quel verde parla solo per l'IA. */}
+              mai il ambra: quel verde parla solo per l'IA. */}
           <View style={{ flexDirection: 'row', gap: spazi.s }}>
             <BottoneSecondario
               testo={messoOggi ? 'Segnato per oggi' : "L'ho messo oggi"}
@@ -298,7 +286,7 @@ export default function DettaglioCapo() {
                           borderRadius: raggi.pillola,
                           backgroundColor: voce.hex,
                           borderWidth: voce.hex === capo.colore.hex ? 3 : 1,
-                          borderColor: voce.hex === capo.colore.hex ? colori.citron : linee.chiara,
+                          borderColor: voce.hex === capo.colore.hex ? colori.ambra : linee.chiara,
                         }}
                       >
                         <View />
@@ -307,11 +295,11 @@ export default function DettaglioCapo() {
                   </View>
                 ) : (
                   <View style={{ flexDirection: 'row', gap: spazi.s }}>
-                    <TextInput
+                    <Campo
                       value={testoModifica}
                       onChangeText={setTestoModifica}
                       autoFocus
-                      style={[stileCampoTesto, { flex: 1 }]}
+                      style={{ flex: 1 }}
                     />
                     <BottoneSecondario
                       testo="Salva"
@@ -354,31 +342,29 @@ export default function DettaglioCapo() {
             ) : null}
 
             <View style={{ flexDirection: 'row', gap: spazi.s }}>
-              <TextInput
+              <Campo
                 value={nuovaEtichetta}
                 onChangeText={setNuovaEtichetta}
                 placeholder="es. da lavoro, da viaggio…"
-                placeholderTextColor="rgba(21,21,26,0.4)"
                 onSubmitEditing={() => {
                   const pulita = nuovaEtichetta.trim()
                   setNuovaEtichetta('')
                   if (!pulita || (capo.etichette ?? []).includes(pulita)) return
                   void aggiornaEtichette(capo.id, [...(capo.etichette ?? []), pulita])
                 }}
-                style={[stileCampoTesto, { flex: 1 }]}
+                style={{ flex: 1 }}
               />
             </View>
 
             <Corpo taglia={11.5} tono="tenue">
               Appunti
             </Corpo>
-            <TextInput
+            <Campo
               defaultValue={capo.appunti ?? ''}
               onEndEditing={(evento) => void aggiornaAppunti(capo.id, evento.nativeEvent.text)}
               placeholder="una nota libera su questo capo…"
-              placeholderTextColor="rgba(21,21,26,0.4)"
               multiline
-              style={[stileCampoTesto, { minHeight: 60, textAlignVertical: 'top' }]}
+              style={{ minHeight: 60, textAlignVertical: 'top' }}
             />
           </Scheda>
 

@@ -47,21 +47,6 @@ export function attributiIncerti(capo: Capo): AttributoCapo[] {
   })
 }
 
-export function eIncerto(capo: Capo, attributo: AttributoCapo): boolean {
-  return attributiIncerti(capo).includes(attributo)
-}
-
-export function valoreAttributo(capo: Capo, attributo: AttributoCapo): string | null {
-  switch (attributo) {
-    case 'colore':
-      return capo.colore.nome
-    case 'tipo':
-      return capo.tipo
-    default:
-      return (capo[attributo] as string | null | undefined) ?? null
-  }
-}
-
 export function dormiente(capo: Capo, adesso = new Date()): boolean {
   if (!capo.ultimo_uso) return true
   const limite = new Date(adesso)
@@ -73,19 +58,22 @@ export function perId(capi: Capo[]): Map<string, Capo> {
   return new Map(capi.map((capo) => [capo.id, capo]))
 }
 
-export function vestizioneIndossabile(vestizione: Vestizione): boolean {
-  if (vestizione.dress) return true
-  return Boolean(vestizione.top && vestizione.bottom)
+export function capiDiVestizione(vestizione: Vestizione, capi: Map<string, Capo>): Capo[] {
+  return SLOT_ORDINATI.concat('dress')
+    .map((slot) => vestizione[slot])
+    .filter((id): id is string => Boolean(id))
+    .map((id) => capi.get(id))
+    .filter((capo): capo is Capo => Boolean(capo))
 }
 
 /**
- * Traduce una vestizione in colori.
+ * Traduce una vestizione in colori: il ponte del manichino a primitive tinte.
  *
- * Il ponte com'è oggi: il manichino non indossa le fotografie, tinge superfici
- * con i colori che il modello di visione ha letto dalle foto dei capi. È il primo
- * passo, non il traguardo — la direzione è che il capo si veda dalla sua foto
- * scontornata, applicata come texture (`docs/adr/0004`). Quando arriverà, questa
- * funzione resta per il ripiego: serve ancora quando la texture non c'è.
+ * Il manichino non indossa le fotografie, tinge superfici con i colori che il
+ * modello di visione ha letto dalle foto dei capi. È il primo passo, non il
+ * traguardo — la direzione è che il capo si veda dalla sua foto scontornata,
+ * applicata come texture (`docs/adr/0004`). Quando arriverà, questa funzione
+ * resta per il ripiego: serve ancora quando la texture non c'è.
  */
 export function coloriDiVestizione(vestizione: Vestizione, capi: Map<string, Capo>): VestizioneColori {
   const risolvi = (id: string | null | undefined) => (id ? (capi.get(id)?.colore.hex ?? null) : null)
@@ -96,14 +84,6 @@ export function coloriDiVestizione(vestizione: Vestizione, capi: Map<string, Cap
     shoes: risolvi(vestizione.shoes),
     dress: risolvi(vestizione.dress),
   }
-}
-
-export function capiDiVestizione(vestizione: Vestizione, capi: Map<string, Capo>): Capo[] {
-  return SLOT_ORDINATI.concat('dress')
-    .map((slot) => vestizione[slot])
-    .filter((id): id is string => Boolean(id))
-    .map((id) => capi.get(id))
-    .filter((capo): capo is Capo => Boolean(capo))
 }
 
 /**
