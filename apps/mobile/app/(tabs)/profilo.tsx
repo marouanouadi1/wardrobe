@@ -1,14 +1,5 @@
 /**
- * Profilo: chi sei, come ti vesti, e la porta per gli strumenti interni.
- *
- * Il playground vive qui sotto «Sviluppo», visibile in `__DEV__` (Expo Go,
- * `npm run mobile`) o in una build che lo dichiara esplicitamente
- * (`EXPO_PUBLIC_STRUMENTI_INTERNI`, vedi `eas.json`): un APK dato a chi lo
- * prova fuori da Expo Go è comunque una build «di produzione» per React
- * Native, quindi `__DEV__` da solo non basterebbe a mostrarlo lì. In
- * produzione il backend rifiuta comunque le rotte /dev/* con un 403
- * (`PLAYGROUND_ABILITATO`, vedi handlers/playground.py), quindi nascondere
- * il pulsante non è sicurezza per oscurità: è coerenza.
+ * Profilo: chi sei, come ti vesti.
  */
 
 import { Image } from 'expo-image'
@@ -24,8 +15,6 @@ import { Bolla, BottoneSecondario, Icona, Scheda, Toccabile } from '../../src/ui
 import { Corpo, Etichetta, Forte, Numero, Titolo } from '../../src/ui/testo'
 import { RigaNavigabile } from '../../src/ui/righe'
 import { Schermata } from '../../src/ui/guscio'
-
-const PLAYGROUND_VISIBILE = __DEV__ || process.env.EXPO_PUBLIC_STRUMENTI_INTERNI === '1'
 
 export default function Profilo() {
   const { capi, outfit, profilo } = useArmadio()
@@ -192,42 +181,6 @@ export default function Profilo() {
         colore={colori.corallo}
         style={{ borderColor: colori.coralloTenue }}
       />
-
-      {PLAYGROUND_VISIBILE ? (
-        <>
-          <Etichetta taglia={11} colore={colori.ambraMedio} style={{ marginTop: spazi.m }}>
-            Sviluppo · solo interno
-          </Etichetta>
-          <RigaNavigabile
-            icona="scintilla"
-            titolo="Modelli in uso"
-            sottotitolo="Quale provider legge le foto e propone gli outfit"
-            onPress={() => router.push('/dev/modelli')}
-            su="scuro"
-          />
-          <RigaNavigabile
-            icona="scintilla"
-            titolo="Playground modelli"
-            sottotitolo="Provider, prompt, costi, storico"
-            onPress={() => router.push('/dev/playground')}
-            bordo
-          />
-          <RigaNavigabile
-            icona="griglia"
-            titolo="Valutazione modelli"
-            sottotitolo="Accuratezza e costo del banco a dieci campioni"
-            onPress={() => router.push('/dev/valutazioni')}
-            bordo
-          />
-          <RigaNavigabile
-            icona="griglia"
-            titolo="Prova 3D"
-            sottotitolo="Un corpo vero che indossa capi veri, su questo telefono"
-            onPress={() => router.push('/dev/prova-3d')}
-            bordo
-          />
-        </>
-      ) : null}
     </Schermata>
   )
 }

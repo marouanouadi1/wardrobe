@@ -37,7 +37,7 @@ type Fase = 'scatta' | 'analisi' | 'manuale'
 const LIMITE_BLOCCO = 20
 
 export default function Carica() {
-  const { avvisa, creaCapoManuale, registraCapo, modelloVisione } = useArmadio()
+  const { avvisa, creaCapoManuale, registraCapo } = useArmadio()
   const [fase, setFase] = useState<Fase>('scatta')
   const [passo, setPasso] = useState(0)
   const [foto, setFoto] = useState<string | null>(null)
@@ -81,7 +81,7 @@ export default function Carica() {
     try {
       const firma = await api.firmaUpload('image/jpeg')
       await api.caricaFoto(firma, esito.assets[0].uri)
-      const avviata = await api.avviaAnalisi(firma.chiave, modelloVisione)
+      const avviata = await api.avviaAnalisi(firma.chiave)
 
       for (let tentativo = 0; tentativo < 40; tentativo += 1) {
         const stato = await api.statoAnalisi(avviata.esecuzione_id)
@@ -139,7 +139,7 @@ export default function Carica() {
       for (const scatto of esito.assets) {
         const firma = await api.firmaUpload('image/jpeg')
         await api.caricaFoto(firma, scatto.uri)
-        await api.avviaAnalisi(firma.chiave, modelloVisione)
+        await api.avviaAnalisi(firma.chiave)
         avviate += 1
         setInBlocco(esito.assets.length - avviate)
       }
