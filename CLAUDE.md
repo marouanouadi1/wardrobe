@@ -30,8 +30,8 @@ generazione. `npm run contracts:check` gira in CI e fallisce se il committato è
 backend. La stessa regola vale per le liste di valori di un'enum: se ti serve l'elenco ordinato
 di un `TipoCapo` o di uno `Stagione`, prendilo da `apps/mobile/src/dati/dominio.ts`
 (`TIPI_CAPO`, `STAGIONI`) o da `VALORI_ATTRIBUTO_CAPO` in `@wardrobe/contracts` — non ridigitarlo:
-due copie della stessa enum divergono in silenzio (è già successo, vedi
-`src/dev/Valutazioni.tsx` prima che venisse allineata a `ETICHETTE.attributo`).
+due copie della stessa enum divergono in silenzio (è già successo, in una schermata interna poi
+rimossa insieme al playground, prima che venisse allineata a `ETICHETTE.attributo`).
 
 ## Lo stato di una risorsa: `useRisorsa`, non `useState` a coppie
 
@@ -67,19 +67,12 @@ attorno al push su `main` per gestire questo caso — non serve un gruppo di con
 condiviso, e aggiungerne uno con `cancel-in-progress` romperebbe di nuovo tutto (una release
 cancellerebbe l'altra invece di metterla in coda).
 
-## Il playground e i suoi endpoint `/dev/*`
-
-`docker-compose.yml` controlla `PLAYGROUND_ABILITATO` sul VPS. Se è `"1"`, gli endpoint
-`GET /dev/*` in `services/api/src/handlers/playground.py` rispondono **senza richiedere un
-token**: è pensato per un giro di test ristretto, non per un'app aperta a chiunque. Prima di
-allargare la platea di utenti, verificare che sia tornato a `"0"`.
-
 ## Design: i valori nei token, le forme nelle primitive
 
 `apps/mobile/src/tema/tokens.ts` è la fonte di verità per colori, tipografia, spazi, ombre. La
 regola scritta in cima al file vale come vincolo di prodotto: **`colori.ambra` (`#F5B324`)
-compare solo dove parla il modello** — badge di match, «letto dalla foto», esiti del playground —
-mai su un'azione dell'utente. Non introdurre nuovi colori hardcoded nelle schermate: se manca un
+compare solo dove parla il modello** — badge di match, «letto dalla foto» — mai su un'azione
+dell'utente. Non introdurre nuovi colori hardcoded nelle schermate: se manca un
 token, aggiungilo a `tokens.ts` (o componilo con `velo(colore, alfa)`, per una velatura), non
 inline. `colori.citron` non esiste più — è stato sostituito dall'ambra perché troppo acceso, vedi
 il commento in cima a `tokens.ts`.
@@ -109,11 +102,3 @@ interno** — ometterlo produce testo scuro su fondo scuro, un difetto che `tsc`
 - `npm run contracts:check` — da rilanciare dopo ogni modifica a `domain/models.py`.
 - `npm run dev:app` — stack locale completo (Postgres via Docker + API + Expo) per provare un
   flusso a mano prima di considerarlo finito.
-
-## Strumenti fuori dal codice spedito
-
-`tools/avatar-3d/` contiene gli script Python (`genera_capi.py`, `vesti_da_foto.py`,
-`comune.py`) che producono gli asset 3D sotto `apps/mobile/assets/3d/`. Non fanno parte
-dell'app: sono un toolchain offline, documentato in `apps/mobile/src/dev/Prova3D.tsx`
-(`app/dev/prova-3d.tsx` è solo il re-export di tre righe che la rotta richiede), da
-rilanciare solo quando quegli asset cambiano.

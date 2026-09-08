@@ -11,7 +11,7 @@ import { Corpo, Titolo } from './testo'
 /**
  * Bolla + titolo + sottotitolo + chevron: la voce navigabile del design.
  * `su="scuro"` è la variante piena (bg inchiostro, chevron ambra) delle
- * scorciatoie in evidenza — «Chiedi tu a Wardrobe», «Modelli in uso».
+ * scorciatoie in evidenza — «Chiedi tu a Wardrobe».
  */
 export function RigaNavigabile({
   icona,

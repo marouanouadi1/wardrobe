@@ -27,7 +27,7 @@ Il perché sta in [`docs/adr/0004`](docs/adr/0004-l-avatar-veste-le-foto-non-i-c
 
 ```txt
 apps/
-  mobile/            app Expo (iOS, Android, web) — 15 schermate, più 4 strumenti interni sotto app/dev/
+  mobile/            app Expo (iOS, Android, web) — 15 schermate
   web/               vuoto, ma il posto c'è
 services/api/
   src/domain/        logica pura: zero SDK, testabile con pytest
@@ -42,7 +42,7 @@ docs/adr/            le decisioni che valeva la pena scrivere
 **1. `handlers/` separato da `domain/`.** Un handler fa tre righe: legge
 l'evento, chiama una funzione pura, formatta la risposta. Tutta la logica sta in
 `domain`, che gira con pytest senza rete, senza container e senza mock della SDK —
-213 test in un secondo. Il vincolo non è una convenzione scritta in un README:
+92 test in un secondo. Il vincolo non è una convenzione scritta in un README:
 `pyproject.toml` vieta gli import di `psycopg` e `httpx` fuori da
 `adapters/`, e il lint fallisce se qualcuno prova.
 
@@ -129,11 +129,11 @@ OPENAI_API_KEY=...           # opzionali
 GOOGLE_API_KEY=...
 ```
 
-Poi **Profilo → Playground modelli**: si scelgono provider e modello, si modifica
-il system prompt, si esegue, e si leggono latenza, token, costo ed esito. Il
-playground esercita i due lavori veri (analisi della foto, suggerimento), non una
-chat: aggiungere un provider è un file in `adapters/llm/` più una riga nel
-registro, e nessuna schermata cambia.
+il provider e il modello dei due lavori veri (analisi della foto, suggerimenti e chat) si
+scelgono da ambiente — `PROVIDER_VISIONE`/`MODELLO_VISIONE` per l'analisi,
+`PROVIDER_STILISTA`/`MODELLO_STILISTA` per suggerimenti e chat, entrambe opzionali
+(il default è Anthropic col primo modello del suo catalogo). Aggiungere un provider è
+un file in `adapters/llm/` più una riga nel registro, e nessuna schermata cambia.
 
 ### Comandi
 
@@ -144,7 +144,7 @@ registro, e nessuna schermata cambia.
 | `npm run mobile` | avvia l'app Expo |
 | `npm run mobile:web` | l'app nel browser |
 | `npm run api:local` | solo l'API (Postgres già acceso) |
-| `npm run api:test` | 214 test del dominio e degli handler |
+| `npm run api:test` | 148 test del dominio e degli handler |
 | `npm run api:lint` | ruff + ruff format + mypy strict |
 | `npm run contracts:generate` | rigenera i tipi TypeScript dal backend |
 | `npm run contracts:check` | verifica che siano allineati (gira in CI) |
@@ -158,8 +158,7 @@ registro, e nessuna schermata cambia.
 Un VPS, un dominio, tre container Docker (`postgres`, `api`, `caddy` per
 l'HTTPS). Il runbook completo — come ci arriva il codice (il repo è privato,
 niente `git clone` sul server), i due `.env` da scrivere a mano, avvio,
-migrazioni e le scelte deliberate (playground abilitato per il primo giro di
-prova, Postgres non raggiungibile da Internet) — è in
+migrazioni e le scelte deliberate (Postgres non raggiungibile da Internet) — è in
 [`docs/deploy.md`](docs/deploy.md).
 
 Ogni merge su `main` fa partire da sola la parte di rilascio che tocca: un
@@ -178,7 +177,7 @@ dettagli operativi in [`docs/deploy.md`](docs/deploy.md) e nei workflow
 
 ### Verificato su questa macchina
 
-- `npm run api:test` → **214 test passati**
+- `npm run api:test` → **148 test passati**
 - `npm run api:lint` → ruff pulito, **mypy strict** senza errori
 - `npm run contracts:check` → contratti allineati; verificato anche il contrario,
   rinominando un campo nel backend per vedere la CI cadere
@@ -189,10 +188,9 @@ dettagli operativi in [`docs/deploy.md`](docs/deploy.md) e nei workflow
   registrazione risponde **403**; con l'email in lista, **POST
   /auth/registrati** restituisce un token e `/capi` con quel token risponde
   con un armadio vuoto (niente più semina finta); senza token, **401**;
-  `/suggerimenti` e `/dev/playground` rispondono **503
-  provider_non_configurato** senza credenziali (non un 500), e
-  `/capi/analisi` esegue la pipeline in linea riportando il motivo del
-  fallimento
+  `/suggerimenti` risponde **503 provider_non_configurato** senza credenziali
+  (non un 500), e `/capi/analisi` esegue la pipeline in linea riportando il
+  motivo del fallimento
 
 ### Verificato sul VPS di produzione
 
@@ -226,23 +224,24 @@ delle due feature di punta — aspettati di ritoccare i prompt in
 **L'avatar spedito è 2D, non 3D.** La scheda «Avatar» (`app/(tabs)/avatar.tsx`) disegna una
 sagoma SVG tinta dai colori letti dalle foto dei capi — nessun WebGL, nessun confine d'errore da
 attraversare: è il ripiego dichiarato dall'ADR 0004, non un fallback di un manichino 3D che non
-è mai partito. Il manichino 3D che veste foto vere esiste solo come strumento interno
-(`src/dev/Prova3D.tsx`, dietro «Profilo → Sviluppo → Prova 3D»), e non è mai stato visto girare
-fuori da questa macchina: compila ed è dentro i bundle nativi, ma serve un dispositivo o un
-simulatore.
+è mai partito. Un manichino 3D che vestiva foto vere è esistito come strumento interno
+(react-three-fiber, dietro «Profilo → Sviluppo → Prova 3D») ed è stato rimosso insieme al
+playground: non era mai stato visto girare fuori da questa macchina, e nessun codice di quella
+strada resta nel repo — solo gli script Python che generavano i suoi asset, in
+`tools/avatar-3d/` prima che anche quelli venissero tolti.
 
 **Dell'avatar vero c'è un primo pezzo, solo lato backend.**
 `services/api/src/adapters/scontorno/fal_provider.py` scontorna la foto di un capo — un passo
-facoltativo, vedi `handlers/analisi.py` — e `adapters/imagegen/google_nano_banana.py` è un
-secondo tentativo, per la generazione d'immagine. Nessuno dei due è ancora collegato a una
-ricostruzione 3D o a un corpo fedele alla persona: la direzione dell'ADR 0004 resta scritta, non
-implementata per intero. Quello che l'utente vede oggi è il manichino a primitive tinte, in 2D.
+facoltativo, vedi `handlers/analisi.py`. Non è ancora collegato a una ricostruzione 3D o a un
+corpo fedele alla persona: la direzione dell'ADR 0004 resta scritta, non implementata per
+intero. Quello che l'utente vede oggi è il manichino a primitive tinte, in 2D.
 
 **Gli id dei modelli non-Anthropic vanno confermati.** Quelli di Claude vengono
 dall'SDK ufficiale; `gpt-5.1` e `gemini-2.5-pro` sono i nomi indicati nel design e
 sono sovrascrivibili da ambiente (`MODELLI_OPENAI`, `MODELLI_GOOGLE`). Anche i
-loro prezzi mancano dal catalogo: il playground mostra «—» invece di inventare un
-numero.
+loro prezzi restano fuori dal catalogo esposto al prodotto: nessun punto dell'app
+li converte più in euro, da quando la vista che li mostrava è stata tolta insieme
+al playground.
 
 ## Le domande che il design lascia aperte
 

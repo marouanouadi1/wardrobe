@@ -2,12 +2,13 @@
  * Lo stato di una richiesta asincrona: caricamento, errore, ricarica. Sul
  * modello di `services/api/src/handlers/_http.py` — un solo posto che sa come
  * si racconta un fallimento, invece di un `useState` a coppie ripetuto in
- * ogni schermata (`accedi`, `registrati`, `segnalazioni`, `dev/valutazioni` lo
- * scrivevano ciascuna a modo suo, e due schermate di `src/dev/` ingoiavano
- * l'errore in un `catch {}` vuoto perché non avevano dove metterlo).
+ * ogni schermata (`accedi`, `registrati`, `segnalazioni` lo scrivevano
+ * ciascuna a modo suo, e un paio di schermate interne, poi rimosse,
+ * ingoiavano l'errore in un `catch {}` vuoto perché non avevano dove
+ * metterlo).
  *
  * Due forme, per due usi diversi:
- * - `useRisorsa` carica da sola al montaggio (una lista, un banco di prova);
+ * - `useRisorsa` carica da sola al montaggio (una lista, un profilo);
  * - `useAzione` aspetta un tocco (un login, un salvataggio).
  */
 
