@@ -17,6 +17,7 @@ import type {
   Suggerimento,
   Vestizione,
 } from '@wardrobe/contracts'
+import { useRouter } from 'expo-router'
 import {
   type ReactNode,
   createContext,
@@ -490,4 +491,22 @@ export function useArmadio(): Archivio {
   const archivio = useContext(Contesto)
   if (!archivio) throw new Error('useArmadio va usato dentro ArchivioProvider')
   return archivio
+}
+
+/**
+ * «Vestila e vai»: infila una vestizione nell'avatar e apre la sua schermata.
+ * Le sei chiamate `vesti(...) + router.push('/(tabs)/avatar')` (Oggi, il
+ * suggeritore, gli outfit salvati) erano la stessa coppia di righe, sempre
+ * insieme.
+ */
+export function useVestiEVai(): (vestizione: Vestizione) => void {
+  const { vesti } = useArmadio()
+  const router = useRouter()
+  return useCallback(
+    (vestizione: Vestizione) => {
+      vesti(vestizione)
+      router.push('/(tabs)/avatar')
+    },
+    [vesti, router],
+  )
 }

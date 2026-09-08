@@ -29,9 +29,15 @@ export const colori = {
   /** Ambra scura: leggibile su ambraTenue. */
   ambraMedio: '#A66E1D',
   ambraScuro: '#8A5A12',
+  /** Ambra chiara: leggibile su fondo scuro (esiti «vago» del playground). */
+  ambraChiaro: '#FFD08B',
   /** Corallo: attenzione, incertezza, capi da lavare. */
   corallo: '#FF6A45',
   coralloTenue: '#FFE3DA',
+  /** Corallo chiaro: leggibile su fondo scuro (esiti «errore» del playground). */
+  coralloChiaro: '#FFB39B',
+  /** La pelle del manichino a primitive tinte (`docs/adr/0004`). */
+  pelle: '#E7DFD2',
 } as const
 
 export const testoSu = {
@@ -53,12 +59,16 @@ export const linee = {
   chiara: 'rgba(21,21,26,0.14)',
   scura: 'rgba(247,244,239,0.16)',
   tenue: 'rgba(21,21,26,0.06)',
+  /** Un filo più marcata di `tenue`: bordi di schede su fondo chiaro. */
+  media: 'rgba(21,21,26,0.08)',
 } as const
 
 /** Angoli morbidi: 26 per le schede, 99 per tutto ciò che è una pillola. */
 export const raggi = {
   piccolo: 14,
   medio: 20,
+  /** L'idioma `raggi.medio + 4` che tornava in ogni riga navigabile. */
+  medioAlto: 24,
   scheda: 26,
   grande: 30,
   pillola: 99,
@@ -100,6 +110,40 @@ export const ombre = {
     elevation: 2,
   },
 } as const
+
+/**
+ * Le velature di crema sulle schermate scure (`src/dev/`): prima erano
+ * quattro costanti quasi identiche — `CREMA_TENUE`, `FONDO_CAMPO`,
+ * `FONDO_RIGA`, `FONDO_CHIP` — ridichiarate in ogni file con valori che
+ * divergevano di un soffio l'uno dall'altro senza un motivo.
+ */
+export const superfici = {
+  suScuro: {
+    /** Il fondo di un campo di testo o di una riga. */
+    campo: 'rgba(247,244,239,0.06)',
+    /** Il bordo di un campo di testo — coincide con `linee.scura`. */
+    bordoCampo: 'rgba(247,244,239,0.16)',
+    /** Il fondo, un filo più chiaro, di una riga di storico o di un chip. */
+    riga: 'rgba(247,244,239,0.05)',
+    chip: 'rgba(247,244,239,0.07)',
+    /** Il fondo di una voce non selezionata in un selettore a righe. */
+    debole: 'rgba(247,244,239,0.04)',
+  },
+} as const
+
+/**
+ * Un colore con opacità, senza ridigitare `rgba(...)` per ogni velatura quasi
+ * identica di uno stesso colore (l'ambra al 12%, al 14%, al 18%...). Sostituisce
+ * anche il citron ritirato (`rgba(215,244,92,*)`, vedi sopra): con `velo(colori.ambra, α)`
+ * la velatura resta ambra, non il verde che non esiste più nel design.
+ */
+export function velo(esadecimale: string, alfa: number): string {
+  const pulito = esadecimale.replace('#', '')
+  const r = parseInt(pulito.substring(0, 2), 16)
+  const g = parseInt(pulito.substring(2, 4), 16)
+  const b = parseInt(pulito.substring(4, 6), 16)
+  return `rgba(${r},${g},${b},${alfa})`
+}
 
 export const caratteri = {
   /** Display: titoli, numeri grandi. Stretto, con letterspacing negativo. */

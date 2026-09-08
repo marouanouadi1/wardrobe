@@ -11,7 +11,7 @@ import { Redirect, Tabs } from 'expo-router'
 import { View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useSessione } from '../../src/dati/sessione'
-import { colori, ombre, raggi } from '../../src/tema/tokens'
+import { colori, ombre, raggi, testoSu } from '../../src/tema/tokens'
 import { Icona, type NomeIcona, Toccabile } from '../../src/ui/base'
 import { Etichetta } from '../../src/ui/testo'
 
@@ -38,6 +38,9 @@ export default function DisposizioneSchede() {
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colori.sfondo } }}
       tabBar={({ state, navigation }) => (
         <View
+          // `Schermata` (`src/ui/guscio.tsx`) rispecchia questo conto per il
+          // `paddingBottom` delle schermate sotto la barra: non ridurlo qui
+          // senza toccare anche lì.
           style={{
             position: 'absolute',
             left: 16,
@@ -81,12 +84,12 @@ export default function DisposizioneSchede() {
                   <Icona
                     nome={voce.icona}
                     misura={voce.centrale ? 22 : 19}
-                    colore={voce.centrale ? colori.inchiostro : attiva ? colori.crema : 'rgba(247,244,239,0.5)'}
+                    colore={voce.centrale ? colori.inchiostro : attiva ? colori.crema : testoSu.scuro.tenue}
                   />
                   {voce.etichetta ? (
                     <Etichetta
                       taglia={8.5}
-                      colore={attiva ? colori.crema : 'rgba(247,244,239,0.5)'}
+                      colore={attiva ? colori.crema : testoSu.scuro.tenue}
                       style={{ letterSpacing: 0.4 }}
                     >
                       {voce.etichetta}

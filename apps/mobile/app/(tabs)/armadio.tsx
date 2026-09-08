@@ -9,22 +9,25 @@
 import type { StatoCapo, TipoCapo } from '@wardrobe/contracts'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useMemo, useState } from 'react'
-import { ScrollView, TextInput, View } from 'react-native'
+import { ScrollView, View } from 'react-native'
 import { useArmadio } from '../../src/dati/archivio'
-import { ETICHETTE, colori, ombre, raggi, spazi } from '../../src/tema/tokens'
-import { Bolla, Icona, Pillola, Toccabile, Vuoto } from '../../src/ui/base'
+import { conta } from '../../src/dati/formato'
+import { ETICHETTE, spazi } from '../../src/tema/tokens'
+import { BarraChiedi, Pillola } from '../../src/ui/base'
 import { CapoInGriglia } from '../../src/ui/capi'
-import { Corpo, Forte, Titolo } from '../../src/ui/testo'
-import { Testata } from '../../src/ui/testata'
+import { Vuoto } from '../../src/ui/stati'
+import { Forte } from '../../src/ui/testo'
+import { RigaNavigabile } from '../../src/ui/righe'
+import { Schermata } from '../../src/ui/guscio'
 
 type Filtro = 'tutti' | TipoCapo | 'da_lavare' | 'preferiti'
 
 const FILTRI: { valore: Filtro; etichetta: string }[] = [
   { valore: 'tutti', etichetta: 'Tutti' },
-  { valore: 'top', etichetta: 'Top' },
-  { valore: 'pantaloni', etichetta: 'Pantaloni' },
-  { valore: 'scarpe', etichetta: 'Scarpe' },
-  { valore: 'capospalla', etichetta: 'Capospalla' },
+  { valore: 'top', etichetta: ETICHETTE.tipo.top },
+  { valore: 'pantaloni', etichetta: ETICHETTE.tipo.pantaloni },
+  { valore: 'scarpe', etichetta: ETICHETTE.tipo.scarpe },
+  { valore: 'capospalla', etichetta: ETICHETTE.tipo.capospalla },
   { valore: 'da_lavare', etichetta: 'Da lavare' },
   { valore: 'preferiti', etichetta: 'Preferiti' },
 ]
@@ -58,96 +61,55 @@ export default function Armadio() {
     })
   }, [capi, filtro, ricerca])
 
-  const daLavare = capi.filter((capo) => capo.stato !== 'pulito').length
+  const inLavatrice = capi.filter((capo) => capo.stato !== 'pulito').length
 
   return (
-    <View style={{ flex: 1 }}>
-      <Testata
-        occhiello={`${capi.length} capi${daLavare ? ` · ${daLavare} in lavatrice` : ''}`}
-        titolo="Il tuo armadio"
-        fotoProfilo={profilo?.foto_url}
-      />
+    <Schermata
+      occhiello={`${capi.length} capi${inLavatrice ? ` · ${inLavatrice} in lavatrice` : ''}`}
+      titolo="Il tuo armadio"
+      fotoProfilo={profilo?.foto_url}
+      tab
+      contentStyle={{ gap: spazi.m }}
+    >
+      <BarraChiedi valore={ricerca} onCambia={setRicerca} placeholder="lino, nero, giacca…" icona="cerca" />
 
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spazi.xl, paddingBottom: 130, gap: spazi.m }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: spazi.s,
-            paddingHorizontal: spazi.l,
-            paddingVertical: 12,
-            borderRadius: raggi.pillola,
-            backgroundColor: colori.scheda,
-            ...ombre.bassa,
-          }}
-        >
-          <Icona nome="cerca" misura={17} colore="rgba(21,21,26,0.45)" spessore={2.2} />
-          <TextInput
-            value={ricerca}
-            onChangeText={setRicerca}
-            placeholder="lino, nero, giacca…"
-            placeholderTextColor="rgba(21,21,26,0.4)"
-            style={{ flex: 1, fontFamily: 'Manrope_500Medium', fontSize: 14.5, color: colori.inchiostro }}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
+        {FILTRI.map((voce) => (
+          <Pillola
+            key={voce.valore}
+            testo={voce.etichetta}
+            attiva={filtro === voce.valore}
+            onPress={() => setFiltro(voce.valore)}
           />
-        </View>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-          {FILTRI.map((voce) => (
-            <Pillola
-              key={voce.valore}
-              testo={voce.etichetta}
-              attiva={filtro === voce.valore}
-              onPress={() => setFiltro(voce.valore)}
-            />
-          ))}
-        </ScrollView>
-
-        <Forte taglia={12.5} tono="tenue">
-          {mostrati.length === 1 ? '1 capo' : `${mostrati.length} capi`}
-        </Forte>
-
-        {mostrati.length === 0 ? (
-          <Vuoto
-            titolo="Niente con questi filtri"
-            spiegazione="Prova a togliere la ricerca, oppure aggiungi un capo con il «+» in basso."
-          />
-        ) : (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spazi.m }}>
-            {mostrati.map((capo) => (
-              <View key={capo.id} style={{ width: '47.5%' }}>
-                <CapoInGriglia capo={capo} onPress={() => router.push(`/capo/${capo.id}`)} />
-              </View>
-            ))}
-          </View>
-        )}
-
-        <Toccabile
-          onPress={() => router.push('/suggeritore')}
-          scala={0.98}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 11,
-            padding: 15,
-            borderRadius: raggi.medio + 4,
-            backgroundColor: colori.inchiostro,
-          }}
-        >
-          <Bolla nome="scintilla" />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Titolo taglia={15.5} colore={colori.scheda}>
-              Chiedi tu a Wardrobe
-            </Titolo>
-            <Corpo taglia={11.5} colore="rgba(255,253,249,0.55)">
-              «Ho una cena, voglio stare comodo»
-            </Corpo>
-          </View>
-          <Icona nome="chevron" misura={16} colore={colori.ambra} spessore={2.4} />
-        </Toccabile>
+        ))}
       </ScrollView>
-    </View>
+
+      <Forte taglia={12.5} tono="tenue">
+        {conta(mostrati.length, 'capo', 'capi')}
+      </Forte>
+
+      {mostrati.length === 0 ? (
+        <Vuoto
+          titolo="Niente con questi filtri"
+          spiegazione="Prova a togliere la ricerca, oppure aggiungi un capo con il «+» in basso."
+        />
+      ) : (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spazi.m }}>
+          {mostrati.map((capo) => (
+            <View key={capo.id} style={{ width: '47.5%' }}>
+              <CapoInGriglia capo={capo} onPress={() => router.push(`/capo/${capo.id}`)} />
+            </View>
+          ))}
+        </View>
+      )}
+
+      <RigaNavigabile
+        icona="scintilla"
+        titolo="Chiedi tu a Wardrobe"
+        sottotitolo="«Ho una cena, voglio stare comodo»"
+        su="scuro"
+        onPress={() => router.push('/suggeritore')}
+      />
+    </Schermata>
   )
 }

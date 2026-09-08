@@ -15,19 +15,17 @@
  * per non aspettare un riavvio prima di provare un provider nuovo.
  */
 
-import type { EsecuzionePlayground, EsitoPlayground, JobIa, ModelloDisponibile, PresetPrompt } from '@wardrobe/contracts'
+import type { EsecuzionePlayground, EsitoPlayground, JobIa, PresetPrompt } from '@wardrobe/contracts'
 import { useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, ScrollView, TextInput, View } from 'react-native'
+import { ScrollView, TextInput, View } from 'react-native'
 import { api } from '../dati/api'
 import { useArmadio } from '../dati/archivio'
-import { colori, raggi, spazi } from '../tema/tokens'
-import { Icona, Pillola, Toccabile } from '../ui/base'
-import { Corpo, Etichetta, Forte, Numero, Titolo } from '../ui/testo'
-import { Testata } from '../ui/testata'
-
-const CREMA_TENUE = 'rgba(247,244,239,0.5)'
-const FONDO_CAMPO = 'rgba(247,244,239,0.06)'
-const BORDO_CAMPO = 'rgba(247,244,239,0.16)'
+import { euro } from '../dati/formato'
+import { colori, raggi, spazi, superfici, testoSu, velo } from '../tema/tokens'
+import { BottonePrimario, BottoneSecondario, Pillola, Toccabile } from '../ui/base'
+import { Schermata } from '../ui/guscio'
+import { RigaRadio, RiquadroStatistica, TitoloSezione, spiaModello } from '../ui/righe'
+import { Corpo, Etichetta, Forte } from '../ui/testo'
 
 /** Il form parte da questi finché il fetch di `/dev/preset` non risponde. */
 const PRESET_INIZIALI: PresetPrompt[] = [
@@ -53,7 +51,7 @@ const PRESET_INIZIALI: PresetPrompt[] = [
 
 export default function Playground() {
   const { capi } = useArmadio()
-  const [modelli, setModelli] = useState<ModelloDisponibile[]>([])
+  const [modelli, setModelli] = useState<import('@wardrobe/contracts').ModelloDisponibile[]>([])
   const [preset, setPreset] = useState<PresetPrompt[]>(PRESET_INIZIALI)
   const [scelto, setScelto] = useState(0)
   const [presetScelto, setPresetScelto] = useState(0)
@@ -192,429 +190,321 @@ export default function Playground() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colori.inchiostro }}>
-      <Testata occhiello="Solo interno" titolo="Playground IA" indietro scura />
-
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spazi.xl, paddingBottom: 60, gap: spazi.l }}
-        showsVerticalScrollIndicator={false}
-      >
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-          {preset.map((voce, indice) => (
-            <Pillola
-              key={voce.id}
-              testo={voce.etichetta}
-              scura
-              attiva={indice === presetScelto}
-              onPress={() => {
-                setPresetScelto(indice)
-                setPrompt(voce.system_prompt)
-                setTemperatura(voce.temperatura ?? 0.4)
-                setMaxToken(String(voce.max_token ?? 900))
-                setPresetAppenaSalvato(false)
-              }}
-            />
-          ))}
-        </ScrollView>
-
-        <View style={{ gap: spazi.s }}>
-          <Etichetta taglia={11} colore={CREMA_TENUE}>
-            Modello
-          </Etichetta>
-          {modelli.map((voce, indice) => (
-            <Toccabile
-              key={`${voce.provider}-${voce.id}`}
-              onPress={() => setScelto(indice)}
-              scala={0.99}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spazi.m,
-                paddingHorizontal: 15,
-                paddingVertical: 14,
-                borderRadius: raggi.medio,
-                borderWidth: 1,
-                borderColor: indice === scelto ? colori.ambra : 'rgba(247,244,239,0.12)',
-                backgroundColor: indice === scelto ? 'rgba(215,244,92,0.12)' : 'rgba(247,244,239,0.04)',
-              }}
-            >
-              <View
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 99,
-                  borderWidth: 2,
-                  borderColor: indice === scelto ? colori.ambra : 'rgba(247,244,239,0.3)',
-                  backgroundColor: indice === scelto ? colori.ambra : 'transparent',
-                }}
-              />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Titolo taglia={15} colore={colori.crema}>
-                  {voce.etichetta}
-                </Titolo>
-                <Corpo taglia={11.5} colore={CREMA_TENUE}>
-                  {voce.provider}
-                  {voce.note ? ` · ${voce.note}` : ''}
-                </Corpo>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                {/* La spia più utile della schermata: se la chiave non c'è, il
-                    test fallirà, ed è meglio saperlo prima di premere. */}
-                <Forte taglia={10} colore={voce.configurato ? colori.ambra : 'rgba(255,106,69,0.9)'}>
-                  {voce.configurato ? 'pronto' : 'senza chiave'}
-                </Forte>
-                {voce.costo_input_eur_mtok !== null && voce.costo_input_eur_mtok !== undefined ? (
-                  <Corpo taglia={10.5} colore="rgba(247,244,239,0.45)">
-                    {`${voce.costo_input_eur_mtok}/${voce.costo_output_eur_mtok} €·Mtok`}
-                  </Corpo>
-                ) : null}
-              </View>
-            </Toccabile>
-          ))}
-        </View>
-
-        <View style={{ gap: spazi.s }}>
-          <Etichetta taglia={11} colore={CREMA_TENUE}>
-            System prompt
-          </Etichetta>
-          <TextInput
-            value={prompt}
-            onChangeText={(testo) => {
-              setPrompt(testo)
+    <Schermata occhiello="Solo interno" titolo="Playground IA" indietro su="scuro">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
+        {preset.map((voce, indice) => (
+          <Pillola
+            key={voce.id}
+            testo={voce.etichetta}
+            su="scuro"
+            attiva={indice === presetScelto}
+            onPress={() => {
+              setPresetScelto(indice)
+              setPrompt(voce.system_prompt)
+              setTemperatura(voce.temperatura ?? 0.4)
+              setMaxToken(String(voce.max_token ?? 900))
               setPresetAppenaSalvato(false)
             }}
-            multiline
-            style={{
-              minHeight: 150,
-              padding: 16,
-              borderRadius: 18,
-              borderWidth: 1,
-              borderColor: BORDO_CAMPO,
-              backgroundColor: FONDO_CAMPO,
-              color: colori.crema,
-              fontFamily: 'Manrope_500Medium',
-              fontSize: 12.5,
-              lineHeight: 19,
-              textAlignVertical: 'top',
-            }}
           />
+        ))}
+      </ScrollView>
 
-          {/* Finché non si preme qui, il prompt provato sopra resta solo
-              nella memoria di questo schermo: non lo vede né un altro
-              collaudo del playground riaperto, né la chat vera. */}
-          <Toccabile
-            onPress={() => void salvaPresetCorrente()}
-            scala={0.97}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              paddingVertical: 13,
-              borderRadius: raggi.pillola,
-              borderWidth: 1,
-              borderColor: colori.ambra,
-              opacity: salvandoPreset ? 0.7 : 1,
-            }}
-          >
-            {salvandoPreset ? (
-              <ActivityIndicator color={colori.ambra} />
-            ) : (
-              <Icona nome={presetAppenaSalvato ? 'spunta' : 'scintilla'} misura={14} spessore={2.2} colore={colori.ambra} />
-            )}
-            <Forte taglia={13} colore={colori.ambra}>
-              {salvandoPreset
-                ? 'Salvo…'
-                : presetAppenaSalvato
-                  ? 'Salvato — lo usa anche la chat vera'
-                  : 'Salva come preset predefinito'}
-            </Forte>
-          </Toccabile>
-        </View>
+      <View style={{ gap: spazi.s }}>
+        <TitoloSezione su="scuro">Modello</TitoloSezione>
+        {modelli.map((voce, indice) => (
+          <RigaRadio
+            key={`${voce.provider}-${voce.id}`}
+            titolo={voce.etichetta}
+            sottotitolo={`${voce.provider}${voce.note ? ` · ${voce.note}` : ''}`}
+            attivo={indice === scelto}
+            onPress={() => setScelto(indice)}
+            dettaglioSpia={
+              voce.costo_input_eur_mtok !== null && voce.costo_input_eur_mtok !== undefined
+                ? `${voce.costo_input_eur_mtok}/${voce.costo_output_eur_mtok} €·Mtok`
+                : undefined
+            }
+            {...spiaModello(voce.configurato)}
+          />
+        ))}
+      </View>
 
-        <View style={{ flexDirection: 'row', gap: spazi.m }}>
-          <View style={{ flex: 1, gap: spazi.s }}>
-            <Etichetta taglia={11} colore={CREMA_TENUE}>
-              {accettaTemperatura
-                ? `Temperature · ${temperatura.toFixed(2).replace('.', ',')}`
-                : 'Temperature · non accettata'}
-            </Etichetta>
-            {/* Sui modelli che hanno rimosso il parametro la manopola si
-                spegne. Lasciarla attiva sarebbe peggio che non averla: in un
-                banco di prova si trarrebbero conclusioni da un valore che non
-                arriva mai al modello. */}
-            <View style={{ flexDirection: 'row', gap: 6, opacity: accettaTemperatura ? 1 : 0.35 }}>
-              {[0, 0.2, 0.45, 0.7, 1].map((valore) => (
-                <Toccabile
-                  key={valore}
-                  onPress={
-                    accettaTemperatura
-                      ? () => {
-                          setTemperatura(valore)
-                          setPresetAppenaSalvato(false)
-                        }
-                      : undefined
-                  }
-                  scala={accettaTemperatura ? 0.94 : 0}
-                  style={{
-                    flex: 1,
-                    alignItems: 'center',
-                    paddingVertical: 11,
-                    borderRadius: raggi.piccolo,
-                    borderWidth: 1,
-                    borderColor:
-                      accettaTemperatura && temperatura === valore ? colori.ambra : BORDO_CAMPO,
-                    backgroundColor:
-                      accettaTemperatura && temperatura === valore
-                        ? 'rgba(215,244,92,0.14)'
-                        : FONDO_CAMPO,
-                  }}
-                >
-                  <Forte taglia={12} colore={colori.crema}>
-                    {valore.toFixed(1).replace('.', ',')}
-                  </Forte>
-                </Toccabile>
-              ))}
-            </View>
-            {!accettaTemperatura ? (
-              <Corpo taglia={11} colore="rgba(247,244,239,0.45)">
-                {"Questo modello ha rimosso `temperature`: la profondità del ragionamento si regola con l'effort, che non è la stessa cosa."}
-              </Corpo>
-            ) : null}
+      <View style={{ gap: spazi.s }}>
+        <TitoloSezione su="scuro">System prompt</TitoloSezione>
+        <TextInput
+          value={prompt}
+          onChangeText={(testo) => {
+            setPrompt(testo)
+            setPresetAppenaSalvato(false)
+          }}
+          multiline
+          style={{
+            minHeight: 150,
+            padding: 16,
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: superfici.suScuro.bordoCampo,
+            backgroundColor: superfici.suScuro.campo,
+            color: colori.crema,
+            fontFamily: 'Manrope_500Medium',
+            fontSize: 12.5,
+            lineHeight: 19,
+            textAlignVertical: 'top',
+          }}
+        />
+
+        {/* Finché non si preme qui, il prompt provato sopra resta solo
+            nella memoria di questo schermo: non lo vede né un altro
+            collaudo del playground riaperto, né la chat vera. Un contorno,
+            non un pieno: il pieno d'ambra è per l'app spedita, qui è lo
+            strumento di misura. */}
+        <BottoneSecondario
+          testo={presetAppenaSalvato ? 'Salvato — lo usa anche la chat vera' : 'Salva come preset predefinito'}
+          colore={colori.ambra}
+          bordo={colori.ambra}
+          icona={presetAppenaSalvato ? 'spunta' : 'scintilla'}
+          caricando={salvandoPreset}
+          onPress={() => void salvaPresetCorrente()}
+        />
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: spazi.m }}>
+        <View style={{ flex: 1, gap: spazi.s }}>
+          <TitoloSezione su="scuro">
+            {accettaTemperatura
+              ? `Temperature · ${temperatura.toFixed(2).replace('.', ',')}`
+              : 'Temperature · non accettata'}
+          </TitoloSezione>
+          {/* Sui modelli che hanno rimosso il parametro la manopola si
+              spegne. Lasciarla attiva sarebbe peggio che non averla: in un
+              banco di prova si trarrebbero conclusioni da un valore che non
+              arriva mai al modello. */}
+          <View style={{ flexDirection: 'row', gap: 6, opacity: accettaTemperatura ? 1 : 0.35 }}>
+            {[0, 0.2, 0.45, 0.7, 1].map((valore) => (
+              <TastoTemperatura
+                key={valore}
+                valore={valore}
+                attivo={accettaTemperatura && temperatura === valore}
+                abilitato={accettaTemperatura}
+                onPress={() => {
+                  setTemperatura(valore)
+                  setPresetAppenaSalvato(false)
+                }}
+              />
+            ))}
           </View>
-          <View style={{ width: 104, gap: spazi.s }}>
-            <Etichetta taglia={11} colore={CREMA_TENUE}>
-              Max token
-            </Etichetta>
-            <TextInput
-              value={maxToken}
-              onChangeText={(testo) => {
-                setMaxToken(testo)
-                setPresetAppenaSalvato(false)
-              }}
-              keyboardType="number-pad"
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 11,
-                borderRadius: raggi.piccolo,
-                borderWidth: 1,
-                borderColor: BORDO_CAMPO,
-                backgroundColor: FONDO_CAMPO,
-                color: colori.crema,
-                fontFamily: 'Manrope_700Bold',
-                fontSize: 14,
-              }}
-            />
-          </View>
+          {!accettaTemperatura ? (
+            <Corpo taglia={11} colore="rgba(247,244,239,0.45)">
+              {"Questo modello ha rimosso `temperature`: la profondità del ragionamento si regola con l'effort, che non è la stessa cosa."}
+            </Corpo>
+          ) : null}
         </View>
-
-        <View style={{ gap: spazi.s }}>
-          <Etichetta taglia={11} colore={CREMA_TENUE}>
-            Chiave usa e getta · solo sviluppo
-          </Etichetta>
+        <View style={{ width: 104, gap: spazi.s }}>
+          <TitoloSezione su="scuro">Max token</TitoloSezione>
           <TextInput
-            value={chiaveSviluppo}
-            onChangeText={setChiaveSviluppo}
-            placeholder="lascia vuoto per usare quella del server"
-            placeholderTextColor="rgba(247,244,239,0.3)"
-            secureTextEntry
-            autoCapitalize="none"
+            value={maxToken}
+            onChangeText={(testo) => {
+              setMaxToken(testo)
+              setPresetAppenaSalvato(false)
+            }}
+            keyboardType="number-pad"
             style={{
-              paddingHorizontal: 16,
-              paddingVertical: 14,
-              borderRadius: 18,
+              paddingHorizontal: 14,
+              paddingVertical: 11,
+              borderRadius: raggi.piccolo,
               borderWidth: 1,
-              borderColor: BORDO_CAMPO,
-              backgroundColor: FONDO_CAMPO,
+              borderColor: superfici.suScuro.bordoCampo,
+              backgroundColor: superfici.suScuro.campo,
               color: colori.crema,
-              fontFamily: 'Manrope_500Medium',
+              fontFamily: 'Manrope_700Bold',
               fontSize: 14,
             }}
           />
         </View>
+      </View>
 
-        <Toccabile
-          onPress={() => setMostraContesto(!mostraContesto)}
-          scala={0}
+      <View style={{ gap: spazi.s }}>
+        <TitoloSezione su="scuro">Chiave usa e getta · solo sviluppo</TitoloSezione>
+        <TextInput
+          value={chiaveSviluppo}
+          onChangeText={setChiaveSviluppo}
+          placeholder="lascia vuoto per usare quella del server"
+          placeholderTextColor="rgba(247,244,239,0.3)"
+          secureTextEntry
+          autoCapitalize="none"
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
             paddingHorizontal: 16,
             paddingVertical: 14,
             borderRadius: 18,
             borderWidth: 1,
-            borderColor: BORDO_CAMPO,
+            borderColor: superfici.suScuro.bordoCampo,
+            backgroundColor: superfici.suScuro.campo,
+            color: colori.crema,
+            fontFamily: 'Manrope_500Medium',
+            fontSize: 14,
           }}
-        >
-          <Forte taglia={12.5} colore="rgba(247,244,239,0.65)" style={{ flex: 1 }}>
-            {`Contesto iniettato · ${(contesto.length / 1024).toFixed(1)} kB`}
-          </Forte>
-          <Forte taglia={12.5} colore={colori.ambra}>
-            {mostraContesto ? 'Nascondi' : 'Mostra'}
-          </Forte>
-        </Toccabile>
+        />
+      </View>
 
-        {mostraContesto ? (
-          <ScrollView
-            horizontal
-            style={{ maxHeight: 260, borderRadius: 18, backgroundColor: FONDO_CAMPO }}
-            contentContainerStyle={{ padding: 16 }}
+      <Toccabile
+        onPress={() => setMostraContesto(!mostraContesto)}
+        scala={0}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 16,
+          paddingVertical: 14,
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: superfici.suScuro.bordoCampo,
+        }}
+      >
+        <Forte taglia={12.5} colore="rgba(247,244,239,0.65)" style={{ flex: 1 }}>
+          {`Contesto iniettato · ${(contesto.length / 1024).toFixed(1)} kB`}
+        </Forte>
+        <Forte taglia={12.5} colore={colori.ambra}>
+          {mostraContesto ? 'Nascondi' : 'Mostra'}
+        </Forte>
+      </Toccabile>
+
+      {mostraContesto ? (
+        <ScrollView
+          horizontal
+          style={{ maxHeight: 260, borderRadius: 18, backgroundColor: superfici.suScuro.campo }}
+          contentContainerStyle={{ padding: 16 }}
+        >
+          <Corpo taglia={10.5} colore="rgba(247,244,239,0.85)" style={{ fontFamily: 'monospace' }}>
+            {contesto}
+          </Corpo>
+        </ScrollView>
+      ) : null}
+
+      <BottonePrimario
+        testo={inCorso ? `Sto interrogando ${modello?.etichetta}…` : `Esegui su ${modello?.etichetta ?? '—'}`}
+        ambra
+        icona="scintilla"
+        caricando={inCorso}
+        onPress={() => void esegui()}
+      />
+
+      {esito ? (
+        <View style={{ padding: 18, borderRadius: raggi.scheda - 2, backgroundColor: superfici.suScuro.campo, gap: spazi.m }}>
+          <View style={{ flexDirection: 'row', gap: spazi.s }}>
+            <RiquadroStatistica numero={`${esito.latenza_ms} ms`} etichetta="latenza" taglia={17} />
+            <RiquadroStatistica
+              numero={esito.uso ? String((esito.uso.token_input ?? 0) + (esito.uso.token_output ?? 0)) : '—'}
+              etichetta="token"
+              taglia={17}
+            />
+            <RiquadroStatistica numero={euro(esito.costo_eur)} etichetta="costo" taglia={17} />
+          </View>
+
+          <Forte
+            taglia={12}
+            colore={esito.esito === 'ok' ? colori.ambra : esito.esito === 'vago' ? colori.ambraChiaro : colori.coralloChiaro}
           >
-            <Corpo taglia={10.5} colore="rgba(247,244,239,0.85)" style={{ fontFamily: 'monospace' }}>
-              {contesto}
-            </Corpo>
-          </ScrollView>
-        ) : null}
-
-        <Toccabile
-          onPress={() => void esegui()}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            paddingVertical: 18,
-            borderRadius: raggi.pillola,
-            backgroundColor: colori.ambra,
-            opacity: inCorso ? 0.7 : 1,
-          }}
-        >
-          {inCorso ? <ActivityIndicator color={colori.inchiostro} /> : <Icona nome="scintilla" misura={18} spessore={2.2} />}
-          <Forte taglia={15.5}>
-            {inCorso ? `Sto interrogando ${modello?.etichetta}…` : `Esegui su ${modello?.etichetta ?? '—'}`}
+            {esito.esito.toUpperCase()}
           </Forte>
-        </Toccabile>
 
-        {esito ? (
-          <View style={{ padding: 18, borderRadius: raggi.scheda - 2, backgroundColor: FONDO_CAMPO, gap: spazi.m }}>
-            <View style={{ flexDirection: 'row', gap: spazi.s }}>
-              {[
-                { valore: `${esito.latenza_ms} ms`, etichetta: 'latenza' },
-                {
-                  valore: esito.uso
-                    ? String((esito.uso.token_input ?? 0) + (esito.uso.token_output ?? 0))
-                    : '—',
-                  etichetta: 'token',
-                },
-                {
-                  valore:
-                    esito.costo_eur === null || esito.costo_eur === undefined
-                      ? '—'
-                      : `${esito.costo_eur.toFixed(4)} €`,
-                  etichetta: 'costo',
-                },
-              ].map((metrica) => (
-                <View
-                  key={metrica.etichetta}
-                  style={{
-                    flex: 1,
-                    paddingHorizontal: 12,
-                    paddingVertical: 11,
-                    borderRadius: raggi.piccolo,
-                    backgroundColor: 'rgba(247,244,239,0.07)',
-                  }}
-                >
-                  <Numero taglia={17} colore={colori.crema}>
-                    {metrica.valore}
-                  </Numero>
-                  <Etichetta taglia={9.5} colore="rgba(247,244,239,0.45)" style={{ marginTop: 3 }}>
-                    {metrica.etichetta}
-                  </Etichetta>
+          {esito.errore ? (
+            <Corpo taglia={13} colore={colori.coralloChiaro}>
+              {esito.errore}
+            </Corpo>
+          ) : null}
+
+          {esito.suggerimenti && esito.suggerimenti.length > 0 ? (
+            <View style={{ gap: spazi.s }}>
+              {esito.suggerimenti.map((proposta) => (
+                <View key={proposta.titolo} style={{ gap: 2 }}>
+                  <Forte taglia={13} colore={colori.crema}>
+                    {`${proposta.titolo} · ${proposta.match}%`}
+                  </Forte>
+                  {proposta.perche.map((motivo) => (
+                    <Corpo key={motivo} taglia={12} colore="rgba(247,244,239,0.7)">
+                      {`— ${motivo}`}
+                    </Corpo>
+                  ))}
                 </View>
               ))}
             </View>
+          ) : null}
 
-            <Forte
-              taglia={12}
-              colore={esito.esito === 'ok' ? colori.ambra : esito.esito === 'vago' ? '#FFD08B' : '#FFB39B'}
+          {esito.lettura ? (
+            <Corpo taglia={11.5} colore="rgba(247,244,239,0.85)" style={{ fontFamily: 'monospace' }}>
+              {JSON.stringify(esito.lettura, null, 2)}
+            </Corpo>
+          ) : null}
+        </View>
+      ) : null}
+
+      {storico.length > 0 ? (
+        <View style={{ gap: spazi.s }}>
+          <TitoloSezione su="scuro">Storico test</TitoloSezione>
+          {storico.map((riga) => (
+            <View
+              key={riga.id}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 11,
+                paddingHorizontal: 15,
+                paddingVertical: 13,
+                borderRadius: 18,
+                backgroundColor: superfici.suScuro.riga,
+              }}
             >
-              {esito.esito.toUpperCase()}
-            </Forte>
-
-            {esito.errore ? (
-              <Corpo taglia={13} colore="#FFB39B">
-                {esito.errore}
-              </Corpo>
-            ) : null}
-
-            {esito.suggerimenti && esito.suggerimenti.length > 0 ? (
-              <View style={{ gap: spazi.s }}>
-                {esito.suggerimenti.map((proposta) => (
-                  <View key={proposta.titolo} style={{ gap: 2 }}>
-                    <Forte taglia={13} colore={colori.crema}>
-                      {`${proposta.titolo} · ${proposta.match}%`}
-                    </Forte>
-                    {proposta.perche.map((motivo) => (
-                      <Corpo key={motivo} taglia={12} colore="rgba(247,244,239,0.7)">
-                        {`— ${motivo}`}
-                      </Corpo>
-                    ))}
-                  </View>
-                ))}
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Forte taglia={13} colore={colori.crema} numberOfLines={1}>
+                  {riga.modello}
+                </Forte>
+                <Corpo taglia={11} colore={testoSu.scuro.tenue}>
+                  {`${riga.job} · T ${riga.temperatura}`}
+                </Corpo>
               </View>
-            ) : null}
-
-            {esito.lettura ? (
-              <Corpo taglia={11.5} colore="rgba(247,244,239,0.85)" style={{ fontFamily: 'monospace' }}>
-                {JSON.stringify(esito.lettura, null, 2)}
-              </Corpo>
-            ) : null}
-          </View>
-        ) : null}
-
-        {storico.length > 0 ? (
-          <View style={{ gap: spazi.s }}>
-            <Etichetta taglia={11} colore={CREMA_TENUE}>
-              Storico test
-            </Etichetta>
-            {storico.map((riga) => (
+              <View style={{ alignItems: 'flex-end' }}>
+                <Forte taglia={12} colore={colori.crema}>
+                  {`${riga.latenza_ms} ms`}
+                </Forte>
+                <Corpo taglia={11} colore={testoSu.scuro.tenue}>
+                  {euro(riga.costo_eur)}
+                </Corpo>
+              </View>
               <View
-                key={riga.id}
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 11,
-                  paddingHorizontal: 15,
-                  paddingVertical: 13,
-                  borderRadius: 18,
-                  backgroundColor: 'rgba(247,244,239,0.05)',
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: raggi.pillola,
+                  backgroundColor: riga.esito === 'ok' ? velo(colori.ambra, 0.18) : velo(colori.corallo, 0.2),
                 }}
               >
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Forte taglia={13} colore={colori.crema} numberOfLines={1}>
-                    {riga.modello}
-                  </Forte>
-                  <Corpo taglia={11} colore="rgba(247,244,239,0.45)">
-                    {`${riga.job} · T ${riga.temperatura}`}
-                  </Corpo>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Forte taglia={12} colore={colori.crema}>
-                    {`${riga.latenza_ms} ms`}
-                  </Forte>
-                  <Corpo taglia={11} colore="rgba(247,244,239,0.45)">
-                    {riga.costo_eur === null || riga.costo_eur === undefined
-                      ? '—'
-                      : `${riga.costo_eur.toFixed(4)} €`}
-                  </Corpo>
-                </View>
-                <View
-                  style={{
-                    paddingHorizontal: 10,
-                    paddingVertical: 5,
-                    borderRadius: raggi.pillola,
-                    backgroundColor: riga.esito === 'ok' ? 'rgba(215,244,92,0.18)' : 'rgba(255,106,69,0.2)',
-                  }}
-                >
-                  <Etichetta taglia={10} colore={riga.esito === 'ok' ? colori.ambra : '#FFB39B'}>
-                    {riga.esito}
-                  </Etichetta>
-                </View>
+                <Etichetta taglia={10} colore={riga.esito === 'ok' ? colori.ambra : colori.coralloChiaro}>
+                  {riga.esito}
+                </Etichetta>
               </View>
-            ))}
-          </View>
-        ) : null}
-      </ScrollView>
-    </View>
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </Schermata>
+  )
+}
+
+function TastoTemperatura({
+  valore,
+  attivo,
+  abilitato,
+  onPress,
+}: {
+  valore: number
+  attivo: boolean
+  abilitato: boolean
+  onPress: () => void
+}) {
+  return (
+    <Pillola
+      testo={valore.toFixed(1).replace('.', ',')}
+      su="scuro"
+      attiva={attivo}
+      onPress={abilitato ? onPress : undefined}
+    />
   )
 }

@@ -14,7 +14,7 @@ import { router } from 'expo-router'
 import { useState } from 'react'
 import { View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { colori, raggi, spazi } from '../src/tema/tokens'
+import { colori, linee, raggi, spazi } from '../src/tema/tokens'
 import { BottonePrimario, Toccabile } from '../src/ui/base'
 import { Corpo, Etichetta, Titolo } from '../src/ui/testo'
 
@@ -74,7 +74,7 @@ export default function Intro() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Titolo taglia={22}>wardrobe</Titolo>
           <View
-            style={{ width: 6, height: 6, borderRadius: 99, backgroundColor: colori.ambra }}
+            style={{ width: 6, height: 6, borderRadius: raggi.pillola, backgroundColor: colori.ambra }}
           />
         </View>
 
@@ -85,9 +85,9 @@ export default function Intro() {
                 key={indice}
                 style={{
                   height: 3,
-                  borderRadius: 99,
+                  borderRadius: raggi.pillola,
                   width: indice === passo ? 26 : 10,
-                  backgroundColor: indice === passo ? colori.ambra : 'rgba(21,21,26,0.14)',
+                  backgroundColor: indice === passo ? colori.ambra : linee.chiara,
                 }}
               />
             ))}
@@ -103,10 +103,10 @@ export default function Intro() {
               paddingLeft: 8,
               paddingRight: 12,
               borderRadius: raggi.pillola,
-              backgroundColor: 'rgba(21,21,26,0.06)',
+              backgroundColor: linee.tenue,
             }}
           >
-            <View style={{ width: 6, height: 6, borderRadius: 99, backgroundColor: colori.ambra }} />
+            <View style={{ width: 6, height: 6, borderRadius: raggi.pillola, backgroundColor: colori.ambra }} />
             <Etichetta taglia={11}>{corrente.occhiello}</Etichetta>
           </View>
 

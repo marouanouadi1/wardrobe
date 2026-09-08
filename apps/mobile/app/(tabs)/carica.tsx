@@ -7,22 +7,21 @@
  * sospetti. Ed è anche il momento in cui l'utente capisce cosa sa fare l'app.
  */
 
-import type { TipoCapo } from '@wardrobe/contracts'
 import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { ScrollView, View } from 'react-native'
-import { api } from '../../src/dati/api'
+import { View } from 'react-native'
+import { api, messaggioDiErrore } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
-import { PALETTE_COLORI } from '../../src/dati/dominio'
-import { ETICHETTE, colori, linee, ombre, raggi, spazi } from '../../src/tema/tokens'
+import { PALETTE_COLORI, TIPI_CAPO } from '../../src/dati/dominio'
+import { conta } from '../../src/dati/formato'
+import { ETICHETTE, colori, linee, ombre, raggi, spazi, velo } from '../../src/tema/tokens'
 import { BottonePrimario, BottoneSecondario, Campo, Icona, Pillola, Toccabile } from '../../src/ui/base'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
-import { Testata } from '../../src/ui/testata'
-
-const TIPI: TipoCapo[] = ['top', 'pantaloni', 'scarpe', 'capospalla', 'abito', 'accessorio']
+import { Schermata } from '../../src/ui/guscio'
+import type { TipoCapo } from '@wardrobe/contracts'
 
 const PASSI = [
   { testo: 'Isolo il capo dallo sfondo' },
@@ -107,7 +106,7 @@ export default function Carica() {
       setFase('scatta')
       setPasso(0)
     } catch (errore) {
-      avvisa(errore instanceof Error ? errore.message : 'Caricamento non riuscito')
+      avvisa(messaggioDiErrore(errore, 'Caricamento non riuscito'))
       setFase('scatta')
       setPasso(0)
     }
@@ -144,15 +143,11 @@ export default function Carica() {
         avviate += 1
         setInBlocco(esito.assets.length - avviate)
       }
-      avvisa(
-        `${avviate} ${avviate === 1 ? 'capo' : 'capi'} in analisi: li trovi in armadio appena il modello ha finito.`,
-      )
+      avvisa(`${conta(avviate, 'capo', 'capi')} in analisi: li trovi in armadio appena il modello ha finito.`)
       router.push('/(tabs)/armadio')
     } catch (errore) {
       avvisa(
-        `${avviate} ${avviate === 1 ? 'foto inviata' : 'foto inviate'} su ${esito.assets.length}, poi si è fermato: ${
-          errore instanceof Error ? errore.message : 'caricamento non riuscito'
-        }`,
+        `${conta(avviate, 'foto inviata', 'foto inviate')} su ${esito.assets.length}, poi si è fermato: ${messaggioDiErrore(errore, 'caricamento non riuscito')}`,
       )
     } finally {
       setInBlocco(null)
@@ -180,281 +175,259 @@ export default function Carica() {
       setNomeManuale('')
       router.push('/(tabs)/armadio')
     } catch (errore) {
-      avvisa(errore instanceof Error ? errore.message : 'Capo non salvato')
+      avvisa(messaggioDiErrore(errore, 'Capo non salvato'))
     } finally {
       setSalvandoManuale(false)
     }
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <Testata occhiello="Nuovo capo" titolo="Aggiungi" />
-
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spazi.xl, paddingBottom: 130, gap: spazi.l }}
-        showsVerticalScrollIndicator={false}
-      >
-        {fase === 'scatta' ? (
-          <>
-            <View
-              style={{
-                height: 430,
-                borderRadius: raggi.grande,
-                overflow: 'hidden',
-                backgroundColor: colori.inchiostro,
-              }}
-            >
-              <Image
-                source={{ uri: 'https://images.pexels.com/photos/18257675/pexels-photo-18257675.jpeg?auto=compress&cs=tinysrgb&w=700&h=900&fit=crop' }}
-                style={{ position: 'absolute', inset: 0, opacity: 0.5 }}
-                contentFit="cover"
-              />
-              <View
-                style={{
-                  position: 'absolute',
-                  inset: 22,
-                  borderWidth: 2,
-                  borderStyle: 'dashed',
-                  borderColor: 'rgba(255,253,249,0.45)',
-                  borderRadius: 22,
-                }}
-              />
-              <LinearGradient
-                colors={['rgba(21,21,26,0)', 'rgba(21,21,26,0.85)']}
-                style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 20, gap: 5 }}
-              >
-                <Titolo taglia={21} colore={colori.scheda}>
-                  Un capo per foto
-                </Titolo>
-                <Corpo taglia={13} colore="rgba(255,253,249,0.78)">
-                  {'Steso sul letto o appeso, con la luce che hai. Non serve altro: al resto pensa il modello.'}
-                </Corpo>
-              </LinearGradient>
-            </View>
-
-            <Toccabile
-              onPress={() => void scegliFoto(true)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                paddingVertical: 18,
-                borderRadius: raggi.pillola,
-                backgroundColor: colori.inchiostro,
-              }}
-            >
-              <Icona nome="fotocamera" misura={19} colore={colori.crema} />
-              <Forte taglia={16} colore={colori.crema}>
-                Scatta
-              </Forte>
-            </Toccabile>
-
-            <View style={{ flexDirection: 'row', gap: 9 }}>
-              <BottoneSecondario
-                testo="Dalla galleria"
-                onPress={() => void scegliFoto(false)}
-                style={{ flex: 1 }}
-              />
-              <BottoneSecondario
-                testo={`${LIMITE_BLOCCO} in blocco`}
-                onPress={() => void analizzaInBlocco()}
-                style={{ flex: 1 }}
-              />
-            </View>
-
-            {inBlocco !== null ? (
-              <Corpo taglia={12.5} tono="tenue" style={{ textAlign: 'center' }}>
-                {inBlocco === 0
-                  ? "Ci siamo, apro l'armadio…"
-                  : `Sto avviando l'analisi · ${inBlocco} ${inBlocco === 1 ? 'capo' : 'capi'} da mandare`}
-              </Corpo>
-            ) : null}
-
-            <Toccabile onPress={() => void scegliFoto(false, 'manuale')} scala={0} style={{ alignItems: 'center' }}>
-              <Forte taglia={12.5} colore={colori.inchiostro} style={{ textDecorationLine: 'underline' }}>
-                Preferisco inserirlo a mano
-              </Forte>
-            </Toccabile>
-
-            <Corpo taglia={11} tono="debole" style={{ textAlign: 'center', paddingHorizontal: spazi.m }}>
-              {
-                "Se lo sfondo non viene via bene: su iPhone, tieni premuto sul capo in Foto e scegli «Copia soggetto», oppure in File tocca a lungo la foto e scegli «Rimuovi sfondo». In alternativa un sito come remove.bg."
-              }
-            </Corpo>
-          </>
-        ) : null}
-
-        {fase === 'analisi' ? (
-          <>
-            <View
-              style={{
-                height: 390,
-                borderRadius: raggi.grande,
-                overflow: 'hidden',
-                backgroundColor: colori.inchiostro,
-              }}
-            >
-              {foto ? (
-                <Image source={{ uri: foto }} style={{ flex: 1 }} contentFit="cover" />
-              ) : null}
-            </View>
-
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spazi.s }}>
-              <Titolo taglia={24} style={{ flex: 1 }}>
-                Sto guardando il capo
-              </Titolo>
-              <Forte taglia={13} colore={colori.ambraMedio}>
-                {Math.round((passo / PASSI.length) * 100)}%
-              </Forte>
-            </View>
-
-            <View style={{ height: 6, borderRadius: 99, backgroundColor: 'rgba(21,21,26,0.08)' }}>
-              <View
-                style={{
-                  height: 6,
-                  borderRadius: 99,
-                  width: `${(passo / PASSI.length) * 100}%`,
-                  backgroundColor: colori.ambra,
-                }}
-              />
-            </View>
-
-            <View style={{ gap: 9 }}>
-              {PASSI.map((voce, indice) => {
-                const fatto = indice < passo
-                const inCorso = indice === passo
-                return (
-                  <View
-                    key={voce.testo}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 11,
-                      paddingHorizontal: 15,
-                      paddingVertical: 13,
-                      borderRadius: 18,
-                      backgroundColor: fatto
-                        ? 'rgba(215,244,92,0.22)'
-                        : inCorso
-                          ? colori.scheda
-                          : 'rgba(21,21,26,0.04)',
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 18,
-                        height: 18,
-                        borderRadius: 99,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: fatto
-                          ? colori.ambra
-                          : inCorso
-                            ? 'rgba(215,244,92,0.55)'
-                            : 'rgba(21,21,26,0.12)',
-                      }}
-                    >
-                      {fatto ? <Icona nome="spunta" misura={11} spessore={3.4} /> : null}
-                    </View>
-                    <Forte taglia={13.5} tono={fatto || inCorso ? 'forte' : 'debole'} style={{ flex: 1 }}>
-                      {voce.testo}
-                    </Forte>
-                  </View>
-                )
-              })}
-            </View>
-          </>
-        ) : null}
-
-        {fase === 'manuale' ? (
-          <>
-            <View
-              style={{
-                height: 260,
-                borderRadius: raggi.grande,
-                overflow: 'hidden',
-                backgroundColor: colori.inchiostro,
-              }}
-            >
-              {foto ? (
-                <Image source={{ uri: foto }} style={{ flex: 1 }} contentFit="cover" />
-              ) : null}
-            </View>
-
-            <Titolo taglia={22}>Di cosa si tratta?</Titolo>
-            <Corpo taglia={12.5} tono="tenue">
-              Tre cose bastano per farlo esistere in armadio: le altre le aggiungi quando vuoi,
-              dal dettaglio del capo.
-            </Corpo>
-
-            <View style={{ gap: spazi.s }}>
-              <Etichetta taglia={11} tono="debole">
-                Categoria
-              </Etichetta>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
-                {TIPI.map((tipo) => (
-                  <Pillola
-                    key={tipo}
-                    testo={ETICHETTE.tipo[tipo]}
-                    attiva={tipo === tipoManuale}
-                    onPress={() => setTipoManuale(tipo)}
-                  />
-                ))}
-              </View>
-            </View>
-
-            <View style={{ gap: spazi.s }}>
-              <Etichetta taglia={11} tono="debole">
-                Colore
-              </Etichetta>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                {PALETTE_COLORI.map((voce, indice) => (
-                  <Toccabile
-                    key={voce.nome}
-                    onPress={() => setColoreManuale(indice)}
-                    scala={0.94}
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: raggi.pillola,
-                      backgroundColor: voce.hex,
-                      borderWidth: indice === coloreManuale ? 3 : 1,
-                      borderColor: indice === coloreManuale ? colori.ambra : linee.chiara,
-                    }}
-                  >
-                    <View />
-                  </Toccabile>
-                ))}
-              </View>
-              <Corpo taglia={12} tono="tenue">
-                {PALETTE_COLORI[coloreManuale]!.nome}
-              </Corpo>
-            </View>
-
-            <Campo
-              etichetta="Nome (facoltativo)"
-              value={nomeManuale}
-              onChangeText={setNomeManuale}
-              placeholder={`${ETICHETTE.tipo[tipoManuale]} ${PALETTE_COLORI[coloreManuale]!.nome.toLowerCase()}`}
+    <Schermata occhiello="Nuovo capo" titolo="Aggiungi" tab>
+      {fase === 'scatta' ? (
+        <>
+          <View
+            style={{
+              height: 430,
+              borderRadius: raggi.grande,
+              overflow: 'hidden',
+              backgroundColor: colori.inchiostro,
+            }}
+          >
+            <Image
+              source={{ uri: 'https://images.pexels.com/photos/18257675/pexels-photo-18257675.jpeg?auto=compress&cs=tinysrgb&w=700&h=900&fit=crop' }}
+              style={{ position: 'absolute', inset: 0, opacity: 0.5 }}
+              contentFit="cover"
             />
+            <View
+              style={{
+                position: 'absolute',
+                inset: 22,
+                borderWidth: 2,
+                borderStyle: 'dashed',
+                borderColor: 'rgba(255,253,249,0.45)',
+                borderRadius: 22,
+              }}
+            />
+            <LinearGradient
+              colors={['rgba(21,21,26,0)', 'rgba(21,21,26,0.85)']}
+              style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 20, gap: 5 }}
+            >
+              <Titolo taglia={21} colore={colori.scheda}>
+                Un capo per foto
+              </Titolo>
+              <Corpo taglia={13} colore="rgba(255,253,249,0.78)">
+                {'Steso sul letto o appeso, con la luce che hai. Non serve altro: al resto pensa il modello.'}
+              </Corpo>
+            </LinearGradient>
+          </View>
 
-            <BottonePrimario
-              testo={salvandoManuale ? 'Salvo…' : "Salva nell'armadio"}
-              disabilitato={salvandoManuale}
-              onPress={() => void salvaManuale()}
+          <BottonePrimario testo="Scatta" icona="fotocamera" onPress={() => void scegliFoto(true)} />
+
+          <View style={{ flexDirection: 'row', gap: 9 }}>
+            <BottoneSecondario
+              testo="Dalla galleria"
+              onPress={() => void scegliFoto(false)}
+              style={{ flex: 1 }}
             />
             <BottoneSecondario
-              testo="Annulla"
-              onPress={() => {
-                setFase('scatta')
-                setFoto(null)
-              }}
-              style={{ borderColor: linee.chiara, ...ombre.bassa }}
+              testo={`${LIMITE_BLOCCO} in blocco`}
+              onPress={() => void analizzaInBlocco()}
+              style={{ flex: 1 }}
             />
-          </>
-        ) : null}
-      </ScrollView>
-    </View>
+          </View>
+
+          {inBlocco !== null ? (
+            <Corpo taglia={12.5} tono="tenue" style={{ textAlign: 'center' }}>
+              {inBlocco === 0
+                ? "Ci siamo, apro l'armadio…"
+                : `Sto avviando l'analisi · ${conta(inBlocco, 'capo', 'capi')} da mandare`}
+            </Corpo>
+          ) : null}
+
+          <Toccabile onPress={() => void scegliFoto(false, 'manuale')} scala={0} style={{ alignItems: 'center' }}>
+            <Forte taglia={12.5} colore={colori.inchiostro} style={{ textDecorationLine: 'underline' }}>
+              Preferisco inserirlo a mano
+            </Forte>
+          </Toccabile>
+
+          <Corpo taglia={11} tono="debole" style={{ textAlign: 'center', paddingHorizontal: spazi.m }}>
+            {
+              "Se lo sfondo non viene via bene: su iPhone, tieni premuto sul capo in Foto e scegli «Copia soggetto», oppure in File tocca a lungo la foto e scegli «Rimuovi sfondo». In alternativa un sito come remove.bg."
+            }
+          </Corpo>
+        </>
+      ) : null}
+
+      {fase === 'analisi' ? (
+        <>
+          <View
+            style={{
+              height: 390,
+              borderRadius: raggi.grande,
+              overflow: 'hidden',
+              backgroundColor: colori.inchiostro,
+            }}
+          >
+            {foto ? (
+              <Image source={{ uri: foto }} style={{ flex: 1 }} contentFit="cover" />
+            ) : null}
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spazi.s }}>
+            <Titolo taglia={24} style={{ flex: 1 }}>
+              Sto guardando il capo
+            </Titolo>
+            <Forte taglia={13} colore={colori.ambraMedio}>
+              {Math.round((passo / PASSI.length) * 100)}%
+            </Forte>
+          </View>
+
+          <View style={{ height: 6, borderRadius: raggi.pillola, backgroundColor: linee.media }}>
+            <View
+              style={{
+                height: 6,
+                borderRadius: raggi.pillola,
+                width: `${(passo / PASSI.length) * 100}%`,
+                backgroundColor: colori.ambra,
+              }}
+            />
+          </View>
+
+          <View style={{ gap: 9 }}>
+            {PASSI.map((voce, indice) => {
+              const fatto = indice < passo
+              const inCorso = indice === passo
+              return (
+                <View
+                  key={voce.testo}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 11,
+                    paddingHorizontal: 15,
+                    paddingVertical: 13,
+                    borderRadius: 18,
+                    backgroundColor: fatto
+                      ? velo(colori.ambra, 0.22)
+                      : inCorso
+                        ? colori.scheda
+                        : 'rgba(21,21,26,0.04)',
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: raggi.pillola,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: fatto
+                        ? colori.ambra
+                        : inCorso
+                          ? velo(colori.ambra, 0.55)
+                          : 'rgba(21,21,26,0.12)',
+                    }}
+                  >
+                    {fatto ? <Icona nome="spunta" misura={11} spessore={3.4} /> : null}
+                  </View>
+                  <Forte taglia={13.5} tono={fatto || inCorso ? 'forte' : 'debole'} style={{ flex: 1 }}>
+                    {voce.testo}
+                  </Forte>
+                </View>
+              )
+            })}
+          </View>
+        </>
+      ) : null}
+
+      {fase === 'manuale' ? (
+        <>
+          <View
+            style={{
+              height: 260,
+              borderRadius: raggi.grande,
+              overflow: 'hidden',
+              backgroundColor: colori.inchiostro,
+            }}
+          >
+            {foto ? (
+              <Image source={{ uri: foto }} style={{ flex: 1 }} contentFit="cover" />
+            ) : null}
+          </View>
+
+          <Titolo taglia={22}>Di cosa si tratta?</Titolo>
+          <Corpo taglia={12.5} tono="tenue">
+            Tre cose bastano per farlo esistere in armadio: le altre le aggiungi quando vuoi,
+            dal dettaglio del capo.
+          </Corpo>
+
+          <View style={{ gap: spazi.s }}>
+            <Etichetta taglia={11} tono="debole">
+              Categoria
+            </Etichetta>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+              {TIPI_CAPO.map((tipo) => (
+                <Pillola
+                  key={tipo}
+                  testo={ETICHETTE.tipo[tipo]}
+                  attiva={tipo === tipoManuale}
+                  onPress={() => setTipoManuale(tipo)}
+                />
+              ))}
+            </View>
+          </View>
+
+          <View style={{ gap: spazi.s }}>
+            <Etichetta taglia={11} tono="debole">
+              Colore
+            </Etichetta>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {PALETTE_COLORI.map((voce, indice) => (
+                <Toccabile
+                  key={voce.nome}
+                  onPress={() => setColoreManuale(indice)}
+                  scala={0.94}
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: raggi.pillola,
+                    backgroundColor: voce.hex,
+                    borderWidth: indice === coloreManuale ? 3 : 1,
+                    borderColor: indice === coloreManuale ? colori.ambra : linee.chiara,
+                  }}
+                >
+                  <View />
+                </Toccabile>
+              ))}
+            </View>
+            <Corpo taglia={12} tono="tenue">
+              {PALETTE_COLORI[coloreManuale]!.nome}
+            </Corpo>
+          </View>
+
+          <Campo
+            etichetta="Nome (facoltativo)"
+            value={nomeManuale}
+            onChangeText={setNomeManuale}
+            placeholder={`${ETICHETTE.tipo[tipoManuale]} ${PALETTE_COLORI[coloreManuale]!.nome.toLowerCase()}`}
+          />
+
+          <BottonePrimario
+            testo="Salva nell'armadio"
+            caricando={salvandoManuale}
+            disabilitato={salvandoManuale}
+            onPress={() => void salvaManuale()}
+          />
+          <BottoneSecondario
+            testo="Annulla"
+            onPress={() => {
+              setFase('scatta')
+              setFoto(null)
+            }}
+            style={{ borderColor: linee.chiara, ...ombre.bassa }}
+          />
+        </>
+      ) : null}
+    </Schermata>
   )
 }

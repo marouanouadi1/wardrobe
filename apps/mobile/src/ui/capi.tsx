@@ -13,28 +13,8 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { View } from 'react-native'
 import { fotoDaMostrare } from '../dati/dominio'
 import { ETICHETTE, colori, ombre, raggi } from '../tema/tokens'
-import { Toccabile } from './base'
+import { Badge, Toccabile } from './base'
 import { Corpo, Etichetta, Forte, Titolo } from './testo'
-
-function BadgeDaLavare() {
-  return (
-    <View
-      style={{
-        position: 'absolute',
-        top: 9,
-        right: 9,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: raggi.pillola,
-        backgroundColor: colori.corallo,
-      }}
-    >
-      <Etichetta taglia={9.5} colore="#fff">
-        da lavare
-      </Etichetta>
-    </View>
-  )
-}
 
 export function CapoInGriglia({ capo, onPress }: { capo: Capo; onPress: () => void }) {
   return (
@@ -65,12 +45,16 @@ export function CapoInGriglia({ capo, onPress }: { capo: Capo; onPress: () => vo
           {capo.colore.nome} · {capo.materiale?.split(',')[0] ?? ETICHETTE.tipo[capo.tipo]}
         </Corpo>
       </LinearGradient>
-      {capo.stato !== 'pulito' ? <BadgeDaLavare /> : null}
+      {capo.stato !== 'pulito' ? (
+        <View style={{ position: 'absolute', top: 9, right: 9 }}>
+          <Badge testo="da lavare" sfondo={colori.corallo} colore={colori.crema} />
+        </View>
+      ) : null}
     </Toccabile>
   )
 }
 
-/** Miniatura quadrata: la usano i suggerimenti e il selettore dell'avatar. */
+/** Miniatura quadrata: la mostrano il dettaglio di un capo («ci sta bene con») e le liste corte. */
 export function Miniatura({
   capo,
   larghezza = 96,
@@ -85,7 +69,7 @@ export function Miniatura({
   onPress?: () => void
 }) {
   return (
-    <Toccabile onPress={onPress} scala={onPress ? 0.96 : 0} style={{ width: larghezza }}>
+    <Toccabile onPress={onPress} scala={0.96} style={{ width: larghezza }}>
       <Image
         source={{ uri: fotoDaMostrare(capo) }}
         style={{
@@ -121,7 +105,7 @@ export function Attributo({
   return (
     <Toccabile
       onPress={onPress}
-      scala={onPress ? 0.96 : 0}
+      scala={0.96}
       style={{
         paddingHorizontal: 14,
         paddingVertical: 10,

@@ -41,7 +41,7 @@ import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { colori, raggi, spazi } from '../tema/tokens'
 import { Toccabile } from '../ui/base'
 import { Corpo, Etichetta } from '../ui/testo'
-import { Testata } from '../ui/testata'
+import { Testata } from '../ui/guscio'
 
 // Su native `require` di un asset restituisce un numero, non un percorso: è il
 // modulo che @react-three/fiber/native passa a `Asset.fromModule`. I tipi di
@@ -314,7 +314,7 @@ export default function Prova3D() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colori.inchiostro }}>
-      <Testata occhiello="Sviluppo" titolo="Prova 3D" indietro scura />
+      <Testata occhiello="Sviluppo" titolo="Prova 3D" indietro su="scuro" />
 
       <View style={{ flex: 1 }} {...gesti.panHandlers}>
         {motivoCaduta ? (

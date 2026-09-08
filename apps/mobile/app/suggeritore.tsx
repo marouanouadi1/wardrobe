@@ -7,28 +7,28 @@
  * come si raccoglie il contesto.
  */
 
-import type { MessaggioChat } from '@wardrobe/contracts'
+import type { MessaggioChat, Suggerimento } from '@wardrobe/contracts'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Image } from 'expo-image'
-import { router, useLocalSearchParams } from 'expo-router'
+import { useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ScrollView, TextInput, View } from 'react-native'
-import { api } from '../src/dati/api'
-import { useArmadio } from '../src/dati/archivio'
+import { ScrollView, View } from 'react-native'
+import { api, messaggioDiErrore } from '../src/dati/api'
+import { useArmadio, useVestiEVai } from '../src/dati/archivio'
 import { capiDiVestizione, fotoDaMostrare } from '../src/dati/dominio'
 import { colori, linee, ombre, raggi, spazi } from '../src/tema/tokens'
 import {
   BadgeIa,
+  BarraChiedi,
+  BollaChat,
   BottonePrimario,
   BottoneSecondario,
-  Icona,
   Pillola,
   Scheda,
   Segmenti,
-  Toccabile,
 } from '../src/ui/base'
+import { Schermata } from '../src/ui/guscio'
 import { Corpo, Forte, Titolo } from '../src/ui/testo'
-import { Testata } from '../src/ui/testata'
 
 type Modo = 'proposte' | 'chat' | 'guidato'
 
@@ -54,9 +54,33 @@ function salvaInCache(messaggi: MessaggioChat[]): void {
   AsyncStorage.setItem(CHIAVE_CACHE_CHAT, JSON.stringify(messaggi)).catch(() => undefined)
 }
 
+/** «Provalo» + «Salva»: la coppia di azioni che chiude ogni proposta, sia
+ * nella scheda piena (proposte) sia in linea dentro la bolla (chat). */
+function AzioniProposta({
+  salvata,
+  onProva,
+  onSalva,
+}: {
+  salvata: boolean
+  onProva: () => void
+  onSalva: () => void
+}) {
+  return (
+    <View style={{ flexDirection: 'row', gap: spazi.s }}>
+      <BottonePrimario testo="Provalo" style={{ flex: 1 }} onPress={onProva} />
+      <BottoneSecondario
+        testo={salvata ? 'Salvato' : 'Salva'}
+        style={{ paddingHorizontal: 18 }}
+        onPress={salvata ? undefined : onSalva}
+      />
+    </View>
+  )
+}
+
 export default function Suggeritore() {
   const parametri = useLocalSearchParams<{ chiedi?: string }>()
-  const { suggerimenti, indice, vesti, salvaOutfit, chiediSuggerimenti, avvisa } = useArmadio()
+  const { suggerimenti, indice, salvaOutfit, chiediSuggerimenti, avvisa } = useArmadio()
+  const vestiEVai = useVestiEVai()
   const [modo, setModo] = useState<Modo>(parametri.chiedi ? 'chat' : 'proposte')
   const [bozza, setBozza] = useState('')
   const [risposte, setRisposte] = useState<Record<string, string>>({})
@@ -106,7 +130,7 @@ export default function Suggeritore() {
         return aggiornata
       })
     } catch (errore) {
-      avvisa(errore instanceof Error ? errore.message : 'Il messaggio non è arrivato allo stilista')
+      avvisa(messaggioDiErrore(errore, 'Il messaggio non è arrivato allo stilista'))
     } finally {
       setInCorso(false)
     }
@@ -130,313 +154,212 @@ export default function Suggeritore() {
 
   const complete = DOMANDE.every((domanda) => risposte[domanda.chiave])
 
+  function provaEsalva(proposta: Suggerimento) {
+    return {
+      salvata: salvati.includes(proposta.titolo),
+      onProva: () => vestiEVai(proposta.vestizione),
+      onSalva: () => {
+        setSalvati((precedenti) => [...precedenti, proposta.titolo])
+        void salvaOutfit(proposta.titolo, { vestizione: proposta.vestizione, origine: 'ia' })
+      },
+    }
+  }
+
   return (
-    <View style={{ flex: 1 }}>
-      <Testata occhiello="Il tuo stilista" titolo="Chiedi a Wardrobe" indietro />
+    <Schermata occhiello="Il tuo stilista" titolo="Chiedi a Wardrobe" indietro>
+      <Segmenti voci={MODI} scelta={modo} onScegli={setModo} />
 
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spazi.xl, paddingBottom: 60, gap: spazi.l }}
-        showsVerticalScrollIndicator={false}
-      >
-        <Segmenti voci={MODI} scelta={modo} onScegli={setModo} />
-
-        {modo === 'proposte'
-          ? suggerimenti.map((proposta) => {
-              const capi = capiDiVestizione(proposta.vestizione, indice)
-              return (
-                <View
-                  key={proposta.titolo}
-                  style={{
-                    borderRadius: raggi.grande - 2,
-                    overflow: 'hidden',
-                    backgroundColor: colori.scheda,
-                    ...ombre.scheda,
-                  }}
-                >
-                  {capi[0] && fotoDaMostrare(capi[0]) ? (
-                    <View>
-                      <Image
-                        source={{ uri: fotoDaMostrare(capi[0]) }}
-                        style={{ width: '100%', height: 230, backgroundColor: capi[0].colore.hex }}
-                        contentFit="cover"
-                        contentPosition={{ top: '20%', left: '50%' }}
-                      />
-                      <View style={{ position: 'absolute', top: 12, right: 12 }}>
-                        <BadgeIa testo={`${proposta.match}%`} />
-                      </View>
-                    </View>
-                  ) : null}
-
-                  <View style={{ padding: 16, gap: spazi.m }}>
-                    <Titolo taglia={21}>{proposta.titolo}</Titolo>
-
-                    <View style={{ flexDirection: 'row', gap: 6 }}>
-                      {capi.map((capo) => (
-                        <Image
-                          key={capo.id}
-                          source={{ uri: fotoDaMostrare(capo) }}
-                          style={{
-                            width: 52,
-                            height: 64,
-                            borderRadius: raggi.piccolo,
-                            backgroundColor: capo.colore.hex,
-                          }}
-                          contentFit="cover"
-                        />
-                      ))}
-                    </View>
-
-                    <View style={{ gap: 7 }}>
-                      {proposta.perche.map((motivo) => (
-                        <View key={motivo} style={{ flexDirection: 'row', gap: 9 }}>
-                          <View
-                            style={{
-                              width: 5,
-                              height: 5,
-                              borderRadius: 99,
-                              marginTop: 7,
-                              backgroundColor: colori.ambra,
-                            }}
-                          />
-                          <Corpo taglia={13} tono="medio" style={{ flex: 1 }}>
-                            {motivo}
-                          </Corpo>
-                        </View>
-                      ))}
-                    </View>
-
-                    {/* «Salva» tiene la proposta senza doverla prima provare:
-                        due tocchi in meno per chi ha già deciso. */}
-                    <View style={{ flexDirection: 'row', gap: spazi.s }}>
-                      <BottonePrimario
-                        testo="Provalo"
-                        style={{ flex: 1 }}
-                        onPress={() => {
-                          vesti(proposta.vestizione)
-                          router.push('/(tabs)/avatar')
-                        }}
-                      />
-                      <BottoneSecondario
-                        testo={salvati.includes(proposta.titolo) ? 'Salvato' : 'Salva'}
-                        style={{ paddingHorizontal: 18 }}
-                        onPress={
-                          salvati.includes(proposta.titolo)
-                            ? undefined
-                            : () => {
-                                setSalvati((precedenti) => [...precedenti, proposta.titolo])
-                                void salvaOutfit(proposta.titolo, {
-                                  vestizione: proposta.vestizione,
-                                  origine: 'ia',
-                                })
-                              }
-                        }
-                      />
-                    </View>
-                  </View>
-                </View>
-              )
-            })
-          : null}
-
-        {modo === 'chat' ? (
-          <>
-            {storiaCaricata && conversazione.length === 0 && !inCorso ? (
-              <Corpo taglia={13} tono="debole" style={{ textAlign: 'center' }}>
-                {"Scrivi per iniziare: questa chat resta qui anche se chiudi l'app."}
-              </Corpo>
-            ) : null}
-
-            <View style={{ gap: 11 }}>
-              {conversazione.map((messaggio) => {
-                const daUtente = messaggio.ruolo === 'utente'
-                return (
-                  <View
-                    key={messaggio.id}
-                    style={{
-                      alignSelf: daUtente ? 'flex-end' : 'flex-start',
-                      maxWidth: '84%',
-                      paddingHorizontal: 16,
-                      paddingVertical: 14,
-                      backgroundColor: daUtente ? colori.inchiostro : colori.scheda,
-                      borderTopLeftRadius: 22,
-                      borderTopRightRadius: 22,
-                      borderBottomLeftRadius: daUtente ? 22 : 6,
-                      borderBottomRightRadius: daUtente ? 6 : 22,
-                      gap: spazi.s,
-                      ...ombre.bassa,
-                    }}
-                  >
-                    {daUtente ? (
-                      <Corpo taglia={14} scuro>
-                        {messaggio.testo}
-                      </Corpo>
-                    ) : (
-                      // La risposta vera dello stilista: prima la prosa —
-                      // c'è sempre — poi le proposte, solo quando ci sono.
-                      <>
-                        <Corpo taglia={14}>{messaggio.testo}</Corpo>
-                        {messaggio.suggerimenti?.map((proposta) => (
-                          <View key={proposta.titolo} style={{ gap: spazi.s }}>
-                            <Forte taglia={14}>{`${proposta.titolo} · ${proposta.match}%`}</Forte>
-                            {proposta.perche.map((motivo) => (
-                              <Corpo key={motivo} taglia={13} tono="medio">
-                                {`— ${motivo}`}
-                              </Corpo>
-                            ))}
-                            <View style={{ flexDirection: 'row', gap: spazi.s, marginTop: spazi.xs }}>
-                              <BottonePrimario
-                                testo="Provalo"
-                                style={{ flex: 1 }}
-                                onPress={() => {
-                                  vesti(proposta.vestizione)
-                                  router.push('/(tabs)/avatar')
-                                }}
-                              />
-                              <BottoneSecondario
-                                testo={salvati.includes(proposta.titolo) ? 'Salvato' : 'Salva'}
-                                style={{ paddingHorizontal: 18 }}
-                                onPress={
-                                  salvati.includes(proposta.titolo)
-                                    ? undefined
-                                    : () => {
-                                        setSalvati((precedenti) => [...precedenti, proposta.titolo])
-                                        void salvaOutfit(proposta.titolo, {
-                                          vestizione: proposta.vestizione,
-                                          origine: 'ia',
-                                        })
-                                      }
-                                }
-                              />
-                            </View>
-                          </View>
-                        ))}
-                      </>
-                    )}
-                  </View>
-                )
-              })}
-
-              {inCorso ? (
-                <View
-                  style={{
-                    alignSelf: 'flex-start',
-                    maxWidth: '84%',
-                    paddingHorizontal: 16,
-                    paddingVertical: 14,
-                    backgroundColor: colori.scheda,
-                    borderTopLeftRadius: 22,
-                    borderTopRightRadius: 22,
-                    borderBottomLeftRadius: 6,
-                    borderBottomRightRadius: 22,
-                    ...ombre.bassa,
-                  }}
-                >
-                  <Corpo taglia={14} tono="debole">
-                    Sto pensando…
-                  </Corpo>
-                </View>
-              ) : null}
-            </View>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-              {SPUNTI.map((spunto) => (
-                <Pillola key={spunto} testo={spunto} onPress={() => invia(spunto)} />
-              ))}
-            </ScrollView>
-
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spazi.s,
-                paddingLeft: 18,
-                padding: 7,
-                borderRadius: raggi.pillola,
-                backgroundColor: colori.scheda,
-                ...ombre.bassa,
-              }}
-            >
-              <TextInput
-                value={bozza}
-                onChangeText={setBozza}
-                onSubmitEditing={() => invia(bozza)}
-                placeholder="Cena fuori, e fa freddo…"
-                placeholderTextColor="rgba(21,21,26,0.4)"
-                style={{ flex: 1, fontFamily: 'Manrope_500Medium', fontSize: 14, color: colori.inchiostro }}
-              />
-              <Toccabile
-                onPress={() => invia(bozza)}
-                scala={0.92}
+      {modo === 'proposte'
+        ? suggerimenti.map((proposta) => {
+            const capi = capiDiVestizione(proposta.vestizione, indice)
+            return (
+              <View
+                key={proposta.titolo}
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: raggi.pillola,
-                  backgroundColor: colori.ambra,
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  borderRadius: raggi.grande - 2,
+                  overflow: 'hidden',
+                  backgroundColor: colori.scheda,
+                  ...ombre.scheda,
                 }}
               >
-                <Icona nome="freccia" misura={19} spessore={2.2} />
-              </Toccabile>
-            </View>
-          </>
-        ) : null}
-
-        {modo === 'guidato' ? (
-          <>
-            {DOMANDE.map((domanda) => (
-              <View key={domanda.chiave} style={{ gap: spazi.s }}>
-                <Titolo taglia={18}>{domanda.testo}</Titolo>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spazi.s }}>
-                  {domanda.opzioni.map((opzione) => (
-                    <Pillola
-                      key={opzione}
-                      testo={opzione}
-                      attiva={risposte[domanda.chiave] === opzione}
-                      onPress={() => {
-                        setRisposte((precedenti) => ({ ...precedenti, [domanda.chiave]: opzione }))
-                        setGenerato(false)
-                      }}
+                {capi[0] && fotoDaMostrare(capi[0]) ? (
+                  <View>
+                    <Image
+                      source={{ uri: fotoDaMostrare(capi[0]) }}
+                      style={{ width: '100%', height: 230, backgroundColor: capi[0].colore.hex }}
+                      contentFit="cover"
+                      contentPosition={{ top: '20%', left: '50%' }}
                     />
-                  ))}
+                    <View style={{ position: 'absolute', top: 12, right: 12 }}>
+                      <BadgeIa testo={`${proposta.match}%`} />
+                    </View>
+                  </View>
+                ) : null}
+
+                <View style={{ padding: 16, gap: spazi.m }}>
+                  <Titolo taglia={21}>{proposta.titolo}</Titolo>
+
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    {capi.map((capo) => (
+                      <Image
+                        key={capo.id}
+                        source={{ uri: fotoDaMostrare(capo) }}
+                        style={{
+                          width: 52,
+                          height: 64,
+                          borderRadius: raggi.piccolo,
+                          backgroundColor: capo.colore.hex,
+                        }}
+                        contentFit="cover"
+                      />
+                    ))}
+                  </View>
+
+                  <View style={{ gap: 7 }}>
+                    {proposta.perche.map((motivo) => (
+                      <View key={motivo} style={{ flexDirection: 'row', gap: 9 }}>
+                        <View
+                          style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: raggi.pillola,
+                            marginTop: 7,
+                            backgroundColor: colori.ambra,
+                          }}
+                        />
+                        <Corpo taglia={13} tono="medio" style={{ flex: 1 }}>
+                          {motivo}
+                        </Corpo>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* «Salva» tiene la proposta senza doverla prima provare:
+                      due tocchi in meno per chi ha già deciso. */}
+                  <AzioniProposta {...provaEsalva(proposta)} />
                 </View>
               </View>
-            ))}
+            )
+          })
+        : null}
 
-            <BottonePrimario
-              testo={complete ? 'Trova il mio outfit' : 'Rispondi alle tre domande'}
-              ambra={complete}
-              disabilitato={!complete}
-              onPress={() => {
-                setGenerato(true)
-                void chiediSuggerimenti(
-                  `${risposte.occasione}, ${risposte.meteo?.toLowerCase()}, mi sento ${risposte.umore?.toLowerCase()}`,
-                )
-              }}
-            />
+      {modo === 'chat' ? (
+        <>
+          {storiaCaricata && conversazione.length === 0 && !inCorso ? (
+            <Corpo taglia={13} tono="debole" style={{ textAlign: 'center' }}>
+              {"Scrivi per iniziare: questa chat resta qui anche se chiudi l'app."}
+            </Corpo>
+          ) : null}
 
-            {generato && suggerimenti[0] ? (
-              <Scheda imbottitura={16} style={{ gap: spazi.m }}>
-                <Titolo taglia={20}>{suggerimenti[0].titolo}</Titolo>
-                <Corpo taglia={13} tono="medio">
-                  {`${risposte.occasione}, ${risposte.meteo?.toLowerCase()}, e ti senti ${risposte.umore?.toLowerCase()}: ${suggerimenti[0].perche[0]}`}
+          <View style={{ gap: 11 }}>
+            {conversazione.map((messaggio) => {
+              const daUtente = messaggio.ruolo === 'utente'
+              return (
+                <BollaChat key={messaggio.id} daUtente={daUtente}>
+                  {daUtente ? (
+                    <Corpo taglia={14} su="scuro">
+                      {messaggio.testo}
+                    </Corpo>
+                  ) : (
+                    // La risposta vera dello stilista: prima la prosa —
+                    // c'è sempre — poi le proposte, solo quando ci sono.
+                    <>
+                      <Corpo taglia={14}>{messaggio.testo}</Corpo>
+                      {messaggio.suggerimenti?.map((proposta) => (
+                        <View key={proposta.titolo} style={{ gap: spazi.s }}>
+                          <Forte taglia={14}>{`${proposta.titolo} · ${proposta.match}%`}</Forte>
+                          {proposta.perche.map((motivo) => (
+                            <Corpo key={motivo} taglia={13} tono="medio">
+                              {`— ${motivo}`}
+                            </Corpo>
+                          ))}
+                          <View style={{ marginTop: spazi.xs }}>
+                            <AzioniProposta {...provaEsalva(proposta)} />
+                          </View>
+                        </View>
+                      ))}
+                    </>
+                  )}
+                </BollaChat>
+              )
+            })}
+
+            {inCorso ? (
+              <BollaChat daUtente={false}>
+                <Corpo taglia={14} tono="debole">
+                  Sto pensando…
                 </Corpo>
-                <BottonePrimario
-                  testo="Vedilo sull'avatar"
-                  onPress={() => {
-                    vesti(suggerimenti[0]!.vestizione)
-                    router.push('/(tabs)/avatar')
-                  }}
-                />
-              </Scheda>
+              </BollaChat>
             ) : null}
-          </>
-        ) : null}
+          </View>
 
-        <Corpo taglia={11.5} tono="debole" style={{ textAlign: 'center', borderTopWidth: 1, borderTopColor: linee.tenue, paddingTop: spazi.m }}>
-          Le proposte usano solo i capi che hai, e mai quelli in lavatrice.
-        </Corpo>
-      </ScrollView>
-    </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
+            {SPUNTI.map((spunto) => (
+              <Pillola key={spunto} testo={spunto} onPress={() => invia(spunto)} />
+            ))}
+          </ScrollView>
+
+          <BarraChiedi
+            valore={bozza}
+            onCambia={setBozza}
+            onInvia={() => invia(bozza)}
+            placeholder="Cena fuori, e fa freddo…"
+          />
+        </>
+      ) : null}
+
+      {modo === 'guidato' ? (
+        <>
+          {DOMANDE.map((domanda) => (
+            <View key={domanda.chiave} style={{ gap: spazi.s }}>
+              <Titolo taglia={18}>{domanda.testo}</Titolo>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spazi.s }}>
+                {domanda.opzioni.map((opzione) => (
+                  <Pillola
+                    key={opzione}
+                    testo={opzione}
+                    attiva={risposte[domanda.chiave] === opzione}
+                    onPress={() => {
+                      setRisposte((precedenti) => ({ ...precedenti, [domanda.chiave]: opzione }))
+                      setGenerato(false)
+                    }}
+                  />
+                ))}
+              </View>
+            </View>
+          ))}
+
+          <BottonePrimario
+            testo={complete ? 'Trova il mio outfit' : 'Rispondi alle tre domande'}
+            ambra={complete}
+            disabilitato={!complete}
+            onPress={() => {
+              setGenerato(true)
+              void chiediSuggerimenti(
+                `${risposte.occasione}, ${risposte.meteo?.toLowerCase()}, mi sento ${risposte.umore?.toLowerCase()}`,
+              )
+            }}
+          />
+
+          {generato && suggerimenti[0] ? (
+            <Scheda imbottitura={16} style={{ gap: spazi.m }}>
+              <Titolo taglia={20}>{suggerimenti[0].titolo}</Titolo>
+              <Corpo taglia={13} tono="medio">
+                {`${risposte.occasione}, ${risposte.meteo?.toLowerCase()}, e ti senti ${risposte.umore?.toLowerCase()}: ${suggerimenti[0].perche[0]}`}
+              </Corpo>
+              <BottonePrimario testo="Vedilo sull'avatar" onPress={() => vestiEVai(suggerimenti[0]!.vestizione)} />
+            </Scheda>
+          ) : null}
+        </>
+      ) : null}
+
+      <Corpo
+        taglia={11.5}
+        tono="debole"
+        style={{ textAlign: 'center', borderTopWidth: 1, borderTopColor: linee.tenue, paddingTop: spazi.m }}
+      >
+        Le proposte usano solo i capi che hai, e mai quelli in lavatrice.
+      </Corpo>
+    </Schermata>
   )
 }
