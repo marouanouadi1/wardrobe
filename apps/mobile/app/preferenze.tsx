@@ -72,6 +72,7 @@ export default function Preferenze() {
             testo="Entra nell'armadio"
             freccia
             caricando={salvando}
+            disabilitato={salvando}
             onPress={() => void entra()}
           />
           <Toccabile onPress={() => void entra()} scala={0} style={{ alignItems: 'center', paddingVertical: 8 }}>

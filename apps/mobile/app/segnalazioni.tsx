@@ -55,6 +55,7 @@ export default function Segnalazioni() {
         caricamento={caricamento}
         errore={Boolean(errore)}
         vuoto={segnalazioni.length === 0}
+        titoloErrore="Non riesco a leggerle"
         titoloVuoto="Ancora nessuna segnalazione"
         spiegazioneVuoto={'Quello che scrivi da «Segnala un problema», nel Profilo, finisce qui — con lo stato di chi lo lavora.'}
       >

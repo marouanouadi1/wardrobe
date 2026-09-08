@@ -57,7 +57,7 @@ export default function Outfit() {
 
               {salvato.occasione ? (
                 <View style={{ position: 'absolute', top: 12, left: 12 }}>
-                  <Badge testo={salvato.occasione} sfondo={velo(colori.crema, 0.9)} colore={colori.inchiostro} />
+                  <Badge testo={salvato.occasione} sfondo={velo(colori.scheda, 0.9)} colore={colori.inchiostro} />
                 </View>
               ) : null}
             </View>
@@ -80,7 +80,14 @@ export default function Outfit() {
                   {salvato.origine === 'ia' ? ' · proposto da Wardrobe' : ''}
                 </Corpo>
               </View>
-              <BottoneTondo nome="freccia" colore={colori.crema} sfondo={colori.inchiostro} misura={46} onPress={() => vestiEVai(salvato.vestizione)} />
+              <BottoneTondo
+                nome="freccia"
+                colore={colori.crema}
+                sfondo={colori.inchiostro}
+                misura={46}
+                misuraIcona={18}
+                onPress={() => vestiEVai(salvato.vestizione)}
+              />
             </View>
           </View>
         )

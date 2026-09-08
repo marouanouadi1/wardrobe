@@ -25,7 +25,7 @@ import {
   type ViewStyle,
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
-import { colori, linee, ombre, raggi, spazi } from '../tema/tokens'
+import { colori, linee, ombre, raggi, spazi, superfici } from '../tema/tokens'
 import { Etichetta, Forte } from './testo'
 
 // ─────────────────────────────────────────────────────────────
@@ -158,7 +158,7 @@ export function BarraChiedi({
         style={{ flex: 1, fontFamily: 'Manrope_500Medium', fontSize: 14.5, color: colori.inchiostro }}
       />
       {onInvia ? (
-        <BottoneTondo nome="freccia" onPress={onInvia} misura={42} sfondo={colori.ambra} />
+        <BottoneTondo nome="freccia" onPress={onInvia} misura={42} misuraIcona={19} sfondo={colori.ambra} />
       ) : null}
     </View>
   )
@@ -184,7 +184,10 @@ export function Scheda({
     <View
       style={[
         {
-          backgroundColor: scura ? colori.inchiostro : colori.scheda,
+          // Una velatura di crema, non l'inchiostro pieno: `Schermata su="scuro"`
+          // usa già l'inchiostro come fondo pagina — una scheda dello stesso
+          // colore ci sparirebbe sopra.
+          backgroundColor: scura ? superfici.suScuro.riga : colori.scheda,
           borderRadius: raggi.scheda,
           padding: imbottitura,
         },
@@ -314,6 +317,11 @@ export function BottonePrimario({
   style?: StyleProp<ViewStyle>
 }) {
   const spento = disabilitato || caricando
+  // La palette «spento» è solo per il chiaro: un bottone `ambra`/`inchiostro`
+  // su schermata scura che passa `caricando` (es. Playground) non deve
+  // schiarirsi verso quel grigio, o sparisce sul fondo inchiostro. `caricando`
+  // da solo blocca il tocco (sopra) e mostra lo spinner (sotto); il fondo
+  // resta quello di `disabilitato`.
   const sfondo = disabilitato
     ? 'rgba(21,21,26,0.08)'
     : ambra
@@ -344,12 +352,10 @@ export function BottonePrimario({
       ]}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
-        {icona ? (
-          caricando ? (
-            <ActivityIndicator color={inchiostro} />
-          ) : (
-            <Icona nome={icona} colore={inchiostro} misura={19} />
-          )
+        {caricando ? (
+          <ActivityIndicator color={inchiostro} />
+        ) : icona ? (
+          <Icona nome={icona} colore={inchiostro} misura={19} />
         ) : null}
         <Forte taglia={16} colore={inchiostro}>
           {testo}
@@ -365,6 +371,9 @@ export function BottoneSecondario({
   onPress,
   sfondo,
   colore,
+  icona,
+  caricando,
+  bordo,
   style,
 }: {
   testo: string
@@ -375,25 +384,39 @@ export function BottoneSecondario({
    */
   sfondo?: string
   colore?: string
+  /** Un'icona a sinistra del testo, sostituita da uno spinner mentre `caricando`. */
+  icona?: NomeIcona
+  caricando?: boolean
+  /** Il colore del contorno, di norma `linee.chiara` — es. `colori.ambra`
+   * per un'azione che resta un contorno ma segnala l'IA (playground). */
+  bordo?: string
   style?: StyleProp<ViewStyle>
 }) {
   return (
     <Toccabile
-      onPress={onPress}
+      onPress={caricando ? undefined : onPress}
       scala={0.96}
       style={[
         {
+          flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'center',
+          gap: spazi.s,
           paddingVertical: 14,
           paddingHorizontal: 16,
           borderRadius: raggi.pillola,
           borderWidth: 1,
-          borderColor: linee.chiara,
+          borderColor: bordo ?? linee.chiara,
           backgroundColor: sfondo ?? 'transparent',
         },
         style,
       ]}
     >
+      {caricando ? (
+        <ActivityIndicator color={colore} />
+      ) : icona ? (
+        <Icona nome={icona} colore={colore} misura={14} spessore={2.2} />
+      ) : null}
       <Forte taglia={13.5} colore={colore}>
         {testo}
       </Forte>
@@ -548,11 +571,18 @@ export function Bolla({
   sfondo = colori.ambra,
   colore = colori.inchiostro,
   misura = 34,
+  misuraIcona,
+  bordo,
 }: {
   nome: NomeIcona
   sfondo?: string
   colore?: string
   misura?: number
+  /** Di norma metà del contenitore; i tondi grandi vogliono un'icona fissa
+   * (18-19), non proporzionale — altrimenti cresce col cerchio. */
+  misuraIcona?: number
+  /** Un anello per staccare dal fondo — es. il tondo di «Oggi» sopra la foto. */
+  bordo?: string
 }) {
   return (
     <View
@@ -563,9 +593,10 @@ export function Bolla({
         backgroundColor: sfondo,
         alignItems: 'center',
         justifyContent: 'center',
+        ...(bordo ? { borderWidth: 1, borderColor: bordo } : null),
       }}
     >
-      <Icona nome={nome} misura={misura * 0.5} colore={colore} spessore={2.2} />
+      <Icona nome={nome} misura={misuraIcona ?? misura * 0.5} colore={colore} spessore={2.2} />
     </View>
   )
 }
@@ -577,16 +608,20 @@ export function BottoneTondo({
   sfondo = colori.ambra,
   colore = colori.inchiostro,
   misura = 42,
+  misuraIcona,
+  bordo,
 }: {
   nome: NomeIcona
   onPress?: () => void
   sfondo?: string
   colore?: string
   misura?: number
+  misuraIcona?: number
+  bordo?: string
 }) {
   return (
     <Toccabile onPress={onPress} scala={0.9} style={{ borderRadius: raggi.pillola }}>
-      <Bolla nome={nome} sfondo={sfondo} colore={colore} misura={misura} />
+      <Bolla nome={nome} sfondo={sfondo} colore={colore} misura={misura} misuraIcona={misuraIcona} bordo={bordo} />
     </Toccabile>
   )
 }

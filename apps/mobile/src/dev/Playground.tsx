@@ -22,7 +22,7 @@ import { api } from '../dati/api'
 import { useArmadio } from '../dati/archivio'
 import { euro } from '../dati/formato'
 import { colori, raggi, spazi, superfici, testoSu, velo } from '../tema/tokens'
-import { BottonePrimario, Pillola, Toccabile } from '../ui/base'
+import { BottonePrimario, BottoneSecondario, Pillola, Toccabile } from '../ui/base'
 import { Schermata } from '../ui/guscio'
 import { RigaRadio, RiquadroStatistica, TitoloSezione, spiaModello } from '../ui/righe'
 import { Corpo, Etichetta, Forte } from '../ui/testo'
@@ -254,13 +254,13 @@ export default function Playground() {
 
         {/* Finché non si preme qui, il prompt provato sopra resta solo
             nella memoria di questo schermo: non lo vede né un altro
-            collaudo del playground riaperto, né la chat vera. Ambra su
-            fondo scuro anche qui: è lo strumento di misura, non l'app
-            spedita — la regola «l'ambra è solo dell'IA» vale sulle
-            schermate che l'utente vede. */}
-        <BottonePrimario
+            collaudo del playground riaperto, né la chat vera. Un contorno,
+            non un pieno: il pieno d'ambra è per l'app spedita, qui è lo
+            strumento di misura. */}
+        <BottoneSecondario
           testo={presetAppenaSalvato ? 'Salvato — lo usa anche la chat vera' : 'Salva come preset predefinito'}
-          ambra
+          colore={colori.ambra}
+          bordo={colori.ambra}
           icona={presetAppenaSalvato ? 'spunta' : 'scintilla'}
           caricando={salvandoPreset}
           onPress={() => void salvaPresetCorrente()}

@@ -103,7 +103,7 @@ export default function DettaglioCapo() {
   // «Segnato per oggi» si legge dal dato vero, non da uno stato locale: se
   // rientri nella schermata il segno è ancora lì.
   const messoOggi = capo.ultimo_uso?.slice(0, 10) === new Date().toISOString().slice(0, 10)
-  const velaturaSuFoto = velo(colori.crema, 0.9)
+  const velaturaSuFoto = velo(colori.scheda, 0.9)
 
   return (
     <Schermata occhiello={ETICHETTE.tipo[capo.tipo]} titolo={capo.nome} indietro contentStyle={{ paddingHorizontal: 0 }}>

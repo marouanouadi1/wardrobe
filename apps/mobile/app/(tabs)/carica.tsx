@@ -415,6 +415,7 @@ export default function Carica() {
           <BottonePrimario
             testo="Salva nell'armadio"
             caricando={salvandoManuale}
+            disabilitato={salvandoManuale}
             onPress={() => void salvaManuale()}
           />
           <BottoneSecondario

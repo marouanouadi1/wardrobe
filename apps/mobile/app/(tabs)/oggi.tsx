@@ -14,7 +14,7 @@ import { ScrollView, View } from 'react-native'
 import { capiDiVestizione, daLavare, nomeDiBattesimo } from '../../src/dati/dominio'
 import { useArmadio, useVestiEVai } from '../../src/dati/archivio'
 import { parola } from '../../src/dati/formato'
-import { colori, linee, ombre, raggi, spazi } from '../../src/tema/tokens'
+import { colori, linee, ombre, raggi, spazi, velo } from '../../src/tema/tokens'
 import { BadgeIa, BarraChiedi, Bolla, BottoneSecondario, BottoneTondo, Scheda, Toccabile } from '../../src/ui/base'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Schermata } from '../../src/ui/guscio'
@@ -118,8 +118,10 @@ export default function Oggi() {
               <BottoneTondo
                 nome="ricarica"
                 misura={52}
+                misuraIcona={19}
                 sfondo="rgba(255,253,249,0.1)"
                 colore={colori.scheda}
+                bordo={velo(colori.scheda, 0.32)}
                 onPress={() =>
                   setScartati((precedenti) =>
                     precedenti.length >= suggerimenti.length - 1 ? [] : [...precedenti, principale.titolo],
