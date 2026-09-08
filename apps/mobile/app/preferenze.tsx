@@ -17,7 +17,7 @@ import { segnaPreferenzeViste } from '../src/dati/intro'
 import { colori, spazi } from '../src/tema/tokens'
 import { BottonePrimario, Pillola, Toccabile } from '../src/ui/base'
 import { Corpo } from '../src/ui/testo'
-import { Testata } from '../src/ui/testata'
+import { Testata } from '../src/ui/guscio'
 
 const STILI = ['Comodo', 'Classico', 'Sportivo', 'Elegante', 'Neutri', 'Colori accesi']
 
@@ -69,9 +69,9 @@ export default function Preferenze() {
 
         <View style={{ marginTop: 'auto', gap: spazi.s }}>
           <BottonePrimario
-            testo={salvando ? 'Un momento…' : "Entra nell'armadio"}
+            testo="Entra nell'armadio"
             freccia
-            disabilitato={salvando}
+            caricando={salvando}
             onPress={() => void entra()}
           />
           <Toccabile onPress={() => void entra()} scala={0} style={{ alignItems: 'center', paddingVertical: 8 }}>

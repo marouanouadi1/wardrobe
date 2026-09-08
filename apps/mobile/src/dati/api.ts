@@ -86,6 +86,27 @@ export class ErroreApi extends Error {
   }
 }
 
+/**
+ * Il messaggio da mostrare per un errore qualunque: `ErroreApi` è già un
+ * `Error` (il suo `.message` è il testo del backend), quindi un solo
+ * controllo copre sia la rete sia l'API — dove prima ogni schermata
+ * ripeteva `errore instanceof Error ? errore.message : ripiego`.
+ */
+export function messaggioDiErrore(errore: unknown, ripiego: string): string {
+  return errore instanceof Error ? errore.message : ripiego
+}
+
+/** Un percorso con la sua querystring, senza ripetere `URLSearchParams` per ogni rotta che ne ha una. */
+function conQuery(percorso: string, parametri: Record<string, string | number | boolean | undefined>): string {
+  const query = new URLSearchParams()
+  for (const [chiave, valore] of Object.entries(parametri)) {
+    if (valore === undefined || valore === false || valore === '') continue
+    query.set(chiave, valore === true ? '1' : String(valore))
+  }
+  const stringa = query.toString()
+  return stringa ? `${percorso}?${stringa}` : percorso
+}
+
 const CHIAVE_TOKEN = 'wardrobe.token'
 
 let tokenCorrente: string | null = null
@@ -183,15 +204,10 @@ export const api = {
   },
 
   // ── armadio ──────────────────────────────────────────────────────────────
-  elencaCapi: (filtro?: { tipo?: string; stato?: string; testo?: string; preferiti?: boolean }) => {
-    const parametri = new URLSearchParams()
-    if (filtro?.tipo) parametri.set('tipo', filtro.tipo)
-    if (filtro?.stato) parametri.set('stato', filtro.stato)
-    if (filtro?.testo) parametri.set('testo', filtro.testo)
-    if (filtro?.preferiti) parametri.set('preferiti', '1')
-    const query = parametri.toString()
-    return chiama<ElencoCapi>(`/capi${query ? `?${query}` : ''}`)
-  },
+  elencaCapi: (filtro?: { tipo?: string; stato?: string; testo?: string; preferiti?: boolean }) =>
+    chiama<ElencoCapi>(
+      conQuery('/capi', { tipo: filtro?.tipo, stato: filtro?.stato, testo: filtro?.testo, preferiti: filtro?.preferiti }),
+    ),
   leggiCapo: (id: string) => chiama<Capo>(`/capi/${id}`),
   /** Un capo inserito a mano: nessuna analisi, nessuna pipeline asincrona. */
   creaCapo: (nuovo: NuovoCapoManuale) =>
@@ -283,18 +299,9 @@ export const api = {
         // un riavvio del server con la chiave nell'ambiente.
         intestazioni: chiaveProvider ? { 'x-provider-key': chiaveProvider } : undefined,
       }),
-    valutazioni: (run?: string) => {
-      const parametri = new URLSearchParams()
-      if (run) parametri.set('run', run)
-      const query = parametri.toString()
-      return chiama<RispostaValutazioni>(`/dev/valutazioni${query ? `?${query}` : ''}`)
-    },
-    immagini: (run?: string) => {
-      const parametri = new URLSearchParams()
-      if (run) parametri.set('run', run)
-      const query = parametri.toString()
-      return chiama<RispostaValutazioniImmagini>(`/dev/immagini${query ? `?${query}` : ''}`)
-    },
+    valutazioni: (run?: string) => chiama<RispostaValutazioni>(conQuery('/dev/valutazioni', { run })),
+    immagini: (run?: string) =>
+      chiama<RispostaValutazioniImmagini>(conQuery('/dev/immagini', { run })),
     votaImmagine: (richiesta: RichiestaRatingImmagine) =>
       chiama<import('@wardrobe/contracts').ValutazioneImmagine>('/dev/immagini', {
         metodo: 'POST',

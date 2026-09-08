@@ -11,13 +11,27 @@ import {
   type AttributoCapo,
   type Capo,
   MESI_PER_DORMIENTE,
+  type Profilo,
   SOGLIA_INCERTEZZA,
   type SlotAvatar,
+  type Stagione,
   type TipoCapo,
   VALORI_ATTRIBUTO_CAPO,
   type Vestizione,
   type VestizioneColori,
 } from '@wardrobe/contracts'
+import { ETICHETTE } from '../tema/tokens'
+
+/**
+ * Le categorie di capo, nell'ordine in cui `ETICHETTE.tipo` le elenca — la
+ * stessa fonte che dà loro un'etichetta italiana. Prima erano una seconda
+ * dichiarazione letterale, ricopiata identica in `carica.tsx` e in
+ * `capo/[id].tsx`.
+ */
+export const TIPI_CAPO = Object.keys(ETICHETTE.tipo) as TipoCapo[]
+
+/** Le stagioni, nello stesso ordine di `ETICHETTE.stagione`. */
+export const STAGIONI = Object.keys(ETICHETTE.stagione) as Stagione[]
 
 const SLOT_DI_TIPO: Record<TipoCapo, SlotAvatar> = {
   top: 'top',
@@ -52,6 +66,23 @@ export function dormiente(capo: Capo, adesso = new Date()): boolean {
   const limite = new Date(adesso)
   limite.setMonth(limite.getMonth() - MESI_PER_DORMIENTE)
   return new Date(capo.ultimo_uso) < limite
+}
+
+/** I capi fermi da più di `MESI_PER_DORMIENTE`: Profilo e Calendario lo contavano ciascuno per conto proprio. */
+export function capiDormienti(capi: Capo[], adesso = new Date()): Capo[] {
+  return capi.filter((capo) => dormiente(capo, adesso))
+}
+
+/** Quanti capi sono in lavatrice: Oggi e l'Armadio lo contavano ciascuno a modo suo. */
+export function daLavare(capi: Iterable<Capo>): number {
+  let n = 0
+  for (const capo of capi) if (capo.stato !== 'pulito') n += 1
+  return n
+}
+
+/** Il nome di battesimo dal profilo — «Buongiorno, Marta» invece di «Buongiorno, Marta Rossi». */
+export function nomeDiBattesimo(profilo: Profilo | null | undefined): string | undefined {
+  return profilo?.nome?.split(' ')[0]
 }
 
 export function perId(capi: Capo[]): Map<string, Capo> {

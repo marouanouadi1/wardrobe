@@ -4,36 +4,43 @@
  * Tutte pressabili con lo stesso feedback — scala 0.97 e un tocco di haptic —
  * perché su un'app che deve risultare facile la coerenza del tocco conta più
  * di qualunque animazione elaborata.
+ *
+ * Una schermata compone queste primitive: non ridefinisce una card, un
+ * bottone o un badge a mano. Se manca una forma, si aggiunge qui (o in
+ * `stati.tsx` / `righe.tsx` / `guscio.tsx`), non inline nella schermata — è la
+ * stessa regola già in vigore per i valori del design (`tema/tokens.ts`).
  */
 
 import * as Haptics from 'expo-haptics'
 import type { ReactNode } from 'react'
 import {
+  ActivityIndicator,
   Platform,
   Pressable,
   type PressableProps,
   TextInput,
   type TextInputProps,
   View,
+  type StyleProp,
   type ViewStyle,
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import { colori, linee, ombre, raggi, spazi } from '../tema/tokens'
-import { Corpo, Etichetta, Forte } from './testo'
+import { Etichetta, Forte } from './testo'
 
 // ─────────────────────────────────────────────────────────────
 // Tocco
 // ─────────────────────────────────────────────────────────────
 
-interface TocacbileProps extends PressableProps {
+interface ToccabileProps extends PressableProps {
   children: ReactNode
-  style?: ViewStyle | ViewStyle[]
+  style?: StyleProp<ViewStyle>
   /** Scala alla pressione. 0 disattiva l'effetto. */
   scala?: number
   haptic?: boolean
 }
 
-export function Toccabile({ children, style, scala = 0.97, haptic = true, ...props }: TocacbileProps) {
+export function Toccabile({ children, style, scala = 0.97, haptic = true, ...props }: ToccabileProps) {
   return (
     <Pressable
       {...props}
@@ -70,7 +77,7 @@ export function Campo({
   etichetta,
   style,
   ...props
-}: TextInputProps & { etichetta?: string; style?: ViewStyle | ViewStyle[] }) {
+}: TextInputProps & { etichetta?: string; style?: StyleProp<ViewStyle> }) {
   const campo = (
     <TextInput
       placeholderTextColor="rgba(21,21,26,0.4)"
@@ -100,6 +107,63 @@ export function Campo({
   )
 }
 
+/**
+ * La barra di richiesta a pillola: campo di testo + bottone tondo d'invio.
+ *
+ * Sostituisce i tre `TextInput` grezzi (Oggi, il suggeritore, la ricerca
+ * dell'armadio) che ridigitavano a mano `fontFamily` e `placeholderTextColor`
+ * — valori che `Campo` incapsula già. Il bottone d'invio è opzionale: la
+ * ricerca dell'armadio non ne ha uno.
+ */
+export function BarraChiedi({
+  valore,
+  onCambia,
+  placeholder,
+  onInvia,
+  icona = 'scintilla',
+  style,
+}: {
+  valore: string
+  onCambia: (testo: string) => void
+  placeholder: string
+  /** Assente: nessun bottone d'invio, solo il campo (es. la ricerca). */
+  onInvia?: () => void
+  icona?: NomeIcona
+  style?: ViewStyle
+}) {
+  return (
+    <View
+      style={[
+        onInvia
+          ? { paddingLeft: spazi.l, paddingRight: 7, paddingVertical: 7 }
+          : { paddingHorizontal: spazi.l, paddingVertical: 12 },
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spazi.s,
+          borderRadius: raggi.pillola,
+          backgroundColor: colori.scheda,
+          ...ombre.bassa,
+        },
+        style,
+      ]}
+    >
+      <Icona nome={icona} misura={17} colore={onInvia ? colori.ambraMedio : 'rgba(21,21,26,0.45)'} spessore={2.2} />
+      <TextInput
+        value={valore}
+        onChangeText={onCambia}
+        onSubmitEditing={onInvia}
+        placeholder={placeholder}
+        placeholderTextColor="rgba(21,21,26,0.4)"
+        style={{ flex: 1, fontFamily: 'Manrope_500Medium', fontSize: 14.5, color: colori.inchiostro }}
+      />
+      {onInvia ? (
+        <BottoneTondo nome="freccia" onPress={onInvia} misura={42} sfondo={colori.ambra} />
+      ) : null}
+    </View>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────
 // Contenitori
 // ─────────────────────────────────────────────────────────────
@@ -107,14 +171,15 @@ export function Campo({
 export function Scheda({
   children,
   style,
-  scura,
+  su,
   imbottitura = spazi.l,
 }: {
   children: ReactNode
-  style?: ViewStyle | ViewStyle[]
-  scura?: boolean
+  style?: StyleProp<ViewStyle>
+  su?: 'chiaro' | 'scuro'
   imbottitura?: number
 }) {
+  const scura = su === 'scuro'
   return (
     <View
       style={[
@@ -140,13 +205,14 @@ export function Pillola({
   testo,
   attiva,
   onPress,
-  scura,
+  su,
 }: {
   testo: string
   attiva?: boolean
   onPress?: () => void
-  scura?: boolean
+  su?: 'chiaro' | 'scuro'
 }) {
+  const scura = su === 'scuro'
   const sfondoAttivo = scura ? colori.ambra : colori.inchiostro
   const testoAttivo = scura ? colori.inchiostro : colori.crema
   return (
@@ -189,7 +255,7 @@ export function Segmenti<T extends string>({
         gap: 3,
         padding: 3,
         borderRadius: raggi.pillola,
-        backgroundColor: 'rgba(21,21,26,0.06)',
+        backgroundColor: linee.tenue,
       }}
     >
       {voci.map((voce) => {
@@ -226,6 +292,8 @@ export function BottonePrimario({
   testo,
   onPress,
   freccia,
+  icona,
+  caricando,
   ambra,
   chiaro,
   disabilitato,
@@ -234,13 +302,18 @@ export function BottonePrimario({
   testo: string
   onPress?: () => void
   freccia?: boolean
+  /** Un'icona a sinistra del testo — es. la fotocamera di «Scatta». */
+  icona?: NomeIcona
+  /** Spegne il tocco e mostra uno spinner al posto dell'icona. */
+  caricando?: boolean
   /** Solo per le azioni che eseguono l'IA: vedi la regola in tokens.ts. */
   ambra?: boolean
   /** Sfondo chiaro (per pulsanti su foto scure): testo scuro invece che crema. */
   chiaro?: boolean
   disabilitato?: boolean
-  style?: ViewStyle
+  style?: StyleProp<ViewStyle>
 }) {
+  const spento = disabilitato || caricando
   const sfondo = disabilitato
     ? 'rgba(21,21,26,0.08)'
     : ambra
@@ -256,21 +329,32 @@ export function BottonePrimario({
 
   return (
     <Toccabile
-      onPress={disabilitato ? undefined : onPress}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: freccia ? 'space-between' : 'center',
-        paddingHorizontal: 22,
-        paddingVertical: 17,
-        borderRadius: raggi.pillola,
-        backgroundColor: sfondo,
-        ...style,
-      }}
+      onPress={spento ? undefined : onPress}
+      style={[
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: freccia ? 'space-between' : 'center',
+          paddingHorizontal: 22,
+          paddingVertical: 17,
+          borderRadius: raggi.pillola,
+          backgroundColor: sfondo,
+        },
+        style,
+      ]}
     >
-      <Forte taglia={16} colore={inchiostro}>
-        {testo}
-      </Forte>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
+        {icona ? (
+          caricando ? (
+            <ActivityIndicator color={inchiostro} />
+          ) : (
+            <Icona nome={icona} colore={inchiostro} misura={19} />
+          )
+        ) : null}
+        <Forte taglia={16} colore={inchiostro}>
+          {testo}
+        </Forte>
+      </View>
       {freccia ? <Icona nome="freccia" colore={inchiostro} misura={19} /> : null}
     </Toccabile>
   )
@@ -279,8 +363,8 @@ export function BottonePrimario({
 export function BottoneSecondario({
   testo,
   onPress,
-  riempimento,
-  tinta,
+  sfondo,
+  colore,
   style,
 }: {
   testo: string
@@ -289,34 +373,52 @@ export function BottoneSecondario({
    * Il fondo quando il pulsante è un interruttore già acceso. Non è mai ambra:
    * questo pulsante non parla per l'IA — vedi la regola in tokens.ts.
    */
-  riempimento?: string
-  tinta?: string
-  style?: ViewStyle
+  sfondo?: string
+  colore?: string
+  style?: StyleProp<ViewStyle>
 }) {
   return (
     <Toccabile
       onPress={onPress}
       scala={0.96}
-      style={{
-        alignItems: 'center',
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderRadius: raggi.pillola,
-        borderWidth: 1,
-        borderColor: linee.chiara,
-        backgroundColor: riempimento ?? 'transparent',
-        ...style,
-      }}
+      style={[
+        {
+          alignItems: 'center',
+          paddingVertical: 14,
+          paddingHorizontal: 16,
+          borderRadius: raggi.pillola,
+          borderWidth: 1,
+          borderColor: linee.chiara,
+          backgroundColor: sfondo ?? 'transparent',
+        },
+        style,
+      ]}
     >
-      <Forte taglia={13.5} colore={tinta}>
+      <Forte taglia={13.5} colore={colore}>
         {testo}
       </Forte>
     </Toccabile>
   )
 }
 
-/** Il badge del match, l'unico posto oltre ai pulsanti IA dove sta l'ambra. */
-export function BadgeIa({ testo, tenue }: { testo: string; tenue?: boolean }) {
+/**
+ * Il badge a pillola generico: un'icona opzionale, un'etichetta, un fondo.
+ *
+ * `BadgeIa` è la sua specializzazione — ambra, icona `scintilla` — per il
+ * solo caso in cui parla il modello. Un badge di stato (chi cuce, non IA)
+ * passa `sfondo`/`colore` propri invece di reinventare la stessa pillola.
+ */
+export function Badge({
+  testo,
+  sfondo = colori.ambra,
+  colore = colori.inchiostro,
+  icona,
+}: {
+  testo: string
+  sfondo?: string
+  colore?: string
+  icona?: NomeIcona
+}) {
   return (
     <View
       style={{
@@ -327,25 +429,53 @@ export function BadgeIa({ testo, tenue }: { testo: string; tenue?: boolean }) {
         paddingHorizontal: 11,
         paddingVertical: 6,
         borderRadius: raggi.pillola,
-        backgroundColor: tenue ? colori.ambraTenue : colori.ambra,
+        backgroundColor: sfondo,
       }}
     >
-      <Icona nome="scintilla" misura={12} colore={colori.inchiostro} spessore={2.4} />
-      <Etichetta taglia={10.5} colore={tenue ? colori.ambraScuro : colori.inchiostro}>
+      {icona ? <Icona nome={icona} misura={12} colore={colore} spessore={2.4} /> : null}
+      <Etichetta taglia={10.5} colore={colore}>
         {testo}
       </Etichetta>
     </View>
   )
 }
 
-export function Vuoto({ titolo, spiegazione }: { titolo: string; spiegazione: string }) {
+/** Il badge del match, l'unico posto oltre ai pulsanti IA dove sta l'ambra. */
+export function BadgeIa({ testo, tenue }: { testo: string; tenue?: boolean }) {
   return (
-    <Scheda imbottitura={spazi.xl} style={{ alignItems: 'center', gap: spazi.s }}>
-      <Forte taglia={15}>{titolo}</Forte>
-      <Corpo taglia={13} tono="tenue" style={{ textAlign: 'center' }}>
-        {spiegazione}
-      </Corpo>
-    </Scheda>
+    <Badge
+      testo={testo}
+      icona="scintilla"
+      sfondo={tenue ? colori.ambraTenue : colori.ambra}
+      colore={tenue ? colori.ambraScuro : colori.inchiostro}
+    />
+  )
+}
+
+/**
+ * La bolla di chat: stessi angoli per il messaggio dell'utente, quello dello
+ * stilista e quello «Sto pensando…». Prima quest'ultima li ricopiava a mano —
+ * una divergenza silenziosa in attesa di succedere.
+ */
+export function BollaChat({ daUtente, children }: { daUtente: boolean; children: ReactNode }) {
+  return (
+    <View
+      style={{
+        alignSelf: daUtente ? 'flex-end' : 'flex-start',
+        maxWidth: '84%',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        backgroundColor: daUtente ? colori.inchiostro : colori.scheda,
+        borderTopLeftRadius: 22,
+        borderTopRightRadius: 22,
+        borderBottomLeftRadius: daUtente ? 22 : 6,
+        borderBottomRightRadius: daUtente ? 6 : 22,
+        gap: spazi.s,
+        ...ombre.bassa,
+      }}
+    >
+      {children}
+    </View>
   )
 }
 
@@ -357,9 +487,10 @@ export function Vuoto({ titolo, spiegazione }: { titolo: string; spiegazione: st
  * Le icone del design, come tracciati SVG.
  *
  * Nessuna libreria: sono nove percorsi, presi dal file di design, e una
- * dipendenza in meno da aggiornare.
+ * dipendenza in meno da aggiornare. L'oggetto resta privato: solo il tipo
+ * `NomeIcona` che ne deriva esce dal modulo.
  */
-export const TRACCIATI = {
+const TRACCIATI = {
   scintilla: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z',
   griglia: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   piu: 'M12 5v14M5 12h14',
@@ -415,12 +546,12 @@ export function Icona({
 export function Bolla({
   nome,
   sfondo = colori.ambra,
-  tinta = colori.inchiostro,
+  colore = colori.inchiostro,
   misura = 34,
 }: {
   nome: NomeIcona
   sfondo?: string
-  tinta?: string
+  colore?: string
   misura?: number
 }) {
   return (
@@ -434,7 +565,28 @@ export function Bolla({
         justifyContent: 'center',
       }}
     >
-      <Icona nome={nome} misura={misura * 0.5} colore={tinta} spessore={2.2} />
+      <Icona nome={nome} misura={misura * 0.5} colore={colore} spessore={2.2} />
     </View>
+  )
+}
+
+/** Una `Bolla` pressabile: il bottone tondo con icona (ritorno, invio, «vedila addosso»…). */
+export function BottoneTondo({
+  nome,
+  onPress,
+  sfondo = colori.ambra,
+  colore = colori.inchiostro,
+  misura = 42,
+}: {
+  nome: NomeIcona
+  onPress?: () => void
+  sfondo?: string
+  colore?: string
+  misura?: number
+}) {
+  return (
+    <Toccabile onPress={onPress} scala={0.9} style={{ borderRadius: raggi.pillola }}>
+      <Bolla nome={nome} sfondo={sfondo} colore={colore} misura={misura} />
+    </Toccabile>
   )
 }

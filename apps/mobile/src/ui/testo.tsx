@@ -15,8 +15,8 @@ type Tono = 'forte' | 'medio' | 'tenue' | 'debole'
 
 interface Props extends TextProps {
   children?: ReactNode
-  /** Su fondo scuro i toni si invertono. */
-  scuro?: boolean
+  /** Su che fondo si posa: su `'scuro'` i toni si invertono. */
+  su?: 'chiaro' | 'scuro'
   tono?: Tono
   colore?: string
   taglia?: number
@@ -24,7 +24,7 @@ interface Props extends TextProps {
 
 function colore(props: Props): string {
   if (props.colore) return props.colore
-  const scala = props.scuro ? testoSu.scuro : testoSu.chiaro
+  const scala = props.su === 'scuro' ? testoSu.scuro : testoSu.chiaro
   return scala[props.tono ?? 'forte']
 }
 

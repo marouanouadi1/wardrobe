@@ -9,19 +9,16 @@
 
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
-import { ScrollView, View } from 'react-native'
+import { View } from 'react-native'
 import { useArmadio } from '../src/dati/archivio'
-import { dormiente } from '../src/dati/dominio'
+import { capiDormienti } from '../src/dati/dominio'
+import { formattaMeseAnno, parola } from '../src/dati/formato'
 import { colori, spazi } from '../src/tema/tokens'
 import { BadgeIa, BottonePrimario, BottoneSecondario, Scheda } from '../src/ui/base'
+import { Schermata } from '../src/ui/guscio'
 import { Corpo, Etichetta, Numero, Titolo } from '../src/ui/testo'
-import { Testata } from '../src/ui/testata'
 
 const GIORNI_SETTIMANA = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
-const MESI = [
-  'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
-]
 
 export default function Calendario() {
   const { capi, indice } = useArmadio()
@@ -42,22 +39,12 @@ export default function Calendario() {
     usiPerGiorno.set(giorno, [...(usiPerGiorno.get(giorno) ?? []), capo.id])
   }
 
-  const dormienti = capi.filter((capo) => dormiente(capo))
+  const dormienti = capiDormienti(capi)
   const ripetuti = capi.filter((capo) => (capo.volte_indossato ?? 0) >= 4).length
 
   return (
-    <View style={{ flex: 1 }}>
-      <Testata
-        occhiello={`${MESI[adesso.getMonth()]} ${adesso.getFullYear()}`}
-        titolo="Cosa ho messo"
-        indietro
-      />
-
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spazi.xl, paddingBottom: 60, gap: spazi.l }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+    <Schermata occhiello={formattaMeseAnno(adesso)} titolo="Cosa ho messo" indietro>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
           {GIORNI_SETTIMANA.map((lettera, indiceGiorno) => (
             <View key={`${lettera}-${indiceGiorno}`} style={{ width: '13.1%', alignItems: 'center' }}>
               <Etichetta taglia={9.5} tono="debole">
@@ -114,9 +101,7 @@ export default function Calendario() {
         <Scheda imbottitura={20} style={{ backgroundColor: colori.ambraTenue, gap: spazi.s }}>
           <BadgeIa testo="dormono in fondo" />
           <Titolo taglia={25}>
-            {dormienti.length === 1
-              ? '1 capo fermo da più di sei mesi'
-              : `${dormienti.length} capi fermi da più di sei mesi`}
+            {parola(dormienti.length, '1 capo fermo da più di sei mesi', `${dormienti.length} capi fermi da più di sei mesi`)}
           </Titolo>
           <Corpo taglia={13.5} tono="medio">
             {'Se vuoi te ne infilo qualcuno negli outfit della settimana, senza che tu debba pensarci.'}
@@ -145,7 +130,6 @@ export default function Calendario() {
             </Scheda>
           ))}
         </View>
-      </ScrollView>
-    </View>
+    </Schermata>
   )
 }

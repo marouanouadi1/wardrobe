@@ -10,18 +10,26 @@
  * generata dal dominio Python.
  */
 
-import type { AttributoCapo, Capo, Stagione, TipoCapo } from '@wardrobe/contracts'
+import type { AttributoCapo, Capo } from '@wardrobe/contracts'
 import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import { ScrollView, View } from 'react-native'
 import { useArmadio } from '../../src/dati/archivio'
-import { PALETTE_COLORI, attributiIncerti, fotoDaMostrare, quandoUsato } from '../../src/dati/dominio'
-import { ETICHETTE, colori, linee, ombre, raggi, spazi } from '../../src/tema/tokens'
-import { BadgeIa, BottonePrimario, BottoneSecondario, Campo, Icona, Pillola, Scheda, Toccabile, Vuoto } from '../../src/ui/base'
+import {
+  PALETTE_COLORI,
+  STAGIONI,
+  TIPI_CAPO,
+  attributiIncerti,
+  fotoDaMostrare,
+  quandoUsato,
+} from '../../src/dati/dominio'
+import { ETICHETTE, colori, linee, ombre, raggi, spazi, velo } from '../../src/tema/tokens'
+import { BadgeIa, BottonePrimario, BottoneSecondario, Campo, Icona, Pillola, Scheda, Toccabile } from '../../src/ui/base'
 import { Attributo, Miniatura } from '../../src/ui/capi'
+import { Schermata, Testata } from '../../src/ui/guscio'
+import { Vuoto } from '../../src/ui/stati'
 import { Corpo, Forte, Titolo } from '../../src/ui/testo'
-import { Testata } from '../../src/ui/testata'
 
 /** I campi che si correggono con un testo libero, non con una scelta chiusa. */
 const ATTRIBUTI_LIBERI = new Set<AttributoCapo>(['materiale', 'fantasia', 'vestibilita', 'lavaggio'])
@@ -41,16 +49,6 @@ function valoreLiberoAttuale(capo: Capo, attributo: AttributoCapo): string {
       return ''
   }
 }
-
-const TIPI: TipoCapo[] = ['top', 'pantaloni', 'scarpe', 'capospalla', 'abito', 'accessorio']
-const STAGIONI: Stagione[] = [
-  'primavera',
-  'estate',
-  'autunno',
-  'inverno',
-  'mezza_stagione',
-  'tutto_lanno',
-]
 
 export default function DettaglioCapo() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -105,287 +103,281 @@ export default function DettaglioCapo() {
   // «Segnato per oggi» si legge dal dato vero, non da uno stato locale: se
   // rientri nella schermata il segno è ancora lì.
   const messoOggi = capo.ultimo_uso?.slice(0, 10) === new Date().toISOString().slice(0, 10)
+  const velaturaSuFoto = velo(colori.crema, 0.9)
 
   return (
-    <View style={{ flex: 1 }}>
-      <Testata occhiello={ETICHETTE.tipo[capo.tipo]} titolo={capo.nome} indietro />
-
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: 60, gap: spazi.l }}
-        showsVerticalScrollIndicator={false}
+    <Schermata occhiello={ETICHETTE.tipo[capo.tipo]} titolo={capo.nome} indietro contentStyle={{ paddingHorizontal: 0 }}>
+      <View
+        style={{
+          marginHorizontal: spazi.xl,
+          borderRadius: raggi.grande - 2,
+          overflow: 'hidden',
+          backgroundColor: capo.colore.hex,
+          ...ombre.alta,
+        }}
       >
+        <Image
+          source={{ uri: fotoDaMostrare(capo) }}
+          style={{ width: '100%', height: 330 }}
+          contentFit="cover"
+          transition={250}
+        />
         <View
           style={{
-            marginHorizontal: spazi.xl,
-            borderRadius: raggi.grande - 2,
-            overflow: 'hidden',
-            backgroundColor: capo.colore.hex,
-            ...ombre.alta,
+            position: 'absolute',
+            top: 12,
+            left: 12,
+            paddingHorizontal: 12,
+            paddingVertical: 7,
+            borderRadius: raggi.pillola,
+            backgroundColor: velaturaSuFoto,
           }}
         >
-          <Image
-            source={{ uri: fotoDaMostrare(capo) }}
-            style={{ width: '100%', height: 330 }}
-            contentFit="cover"
-            transition={250}
+          <Forte taglia={11}>{ETICHETTE.tipo[capo.tipo]}</Forte>
+        </View>
+        <Toccabile
+          onPress={() => void cambiaPreferito(capo.id)}
+          scala={0.9}
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            width: 38,
+            height: 38,
+            borderRadius: raggi.pillola,
+            backgroundColor: velaturaSuFoto,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Icona
+            nome="cuore"
+            misura={18}
+            colore={capo.preferito ? colori.corallo : 'rgba(21,21,26,0.6)'}
+            pieno={capo.preferito}
           />
-          <View
-            style={{
-              position: 'absolute',
-              top: 12,
-              left: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 7,
-              borderRadius: raggi.pillola,
-              backgroundColor: 'rgba(255,253,249,0.9)',
-            }}
-          >
-            <Forte taglia={11}>{ETICHETTE.tipo[capo.tipo]}</Forte>
-          </View>
-          <Toccabile
-            onPress={() => void cambiaPreferito(capo.id)}
-            scala={0.9}
-            style={{
-              position: 'absolute',
-              top: 12,
-              right: 12,
-              width: 38,
-              height: 38,
-              borderRadius: raggi.pillola,
-              backgroundColor: 'rgba(255,253,249,0.9)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Icona
-              nome="cuore"
-              misura={18}
-              colore={capo.preferito ? colori.corallo : 'rgba(21,21,26,0.6)'}
-              pieno={capo.preferito}
-            />
-          </Toccabile>
+        </Toccabile>
+      </View>
+
+      <View style={{ paddingHorizontal: spazi.xl, gap: spazi.m }}>
+        <View>
+          <Titolo taglia={28}>{capo.nome}</Titolo>
+          <Corpo taglia={13.5} tono="tenue">
+            {capo.brand ? `${capo.brand} · ` : ''}
+            {`ultimo uso ${quandoUsato(capo.ultimo_uso)}`}
+          </Corpo>
         </View>
 
-        <View style={{ paddingHorizontal: spazi.xl, gap: spazi.m }}>
-          <View>
-            <Titolo taglia={28}>{capo.nome}</Titolo>
-            <Corpo taglia={13.5} tono="tenue">
-              {capo.brand ? `${capo.brand} · ` : ''}
-              {`ultimo uso ${quandoUsato(capo.ultimo_uso)}`}
-            </Corpo>
-          </View>
+        <BottonePrimario
+          testo="Provalo sull'avatar"
+          freccia
+          onPress={() => {
+            vestiSlot(capo.id)
+            router.push('/(tabs)/avatar')
+          }}
+        />
 
-          <BottonePrimario
-            testo="Provalo sull'avatar"
-            freccia
-            onPress={() => {
-              vestiSlot(capo.id)
-              router.push('/(tabs)/avatar')
-            }}
+        {/* Due interruttori: l'etichetta dice l'azione quando sono spenti e
+            conferma lo stato quando sono accesi. Il corallo è per il bucato,
+            mai il ambra: quel verde parla solo per l'IA. */}
+        <View style={{ flexDirection: 'row', gap: spazi.s }}>
+          <BottoneSecondario
+            testo={messoOggi ? 'Segnato per oggi' : "L'ho messo oggi"}
+            sfondo={messoOggi ? colori.inchiostro : undefined}
+            colore={messoOggi ? colori.crema : undefined}
+            style={{ flex: 1 }}
+            onPress={messoOggi ? undefined : () => void indossaOggi(capo.id)}
           />
+          <BottoneSecondario
+            testo={capo.stato === 'pulito' ? 'Da lavare' : 'In lavatrice'}
+            sfondo={capo.stato === 'pulito' ? undefined : colori.coralloTenue}
+            style={{ flex: 1 }}
+            onPress={() => void cambiaStato(capo.id, capo.stato === 'pulito' ? 'da_lavare' : 'pulito')}
+          />
+        </View>
 
-          {/* Due interruttori: l'etichetta dice l'azione quando sono spenti e
-              conferma lo stato quando sono accesi. Il corallo è per il bucato,
-              mai il ambra: quel verde parla solo per l'IA. */}
-          <View style={{ flexDirection: 'row', gap: spazi.s }}>
-            <BottoneSecondario
-              testo={messoOggi ? 'Segnato per oggi' : "L'ho messo oggi"}
-              riempimento={messoOggi ? colori.inchiostro : undefined}
-              tinta={messoOggi ? colori.crema : undefined}
-              style={{ flex: 1 }}
-              onPress={messoOggi ? undefined : () => void indossaOggi(capo.id)}
-            />
-            <BottoneSecondario
-              testo={capo.stato === 'pulito' ? 'Da lavare' : 'In lavatrice'}
-              riempimento={capo.stato === 'pulito' ? undefined : colori.coralloTenue}
-              style={{ flex: 1 }}
-              onPress={() => void cambiaStato(capo.id, capo.stato === 'pulito' ? 'da_lavare' : 'pulito')}
-            />
+        <Scheda imbottitura={18} style={{ gap: spazi.m }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
+            <BadgeIa testo="letto dalla foto" />
+            {media !== null ? (
+              <Forte taglia={11.5} tono="debole" style={{ marginLeft: 'auto' }}>
+                {media}% sicuro
+              </Forte>
+            ) : null}
           </View>
 
-          <Scheda imbottitura={18} style={{ gap: spazi.m }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
-              <BadgeIa testo="letto dalla foto" />
-              {media !== null ? (
-                <Forte taglia={11.5} tono="debole" style={{ marginLeft: 'auto' }}>
-                  {media}% sicuro
-                </Forte>
-              ) : null}
-            </View>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spazi.s }}>
+            {attributi.map(([chiave, valore]) =>
+              valore ? (
+                <Attributo
+                  key={chiave}
+                  chiave={ETICHETTE.attributo[chiave]}
+                  valore={valore}
+                  incerto={incerti.includes(chiave)}
+                  onPress={() => {
+                    if (ATTRIBUTI_LIBERI.has(chiave)) {
+                      setTestoModifica(valoreLiberoAttuale(capo, chiave))
+                    }
+                    setAttributoInModifica(attributoInModifica === chiave ? null : chiave)
+                  }}
+                />
+              ) : null,
+            )}
+          </View>
 
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spazi.s }}>
-              {attributi.map(([chiave, valore]) =>
-                valore ? (
-                  <Attributo
-                    key={chiave}
-                    chiave={ETICHETTE.attributo[chiave]}
-                    valore={valore}
-                    incerto={incerti.includes(chiave)}
-                    onPress={() => {
-                      if (ATTRIBUTI_LIBERI.has(chiave)) {
-                        setTestoModifica(valoreLiberoAttuale(capo, chiave))
-                      }
-                      setAttributoInModifica(attributoInModifica === chiave ? null : chiave)
-                    }}
-                  />
-                ) : null,
-              )}
-            </View>
+          <Corpo taglia={11.5} tono="debole">
+            {incerti.length === 0
+              ? 'Il modello è sicuro di tutto. Tocca un valore se vuoi cambiarlo.'
+              : 'Tocca un valore per correggerlo. Quelli in corallo sono incerti: il modello preferisce chiedere.'}
+          </Corpo>
 
-            <Corpo taglia={11.5} tono="debole">
-              {incerti.length === 0
-                ? 'Il modello è sicuro di tutto. Tocca un valore se vuoi cambiarlo.'
-                : 'Tocca un valore per correggerlo. Quelli in corallo sono incerti: il modello preferisce chiedere.'}
-            </Corpo>
+          {attributoInModifica ? (
+            <View style={{ gap: spazi.s, paddingTop: spazi.s, borderTopWidth: 1, borderTopColor: linee.tenue }}>
+              <Forte taglia={12.5}>{`Correggi ${ETICHETTE.attributo[attributoInModifica]}`}</Forte>
 
-            {attributoInModifica ? (
-              <View style={{ gap: spazi.s, paddingTop: spazi.s, borderTopWidth: 1, borderTopColor: linee.tenue }}>
-                <Forte taglia={12.5}>{`Correggi ${ETICHETTE.attributo[attributoInModifica]}`}</Forte>
-
-                {attributoInModifica === 'tipo' ? (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
-                    {TIPI.map((tipo) => (
-                      <Pillola
-                        key={tipo}
-                        testo={ETICHETTE.tipo[tipo]}
-                        attiva={tipo === capo.tipo}
-                        onPress={() => {
-                          void correggi(capo.id, 'tipo', tipo)
-                          setAttributoInModifica(null)
-                        }}
-                      />
-                    ))}
-                  </View>
-                ) : attributoInModifica === 'stagione' ? (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
-                    {STAGIONI.map((stagione) => (
-                      <Pillola
-                        key={stagione}
-                        testo={ETICHETTE.stagione[stagione]}
-                        attiva={stagione === capo.stagione}
-                        onPress={() => {
-                          void correggi(capo.id, 'stagione', stagione)
-                          setAttributoInModifica(null)
-                        }}
-                      />
-                    ))}
-                  </View>
-                ) : attributoInModifica === 'colore' ? (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                    {PALETTE_COLORI.map((voce) => (
-                      <Toccabile
-                        key={voce.nome}
-                        onPress={() => {
-                          void correggi(capo.id, 'colore', voce)
-                          setAttributoInModifica(null)
-                        }}
-                        scala={0.94}
-                        style={{
-                          width: 38,
-                          height: 38,
-                          borderRadius: raggi.pillola,
-                          backgroundColor: voce.hex,
-                          borderWidth: voce.hex === capo.colore.hex ? 3 : 1,
-                          borderColor: voce.hex === capo.colore.hex ? colori.ambra : linee.chiara,
-                        }}
-                      >
-                        <View />
-                      </Toccabile>
-                    ))}
-                  </View>
-                ) : (
-                  <View style={{ flexDirection: 'row', gap: spazi.s }}>
-                    <Campo
-                      value={testoModifica}
-                      onChangeText={setTestoModifica}
-                      autoFocus
-                      style={{ flex: 1 }}
-                    />
-                    <BottoneSecondario
-                      testo="Salva"
-                      riempimento={colori.inchiostro}
-                      tinta={colori.crema}
+              {attributoInModifica === 'tipo' ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+                  {TIPI_CAPO.map((tipo) => (
+                    <Pillola
+                      key={tipo}
+                      testo={ETICHETTE.tipo[tipo]}
+                      attiva={tipo === capo.tipo}
                       onPress={() => {
-                        const attributo = attributoInModifica
-                        void correggi(capo.id, attributo, testoModifica.trim())
+                        void correggi(capo.id, 'tipo', tipo)
                         setAttributoInModifica(null)
                       }}
                     />
-                  </View>
-                )}
-              </View>
-            ) : null}
-          </Scheda>
-
-          <Scheda imbottitura={16} style={{ gap: spazi.m }}>
-            <Titolo taglia={16}>Etichette</Titolo>
-            <Corpo taglia={11.5} tono="debole">
-              Solo tue: il modello non le legge dalla foto, ma lo stilista sì.
-            </Corpo>
-
-            {(capo.etichette ?? []).length > 0 ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
-                {(capo.etichette ?? []).map((etichetta) => (
-                  <Pillola
-                    key={etichetta}
-                    testo={`${etichetta} ×`}
-                    attiva
-                    onPress={() =>
-                      void aggiornaEtichette(
-                        capo.id,
-                        (capo.etichette ?? []).filter((voce) => voce !== etichetta),
-                      )
-                    }
+                  ))}
+                </View>
+              ) : attributoInModifica === 'stagione' ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+                  {STAGIONI.map((stagione) => (
+                    <Pillola
+                      key={stagione}
+                      testo={ETICHETTE.stagione[stagione]}
+                      attiva={stagione === capo.stagione}
+                      onPress={() => {
+                        void correggi(capo.id, 'stagione', stagione)
+                        setAttributoInModifica(null)
+                      }}
+                    />
+                  ))}
+                </View>
+              ) : attributoInModifica === 'colore' ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                  {PALETTE_COLORI.map((voce) => (
+                    <Toccabile
+                      key={voce.nome}
+                      onPress={() => {
+                        void correggi(capo.id, 'colore', voce)
+                        setAttributoInModifica(null)
+                      }}
+                      scala={0.94}
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: raggi.pillola,
+                        backgroundColor: voce.hex,
+                        borderWidth: voce.hex === capo.colore.hex ? 3 : 1,
+                        borderColor: voce.hex === capo.colore.hex ? colori.ambra : linee.chiara,
+                      }}
+                    >
+                      <View />
+                    </Toccabile>
+                  ))}
+                </View>
+              ) : (
+                <View style={{ flexDirection: 'row', gap: spazi.s }}>
+                  <Campo
+                    value={testoModifica}
+                    onChangeText={setTestoModifica}
+                    autoFocus
+                    style={{ flex: 1 }}
                   />
-                ))}
-              </View>
-            ) : null}
-
-            <View style={{ flexDirection: 'row', gap: spazi.s }}>
-              <Campo
-                value={nuovaEtichetta}
-                onChangeText={setNuovaEtichetta}
-                placeholder="es. da lavoro, da viaggio…"
-                onSubmitEditing={() => {
-                  const pulita = nuovaEtichetta.trim()
-                  setNuovaEtichetta('')
-                  if (!pulita || (capo.etichette ?? []).includes(pulita)) return
-                  void aggiornaEtichette(capo.id, [...(capo.etichette ?? []), pulita])
-                }}
-                style={{ flex: 1 }}
-              />
+                  <BottoneSecondario
+                    testo="Salva"
+                    sfondo={colori.inchiostro}
+                    colore={colori.crema}
+                    onPress={() => {
+                      const attributo = attributoInModifica
+                      void correggi(capo.id, attributo, testoModifica.trim())
+                      setAttributoInModifica(null)
+                    }}
+                  />
+                </View>
+              )}
             </View>
-
-            <Corpo taglia={11.5} tono="tenue">
-              Appunti
-            </Corpo>
-            <Campo
-              defaultValue={capo.appunti ?? ''}
-              onEndEditing={(evento) => void aggiornaAppunti(capo.id, evento.nativeEvent.text)}
-              placeholder="una nota libera su questo capo…"
-              multiline
-              style={{ minHeight: 60, textAlignVertical: 'top' }}
-            />
-          </Scheda>
-
-          {ciStaBene.length > 0 ? (
-            <>
-              <Titolo taglia={19}>Ci sta bene con</Titolo>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-                {ciStaBene.map((altro) => (
-                  <Miniatura
-                    key={altro.id}
-                    capo={altro}
-                    larghezza={100}
-                    altezza={124}
-                    onPress={() => router.push(`/capo/${altro.id}`)}
-                  />
-                ))}
-              </ScrollView>
-            </>
           ) : null}
-        </View>
-      </ScrollView>
-    </View>
+        </Scheda>
+
+        <Scheda imbottitura={16} style={{ gap: spazi.m }}>
+          <Titolo taglia={16}>Etichette</Titolo>
+          <Corpo taglia={11.5} tono="debole">
+            Solo tue: il modello non le legge dalla foto, ma lo stilista sì.
+          </Corpo>
+
+          {(capo.etichette ?? []).length > 0 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
+              {(capo.etichette ?? []).map((etichetta) => (
+                <Pillola
+                  key={etichetta}
+                  testo={`${etichetta} ×`}
+                  attiva
+                  onPress={() =>
+                    void aggiornaEtichette(
+                      capo.id,
+                      (capo.etichette ?? []).filter((voce) => voce !== etichetta),
+                    )
+                  }
+                />
+              ))}
+            </View>
+          ) : null}
+
+          <View style={{ flexDirection: 'row', gap: spazi.s }}>
+            <Campo
+              value={nuovaEtichetta}
+              onChangeText={setNuovaEtichetta}
+              placeholder="es. da lavoro, da viaggio…"
+              onSubmitEditing={() => {
+                const pulita = nuovaEtichetta.trim()
+                setNuovaEtichetta('')
+                if (!pulita || (capo.etichette ?? []).includes(pulita)) return
+                void aggiornaEtichette(capo.id, [...(capo.etichette ?? []), pulita])
+              }}
+              style={{ flex: 1 }}
+            />
+          </View>
+
+          <Corpo taglia={11.5} tono="tenue">
+            Appunti
+          </Corpo>
+          <Campo
+            defaultValue={capo.appunti ?? ''}
+            onEndEditing={(evento) => void aggiornaAppunti(capo.id, evento.nativeEvent.text)}
+            placeholder="una nota libera su questo capo…"
+            multiline
+            style={{ minHeight: 60, textAlignVertical: 'top' }}
+          />
+        </Scheda>
+
+        {ciStaBene.length > 0 ? (
+          <>
+            <Titolo taglia={19}>Ci sta bene con</Titolo>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+              {ciStaBene.map((altro) => (
+                <Miniatura
+                  key={altro.id}
+                  capo={altro}
+                  larghezza={100}
+                  altezza={124}
+                  onPress={() => router.push(`/capo/${altro.id}`)}
+                />
+              ))}
+            </ScrollView>
+          </>
+        ) : null}
+      </View>
+    </Schermata>
   )
 }
