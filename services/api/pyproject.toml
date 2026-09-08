@@ -1,6 +1,6 @@
 [project]
 name = "wardrobe-api"
-version = "0.2.0"
+version = "0.3.0"
 description = "API di Wardrobe: handlers sottili sopra un domain puro"
 requires-python = ">=3.12"
 dependencies = [
