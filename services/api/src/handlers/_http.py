@@ -17,8 +17,15 @@ from pydantic import BaseModel, ValidationError
 
 from domain.errors import ErroreDominio, NonAutenticato, RichiestaNonValida
 
+_LIVELLO = os.environ.get("LOG_LEVEL", "INFO")
+# Senza un handler, un record sotto WARNING non arriva da nessuna parte:
+# Python usa `logging.lastResort` come rete di sicurezza, e quella ha un
+# livello fisso a WARNING. `logger.setLevel` da solo (con `basicConfig` mai
+# chiamato) faceva sembrare configurato un logger che in realtà scartava ogni
+# `.debug()`/`.info()` in silenzio, in sviluppo come in produzione.
+logging.basicConfig(level=_LIVELLO)
 logger = logging.getLogger("wardrobe")
-logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
+logger.setLevel(_LIVELLO)
 
 Evento = dict[str, Any]
 Risposta = dict[str, Any]
@@ -96,6 +103,14 @@ def endpoint(funzione: Callable[[Evento], Risposta]) -> Callable[[Evento, Any], 
             return funzione(evento)
         except ErroreDominio as exc:
             logger.warning("errore di dominio: %s (%s)", exc, exc.codice)
+            # `LetturaNonValida` e `SuggerimentoNonValido` portano con sé la
+            # risposta grezza del modello (`domain/errors.py`): senza questo
+            # log restava catturata e mai letta da nessuno, e un fallimento
+            # del modello era impossibile da diagnosticare in produzione.
+            # Troncata: è per i log, non un dump illimitato.
+            grezzo = getattr(exc, "grezzo", None)
+            if grezzo:
+                logger.warning("risposta grezza del modello: %s", grezzo[:2000])
             return ok({"errore": exc.codice, "messaggio": str(exc)}, exc.stato_http)
         except Exception:
             # Niente dettagli al client, tutto nei log: un 500 non è un canale

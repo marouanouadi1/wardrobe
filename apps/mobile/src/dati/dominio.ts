@@ -80,6 +80,13 @@ export function daLavare(capi: Iterable<Capo>): number {
   return n
 }
 
+/** Solo il pulito: lo stesso filtro di `capi_disponibili`
+ * (`services/api/src/domain/wardrobe.py`), che decide cosa lo stilista può usare.
+ * Serve anche qui per non chiedere una proposta che il backend non può produrre. */
+export function capiDisponibili(capi: Iterable<Capo>): Capo[] {
+  return Array.from(capi).filter((capo) => capo.stato === 'pulito')
+}
+
 /** Il nome di battesimo dal profilo — «Buongiorno, Marta» invece di «Buongiorno, Marta Rossi». */
 export function nomeDiBattesimo(profilo: Profilo | null | undefined): string | undefined {
   return profilo?.nome?.split(' ')[0]

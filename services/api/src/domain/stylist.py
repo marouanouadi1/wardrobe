@@ -63,6 +63,38 @@ Regole:
 PROMPT_SUGGERIMENTO = "Ecco il contesto di oggi in JSON. Proponi {numero} outfit.\n\n{contesto}"
 
 
+def schema_proposte() -> dict[str, object]:
+    """JSON Schema per gli structured output di `/suggerimenti`.
+
+    Stessa scelta di `schema_lettura` in `vision.py`: la forma qui, la
+    validazione stretta a valle in `interpreta_suggerimenti`, dove sappiamo
+    spiegare l'errore invece di farci rifiutare la richiesta con un 400.
+
+    Deliberatamente niente minimo sulla lunghezza di "proposte": con l'armadio
+    senza capi disponibili la lista vuota è la risposta corretta, non
+    un'anomalia da vietare — vietarla costringerebbe il modello a inventare un
+    capo pur di riempirla, ed è esattamente l'errore che il docstring in cima
+    a questo modulo chiama un bug.
+    """
+    proposta = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["titolo", "match", "capi", "perche"],
+        "properties": {
+            "titolo": {"type": "string"},
+            "match": {"type": "integer"},
+            "capi": {"type": "array", "items": {"type": "string"}},
+            "perche": {"type": "array", "items": {"type": "string"}},
+        },
+    }
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["proposte"],
+        "properties": {"proposte": {"type": "array", "items": proposta}},
+    }
+
+
 def costruisci_contesto(
     capi: list[Capo],
     *,
@@ -124,6 +156,7 @@ def richiesta_suggerimento(
         temperatura=temperatura,
         max_token=max_token,
         forza_json=True,
+        schema_atteso=schema_proposte(),
     )
 
 
@@ -179,6 +212,14 @@ def interpreta_suggerimenti(testo: str, capi: list[Capo]) -> list[Suggerimento]:
     dati = estrai_json(testo)
     grezze = dati.get("proposte")
     if not isinstance(grezze, list) or not grezze:
+        if not capi_disponibili(capi):
+            # Non è un formato sbagliato: senza capi puliti il modello non può
+            # proporre nulla senza inventarne uno, e «nessuna proposta» è
+            # l'unica risposta corretta (vedi il system prompt, righe 35-37).
+            # Il chiamante che arriva fin qui senza filtrare prima è un uso
+            # diretto dell'API — l'app vera (`app/(tabs)/oggi.tsx`) non chiama
+            # più con un armadio senza capi disponibili.
+            raise SuggerimentoNonValido("nessun capo disponibile da proporre", testo)
         raise SuggerimentoNonValido("nessuna proposta nella risposta", testo)
 
     indice = per_id(capi)

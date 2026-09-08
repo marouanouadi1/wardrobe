@@ -52,6 +52,7 @@ interface Stato {
 }
 
 type Azione =
+  | { tipo: 'inCaricamento' }
   | { tipo: 'caricato'; capi: Capo[]; outfit: Outfit[]; profilo: Profilo | null }
   | { tipo: 'capoAggiornato'; capo: Capo }
   | { tipo: 'capoCreato'; capo: Capo }
@@ -74,6 +75,8 @@ const INIZIALE: Stato = {
 
 function riduci(stato: Stato, azione: Azione): Stato {
   switch (azione.tipo) {
+    case 'inCaricamento':
+      return { ...stato, pronto: false }
     case 'caricato':
       return { ...stato, pronto: true, capi: azione.capi, outfit: azione.outfit, profilo: azione.profilo }
     case 'capoAggiornato':
@@ -155,6 +158,13 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       invia({ tipo: 'caricato', capi: [], outfit: [], profilo: null })
       return
     }
+    // `pronto` torna a `false` finché questo giro di rete non finisce: senza,
+    // al login `pronto` restava `true` dal giro precedente (senza token,
+    // partito subito con `capi: []`) e uno schermo con l'armadio pieno
+    // mostrava per un attimo lo stato «armadio vuoto» — vedi la guardia in
+    // `app/(tabs)/oggi.tsx`, che legge `pronto` per distinguere «vuoto per
+    // davvero» da «ancora in caricamento».
+    invia({ tipo: 'inCaricamento' })
     try {
       const [elenco, outfit, profilo] = await Promise.all([
         api.elencaCapi(),
@@ -383,11 +393,11 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       })
       invia({ tipo: 'suggerimenti', suggerimenti: risposta.suggerimenti })
       return risposta.suggerimenti
-    } catch (errore) {
-      invia({
-        tipo: 'avviso',
-        testo: errore instanceof Error ? errore.message : 'Nessun suggerimento disponibile',
-      })
+    } catch {
+      // Non il testo tecnico dell'eccezione (`suggerimento_non_valido` e simili
+      // sono un dettaglio di dominio, non un contenuto per l'utente — stessa
+      // regola di `src/ui/stati.tsx`): una frase fissa, sempre.
+      invia({ tipo: 'avviso', testo: 'Non riesco a proporti nulla adesso. Riprova tra poco.' })
       return []
     }
   }, [])

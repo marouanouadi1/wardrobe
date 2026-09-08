@@ -9,31 +9,41 @@
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ScrollView, View } from 'react-native'
-import { capiDiVestizione, daLavare, nomeDiBattesimo } from '../../src/dati/dominio'
+import { capiDiVestizione, capiDisponibili, daLavare, nomeDiBattesimo } from '../../src/dati/dominio'
 import { useArmadio, useVestiEVai } from '../../src/dati/archivio'
 import { parola } from '../../src/dati/formato'
 import { colori, linee, ombre, raggi, spazi, velo } from '../../src/tema/tokens'
-import { BadgeIa, BarraChiedi, Bolla, BottoneSecondario, BottoneTondo, Scheda, Toccabile } from '../../src/ui/base'
+import { BadgeIa, BarraChiedi, Bolla, BottonePrimario, BottoneSecondario, BottoneTondo, Scheda, Toccabile } from '../../src/ui/base'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Schermata } from '../../src/ui/guscio'
+import { Vuoto } from '../../src/ui/stati'
 
 const SCORCIATOIE = ['Ho una cena', 'Fa freddo', 'Solo capi puliti', 'Sorprendimi']
 
 export default function Oggi() {
-  const { suggerimenti, indice, profilo, chiediSuggerimenti } = useArmadio()
+  const { suggerimenti, indice, profilo, capi, pronto, chiediSuggerimenti } = useArmadio()
   const vestiEVai = useVestiEVai()
   const [domanda, setDomanda] = useState('')
   const [scartati, setScartati] = useState<string[]>([])
 
-  // Al primo avvio la proposta non c'è ancora: nessuno l'ha mai chiesta.
-  // Senza questo effetto la schermata che risponde alla domanda per cui
-  // esiste l'app si apre muta, con solo la barra «chiedi tu» in cima.
+  const disponibili = useMemo(() => capiDisponibili(capi), [capi])
+
+  // Al primo avvio la proposta non c'è ancora: nessuno l'ha mai chiesta. Parte
+  // solo a caricamento finito (`pronto`) e solo se c'è almeno un capo pulito:
+  // chiederla a un armadio vuoto è una chiamata al modello che non può che
+  // fallire — vedi `handlers/suggerimenti.py`, che la rifiuta comunque.
+  // `suggerimenti.length` nelle dep fa rientrare l'effetto a chiamata riuscita
+  // (ed esce subito); a chiamata fallita `suggerimenti` resta vuoto e nessuna
+  // dep cambia, quindi non riparte da solo. Aggiungere il primo capo pulito fa
+  // scattare la proposta subito, senza uscire e rientrare dalla tab.
   useEffect(() => {
-    if (suggerimenti.length === 0) void chiediSuggerimenti()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (!pronto) return
+    if (disponibili.length === 0) return
+    if (suggerimenti.length > 0) return
+    void chiediSuggerimenti()
+  }, [pronto, disponibili.length, suggerimenti.length, chiediSuggerimenti])
 
   const vivi = suggerimenti.filter((s) => !scartati.includes(s.titolo))
   const principale = vivi[0] ?? suggerimenti[0]
@@ -45,6 +55,7 @@ export default function Oggi() {
   const copertina = principale ? capiDiVestizione(principale.vestizione, indice)[0] : undefined
   const inLavatrice = daLavare(indice.values())
   const nome = nomeDiBattesimo(profilo)
+  const armadioVuoto = pronto && capi.length === 0
 
   function chiedi(testo: string) {
     router.push({ pathname: '/suggeritore', params: { chiedi: testo } })
@@ -57,16 +68,38 @@ export default function Oggi() {
       fotoProfilo={profilo?.foto_url}
       tab
     >
-      {/* Chiedi tu: l'ingresso libero, in cima, perché la proposta automatica
-          non può indovinare una cena a cui non è invitata. */}
-      <BarraChiedi
-        valore={domanda}
-        onCambia={setDomanda}
-        onInvia={() => chiedi(domanda)}
-        placeholder="Dimmi tu: «cena fuori, ho freddo»"
-      />
+      {armadioVuoto ? (
+        // Niente da proporre e niente da chiedere: la barra e le scorciatoie
+        // presuppongono un armadio, e chiedere «cosa metto» senza capi non
+        // porta da nessuna parte.
+        <>
+          <Vuoto
+            titolo="Il tuo armadio è vuoto"
+            spiegazione="Aggiungi il primo capo e ti dico cosa metterti."
+          />
+          <BottonePrimario testo="Carica il primo capo" onPress={() => router.push('/(tabs)/carica')} />
+        </>
+      ) : (
+        <>
+          {/* Chiedi tu: l'ingresso libero, in cima, perché la proposta automatica
+              non può indovinare una cena a cui non è invitata. */}
+          <BarraChiedi
+            valore={domanda}
+            onCambia={setDomanda}
+            onInvia={() => chiedi(domanda)}
+            placeholder="Dimmi tu: «cena fuori, ho freddo»"
+          />
 
-      <ScorrimentoScorciatoie onScegli={chiedi} />
+          <ScorrimentoScorciatoie onScegli={chiedi} />
+
+          {pronto && disponibili.length === 0 ? (
+            <Vuoto
+              titolo="Niente di pulito da proporre"
+              spiegazione="Tutti i tuoi capi sono in lavatrice: appena tornano puliti chiedo di nuovo."
+            />
+          ) : null}
+        </>
+      )}
 
       {principale ? (
         <View

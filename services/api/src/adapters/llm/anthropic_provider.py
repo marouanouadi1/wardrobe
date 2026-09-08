@@ -144,6 +144,13 @@ class ProviderAnthropic:
         if messaggio.stop_reason == "refusal":
             raise ErroreProvider(f"{NOME} ha rifiutato la richiesta")
 
+        # Con lo schema attivo il JSON troncato non è più «il modello ha
+        # sbagliato formato»: è `max_tokens` esaurito a metà oggetto. Dirlo qui
+        # evita che arrivi a valle come un generico «JSON non valido», che
+        # nasconde la causa vera (alzare `max_token`, non riparare il prompt).
+        if messaggio.stop_reason == "max_tokens":
+            raise ErroreProvider(f"{NOME} ha troncato la risposta: max_tokens esaurito")
+
         # La risposta è una lista di blocchi di tipi diversi (testo, pensiero,
         # uso di strumenti): prendiamo solo il testo, restringendo per tipo e
         # non per attributo — così se l'SDK aggiunge un blocco nuovo, il

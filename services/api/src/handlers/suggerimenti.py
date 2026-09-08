@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import logging
 import os
 
 from domain.models import RichiestaSuggerimenti, RispostaSuggerimenti
-from domain.stylist import costruisci_contesto, interpreta_suggerimenti, richiesta_suggerimento
+from domain.stylist import (
+    costruisci_contesto,
+    interpreta_suggerimenti,
+    payload_contesto,
+    richiesta_suggerimento,
+)
 from handlers._container import orologio, repository
 from handlers._http import Evento, Risposta, corpo, endpoint, ok, utente_id
+
+logger = logging.getLogger("wardrobe")
 
 PROVIDER_DEFAULT = os.environ.get("PROVIDER_STILISTA", "anthropic")
 MODELLO_DEFAULT = os.environ.get("MODELLO_STILISTA", "")
@@ -32,6 +40,9 @@ def proponi(evento: Evento) -> Risposta:
         richiesta_utente=richiesta.richiesta_utente,
         numero_proposte=richiesta.numero_proposte,
     )
+    # Il primo posto da guardare se un suggerimento esce strano (vedi il
+    # docstring di `payload_contesto`): non era mai stato loggato.
+    logger.debug("contesto suggerimenti: %s", payload_contesto(contesto))
 
     provider = provider_per_nome(richiesta.provider or PROVIDER_DEFAULT)
     modello = richiesta.modello or MODELLO_DEFAULT or provider.modelli()[0].id

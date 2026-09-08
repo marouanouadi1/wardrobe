@@ -8,12 +8,13 @@ import pytest
 
 from conftest import OGGI, costruisci_capo
 from domain.errors import SuggerimentoNonValido
-from domain.models import Capo, Meteo, TipoCapo
+from domain.models import Capo, Meteo, StatoCapo, TipoCapo
 from domain.stylist import (
     costruisci_contesto,
     interpreta_suggerimenti,
     payload_contesto,
     richiesta_suggerimento,
+    schema_proposte,
 )
 
 
@@ -62,6 +63,12 @@ class TestCostruisciContesto:
         assert "Milano" in payload
         assert "null" not in payload
         assert json.loads(payload)["meteo"]["temp_c"] == 12
+
+    def test_un_armadio_vuoto_non_esplode(self):
+        # È lo stesso caso di un account appena registrato: il contesto deve
+        # restare costruibile, con la lista disponibili semplicemente vuota.
+        contesto = costruisci_contesto([], oggi=OGGI)
+        assert contesto.capi_disponibili == []
 
 
 class TestInterpretaSuggerimenti:
@@ -113,6 +120,20 @@ class TestInterpretaSuggerimenti:
         with pytest.raises(SuggerimentoNonValido, match="senza capi"):
             interpreta_suggerimenti('{"proposte": [{"titolo": "x", "capi": []}]}', armadio)
 
+    def test_con_armadio_vuoto_il_motivo_e_larmadio_non_la_risposta(self):
+        # Stesso JSON di `test_rifiuta_una_risposta_senza_proposte`, ma qui il
+        # modello ha ragione a non proporre nulla: il messaggio non deve
+        # incolpare il formato della risposta.
+        with pytest.raises(SuggerimentoNonValido, match="capo disponibile"):
+            interpreta_suggerimenti('{"proposte": []}', [])
+
+    def test_con_armadio_tutto_sporco_il_motivo_e_larmadio(self):
+        # Nessun capo pulito è la stessa condizione di un armadio vuoto agli
+        # occhi del modello: `capi_disponibili` è comunque `[]`.
+        sporco = [costruisci_capo("t1", TipoCapo.TOP, stato=StatoCapo.DA_LAVARE)]
+        with pytest.raises(SuggerimentoNonValido, match="capo disponibile"):
+            interpreta_suggerimenti('{"proposte": []}', sporco)
+
 
 class TestRichiestaSuggerimento:
     def test_inietta_il_contesto_nel_prompt(self, armadio: list[Capo]):
@@ -130,3 +151,34 @@ class TestRichiestaSuggerimento:
         # il costo senza migliorare la proposta.
         richiesta = richiesta_suggerimento(costruisci_contesto(armadio, oggi=OGGI), "finto-1")
         assert richiesta.immagini == []
+
+    def test_forza_gli_structured_output(self, armadio: list[Capo]):
+        # `forza_json=True` da solo non basta: `adapters/llm/anthropic_provider`
+        # attiva `output_config` solo se anche `schema_atteso` è valorizzato.
+        # Senza questa asserzione era passato inosservato (vedi `test_vision.py`,
+        # che la fa già per l'analisi foto).
+        richiesta = richiesta_suggerimento(costruisci_contesto(armadio, oggi=OGGI), "finto-1")
+        assert richiesta.forza_json is True
+        assert richiesta.schema_atteso is not None
+
+
+class TestSchemaProposte:
+    def test_non_impone_un_minimo_di_proposte(self):
+        # Vietare la lista vuota costringerebbe il modello a inventare un capo
+        # pur di riempirla, con un armadio senza capi disponibili.
+        schema = schema_proposte()
+        assert "minItems" not in schema["properties"]["proposte"]
+
+    def test_ogni_proposta_ha_i_quattro_campi_richiesti(self):
+        schema = schema_proposte()
+        proposta = schema["properties"]["proposte"]["items"]
+        assert set(proposta["required"]) == {"titolo", "match", "capi", "perche"}
+        assert proposta["additionalProperties"] is False
+
+    def test_non_porta_vincoli_che_i_provider_rifiutano(self):
+        # Stessa cautela di `test_vision.py`: niente vincoli di Pydantic
+        # (`ge`/`le` su match, lunghezze su titolo/perche) negli structured
+        # output, la validazione stretta resta a `_valida_proposta`.
+        serializzato = json.dumps(schema_proposte())
+        for vietato in ("pattern", "minimum", "maximum", "minLength", "maxLength", "minItems"):
+            assert vietato not in serializzato
