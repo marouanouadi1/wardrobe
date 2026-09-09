@@ -12,7 +12,7 @@ import { useMemo, useState } from 'react'
 import { ScrollView, View } from 'react-native'
 import { useArmadio } from '../../src/dati/archivio'
 import { conta } from '../../src/dati/formato'
-import { ETICHETTE, spazi } from '../../src/tema/tokens'
+import { ETICHETTE, griglie, spazi } from '../../src/tema/tokens'
 import { BarraChiedi, Pillola } from '../../src/ui/base'
 import { CapoInGriglia } from '../../src/ui/capi'
 import { Vuoto } from '../../src/ui/stati'
@@ -94,9 +94,9 @@ export default function Armadio() {
           spiegazione="Prova a togliere la ricerca, oppure aggiungi un capo con il «+» in basso."
         />
       ) : (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spazi.m }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: griglie.armadio.distanza }}>
           {mostrati.map((capo) => (
-            <View key={capo.id} style={{ width: '47.5%' }}>
+            <View key={capo.id} style={{ width: griglie.armadio.colonna }}>
               <CapoInGriglia capo={capo} onPress={() => router.push(`/capo/${capo.id}`)} />
             </View>
           ))}

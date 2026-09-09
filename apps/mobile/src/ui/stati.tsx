@@ -9,8 +9,8 @@
 
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Animated, Easing, View } from 'react-native'
-import { colori, linee, raggi, spazi } from '../tema/tokens'
+import { ActivityIndicator, Animated, View } from 'react-native'
+import { colori, curve, durate, linee, raggi, spazi } from '../tema/tokens'
 import { Scheda } from './base'
 import { Corpo, Forte } from './testo'
 
@@ -53,14 +53,14 @@ export function AttesaLunga({
       Animated.sequence([
         Animated.timing(scorrimento, {
           toValue: corsa,
-          duration: 900,
-          easing: Easing.inOut(Easing.ease),
+          duration: durate.corsa,
+          easing: curve.respiro,
           useNativeDriver: true,
         }),
         Animated.timing(scorrimento, {
           toValue: 0,
-          duration: 900,
-          easing: Easing.inOut(Easing.ease),
+          duration: durate.corsa,
+          easing: curve.respiro,
           useNativeDriver: true,
         }),
       ]),
@@ -153,9 +153,10 @@ export function StatoRisorsa({
   vuoto,
   titoloVuoto,
   spiegazioneVuoto,
-  titoloErrore = 'Non riesco a leggerli',
+  titoloErrore = 'Non riesco a leggere',
   spiegazioneErrore = 'Controlla che il backend sia raggiungibile e riprova.',
   su,
+  scheletro,
   children,
 }: {
   caricamento: boolean
@@ -166,9 +167,17 @@ export function StatoRisorsa({
   titoloErrore?: string
   spiegazioneErrore?: string
   su?: 'chiaro' | 'scuro'
+  /**
+   * La forma da mostrare al posto dello spinner — `<ScheletroGrigliaCapi />` e
+   * compagnia (`ui/scheletri.tsx`). Assente, resta lo spinner: va bene dove
+   * non c'è una forma da promettere (un salvataggio, una lista di due righe),
+   * e uno scheletro che indovina una forma sbagliata è peggio di uno spinner
+   * onesto.
+   */
+  scheletro?: ReactNode
   children: ReactNode
 }) {
-  if (caricamento) return <Caricamento su={su} />
+  if (caricamento) return <>{scheletro ?? <Caricamento su={su} />}</>
   if (errore) return <Errore titolo={titoloErrore} spiegazione={spiegazioneErrore} su={su} />
   if (vuoto) return <Vuoto titolo={titoloVuoto} spiegazione={spiegazioneVuoto} su={su} />
   return <>{children}</>

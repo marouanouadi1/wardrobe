@@ -18,7 +18,6 @@ import { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   Animated,
-  Easing,
   Platform,
   Pressable,
   type PressableProps,
@@ -29,7 +28,7 @@ import {
   type ViewStyle,
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
-import { colori, linee, ombre, raggi, spazi, superfici } from '../tema/tokens'
+import { colori, curve, durate, linee, ombre, raggi, spazi, superfici } from '../tema/tokens'
 import { Etichetta, Forte } from './testo'
 
 // ─────────────────────────────────────────────────────────────
@@ -525,20 +524,20 @@ export function PuntiniAttesa() {
     const animazioni = valori.map((valore, indice) =>
       Animated.loop(
         Animated.sequence([
-          Animated.delay(indice * 160),
+          Animated.delay(indice * durate.scaglione),
           Animated.timing(valore, {
             toValue: 1,
-            duration: 380,
-            easing: Easing.inOut(Easing.ease),
+            duration: durate.pulsazione,
+            easing: curve.respiro,
             useNativeDriver: true,
           }),
           Animated.timing(valore, {
             toValue: 0.3,
-            duration: 380,
-            easing: Easing.inOut(Easing.ease),
+            duration: durate.pulsazione,
+            easing: curve.respiro,
             useNativeDriver: true,
           }),
-          Animated.delay((valori.length - 1 - indice) * 160),
+          Animated.delay((valori.length - 1 - indice) * durate.scaglione),
         ]),
       ),
     )
@@ -715,5 +714,82 @@ export function BottoneIndietro({ onPress, su }: { onPress?: () => void; su?: 'c
     >
       <Icona nome="indietro" misura={17} colore={scura ? colori.crema : colori.inchiostro} spessore={2.2} />
     </Toccabile>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// Movimento
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Fa entrare un contenuto al montaggio: una dissolvenza e una risalita di
+ * pochi pixel. `ritardo` scaglia una lista — `indice * durate.scaglione` —
+ * così le voci arrivano una dopo l'altra invece che tutte insieme, che è la
+ * differenza fra una schermata che si compone e una che sbatte.
+ *
+ * Solo opacità e `translateY`, perché sono le due proprietà che il driver
+ * nativo anima davvero: una `height` o un `marginTop` tornerebbero a passare
+ * dal thread JS a ogni frame, e su una lista scaglionata si vedrebbe.
+ *
+ * **Non ci si avvolge uno scheletro.** Uno scheletro deve esserci al primo
+ * frame: farlo comparire allunga di altri `durate.media` ms un'attesa che è
+ * già l'unica cosa che l'utente sta guardando. Si avvolge il contenuto vero,
+ * quello che allo scheletro prende il posto.
+ */
+export function Comparsa({
+  ritardo = 0,
+  salita = 10,
+  children,
+  style,
+}: {
+  /** In millisecondi. Per una lista: `indice * durate.scaglione`. */
+  ritardo?: number
+  /** Di quanti pixel risale entrando. `0` lascia la sola dissolvenza. */
+  salita?: number
+  children: ReactNode
+  style?: StyleProp<ViewStyle>
+}) {
+  // Il nodo interpolato nasce nell'inizializzatore di `useState`, insieme al
+  // valore che lo guida, e non in un `useMemo`: durante il render qui non si
+  // legge e non si chiama niente (`react-hooks/refs`), e l'istanza resta la
+  // stessa a ogni render senza mai passare da un setter. Il prezzo è che
+  // `salita` viene catturata al primo render — cambiarla dopo non ha effetto,
+  // accettabile per un valore di design, costante per definizione.
+  const [movimento] = useState(() => {
+    const avanzamento = new Animated.Value(0)
+    return {
+      avanzamento,
+      risalita: avanzamento.interpolate({ inputRange: [0, 1], outputRange: [salita, 0] }),
+    }
+  })
+
+  // Nessuna `setState` qui dentro: non c'è niente da mettere nello stato, il
+  // valore animato è già suo — il caso in cui `react-hooks/set-state-in-effect`
+  // non ha nulla da dire perché non c'è stato React da aggiornare.
+  useEffect(() => {
+    const animazione = Animated.timing(movimento.avanzamento, {
+      toValue: 1,
+      duration: durate.media,
+      delay: ritardo,
+      easing: curve.entrata,
+      useNativeDriver: true,
+    })
+    animazione.start()
+    return () => animazione.stop()
+  }, [movimento, ritardo])
+
+  // L'`Animated.View` monta subito e non aspetta nessuna misura: è la trappola
+  // descritta in `ui/stati.tsx` — un'animazione avviata col driver nativo su
+  // una vista non ancora montata non arriva mai allo schermo. Qui non c'è
+  // proprio un `onLayout` da attendere, ed è di proposito.
+  return (
+    <Animated.View
+      style={[
+        { opacity: movimento.avanzamento, transform: [{ translateY: movimento.risalita }] },
+        style,
+      ]}
+    >
+      {children}
+    </Animated.View>
   )
 }

@@ -15,7 +15,7 @@ import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { View } from 'react-native'
 import { fotoDaMostrare } from '../dati/dominio'
-import { ETICHETTE, colori, ombre, raggi } from '../tema/tokens'
+import { ETICHETTE, colori, durate, griglie, ombre, raggi } from '../tema/tokens'
 import { Badge, BottoneTondo, Toccabile } from './base'
 import { Corpo, Etichetta, Forte, Titolo } from './testo'
 
@@ -25,7 +25,7 @@ export function CapoInGriglia({ capo, onPress }: { capo: Capo; onPress: () => vo
       onPress={onPress}
       style={{
         flex: 1,
-        borderRadius: raggi.medio + 2,
+        borderRadius: griglie.armadio.raggio,
         overflow: 'hidden',
         backgroundColor: colori.fondoFoto,
         ...ombre.bassa,
@@ -33,9 +33,9 @@ export function CapoInGriglia({ capo, onPress }: { capo: Capo; onPress: () => vo
     >
       <Image
         source={{ uri: fotoDaMostrare(capo) }}
-        style={{ width: '100%', height: 182 }}
+        style={{ width: '100%', height: griglie.armadio.altezzaFoto }}
         contentFit="cover"
-        transition={200}
+        transition={durate.breve}
       />
       <LinearGradient
         colors={['rgba(21,21,26,0)', 'rgba(21,21,26,0.82)']}
@@ -84,7 +84,7 @@ export function Miniatura({
           borderColor: colori.inchiostro,
         }}
         contentFit="cover"
-        transition={200}
+        transition={durate.breve}
       />
       <Forte taglia={11.5} style={{ marginTop: 7 }} numberOfLines={2}>
         {capo.nome}
