@@ -10,7 +10,6 @@
 import type {
   AttributoCapo,
   Capo,
-  NuovoCapoManuale,
   OrigineOutfit,
   Outfit,
   Profilo,
@@ -109,8 +108,6 @@ function riduci(stato: Stato, azione: Azione): Stato {
 interface Archivio extends Stato {
   indice: Map<string, Capo>
   correggi: (capoId: string, attributo: AttributoCapo, valore: unknown) => Promise<void>
-  /** Un capo inserito a mano: nessuna analisi, entra subito in armadio. */
-  creaCapoManuale: (nuovo: NuovoCapoManuale) => Promise<void>
   /** Un capo già creato dal backend (es. da un'analisi completata): lo mette
    * subito in armadio, senza rifare la richiesta che l'ha prodotto. */
   registraCapo: (capo: Capo) => void
@@ -237,14 +234,6 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
     },
     [applica, indice],
   )
-
-  const creaCapoManuale = useCallback<Archivio['creaCapoManuale']>(async (nuovo) => {
-    // Nessun ottimismo qui: senza un id vero non c'è nulla da mostrare finché
-    // il backend non risponde, a differenza di una correzione su un capo che
-    // esiste già.
-    const capo = await api.creaCapo(nuovo)
-    invia({ tipo: 'capoCreato', capo })
-  }, [])
 
   const registraCapo = useCallback<Archivio['registraCapo']>((capo) => {
     invia({ tipo: 'capoCreato', capo })
@@ -409,7 +398,6 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       ...stato,
       indice,
       correggi,
-      creaCapoManuale,
       registraCapo,
       aggiornaEtichette,
       aggiornaAppunti,
@@ -430,7 +418,6 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       stato,
       indice,
       correggi,
-      creaCapoManuale,
       registraCapo,
       aggiornaEtichette,
       aggiornaAppunti,

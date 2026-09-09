@@ -10,8 +10,6 @@ from domain.models import (
     Capo,
     Colore,
     FiltroArmadio,
-    NuovoCapoManuale,
-    SlotAvatar,
     StatoCapo,
     TipoCapo,
     Vestizione,
@@ -20,7 +18,6 @@ from domain.wardrobe import (
     attributi_incerti,
     colori_vestizione,
     correggi_attributo,
-    crea_capo_manuale,
     dormienti,
     filtra,
     mesi_fa,
@@ -187,47 +184,6 @@ class TestSegnaIndossato:
         assert usato.ultimo_uso == OGGI
         assert usato.volte_indossato == capo.volte_indossato + 1
         assert usato.stato is StatoCapo.DA_LAVARE
-
-
-class TestCreaCapoManuale:
-    def test_costruisce_un_capo_senza_analisi(self):
-        nuovo = NuovoCapoManuale(
-            nome="Camicia in lino",
-            tipo=TipoCapo.TOP,
-            colore=Colore(nome="Panna", hex="#E7DFD2"),
-            chiave_foto="capi/demo/manuale.jpg",
-        )
-        capo = crea_capo_manuale(nuovo, capo_id="c1", adesso=ADESSO)
-        assert capo.nome == "Camicia in lino"
-        assert capo.slot is SlotAvatar.TOP
-        assert capo.foto.chiave == "capi/demo/manuale.jpg"
-        # Un capo inserito a mano non è mai passato da un modello: niente
-        # confidenze da mostrare, e niente attributi incerti da correggere.
-        assert capo.analisi is None
-        assert attributi_incerti(capo) == []
-
-    def test_lo_slot_segue_il_tipo_anche_a_mano(self):
-        nuovo = NuovoCapoManuale(
-            nome="Giacca",
-            tipo=TipoCapo.CAPOSPALLA,
-            colore=Colore(nome="Blu", hex="#112233"),
-            chiave_foto="capi/demo/giacca.jpg",
-        )
-        capo = crea_capo_manuale(nuovo, capo_id="c2", adesso=ADESSO)
-        assert capo.slot is slot_da_tipo(TipoCapo.CAPOSPALLA)
-
-    def test_porta_etichette_e_appunti(self):
-        nuovo = NuovoCapoManuale(
-            nome="Felpa",
-            tipo=TipoCapo.TOP,
-            colore=Colore(nome="Grigio", hex="#AABBCC"),
-            chiave_foto="capi/demo/felpa.jpg",
-            etichette=["da lavoro", "comodo"],
-            appunti="regalo di compleanno",
-        )
-        capo = crea_capo_manuale(nuovo, capo_id="c3", adesso=ADESSO)
-        assert capo.etichette == ["da lavoro", "comodo"]
-        assert capo.appunti == "regalo di compleanno"
 
 
 class TestSintetizza:

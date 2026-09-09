@@ -53,7 +53,6 @@ ROTTE: list[tuple[str, re.Pattern[str], Handler]] = [
     ("POST", re.compile(r"^/auth/registrati$"), auth.registra),
     ("POST", re.compile(r"^/foto/upload$"), foto.upload),
     ("GET", re.compile(r"^/capi$"), capi.elenca),
-    ("POST", re.compile(r"^/capi$"), capi.crea),
     ("GET", re.compile(r"^/capi/(?P<capoId>[^/]+)$"), capi.leggi),
     ("PATCH", re.compile(r"^/capi/(?P<capoId>[^/]+)$"), capi.aggiorna),
     ("POST", re.compile(r"^/capi/(?P<capoId>[^/]+)/indossato$"), capi.indossa),

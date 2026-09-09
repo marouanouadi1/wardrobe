@@ -15,8 +15,6 @@ from domain.models import (
     Capo,
     CapoSintetico,
     FiltroArmadio,
-    FotoCapo,
-    NuovoCapoManuale,
     RiepilogoArmadio,
     SlotAvatar,
     StatoCapo,
@@ -191,34 +189,6 @@ def sintetizza(capo: Capo) -> CapoSintetico:
         # Gli appunti no: sono per l'utente, non aggiungono segnale per un
         # outfit e costerebbero token per ogni capo in armadio.
         etichette=capo.etichette,
-    )
-
-
-def crea_capo_manuale(nuovo: NuovoCapoManuale, *, capo_id: str, adesso: datetime) -> Capo:
-    """Un capo inserito a mano: stessa forma di `vision.crea_capo`, senza modello.
-
-    Nessuna `AnalisiVisione`: senza una lettura non ci sono confidenze da
-    mostrare, e l'app non deve dipingere corallo un capo che non è mai
-    passato da un modello.
-    """
-    return Capo(
-        id=capo_id,
-        nome=nuovo.nome,
-        tipo=nuovo.tipo,
-        slot=slot_da_tipo(nuovo.tipo),
-        colore=nuovo.colore,
-        foto=FotoCapo(chiave=nuovo.chiave_foto),
-        brand=nuovo.brand,
-        sottotipo=nuovo.sottotipo,
-        materiale=nuovo.materiale,
-        fantasia=nuovo.fantasia,
-        stagione=nuovo.stagione,
-        vestibilita=nuovo.vestibilita,
-        lavaggio=nuovo.lavaggio,
-        etichette=nuovo.etichette,
-        appunti=nuovo.appunti,
-        creato_il=adesso,
-        aggiornato_il=adesso,
     )
 
 

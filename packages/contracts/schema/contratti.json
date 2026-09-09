@@ -79,9 +79,6 @@
     "NuovaSegnalazione": {
       "$ref": "#/$defs/NuovaSegnalazione"
     },
-    "NuovoCapoManuale": {
-      "$ref": "#/$defs/NuovoCapoManuale"
-    },
     "NuovoOutfit": {
       "$ref": "#/$defs/NuovoOutfit"
     },
@@ -1256,118 +1253,6 @@
         "testo"
       ],
       "title": "NuovaSegnalazione",
-      "type": "object"
-    },
-    "NuovoCapoManuale": {
-      "additionalProperties": false,
-      "description": "Un capo inserito a mano, senza passare dal modello di visione.\n\nNessuna `AnalisiVisione`: un capo che non è mai stato letto da un modello\nnon ha confidenze da mostrare, e non deve fingere di averle. Tipo e\ncolore restano obbligatori — sono gli stessi due attributi che\n`ATTRIBUTI_INDISPENSABILI` chiede alla lettura automatica: senza tipo il\ncapo non ha uno slot per l'avatar, senza colore il manichino di oggi non\nha niente da tingere.",
-      "properties": {
-        "nome": {
-          "type": "string"
-        },
-        "tipo": {
-          "$ref": "#/$defs/TipoCapo"
-        },
-        "colore": {
-          "$ref": "#/$defs/Colore"
-        },
-        "chiave_foto": {
-          "type": "string"
-        },
-        "brand": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "sottotipo": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "materiale": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "fantasia": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "stagione": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Stagione"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "vestibilita": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "lavaggio": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "etichette": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "appunti": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "nome",
-        "tipo",
-        "colore",
-        "chiave_foto"
-      ],
-      "title": "NuovoCapoManuale",
       "type": "object"
     },
     "NuovoOutfit": {

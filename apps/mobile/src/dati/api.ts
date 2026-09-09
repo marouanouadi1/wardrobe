@@ -23,7 +23,6 @@ import type {
   ElencoSegnalazioni,
   EsitoAnalisi,
   NuovaSegnalazione,
-  NuovoCapoManuale,
   NuovoOutfit,
   Outfit,
   Profilo,
@@ -202,9 +201,6 @@ export const api = {
       conQuery('/capi', { tipo: filtro?.tipo, stato: filtro?.stato, testo: filtro?.testo, preferiti: filtro?.preferiti }),
     ),
   leggiCapo: (id: string) => chiama<Capo>(`/capi/${id}`),
-  /** Un capo inserito a mano: nessuna analisi, nessuna pipeline asincrona. */
-  creaCapo: (nuovo: NuovoCapoManuale) =>
-    chiama<Capo>('/capi', { metodo: 'POST', corpo: nuovo }),
   aggiornaCapo: (id: string, modifica: AggiornamentoCapo) =>
     chiama<Capo>(`/capi/${id}`, { metodo: 'PATCH', corpo: modifica }),
   segnaIndossato: (id: string) => chiama<Capo>(`/capi/${id}/indossato`, { metodo: 'POST' }),

@@ -452,32 +452,6 @@ class AggiornamentoCapo(ModelloWardrobe):
     appunti: str | None = None
 
 
-class NuovoCapoManuale(ModelloWardrobe):
-    """Un capo inserito a mano, senza passare dal modello di visione.
-
-    Nessuna `AnalisiVisione`: un capo che non è mai stato letto da un modello
-    non ha confidenze da mostrare, e non deve fingere di averle. Tipo e
-    colore restano obbligatori — sono gli stessi due attributi che
-    `ATTRIBUTI_INDISPENSABILI` chiede alla lettura automatica: senza tipo il
-    capo non ha uno slot per l'avatar, senza colore il manichino di oggi non
-    ha niente da tingere.
-    """
-
-    nome: str
-    tipo: TipoCapo
-    colore: Colore
-    chiave_foto: str
-    brand: str | None = None
-    sottotipo: str | None = None
-    materiale: str | None = None
-    fantasia: str | None = None
-    stagione: Stagione | None = None
-    vestibilita: str | None = None
-    lavaggio: str | None = None
-    etichette: list[str] = Field(default_factory=list)
-    appunti: str | None = None
-
-
 class RichiestaSuggerimenti(ModelloWardrobe):
     richiesta_utente: str | None = None
     meteo: Meteo | None = None

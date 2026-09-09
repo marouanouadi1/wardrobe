@@ -20,14 +20,12 @@ import { useState } from 'react'
 import { View } from 'react-native'
 import { api, messaggioDiErrore } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
-import { PALETTE_COLORI, TIPI_CAPO } from '../../src/dati/dominio'
 import { conta } from '../../src/dati/formato'
-import { ETICHETTE, colori, linee, ombre, raggi, spazi, velo } from '../../src/tema/tokens'
-import { BottonePrimario, BottoneSecondario, Campo, Icona, Pillola, Toccabile } from '../../src/ui/base'
+import { colori, linee, raggi, spazi, velo } from '../../src/tema/tokens'
+import { BottonePrimario, BottoneSecondario, Icona } from '../../src/ui/base'
 import { MiniaturaFoto } from '../../src/ui/capi'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Schermata } from '../../src/ui/guscio'
-import type { TipoCapo } from '@wardrobe/contracts'
 
 const PASSI = [
   { testo: 'Isolo il capo dallo sfondo' },
@@ -37,7 +35,7 @@ const PASSI = [
   { testo: 'Etichetta di lavaggio' },
 ]
 
-type Fase = 'scatta' | 'analisi' | 'manuale'
+type Fase = 'scatta' | 'analisi'
 
 /** Quante foto si possono scegliere in un colpo solo dalla galleria — il
  * limite di `selectionLimit`, non più scritto anche nell'etichetta di un
@@ -55,7 +53,7 @@ interface FotoInCoda {
 let contatoreFoto = 0
 
 export default function Carica() {
-  const { avvisa, creaCapoManuale, registraCapo } = useArmadio()
+  const { avvisa, registraCapo } = useArmadio()
   const [fase, setFase] = useState<Fase>('scatta')
   const [passo, setPasso] = useState(0)
   const [foto, setFoto] = useState<string | null>(null)
@@ -69,13 +67,6 @@ export default function Carica() {
     riuscite: number
     fallite: number
   } | null>(null)
-  // Il percorso «a mano»: prima di fidarsi del modello, o quando lo scontorno
-  // e la lettura automatica non bastano, l'utente compila lui i tre campi
-  // che servono perché il capo esista (nome, tipo, colore).
-  const [nomeManuale, setNomeManuale] = useState('')
-  const [tipoManuale, setTipoManuale] = useState<TipoCapo>('top')
-  const [coloreManuale, setColoreManuale] = useState(0)
-  const [salvandoManuale, setSalvandoManuale] = useState(false)
 
   async function scattaUnaFoto() {
     const permesso = await ImagePicker.requestCameraPermissionsAsync()
@@ -209,48 +200,6 @@ export default function Carica() {
     else void analizzaCoda(coda.map((f) => f.uri))
   }
 
-  /** Prima di fidarsi del modello: una foto sola, dritta al modulo a mano —
-   * non passa dalla coda, non ha senso metterla in fila con le altre. */
-  async function avviaManuale() {
-    const permesso = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (!permesso.granted) {
-      avvisa('Senza accesso alle foto non posso leggere il capo.')
-      return
-    }
-    const esito = await ImagePicker.launchImageLibraryAsync({ quality: 0.8, mediaTypes: ['images'] })
-    if (esito.canceled || !esito.assets[0]) return
-    avvisa(null)
-    setFoto(esito.assets[0].uri)
-    setFase('manuale')
-  }
-
-  /** Inserisce il capo a mano: nessuna pipeline, nessuna confidenza da correggere dopo. */
-  async function salvaManuale() {
-    if (!foto || salvandoManuale) return
-    setSalvandoManuale(true)
-    try {
-      const paletta = PALETTE_COLORI[coloreManuale]!
-      const firma = await api.firmaUpload('image/jpeg')
-      await api.caricaFoto(firma, foto)
-
-      await creaCapoManuale({
-        nome: nomeManuale.trim() || `${ETICHETTE.tipo[tipoManuale]} ${paletta.nome.toLowerCase()}`,
-        tipo: tipoManuale,
-        colore: { nome: paletta.nome, hex: paletta.hex },
-        chiave_foto: firma.chiave,
-      })
-      avvisa(null)
-      setFase('scatta')
-      setFoto(null)
-      setNomeManuale('')
-      router.push('/(tabs)/armadio')
-    } catch (errore) {
-      avvisa(messaggioDiErrore(errore, 'Capo non salvato'))
-    } finally {
-      setSalvandoManuale(false)
-    }
-  }
-
   return (
     <Schermata occhiello="Nuovo capo" titolo="Aggiungi" tab>
       {fase === 'scatta' ? (
@@ -328,14 +277,6 @@ export default function Carica() {
                 </Corpo>
               ) : null}
             </View>
-          ) : null}
-
-          {!analizzandoCoda ? (
-            <Toccabile onPress={() => void avviaManuale()} scala={0} style={{ alignItems: 'center' }}>
-              <Forte taglia={12.5} colore={colori.inchiostro} style={{ textDecorationLine: 'underline' }}>
-                Preferisco inserirlo a mano
-              </Forte>
-            </Toccabile>
           ) : null}
 
           <Corpo taglia={11} tono="debole" style={{ textAlign: 'center', paddingHorizontal: spazi.m }}>
@@ -425,95 +366,6 @@ export default function Carica() {
               )
             })}
           </View>
-        </>
-      ) : null}
-
-      {fase === 'manuale' ? (
-        <>
-          <View
-            style={{
-              height: 260,
-              borderRadius: raggi.grande,
-              overflow: 'hidden',
-              backgroundColor: colori.inchiostro,
-            }}
-          >
-            {foto ? (
-              <Image source={{ uri: foto }} style={{ flex: 1 }} contentFit="cover" />
-            ) : null}
-          </View>
-
-          <Titolo taglia={22}>Di cosa si tratta?</Titolo>
-          <Corpo taglia={12.5} tono="tenue">
-            Tre cose bastano per farlo esistere in armadio: le altre le aggiungi quando vuoi,
-            dal dettaglio del capo.
-          </Corpo>
-
-          <View style={{ gap: spazi.s }}>
-            <Etichetta taglia={11} tono="debole">
-              Categoria
-            </Etichetta>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
-              {TIPI_CAPO.map((tipo) => (
-                <Pillola
-                  key={tipo}
-                  testo={ETICHETTE.tipo[tipo]}
-                  attiva={tipo === tipoManuale}
-                  onPress={() => setTipoManuale(tipo)}
-                />
-              ))}
-            </View>
-          </View>
-
-          <View style={{ gap: spazi.s }}>
-            <Etichetta taglia={11} tono="debole">
-              Colore
-            </Etichetta>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              {PALETTE_COLORI.map((voce, indice) => (
-                <Toccabile
-                  key={voce.nome}
-                  onPress={() => setColoreManuale(indice)}
-                  scala={0.94}
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: raggi.pillola,
-                    backgroundColor: voce.hex,
-                    borderWidth: indice === coloreManuale ? 3 : 1,
-                    borderColor: indice === coloreManuale ? colori.ambra : linee.chiara,
-                  }}
-                >
-                  <View />
-                </Toccabile>
-              ))}
-            </View>
-            <Corpo taglia={12} tono="tenue">
-              {PALETTE_COLORI[coloreManuale]!.nome}
-            </Corpo>
-          </View>
-
-          <Campo
-            etichetta="Nome (facoltativo)"
-            value={nomeManuale}
-            onChangeText={setNomeManuale}
-            placeholder={`${ETICHETTE.tipo[tipoManuale]} ${PALETTE_COLORI[coloreManuale]!.nome.toLowerCase()}`}
-          />
-
-          <BottonePrimario
-            testo="Salva nell'armadio"
-            caricando={salvandoManuale}
-            disabilitato={salvandoManuale}
-            onPress={() => void salvaManuale()}
-          />
-          <BottoneSecondario
-            testo="Annulla"
-            onPress={() => {
-              setFase('scatta')
-              setFoto(null)
-            }}
-            style={{ borderColor: linee.chiara, ...ombre.bassa }}
-          />
         </>
       ) : null}
     </Schermata>

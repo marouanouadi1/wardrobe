@@ -55,7 +55,6 @@ export interface Contratti {
   Meteo?: Meteo
   ModelloDisponibile?: ModelloDisponibile
   NuovaSegnalazione?: NuovaSegnalazione
-  NuovoCapoManuale?: NuovoCapoManuale
   NuovoOutfit?: NuovoOutfit
   OrigineOutfit?: OrigineOutfit
   Outfit?: Outfit
@@ -404,31 +403,6 @@ export interface ModelloDisponibile {
 }
 export interface NuovaSegnalazione {
   testo: string
-}
-/**
- * Un capo inserito a mano, senza passare dal modello di visione.
- *
- * Nessuna `AnalisiVisione`: un capo che non è mai stato letto da un modello
- * non ha confidenze da mostrare, e non deve fingere di averle. Tipo e
- * colore restano obbligatori — sono gli stessi due attributi che
- * `ATTRIBUTI_INDISPENSABILI` chiede alla lettura automatica: senza tipo il
- * capo non ha uno slot per l'avatar, senza colore il manichino di oggi non
- * ha niente da tingere.
- */
-export interface NuovoCapoManuale {
-  nome: string
-  tipo: TipoCapo
-  colore: Colore
-  chiave_foto: string
-  brand?: string | null
-  sottotipo?: string | null
-  materiale?: string | null
-  fantasia?: string | null
-  stagione?: Stagione | null
-  vestibilita?: string | null
-  lavaggio?: string | null
-  etichette?: string[]
-  appunti?: string | null
 }
 export interface NuovoOutfit {
   nome: string

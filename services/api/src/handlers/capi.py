@@ -8,18 +8,16 @@ from domain.models import (
     AttributoCapo,
     ElencoCapi,
     FiltroArmadio,
-    NuovoCapoManuale,
     StatoCapo,
     TipoCapo,
 )
 from domain.wardrobe import (
     correggi_attributo,
-    crea_capo_manuale,
     filtra,
     riepilogo,
     segna_indossato,
 )
-from handlers._container import generatore_id, orologio, repository
+from handlers._container import orologio, repository
 from handlers._foto_capo import con_url as _con_url
 from handlers._http import Evento, Risposta, corpo, endpoint, ok, parametro, query, utente_id
 
@@ -47,15 +45,6 @@ def leggi(evento: Evento) -> Risposta:
     if capo is None:
         raise CapoNonTrovato(capo_id)
     return ok(_con_url(capo))
-
-
-@endpoint
-def crea(evento: Evento) -> Risposta:
-    """POST /capi — un capo inserito a mano, senza passare dal modello di visione."""
-    utente = utente_id(evento)
-    nuovo = corpo(evento, NuovoCapoManuale)
-    capo = crea_capo_manuale(nuovo, capo_id=generatore_id().nuovo(), adesso=orologio().adesso())
-    return ok(_con_url(repository().salva_capo(utente, capo)), 201)
 
 
 @endpoint
