@@ -86,7 +86,7 @@ export default function Armadio() {
       </ScrollView>
 
       {pronto ? (
-        <Forte taglia={12.5} tono="tenue">
+        <Forte taglia="minuto" tono="tenue">
           {conta(mostrati.length, 'capo', 'capi')}
         </Forte>
       ) : null}

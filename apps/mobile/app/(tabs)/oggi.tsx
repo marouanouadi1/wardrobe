@@ -196,11 +196,11 @@ export default function Oggi() {
             <BadgeIa testo={`match ${principale.match}%`} />
           </View>
           <View style={{ padding: 18, gap: spazi.s }}>
-            <Etichetta taglia={11.5} tono="tenue">
+            <Etichetta taglia="micro" tono="tenue">
               La proposta di oggi
             </Etichetta>
-            <Titolo taglia={29}>{principale.titolo}</Titolo>
-            <Corpo taglia={13.5} tono="medio">
+            <Titolo taglia="testata">{principale.titolo}</Titolo>
+            <Corpo taglia="corpo" tono="medio">
               {principale.perche[0]}
             </Corpo>
             <View style={{ flexDirection: 'row', gap: spazi.s, marginTop: spazi.s }}>
@@ -234,7 +234,7 @@ export default function Oggi() {
         // l'analisi di una foto — e qui l'ambra è legittima: è il modello che
         // sta parlando, non un dato che arriva.
         <Scheda imbottitura={24} style={{ alignItems: 'center', gap: spazi.m }}>
-          <Titolo taglia={17}>Sto pensando a cosa metterti</Titolo>
+          <Titolo taglia="guida">Sto pensando a cosa metterti</Titolo>
           <AttesaLunga messaggi={MESSAGGI_SUGGERIMENTI} />
         </Scheda>
       ) : null}
@@ -247,13 +247,13 @@ export default function Oggi() {
       ) : alternative.length > 0 ? (
         <>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
-            <Titolo taglia={19} style={{ flex: 1 }}>
+            <Titolo taglia="sezione" style={{ flex: 1 }}>
               Altre due strade
             </Titolo>
             <LinkTesto
               centrato={false}
               forte
-              taglia={13}
+              taglia="minuto"
               colore={colori.ambraMedio}
               onPress={() => router.push('/suggeritore')}
             >
@@ -295,8 +295,8 @@ export default function Oggi() {
                     ))}
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Titolo taglia={16.5}>{proposta.titolo}</Titolo>
-                    <Corpo taglia={12.5} tono="tenue" numberOfLines={2}>
+                    <Titolo taglia="guida">{proposta.titolo}</Titolo>
+                    <Corpo taglia="minuto" tono="tenue" numberOfLines={2}>
                       {proposta.perche[0]}
                     </Corpo>
                   </View>
@@ -316,10 +316,10 @@ export default function Oggi() {
         <Scheda imbottitura={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <Bolla nome="ricarica" sfondo={linee.tenue} colore={colori.inchiostro} />
           <View style={{ flex: 1 }}>
-            <Titolo taglia={17}>
+            <Titolo taglia="guida">
               {`Hai ${parola(inLavatrice, 'un capo', `${inLavatrice} capi`)} in lavatrice`}
             </Titolo>
-            <Corpo taglia={12.5} tono="tenue">
+            <Corpo taglia="minuto" tono="tenue">
               Li escludo dai suggerimenti finché non tornano puliti.
             </Corpo>
           </View>
@@ -349,7 +349,7 @@ function ScorrimentoScorciatoie({ onScegli }: { onScegli: (testo: string) => voi
             borderColor: linee.chiara,
           }}
         >
-          <Forte taglia={12.5} tono="medio">
+          <Forte taglia="minuto" tono="medio">
             {testo}
           </Forte>
         </Toccabile>

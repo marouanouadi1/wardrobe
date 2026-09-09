@@ -90,7 +90,7 @@ export default function Preferenze() {
       <Testata occhiello="il tuo stile" titolo="Dimmi come ti vesti." indietro={Boolean(rivisita)} />
 
       <View style={{ flex: 1, paddingHorizontal: spazi.xl, paddingBottom: spazi.l, gap: spazi.l }}>
-        <Corpo taglia={15} tono="medio" style={{ maxWidth: 330 }}>
+        <Corpo taglia="guida" tono="medio" style={{ maxWidth: 330 }}>
           Tre tocchi e i suggerimenti partono già tarati sul tuo stile. Puoi cambiare quando vuoi,
           da Profilo.
         </Corpo>

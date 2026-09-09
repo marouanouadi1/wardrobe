@@ -259,19 +259,27 @@ export const caratteri = {
 /**
  * La scala tipografica. `ui/testo.tsx` documenta da tempo tre taglie per
  * `Titolo` — «40 (onboarding), 27 (testata), 19 (sezione)» — ma il codice ne
- * usa undici, e un terzo delle occorrenze di `taglia` in tutto l'app sono
- * mezzi punti (`13.5`, `12.5`, `11.5`…) indistinguibili a schermo l'uno
- * dall'altro: il sintomo di una taglia scelta a occhio, componente per
+ * usa 28 valori distinti, e un terzo delle occorrenze di `taglia` in tutto
+ * l'app sono mezzi punti (`13.5`, `12.5`, `11.5`…) indistinguibili a schermo
+ * l'uno dall'altro: il sintomo di una taglia scelta a occhio, componente per
  * componente, invece che da un elenco.
  *
- * `Titolo`/`Corpo`/`Forte`/`Etichetta` accettano una chiave di qui oltre a un
- * numero — `taglia="sezione"` invece di `taglia={19}` — senza smettere di
- * accettare un numero per i casi che hanno una vera ragione di scostarsi
- * (un titolo che deve stare esattamente in una riga, per esempio). Non è un
- * rifacimento delle taglie esistenti: i call site restano quello che erano
- * finché non li si tocca per un altro motivo.
+ * `nano` è l'unica chiave aggiunta insieme allo sweep che ha portato le 88
+ * occorrenze numeriche di `taglia` sulla scala: un pavimento mancava
+ * davvero — otto etichette maiuscole vivevano fra 8.5 e 10.5, sotto `micro`.
+ * Il vuoto fra `sezione` (19) e `testata` (27) invece non è un buco da
+ * riempire: gli otto `Titolo` che ci cadono in mezzo (20-25) non hanno un
+ * ruolo comune, sono la stessa deriva «a occhio» che questa scala esiste per
+ * fermare — ci sono finiti su `testata` o `sezione` per ruolo, non per il
+ * numero più vicino.
+ *
+ * `Titolo`/`Corpo`/`Forte`/`Etichetta`/`Numero` accettano una chiave di qui
+ * oltre a un numero — `taglia="sezione"` invece di `taglia={19}` — senza
+ * smettere di accettare un numero per i casi che hanno una vera ragione di
+ * scostarsi (un titolo che deve stare esattamente in una riga, per esempio).
  */
 export const tipografia = {
+  nano: 10,
   micro: 11,
   minuto: 12.5,
   corpo: 14,

@@ -63,7 +63,7 @@ export default function Registrati() {
       onLinkFantasma={() => router.back()}
       testoLinkFantasma={
         <>
-          Hai già un account? <Forte taglia={13.5}>Accedi</Forte>
+          Hai già un account? <Forte taglia="corpo">Accedi</Forte>
         </>
       }
       azione={
@@ -108,7 +108,7 @@ export default function Registrati() {
           }}
         />
         {conferma.length > 0 && !passwordCorrispondono ? (
-          <TestoErrore taglia={12.5}>Le due password non coincidono.</TestoErrore>
+          <TestoErrore>Le due password non coincidono.</TestoErrore>
         ) : null}
       </View>
     </GuscioAutenticazione>

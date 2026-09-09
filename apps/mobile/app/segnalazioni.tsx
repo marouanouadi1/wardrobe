@@ -75,12 +75,12 @@ export default function Segnalazioni() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
                 <Badge testo={stile.etichetta} sfondo={stile.sfondo} colore={stile.testo} />
-                <Corpo taglia={11.5} tono="tenue" style={{ flex: 1, textAlign: 'right' }}>
+                <Corpo taglia="micro" tono="tenue" style={{ flex: 1, textAlign: 'right' }}>
                   {formattaData(segnalazione.creata_il)}
                 </Corpo>
               </View>
 
-              <Corpo taglia={14}>{segnalazione.testo}</Corpo>
+              <Corpo taglia="corpo">{segnalazione.testo}</Corpo>
 
               {amministratore ? (
                 <View style={{ flexDirection: 'row', gap: 6, marginTop: spazi.xs }}>

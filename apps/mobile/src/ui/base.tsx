@@ -30,7 +30,7 @@ import {
 import Svg, { Path } from 'react-native-svg'
 import { caratteri, colori, curve, durate, linee, ombre, raggi, spazi, superfici, testoSu } from '../tema/tokens'
 import { Fondo, useFondo, type Su } from './fondo'
-import { Corpo, Etichetta, Forte } from './testo'
+import { Corpo, Etichetta, Forte, type Taglia } from './testo'
 
 // ─────────────────────────────────────────────────────────────
 // Tocco
@@ -511,7 +511,7 @@ export function Badge({
       }}
     >
       {icona ? <Icona nome={icona} misura={12} colore={colore} spessore={2.4} /> : null}
-      <Etichetta taglia={10.5} colore={colore}>
+      <Etichetta taglia="nano" colore={colore}>
         {testo}
       </Etichetta>
     </View>
@@ -802,7 +802,7 @@ export function BottoneIndietro({ onPress, su }: { onPress?: () => void; su?: Su
 export function LinkTesto({
   children,
   onPress,
-  taglia = 13.5,
+  taglia = 'corpo',
   tono = 'tenue',
   colore,
   su,
@@ -812,7 +812,7 @@ export function LinkTesto({
 }: {
   children: ReactNode
   onPress?: () => void
-  taglia?: number
+  taglia?: Taglia
   tono?: 'forte' | 'medio' | 'tenue' | 'debole'
   colore?: string
   su?: Su

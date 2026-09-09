@@ -14,6 +14,10 @@ import { useFondo, type Su } from './fondo'
 
 type Tono = 'forte' | 'medio' | 'tenue' | 'debole'
 
+/** Un numero esatto, o una chiave di `tipografia` (`tema/tokens.ts`) —
+ * `taglia="sezione"` invece di ridigitare `19`. */
+export type Taglia = number | keyof typeof tipografia
+
 interface Props extends TextProps {
   children?: ReactNode
   /** Su che fondo si posa: su `'scuro'` i toni si invertono. Di norma non
@@ -23,9 +27,7 @@ interface Props extends TextProps {
   su?: Su
   tono?: Tono
   colore?: string
-  /** Un numero esatto, o una chiave di `tipografia` (`tema/tokens.ts`) —
-   * `taglia="sezione"` invece di ridigitare `19`. */
-  taglia?: number | keyof typeof tipografia
+  taglia?: Taglia
 }
 
 function useColore(props: Props): string {
@@ -56,7 +58,7 @@ export function Titolo({ taglia = 'testata', style, ...props }: Props) {
 }
 
 /** Numero grande: statistiche, contatori. */
-export function Numero({ taglia = 26, style, ...props }: Props) {
+export function Numero({ taglia = 'testata', style, ...props }: Props) {
   const numero = risolviTaglia(taglia)
   return (
     <Text

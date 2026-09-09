@@ -90,7 +90,7 @@ export default function Intro() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
           {passo > 0 ? <BottoneIndietro onPress={() => setPasso(passo - 1)} /> : null}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Titolo taglia={22}>wardrobe</Titolo>
+            <Titolo taglia="sezione">wardrobe</Titolo>
             <View
               style={{ width: 6, height: 6, borderRadius: raggi.pillola, backgroundColor: colori.ambra }}
             />
@@ -132,13 +132,13 @@ export default function Intro() {
             }}
           >
             <View style={{ width: 6, height: 6, borderRadius: raggi.pillola, backgroundColor: colori.ambra }} />
-            <Etichetta taglia={11}>{corrente.occhiello}</Etichetta>
+            <Etichetta taglia="micro">{corrente.occhiello}</Etichetta>
           </View>
 
-          <Titolo taglia={40} style={{ letterSpacing: -1.6 }}>
+          <Titolo taglia="eroe" style={{ letterSpacing: -1.6 }}>
             {corrente.titolo}
           </Titolo>
-          <Corpo taglia={15} tono="medio" style={{ maxWidth: 330 }}>
+          <Corpo taglia="guida" tono="medio" style={{ maxWidth: 330 }}>
             {corrente.corpo}
           </Corpo>
 

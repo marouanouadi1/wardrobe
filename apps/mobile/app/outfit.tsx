@@ -80,8 +80,8 @@ export default function Outfit() {
                 }}
               >
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Titolo taglia={19}>{salvato.nome}</Titolo>
-                  <Corpo taglia={12} tono="tenue">
+                  <Titolo taglia="sezione">{salvato.nome}</Titolo>
+                  <Corpo taglia="micro" tono="tenue">
                     {salvato.volte_indossato
                       ? `Indossato ${salvato.volte_indossato} volte · ultima ${quandoUsato(salvato.ultimo_uso)}`
                       : 'Mai indossato'}

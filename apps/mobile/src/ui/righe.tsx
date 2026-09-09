@@ -95,14 +95,14 @@ export function RigaStatistiche({
         voce.su === 'scuro' ? (
           <Scheda key={voce.etichetta} su="scuro" sfondo={colori.inchiostro} imbottitura={15} style={{ flex: 1 }}>
             <Numero>{voce.numero}</Numero>
-            <Forte taglia={10.5} tono="medio" style={{ marginTop: 5 }}>
+            <Forte taglia="nano" tono="medio" style={{ marginTop: 5 }}>
               {voce.etichetta}
             </Forte>
           </Scheda>
         ) : (
           <Scheda key={voce.etichetta} imbottitura={15} style={{ flex: 1 }}>
             <Numero>{voce.numero}</Numero>
-            <Corpo taglia={10.5} tono="tenue" style={{ marginTop: 5 }}>
+            <Corpo taglia="nano" tono="tenue" style={{ marginTop: 5 }}>
               {voce.etichetta}
             </Corpo>
           </Scheda>

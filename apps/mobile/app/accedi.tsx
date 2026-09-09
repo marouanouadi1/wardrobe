@@ -42,7 +42,7 @@ export default function Accedi() {
       onLinkFantasma={() => router.push('/registrati')}
       testoLinkFantasma={
         <>
-          Non hai un account? <Forte taglia={13.5}>Registrati</Forte>
+          Non hai un account? <Forte taglia="corpo">Registrati</Forte>
         </>
       }
       azione={

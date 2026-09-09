@@ -144,7 +144,7 @@ export default function DettaglioCapo() {
             backgroundColor: velaturaSuFoto,
           }}
         >
-          <Forte taglia={11}>{ETICHETTE.tipo[capo.tipo]}</Forte>
+          <Forte taglia="micro">{ETICHETTE.tipo[capo.tipo]}</Forte>
         </View>
         <View style={{ position: 'absolute', top: 12, right: 12 }}>
           <BottoneTondo
@@ -161,8 +161,8 @@ export default function DettaglioCapo() {
 
       <View style={{ paddingHorizontal: spazi.xl, gap: spazi.m }}>
         <View>
-          <Titolo taglia={28}>{capo.nome}</Titolo>
-          <Corpo taglia={13.5} tono="tenue">
+          <Titolo taglia="testata">{capo.nome}</Titolo>
+          <Corpo taglia="corpo" tono="tenue">
             {capo.brand ? `${capo.brand} · ` : ''}
             {`ultimo uso ${quandoUsato(capo.ultimo_uso)}`}
           </Corpo>
@@ -200,7 +200,7 @@ export default function DettaglioCapo() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
             <BadgeIa testo="letto dalla foto" />
             {media !== null ? (
-              <Forte taglia={11.5} tono="debole" style={{ marginLeft: 'auto' }}>
+              <Forte taglia="micro" tono="debole" style={{ marginLeft: 'auto' }}>
                 {media}% sicuro
               </Forte>
             ) : null}
@@ -225,7 +225,7 @@ export default function DettaglioCapo() {
             )}
           </View>
 
-          <Corpo taglia={11.5} tono="debole">
+          <Corpo taglia="micro" tono="debole">
             {incerti.length === 0
               ? 'Il modello è sicuro di tutto. Tocca un valore se vuoi cambiarlo.'
               : 'Tocca un valore per correggerlo. Quelli in corallo sono incerti: il modello preferisce chiedere.'}
@@ -233,7 +233,7 @@ export default function DettaglioCapo() {
 
           {attributoInModifica ? (
             <View style={{ gap: spazi.s, paddingTop: spazi.s, borderTopWidth: 1, borderTopColor: linee.tenue }}>
-              <Forte taglia={12.5}>{`Correggi ${ETICHETTE.attributo[attributoInModifica]}`}</Forte>
+              <Forte taglia="minuto">{`Correggi ${ETICHETTE.attributo[attributoInModifica]}`}</Forte>
 
               {attributoInModifica === 'tipo' ? (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
@@ -314,8 +314,8 @@ export default function DettaglioCapo() {
         </Scheda>
 
         <Scheda imbottitura={16} style={{ gap: spazi.m }}>
-          <Titolo taglia={16}>Etichette</Titolo>
-          <Corpo taglia={11.5} tono="debole">
+          <Titolo taglia="guida">Etichette</Titolo>
+          <Corpo taglia="micro" tono="debole">
             Solo tue: il modello non le legge dalla foto, ma lo stilista sì.
           </Corpo>
 
@@ -352,7 +352,7 @@ export default function DettaglioCapo() {
             />
           </View>
 
-          <Corpo taglia={11.5} tono="tenue">
+          <Corpo taglia="micro" tono="tenue">
             Appunti
           </Corpo>
           <Campo
@@ -370,7 +370,7 @@ export default function DettaglioCapo() {
                 senza nessun giudizio dietro. «Ci sta bene con» prometteva un
                 criterio che non c'è: la schermata dichiara di non fingere di
                 sapere, e questo titolo faceva l'opposto. */}
-            <Titolo taglia={19}>Altri capi del tuo armadio</Titolo>
+            <Titolo taglia="sezione">Altri capi del tuo armadio</Titolo>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
               {altriCapi.map((altro) => (
                 <Miniatura
