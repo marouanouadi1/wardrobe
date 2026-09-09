@@ -22,7 +22,7 @@ import { api, messaggioDiErrore } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
 import { conta } from '../../src/dati/formato'
 import { colori, raggi, spazi } from '../../src/tema/tokens'
-import { BottonePrimario, BottoneSecondario, Icona, Scheda } from '../../src/ui/base'
+import { BottonePrimario, BottoneSecondario, Scheda } from '../../src/ui/base'
 import { MiniaturaFoto, SchedaFoto } from '../../src/ui/capi'
 import { AttesaLunga } from '../../src/ui/stati'
 import { Corpo, Etichetta, Titolo } from '../../src/ui/testo'
@@ -80,7 +80,6 @@ export default function Carica() {
    * di interrompere una coda di venti foto una volta partita. */
   const controllerCodaRef = useRef<AbortController | null>(null)
   const annullataCodaRef = useRef(false)
-  const [immagineCopertinaFallita, setImmagineCopertinaFallita] = useState(false)
   /** Le foto scattate o scelte, in attesa di «Analizza»: si può togliere
    * quella sbagliata prima di partire, cosa che il vecchio bottone «20 in
    * blocco» — diretto in analisi appena scelte le foto — non permetteva. */
@@ -272,21 +271,16 @@ export default function Carica() {
       {fase === 'scatta' ? (
         <>
           <SchedaFoto raggio={raggi.grande} ombra="nessuna" sfondo={colori.inchiostro} style={{ height: 430 }}>
-            {!immagineCopertinaFallita ? (
-              <Image
-                source={{ uri: 'https://images.pexels.com/photos/18257675/pexels-photo-18257675.jpeg?auto=compress&cs=tinysrgb&w=700&h=900&fit=crop' }}
-                style={{ position: 'absolute', inset: 0, opacity: 0.5 }}
-                contentFit="cover"
-                onError={() => setImmagineCopertinaFallita(true)}
-              />
-            ) : (
-              // Senza rete l'immagine non arriva mai: prima restava un
-              // rettangolo nero e basta. Un'icona non è la foto vera, ma
-              // dice che il vuoto è voluto, non un difetto.
-              <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
-                <Icona nome="fotocamera" misura={64} colore="rgba(255,253,249,0.28)" spessore={1.4} />
-              </View>
-            )}
+            {/* Prima una foto Pexels caricata dalla rete a ogni apertura di
+                questa schermata — con relativo fallback per quando non
+                arrivava. Ora è nel bundle (foto Pexels 18257675, licenza
+                Pexels: nessuna attribuzione richiesta), e il fallback non
+                serve più: non può più fallire un caricamento che non parte. */}
+            <Image
+              source={require('../../assets/carica-copertina.jpg')}
+              style={{ position: 'absolute', inset: 0, opacity: 0.5 }}
+              contentFit="cover"
+            />
             <View
               style={{
                 position: 'absolute',

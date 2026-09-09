@@ -6,6 +6,11 @@
  * c'è dove appoggiare quel salvataggio. Quel passo vive ora in
  * `preferenze.tsx`, dopo il login. Qui restano solo le due schermate di puro
  * marketing: cosa fa l'app, e perché fotografare basta.
+ *
+ * Le due foto di sfondo erano caricate da Pexels a ogni apertura — la prima
+ * impressione dell'app dipendeva dalla rete. Ora sono nel bundle
+ * (`assets/intro-passo-*.jpg`, foto Pexels 17745134 e 31064320, licenza
+ * Pexels: nessuna attribuzione richiesta).
  */
 
 import { Image } from 'expo-image'
@@ -26,7 +31,7 @@ const PASSI = [
     corpo:
       'Fotografi i vestiti una volta sola. Poi ogni mattina ti dico cosa mettere, con quello che hai già in casa.',
     azione: 'Come funziona',
-    foto: 17745134,
+    foto: require('../assets/intro-passo-1.jpg') as number,
   },
   {
     occhiello: 'come funziona',
@@ -34,13 +39,9 @@ const PASSI = [
     corpo:
       'Un capo per foto. Il modello riconosce categoria, colore, tessuto, stagione e lavaggio. Tu correggi solo se sbaglia.',
     azione: 'Accedi o registrati',
-    foto: 31064320,
+    foto: require('../assets/intro-passo-2.jpg') as number,
   },
 ] as const
-
-function foto(id: number): string {
-  return `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=900&h=1300&fit=crop`
-}
 
 export default function Intro() {
   const [passo, setPasso] = useState(0)
@@ -69,12 +70,7 @@ export default function Intro() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colori.sfondo }}>
-      <Image
-        source={{ uri: foto(corrente.foto) }}
-        style={{ position: 'absolute', inset: 0 }}
-        contentFit="cover"
-        transition={300}
-      />
+      <Image source={corrente.foto} style={{ position: 'absolute', inset: 0 }} contentFit="cover" />
       {/* La sfumatura non è decorazione: senza, il testo scuro su una foto
           qualunque diventa illeggibile. */}
       <LinearGradient
