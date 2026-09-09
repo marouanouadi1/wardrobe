@@ -28,7 +28,8 @@ import {
   type ViewStyle,
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
-import { colori, curve, durate, linee, ombre, raggi, spazi, superfici } from '../tema/tokens'
+import { caratteri, colori, curve, durate, linee, ombre, raggi, spazi, superfici, testoSu } from '../tema/tokens'
+import { Fondo, useFondo, type Su } from './fondo'
 import { Corpo, Etichetta, Forte } from './testo'
 
 // ─────────────────────────────────────────────────────────────
@@ -81,25 +82,34 @@ export function Campo({
   style,
   ...props
 }: TextInputProps & { etichetta?: string; style?: StyleProp<ViewStyle> }) {
+  // Il fondo che questo campo dipinge è sempre chiaro — un `TextInput` non
+  // legge il contesto (il suo `color` è cablato), ma un `Corpo` infilato qui
+  // dentro in futuro lo farebbe: asserisce, non lascia indovinare. Non
+  // avvolge l'`Etichetta` sotto: quella sta sul fondo della schermata, non su
+  // quello del campo.
   const campo = (
-    <TextInput
-      placeholderTextColor="rgba(21,21,26,0.4)"
-      {...props}
-      style={[
-        {
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          borderRadius: raggi.piccolo,
-          borderWidth: 1,
-          borderColor: linee.chiara,
-          backgroundColor: colori.scheda,
-          fontFamily: 'Manrope_500Medium',
-          fontSize: 15,
-          color: colori.inchiostro,
-        },
-        style,
-      ]}
-    />
+    <Fondo su="chiaro">
+      <TextInput
+        placeholderTextColor="rgba(21,21,26,0.4)"
+        {...props}
+        style={[
+          {
+            paddingHorizontal: 16,
+            paddingVertical: 14,
+            borderRadius: raggi.piccolo,
+            borderWidth: 1,
+            borderColor: linee.chiara,
+            backgroundColor: colori.scheda,
+            fontFamily: caratteri.testo,
+            // 15: un `TextInput` nativo non passa da `risolviTaglia` — non
+            // c'è una `taglia` da leggere dalla scala qui, solo un numero.
+            fontSize: 15,
+            color: colori.inchiostro,
+          },
+          style,
+        ]}
+      />
+    </Fondo>
   )
   if (!etichetta) return campo
   return (
@@ -135,35 +145,39 @@ export function BarraChiedi({
   style?: ViewStyle
 }) {
   return (
-    <View
-      style={[
-        onInvia
-          ? { paddingLeft: spazi.l, paddingRight: 7, paddingVertical: 7 }
-          : { paddingHorizontal: spazi.l, paddingVertical: 12 },
-        {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: spazi.s,
-          borderRadius: raggi.pillola,
-          backgroundColor: colori.scheda,
-          ...ombre.bassa,
-        },
-        style,
-      ]}
-    >
-      <Icona nome={icona} misura={17} colore={onInvia ? colori.ambraMedio : 'rgba(21,21,26,0.45)'} spessore={2.2} />
-      <TextInput
-        value={valore}
-        onChangeText={onCambia}
-        onSubmitEditing={onInvia}
-        placeholder={placeholder}
-        placeholderTextColor="rgba(21,21,26,0.4)"
-        style={{ flex: 1, fontFamily: 'Manrope_500Medium', fontSize: 14.5, color: colori.inchiostro }}
-      />
-      {onInvia ? (
-        <BottoneTondo nome="freccia" onPress={onInvia} misura={42} misuraIcona={19} sfondo={colori.ambra} />
-      ) : null}
-    </View>
+    <Fondo su="chiaro">
+      <View
+        style={[
+          onInvia
+            ? { paddingLeft: spazi.l, paddingRight: 7, paddingVertical: 7 }
+            : { paddingHorizontal: spazi.l, paddingVertical: 12 },
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spazi.s,
+            borderRadius: raggi.pillola,
+            backgroundColor: colori.scheda,
+            ...ombre.bassa,
+          },
+          style,
+        ]}
+      >
+        <Icona nome={icona} misura={17} colore={onInvia ? colori.ambraMedio : 'rgba(21,21,26,0.45)'} spessore={2.2} />
+        <TextInput
+          value={valore}
+          onChangeText={onCambia}
+          onSubmitEditing={onInvia}
+          placeholder={placeholder}
+          placeholderTextColor="rgba(21,21,26,0.4)"
+          // 14.5: stessa nota di `Campo` sopra — un `TextInput` non legge
+          // `tipografia`, solo `caratteri.testo` per la famiglia.
+          style={{ flex: 1, fontFamily: caratteri.testo, fontSize: 14.5, color: colori.inchiostro }}
+        />
+        {onInvia ? (
+          <BottoneTondo nome="freccia" onPress={onInvia} misura={42} misuraIcona={19} sfondo={colori.ambra} />
+        ) : null}
+      </View>
+    </Fondo>
   )
 }
 
@@ -175,31 +189,40 @@ export function Scheda({
   children,
   style,
   su,
+  sfondo,
   imbottitura = spazi.l,
 }: {
   children: ReactNode
   style?: StyleProp<ViewStyle>
-  su?: 'chiaro' | 'scuro'
+  su?: Su
+  /** Un fondo esplicito, invece della coppia chiara/scura di sempre — l'ambra
+   * tenue del promemoria di `calendario.tsx`, il corallo tenue di `Avviso`.
+   * Con `sfondo`, `su` resta comunque quello che si dichiara a chi sta dentro
+   * (di norma `'chiaro'`, per un fondo tenue). */
+  sfondo?: string
   imbottitura?: number
 }) {
-  const scura = su === 'scuro'
+  const fondo: Su = su ?? 'chiaro'
+  const scura = fondo === 'scuro'
   return (
-    <View
-      style={[
-        {
-          // Una velatura di crema, non l'inchiostro pieno: `Schermata su="scuro"`
-          // usa già l'inchiostro come fondo pagina — una scheda dello stesso
-          // colore ci sparirebbe sopra.
-          backgroundColor: scura ? superfici.suScuro.riga : colori.scheda,
-          borderRadius: raggi.scheda,
-          padding: imbottitura,
-        },
-        scura ? null : ombre.scheda,
-        style,
-      ]}
-    >
-      {children}
-    </View>
+    <Fondo su={fondo}>
+      <View
+        style={[
+          {
+            // Una velatura di crema, non l'inchiostro pieno: `Schermata su="scuro"`
+            // usa già l'inchiostro come fondo pagina — una scheda dello stesso
+            // colore ci sparirebbe sopra.
+            backgroundColor: sfondo ?? (scura ? superfici.suScuro.riga : colori.scheda),
+            borderRadius: raggi.scheda,
+            padding: imbottitura,
+          },
+          scura ? null : ombre.scheda,
+          style,
+        ]}
+      >
+        {children}
+      </View>
+    </Fondo>
   )
 }
 
@@ -216,11 +239,12 @@ export function Pillola({
   testo: string
   attiva?: boolean
   onPress?: () => void
-  su?: 'chiaro' | 'scuro'
+  su?: Su
 }) {
-  const scura = su === 'scuro'
+  const ereditato = useFondo()
+  const fondo = su ?? ereditato
+  const scura = fondo === 'scuro'
   const sfondoAttivo = scura ? colori.ambra : colori.inchiostro
-  const testoAttivo = scura ? colori.inchiostro : colori.crema
   return (
     <Toccabile
       onPress={onPress}
@@ -234,12 +258,14 @@ export function Pillola({
         backgroundColor: attiva ? sfondoAttivo : 'transparent',
       }}
     >
-      <Forte
-        taglia={13}
-        colore={attiva ? testoAttivo : scura ? 'rgba(247,244,239,0.75)' : 'rgba(21,21,26,0.72)'}
-      >
-        {testo}
-      </Forte>
+      {/* Opaca quando `attiva` — asserisce il fondo che dipinge, invertito
+          rispetto a quello ambientale (l'ambra e l'inchiostro vogliono il
+          testo dell'altro verso). Trasparente altrimenti — inoltra. */}
+      <Fondo su={attiva ? (scura ? 'chiaro' : 'scuro') : fondo}>
+        <Forte taglia="minuto" tono={attiva ? 'forte' : 'medio'}>
+          {testo}
+        </Forte>
+      </Fondo>
     </Toccabile>
   )
 }
@@ -280,9 +306,15 @@ export function Segmenti<T extends string>({
               ...(attivo ? ombre.bassa : {}),
             }}
           >
-            <Forte taglia={13} tono={attivo ? 'forte' : 'tenue'}>
-              {voce.etichetta}
-            </Forte>
+            {/* La pillola attiva è opaca (`colori.scheda`, sempre chiara,
+                anche se `Segmenti` vive su una schermata scura): asserisce. La
+                pista intorno è una velatura — `linee.tenue` — e inoltra da
+                sola, senza bisogno di scriverlo qui. */}
+            <Fondo su={attivo ? 'chiaro' : undefined}>
+              <Forte taglia="minuto" tono={attivo ? 'forte' : 'tenue'}>
+                {voce.etichetta}
+              </Forte>
+            </Fondo>
           </Toccabile>
         )
       })}
@@ -360,17 +392,23 @@ export function BottonePrimario({
         style,
       ]}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
-        {caricando ? (
-          <ActivityIndicator color={inchiostro} />
-        ) : icona ? (
-          <Icona nome={icona} colore={inchiostro} misura={compatto ? 15 : 19} />
-        ) : null}
-        <Forte taglia={compatto ? 13.5 : 16} colore={inchiostro}>
-          {testo}
-        </Forte>
-      </View>
-      {freccia ? <Icona nome="freccia" colore={inchiostro} misura={19} /> : null}
+      {/* `inchiostro` qui sopra copre già ogni caso (disabilitato incluso),
+          ma un `Fondo` asserisce anche per chi in futuro infila un `Corpo`
+          qui dentro senza pensarci — lo stesso fondo che il pulsante dipinge
+          davvero, non quello della schermata sotto. */}
+      <Fondo su={ambra || chiaro || disabilitato ? 'chiaro' : 'scuro'}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
+          {caricando ? (
+            <ActivityIndicator color={inchiostro} />
+          ) : icona ? (
+            <Icona nome={icona} colore={inchiostro} misura={compatto ? 15 : 19} />
+          ) : null}
+          <Forte taglia={compatto ? 'corpo' : 'guida'} colore={inchiostro}>
+            {testo}
+          </Forte>
+        </View>
+        {freccia ? <Icona nome="freccia" colore={inchiostro} misura={19} /> : null}
+      </Fondo>
     </Toccabile>
   )
 }
@@ -401,6 +439,14 @@ export function BottoneSecondario({
   bordo?: string
   style?: StyleProp<ViewStyle>
 }) {
+  // `colore` esplicito quando il chiamante ha una ragione (uno stato acceso
+  // con `sfondo` proprio); altrimenti dal fondo ereditato — **risolto qui una
+  // volta sola**, non lasciato al solo `Forte`: `ActivityIndicator` e `Icona`
+  // sotto prendono una stringa, non un `Corpo`, e il contesto non li
+  // raggiungerebbe da soli. Prima, `colore` assente cadeva silenziosamente
+  // su un default che su fondo scuro era invisibile.
+  const fondo = useFondo()
+  const tinta = colore ?? (fondo === 'scuro' ? testoSu.scuro.forte : testoSu.chiaro.forte)
   return (
     <Toccabile
       onPress={caricando ? undefined : onPress}
@@ -422,11 +468,11 @@ export function BottoneSecondario({
       ]}
     >
       {caricando ? (
-        <ActivityIndicator color={colore} />
+        <ActivityIndicator color={tinta} />
       ) : icona ? (
-        <Icona nome={icona} colore={colore} misura={14} spessore={2.2} />
+        <Icona nome={icona} colore={tinta} misura={14} spessore={2.2} />
       ) : null}
-      <Forte taglia={13.5} colore={colore}>
+      <Forte taglia="corpo" colore={tinta}>
         {testo}
       </Forte>
     </Toccabile>
@@ -506,7 +552,11 @@ export function BollaChat({ daUtente, children }: { daUtente: boolean; children:
         ...ombre.bassa,
       }}
     >
-      {children}
+      {/* Prima chi usava `BollaChat` doveva ricordarsi di scrivere
+          `su="scuro"` a mano su ogni testo dentro il ramo `daUtente` — un
+          solo call site in tutto l'app lo faceva. La bolla sa già di essere
+          scura o chiara: lo dice, non lo lascia indovinare. */}
+      <Fondo su={daUtente ? 'scuro' : 'chiaro'}>{children}</Fondo>
     </View>
   )
 }
@@ -718,8 +768,9 @@ export function BottoneTondo({
  * L'ambra qui sarebbe sbagliata: è un'azione dell'utente, non il modello che
  * parla (la regola di `tema/tokens.ts`) — resta `linee.tenue`, come sempre.
  */
-export function BottoneIndietro({ onPress, su }: { onPress?: () => void; su?: 'chiaro' | 'scuro' }) {
-  const scura = su === 'scuro'
+export function BottoneIndietro({ onPress, su }: { onPress?: () => void; su?: Su }) {
+  const ereditato = useFondo()
+  const scura = (su ?? ereditato) === 'scuro'
   return (
     <Toccabile
       onPress={onPress ?? (() => router.back())}
@@ -764,7 +815,7 @@ export function LinkTesto({
   taglia?: number
   tono?: 'forte' | 'medio' | 'tenue' | 'debole'
   colore?: string
-  su?: 'chiaro' | 'scuro'
+  su?: Su
   /** `false` per un link in linea — «Storico»/«Nuova» nell'header di una
    * chat — dove centrare allargherebbe il tocco oltre il testo stesso. */
   centrato?: boolean

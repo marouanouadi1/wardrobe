@@ -275,9 +275,9 @@ export default function Suggeritore() {
                 <BollaChat key={messaggio.id} daUtente={daUtente}>
                   <View style={{ opacity: inVolo ? 0.6 : 1, gap: spazi.s }}>
                     {daUtente ? (
-                      <Corpo taglia={14} su="scuro">
-                        {messaggio.testo}
-                      </Corpo>
+                      // `su="scuro"` non serve più scriverlo qui: `BollaChat`
+                      // lo dichiara da sé (`ui/base.tsx`), da `daUtente`.
+                      <Corpo taglia={14}>{messaggio.testo}</Corpo>
                     ) : (
                       // La risposta vera dello stilista: prima la prosa —
                       // c'è sempre — poi le proposte, solo quando ci sono.

@@ -18,6 +18,7 @@ import { View, type StyleProp, type ViewStyle } from 'react-native'
 import { fotoDaMostrare } from '../dati/dominio'
 import { ETICHETTE, colori, durate, griglie, ombre, raggi } from '../tema/tokens'
 import { Badge, BottoneTondo, Toccabile } from './base'
+import { Fondo, type Su } from './fondo'
 import { Corpo, Etichetta, Forte, Titolo } from './testo'
 
 const OMBRE_SCHEDA_FOTO = {
@@ -40,26 +41,73 @@ const OMBRE_SCHEDA_FOTO = {
 export function SchedaFoto({
   raggio = raggi.grande - 2,
   ombra = 'scheda',
-  sfondo = colori.scheda,
+  su,
+  sfondo,
   style,
   children,
 }: {
   raggio?: number
   ombra?: keyof typeof OMBRE_SCHEDA_FOTO
+  su?: Su
+  /** Un fondo esplicito, invece del solido che `su` ricava da sé — il velo
+   * d'inchiostro di uno scheletro che sa di stare già su una `Schermata`
+   * scura (`ScheletroSchedaOutfit`), non un rettangolo scuro autonomo su una
+   * schermata chiara (`carica.tsx`). */
   sfondo?: string
   style?: StyleProp<ViewStyle>
   children: ReactNode
 }) {
+  // Prima `sfondo` era l'unica leva — `carica.tsx` le passava
+  // `colori.inchiostro` senza modo di dirlo ai testi dentro, che finivano
+  // cablati a mano (`colore={colori.scheda}`, `colore="rgba(255,253,249,…)"`).
+  const fondo: Su = su ?? 'chiaro'
+  const scura = fondo === 'scuro'
   return (
-    <View
-      style={[
-        { borderRadius: raggio, overflow: 'hidden', backgroundColor: sfondo },
-        OMBRE_SCHEDA_FOTO[ombra],
-        style,
-      ]}
+    <Fondo su={fondo}>
+      <View
+        style={[
+          {
+            borderRadius: raggio,
+            overflow: 'hidden',
+            backgroundColor: sfondo ?? (scura ? colori.inchiostro : colori.scheda),
+          },
+          OMBRE_SCHEDA_FOTO[ombra],
+          style,
+        ]}
+      >
+        {children}
+      </View>
+    </Fondo>
+  )
+}
+
+/**
+ * Il piede di una foto: la sfumatura verso l'inchiostro, ancorata in fondo,
+ * con `su="scuro"` già dichiarato per chi ci scrive dentro. `CapoInGriglia`
+ * e le due schermate di `carica.tsx` lo ricostruivano a mano — stesso
+ * gradiente, e per la stessa ragione i loro testi erano cablati a mano
+ * (`colore={colori.scheda}`, `colore="rgba(255,253,249,…)"`): nessuno dei
+ * due sapeva dirsi scuro all'unico modo che un `ReactNode` permette.
+ */
+export function PiedeFoto({
+  children,
+  opacita = 0.82,
+  style,
+}: {
+  children: ReactNode
+  /** Quanto scende verso l'inchiostro pieno: 0.82 di norma. La copertina di
+   * `carica.tsx` usa 0.85 — una foto già velata al 50% ha meno bisogno di
+   * sfumatura per restare leggibile. */
+  opacita?: number
+  style?: StyleProp<ViewStyle>
+}) {
+  return (
+    <LinearGradient
+      colors={['rgba(21,21,26,0)', `rgba(21,21,26,${opacita})`]}
+      style={[{ position: 'absolute', left: 0, right: 0, bottom: 0 }, style]}
     >
-      {children}
-    </View>
+      <Fondo su="scuro">{children}</Fondo>
+    </LinearGradient>
   )
 }
 
@@ -69,7 +117,7 @@ export function SchedaFoto({
  * sua scelta. Una forma che vive qui invece che ridisegnata inline in una
  * schermata, per la stessa regola di `SchedaFoto` sopra.
  */
-export function MotiviProposta({ motivi, su }: { motivi: string[]; su?: 'chiaro' | 'scuro' }) {
+export function MotiviProposta({ motivi, su }: { motivi: string[]; su?: Su }) {
   return (
     <View style={{ gap: 7 }}>
       {motivi.map((motivo) => (
@@ -110,17 +158,12 @@ export function CapoInGriglia({ capo, onPress }: { capo: Capo; onPress: () => vo
         contentFit="cover"
         transition={durate.breve}
       />
-      <LinearGradient
-        colors={['rgba(21,21,26,0)', 'rgba(21,21,26,0.82)']}
-        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 24, padding: 12 }}
-      >
-        <Titolo taglia={14} colore={colori.scheda}>
-          {capo.nome}
-        </Titolo>
-        <Corpo taglia={11} colore="rgba(255,253,249,0.72)">
+      <PiedeFoto style={{ paddingTop: 24, padding: 12 }}>
+        <Titolo taglia="corpo">{capo.nome}</Titolo>
+        <Corpo taglia="micro" tono="medio">
           {capo.colore.nome} · {capo.materiale?.split(',')[0] ?? ETICHETTE.tipo[capo.tipo]}
         </Corpo>
-      </LinearGradient>
+      </PiedeFoto>
       {capo.stato !== 'pulito' ? (
         <View style={{ position: 'absolute', top: 9, right: 9 }}>
           <Badge testo="da lavare" sfondo={colori.corallo} colore={colori.crema} />

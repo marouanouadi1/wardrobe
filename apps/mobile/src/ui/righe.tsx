@@ -6,6 +6,7 @@
 import { View } from 'react-native'
 import { colori, linee, raggi, spazi } from '../tema/tokens'
 import { Bolla, Scheda, type NomeIcona, Icona, Toccabile } from './base'
+import { useFondo, type Su } from './fondo'
 import { Corpo, Forte, Numero, Titolo } from './testo'
 
 /**
@@ -19,7 +20,7 @@ export function RigaNavigabile({
   sottotitolo,
   onPress,
   onPressaLungo,
-  su = 'chiaro',
+  su,
   bordo,
 }: {
   icona: NomeIcona
@@ -29,11 +30,13 @@ export function RigaNavigabile({
   /** Un'azione secondaria sulla stessa riga — es. eliminare, nell'elenco delle
    * conversazioni — senza aggiungere un'icona che non fa parte del set. */
   onPressaLungo?: () => void
-  su?: 'chiaro' | 'scuro'
+  su?: Su
   /** Un bordo sottile invece del solo fondo — le righe «di servizio» di Profilo. */
   bordo?: boolean
 }) {
-  const scura = su === 'scuro'
+  const ereditato = useFondo()
+  const fondo = su ?? ereditato
+  const scura = fondo === 'scuro'
   return (
     <Toccabile
       onPress={onPress}
@@ -55,10 +58,10 @@ export function RigaNavigabile({
         <Bolla nome={icona} misura={40} sfondo={linee.tenue} colore={colori.inchiostro} />
       )}
       <View style={{ flex: 1 }}>
-        <Titolo taglia={17} su={su}>
+        <Titolo taglia="guida" su={fondo}>
           {titolo}
         </Titolo>
-        <Corpo taglia={12} tono="tenue" su={su}>
+        <Corpo taglia="micro" tono="tenue" su={fondo}>
           {sottotitolo}
         </Corpo>
       </View>
@@ -68,10 +71,14 @@ export function RigaNavigabile({
 }
 
 /**
- * La fila di due o tre numeri — Profilo, il calendario. Una tessera senza
- * `sfondo` è la card di sempre (`Scheda`, bianca, con la sua ombra); con
- * `sfondo` diventa una tinta piena e senza ombra, per il caso di Profilo dove
- * una delle tre («fermi») è volutamente inchiostro pieno.
+ * La fila di due o tre numeri — Profilo, il calendario. Una tessera con `su`
+ * è la card di sempre (`Scheda`, bianca, con la sua ombra); `su="scuro"` la
+ * dipinge d'inchiostro pieno e senza ombra, per il caso di Profilo dove una
+ * delle tre («fermi») lo è.
+ *
+ * Prima la voce portava `sfondo`/`tinta` come due campi separati — accoppiati
+ * solo per convenzione, non dal tipo: nulla obbligava a passarli insieme.
+ * `su` è un solo interruttore, e la tessera ricava il resto da sé.
  */
 export function RigaStatistiche({
   voci,
@@ -79,28 +86,22 @@ export function RigaStatistiche({
   voci: readonly {
     numero: string
     etichetta: string
-    sfondo?: string
-    tinta?: string
+    su?: Su
   }[]
 }) {
   return (
     <View style={{ flexDirection: 'row', gap: 9 }}>
       {voci.map((voce) =>
-        voce.sfondo ? (
-          <View
-            key={voce.etichetta}
-            style={{ flex: 1, padding: 15, borderRadius: raggi.medio + 2, backgroundColor: voce.sfondo }}
-          >
-            <Numero taglia={24} colore={voce.tinta}>
-              {voce.numero}
-            </Numero>
-            <Forte taglia={10.5} colore={voce.tinta} style={{ marginTop: 5, opacity: 0.6 }}>
+        voce.su === 'scuro' ? (
+          <Scheda key={voce.etichetta} su="scuro" sfondo={colori.inchiostro} imbottitura={15} style={{ flex: 1 }}>
+            <Numero>{voce.numero}</Numero>
+            <Forte taglia={10.5} tono="medio" style={{ marginTop: 5 }}>
               {voce.etichetta}
             </Forte>
-          </View>
+          </Scheda>
         ) : (
           <Scheda key={voce.etichetta} imbottitura={15} style={{ flex: 1 }}>
-            <Numero taglia={26}>{voce.numero}</Numero>
+            <Numero>{voce.numero}</Numero>
             <Corpo taglia={10.5} tono="tenue" style={{ marginTop: 5 }}>
               {voce.etichetta}
             </Corpo>

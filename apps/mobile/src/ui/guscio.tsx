@@ -14,8 +14,9 @@ import type { ReactNode } from 'react'
 import { useRef } from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, View, type ViewStyle } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { colori, linee, raggi, spazi } from '../tema/tokens'
+import { colori, linee, raggi, spazi, testoSu } from '../tema/tokens'
 import { BottoneIndietro, Icona, LinkTesto, Toccabile } from './base'
+import { Fondo, useFondo, type Su } from './fondo'
 import { Corpo, TestoErrore, Titolo } from './testo'
 
 export function Testata({
@@ -33,9 +34,12 @@ export function Testata({
    * a chi ha bisogno di tornare a un passo, non a una schermata (l'intro). */
   onIndietro?: () => void
   fotoProfilo?: string | null
-  su?: 'chiaro' | 'scuro'
+  su?: Su
 }) {
   const bordi = useSafeAreaInsets()
+  const ereditato = useFondo()
+  const fondo = su ?? ereditato
+  const scura = fondo === 'scuro'
 
   return (
     <View
@@ -48,13 +52,13 @@ export function Testata({
         gap: spazi.m,
       }}
     >
-      {indietro ? <BottoneIndietro onPress={onIndietro} su={su} /> : null}
+      {indietro ? <BottoneIndietro onPress={onIndietro} su={fondo} /> : null}
 
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Corpo taglia={11.5} tono="tenue" su={su}>
+        <Corpo taglia="micro" tono="tenue" su={fondo}>
           {occhiello}
         </Corpo>
-        <Titolo taglia={27} su={su} style={{ marginTop: 1 }}>
+        <Titolo taglia="testata" su={fondo} style={{ marginTop: 1 }}>
           {titolo}
         </Titolo>
       </View>
@@ -68,14 +72,14 @@ export function Testata({
             height: 42,
             borderRadius: raggi.pillola,
             overflow: 'hidden',
-            backgroundColor: linee.tenue,
+            backgroundColor: scura ? linee.scura : linee.tenue,
           }}
         >
           {fotoProfilo ? (
             <Image source={{ uri: fotoProfilo }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
           ) : (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-              <Icona nome="utente" misura={20} colore="rgba(21,21,26,0.5)" />
+              <Icona nome="utente" misura={20} colore={scura ? testoSu.scuro.tenue : testoSu.chiaro.tenue} />
             </View>
           )}
         </Toccabile>
@@ -110,7 +114,7 @@ export function Schermata({
   indietro?: boolean
   onIndietro?: () => void
   fotoProfilo?: string | null
-  su?: 'chiaro' | 'scuro'
+  su?: Su
   /** Sotto la barra galleggiante: il `paddingBottom` le lascia spazio. */
   tab?: boolean
   /** Ancora la vista in fondo quando il contenuto cresce: la chat, dove
@@ -122,29 +126,35 @@ export function Schermata({
   const bordi = useSafeAreaInsets()
   const paddingBottom = tab ? Math.max(bordi.bottom, 10) + 6 + 48 + 8 : 60
   const scrollRef = useRef<ScrollView>(null)
+  // Il fondo pagina, asserito: è la sola ragione per cui `su="scuro"` esiste,
+  // ed è il punto più esterno da cui ogni `Scheda`/testo nudo dentro
+  // `children` eredita — oggi nessuna schermata lo passa ancora.
+  const fondo: Su = su ?? 'chiaro'
 
   return (
-    <View style={{ flex: 1, backgroundColor: su === 'scuro' ? colori.inchiostro : undefined }}>
-      <Testata
-        occhiello={occhiello}
-        titolo={titolo}
-        indietro={indietro}
-        onIndietro={onIndietro}
-        fotoProfilo={fotoProfilo}
-        su={su}
-      />
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={[
-          { paddingHorizontal: spazi.xl, paddingBottom, gap: spazi.l },
-          contentStyle,
-        ]}
-        showsVerticalScrollIndicator={false}
-        onContentSizeChange={ancoraInFondo ? () => scrollRef.current?.scrollToEnd({ animated: true }) : undefined}
-      >
-        {children}
-      </ScrollView>
-    </View>
+    <Fondo su={fondo}>
+      <View style={{ flex: 1, backgroundColor: fondo === 'scuro' ? colori.inchiostro : undefined }}>
+        <Testata
+          occhiello={occhiello}
+          titolo={titolo}
+          indietro={indietro}
+          onIndietro={onIndietro}
+          fotoProfilo={fotoProfilo}
+          su={fondo}
+        />
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={[
+            { paddingHorizontal: spazi.xl, paddingBottom, gap: spazi.l },
+            contentStyle,
+          ]}
+          showsVerticalScrollIndicator={false}
+          onContentSizeChange={ancoraInFondo ? () => scrollRef.current?.scrollToEnd({ animated: true }) : undefined}
+        >
+          {children}
+        </ScrollView>
+      </View>
+    </Fondo>
   )
 }
 
@@ -172,33 +182,35 @@ export function GuscioAutenticazione({
 }) {
   const bordi = useSafeAreaInsets()
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colori.sfondo }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          paddingHorizontal: spazi.xl,
-          paddingTop: bordi.top,
-          paddingBottom: bordi.bottom,
-          gap: spazi.l,
-        }}
+    <Fondo su="chiaro">
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: colori.sfondo }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={{ gap: spazi.xs, marginBottom: spazi.l }}>
-          <Titolo>{titolo}</Titolo>
-          <Corpo tono="tenue">{sottotitolo}</Corpo>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            paddingHorizontal: spazi.xl,
+            paddingTop: bordi.top,
+            paddingBottom: bordi.bottom,
+            gap: spazi.l,
+          }}
+        >
+          <View style={{ gap: spazi.xs, marginBottom: spazi.l }}>
+            <Titolo>{titolo}</Titolo>
+            <Corpo tono="tenue">{sottotitolo}</Corpo>
+          </View>
+
+          {children}
+
+          {errore ? <TestoErrore>{errore}</TestoErrore> : null}
+
+          {azione}
+
+          <LinkTesto onPress={onLinkFantasma}>{testoLinkFantasma}</LinkTesto>
         </View>
-
-        {children}
-
-        {errore ? <TestoErrore>{errore}</TestoErrore> : null}
-
-        {azione}
-
-        <LinkTesto onPress={onLinkFantasma}>{testoLinkFantasma}</LinkTesto>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </Fondo>
   )
 }

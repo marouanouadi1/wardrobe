@@ -81,11 +81,11 @@ export default function Profilo() {
             voci={[
               { numero: String(capi.length), etichetta: 'capi' },
               // Non ambra: un conteggio di dati dell'utente, non il modello
-              // che parla — la regola in cima a `tokens.ts`. E senza `sfondo`,
+              // che parla — la regola in cima a `tokens.ts`. E senza `su`,
               // così prende la stessa card bianca di «capi» invece di una
               // tinta piena inventata per l'occasione.
               { numero: String(outfit.length), etichetta: 'outfit' },
-              { numero: String(dormienti.length), etichetta: 'fermi', sfondo: colori.inchiostro, tinta: colori.crema },
+              { numero: String(dormienti.length), etichetta: 'fermi', su: 'scuro' },
             ]}
           />
 

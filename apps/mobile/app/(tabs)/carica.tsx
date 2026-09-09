@@ -14,16 +14,15 @@
 
 import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'expo-image'
-import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useRef, useState } from 'react'
 import { View } from 'react-native'
 import { api, messaggioDiErrore } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
 import { conta } from '../../src/dati/formato'
-import { colori, raggi, spazi } from '../../src/tema/tokens'
+import { raggi, spazi } from '../../src/tema/tokens'
 import { BottonePrimario, BottoneSecondario, Scheda } from '../../src/ui/base'
-import { MiniaturaFoto, SchedaFoto } from '../../src/ui/capi'
+import { MiniaturaFoto, PiedeFoto, SchedaFoto } from '../../src/ui/capi'
 import { AttesaLunga } from '../../src/ui/stati'
 import { Corpo, Etichetta, Titolo } from '../../src/ui/testo'
 import { Schermata } from '../../src/ui/guscio'
@@ -270,7 +269,7 @@ export default function Carica() {
     <Schermata occhiello="Nuovo capo" titolo="Aggiungi" tab>
       {fase === 'scatta' ? (
         <>
-          <SchedaFoto raggio={raggi.grande} ombra="nessuna" sfondo={colori.inchiostro} style={{ height: 430 }}>
+          <SchedaFoto raggio={raggi.grande} ombra="nessuna" su="scuro" style={{ height: 430 }}>
             {/* Prima una foto Pexels caricata dalla rete a ogni apertura di
                 questa schermata — con relativo fallback per quando non
                 arrivava. Ora è nel bundle (foto Pexels 18257675, licenza
@@ -291,17 +290,12 @@ export default function Carica() {
                 borderRadius: 22,
               }}
             />
-            <LinearGradient
-              colors={['rgba(21,21,26,0)', 'rgba(21,21,26,0.85)']}
-              style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 20, gap: 5 }}
-            >
-              <Titolo taglia={21} colore={colori.scheda}>
-                Un capo per foto
-              </Titolo>
-              <Corpo taglia={13} colore="rgba(255,253,249,0.78)">
+            <PiedeFoto opacita={0.85} style={{ padding: 20, gap: 5 }}>
+              <Titolo taglia="sezione">Un capo per foto</Titolo>
+              <Corpo taglia="minuto" tono="medio">
                 {'Steso sul letto o appeso, con la luce che hai. Non serve altro: al resto pensa il modello.'}
               </Corpo>
-            </LinearGradient>
+            </PiedeFoto>
           </SchedaFoto>
 
           {!analizzandoCoda ? (
@@ -318,7 +312,7 @@ export default function Carica() {
 
           {coda.length > 0 ? (
             <View style={{ gap: spazi.s }}>
-              <Etichetta taglia={11} tono="debole">
+              <Etichetta taglia="micro" tono="debole">
                 {conta(coda.length, 'capo in coda', 'capi in coda')}
               </Etichetta>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spazi.s }}>
@@ -342,7 +336,7 @@ export default function Carica() {
                 // esisteva.
                 <Scheda imbottitura={18} style={{ gap: spazi.m }}>
                   {progressoCoda ? (
-                    <Corpo taglia={13} tono="medio" style={{ textAlign: 'center' }}>
+                    <Corpo taglia="minuto" tono="medio" style={{ textAlign: 'center' }}>
                       {`Sto guardando il capo ${progressoCoda.riuscite + progressoCoda.fallite + 1} di ${progressoCoda.totale}`}
                     </Corpo>
                   ) : null}
@@ -356,7 +350,7 @@ export default function Carica() {
             </View>
           ) : null}
 
-          <Corpo taglia={11} tono="debole" style={{ textAlign: 'center', paddingHorizontal: spazi.m }}>
+          <Corpo taglia="micro" tono="debole" style={{ textAlign: 'center', paddingHorizontal: spazi.m }}>
             {
               "Se lo sfondo non viene via bene: su iPhone, tieni premuto sul capo in Foto e scegli «Copia soggetto», oppure in File tocca a lungo la foto e scegli «Rimuovi sfondo». In alternativa un sito come remove.bg."
             }
@@ -366,13 +360,13 @@ export default function Carica() {
 
       {fase === 'analisi' ? (
         <>
-          <SchedaFoto raggio={raggi.grande} ombra="nessuna" sfondo={colori.inchiostro} style={{ height: 390 }}>
+          <SchedaFoto raggio={raggi.grande} ombra="nessuna" su="scuro" style={{ height: 390 }}>
             {foto ? (
               <Image source={{ uri: foto }} style={{ flex: 1 }} contentFit="cover" />
             ) : null}
           </SchedaFoto>
 
-          <Titolo taglia={24}>Sto guardando il capo</Titolo>
+          <Titolo taglia="testata">Sto guardando il capo</Titolo>
 
           <AttesaLunga messaggi={MESSAGGI_ATTESA} />
 

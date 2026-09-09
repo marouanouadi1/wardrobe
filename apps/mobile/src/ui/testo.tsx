@@ -10,13 +10,17 @@
 import type { ReactNode } from 'react'
 import { StyleSheet, Text, type TextProps, type TextStyle } from 'react-native'
 import { caratteri, colori, testoSu, tipografia } from '../tema/tokens'
+import { useFondo, type Su } from './fondo'
 
 type Tono = 'forte' | 'medio' | 'tenue' | 'debole'
 
 interface Props extends TextProps {
   children?: ReactNode
-  /** Su che fondo si posa: su `'scuro'` i toni si invertono. */
-  su?: 'chiaro' | 'scuro'
+  /** Su che fondo si posa: su `'scuro'` i toni si invertono. Di norma non
+   * serve scriverlo — si eredita dal `<Fondo>` più vicino (`ui/fondo.tsx`);
+   * questa prop resta come override esplicito, con la stessa precedenza di
+   * `colore`. */
+  su?: Su
   tono?: Tono
   colore?: string
   /** Un numero esatto, o una chiave di `tipografia` (`tema/tokens.ts`) —
@@ -24,9 +28,10 @@ interface Props extends TextProps {
   taglia?: number | keyof typeof tipografia
 }
 
-function colore(props: Props): string {
+function useColore(props: Props): string {
+  const fondo = useFondo()
   if (props.colore) return props.colore
-  const scala = props.su === 'scuro' ? testoSu.scuro : testoSu.chiaro
+  const scala = (props.su ?? fondo) === 'scuro' ? testoSu.scuro : testoSu.chiaro
   return scala[props.tono ?? 'forte']
 }
 
@@ -43,7 +48,7 @@ export function Titolo({ taglia = 'testata', style, ...props }: Props) {
       {...props}
       style={[
         stili.display,
-        { fontSize: numero, lineHeight: numero * 1.1, color: colore(props) },
+        { fontSize: numero, lineHeight: numero * 1.1, color: useColore(props) },
         style,
       ]}
     />
@@ -58,7 +63,7 @@ export function Numero({ taglia = 26, style, ...props }: Props) {
       {...props}
       style={[
         stili.display,
-        { fontSize: numero, lineHeight: numero, letterSpacing: -numero * 0.04, color: colore(props) },
+        { fontSize: numero, lineHeight: numero, letterSpacing: -numero * 0.04, color: useColore(props) },
         style,
       ]}
     />
@@ -72,7 +77,7 @@ export function Corpo({ taglia = 'corpo', style, ...props }: Props) {
       {...props}
       style={[
         stili.testo,
-        { fontSize: numero, lineHeight: numero * 1.5, color: colore(props) },
+        { fontSize: numero, lineHeight: numero * 1.5, color: useColore(props) },
         style,
       ]}
     />
@@ -86,7 +91,7 @@ export function Forte({ taglia = 'corpo', style, ...props }: Props) {
       {...props}
       style={[
         stili.forte,
-        { fontSize: numero, lineHeight: numero * 1.3, color: colore(props) },
+        { fontSize: numero, lineHeight: numero * 1.3, color: useColore(props) },
         style,
       ]}
     />
@@ -108,7 +113,7 @@ export function Etichetta({ taglia = 'micro', style, ...props }: Props) {
   return (
     <Text
       {...props}
-      style={[stili.etichetta, { fontSize: numero, color: colore(props) }, style]}
+      style={[stili.etichetta, { fontSize: numero, color: useColore(props) }, style]}
     />
   )
 }

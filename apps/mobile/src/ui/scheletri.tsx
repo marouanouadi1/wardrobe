@@ -32,6 +32,7 @@ import { useEffect, useState } from 'react'
 import { Animated, View, type DimensionValue, type StyleProp, type ViewStyle } from 'react-native'
 import { colori, curve, durate, griglie, ombre, raggi, spazi, superfici } from '../tema/tokens'
 import { SchedaFoto } from './capi'
+import { useFondo, type Su } from './fondo'
 
 /**
  * Il rettangolo che respira: la sola forma da cui sono fatti tutti gli
@@ -51,9 +52,11 @@ export function Blocco({
   larghezza?: DimensionValue
   altezza?: DimensionValue
   raggio?: number
-  su?: 'chiaro' | 'scuro'
+  su?: Su
   style?: StyleProp<ViewStyle>
 }) {
+  const ereditato = useFondo()
+  const fondo = su ?? ereditato
   // `useState` con inizializzatore, non `useRef(...).current`: stessa scelta
   // di `PuntiniAttesa` e `AttesaLunga`, per la stessa regola (`react-hooks/refs`).
   const [pulsazione] = useState(() => new Animated.Value(1))
@@ -90,7 +93,7 @@ export function Blocco({
           width: larghezza,
           height: altezza,
           borderRadius: raggio,
-          backgroundColor: superfici.scheletro[su === 'scuro' ? 'scuro' : 'chiaro'],
+          backgroundColor: superfici.scheletro[fondo === 'scuro' ? 'scuro' : 'chiaro'],
           opacity: pulsazione,
         },
         style,
@@ -113,11 +116,26 @@ export function ScheletroProposta({
   su,
 }: {
   altezzaFoto?: number
-  su?: 'chiaro' | 'scuro'
+  su?: Su
 }) {
+  const ereditato = useFondo()
+  const fondo = su ?? ereditato
+  const scura = fondo === 'scuro'
   return (
-    <SchedaFoto raggio={raggi.grande} ombra="alta">
-      <Blocco altezza={altezzaFoto} raggio={0} su={su} />
+    // Prima questa `SchedaFoto` non riceveva `su` (né `sfondo`) — restava
+    // sempre bianca — mentre i `Blocco` dentro sì: con `su="scuro"`
+    // disegnavano un velo di crema sopra una scheda bianca, e sparivano.
+    // `ScheletroSchedaOutfit` qui sotto è la stessa forma e lo fa giusto:
+    // stesso velo (`superfici.suScuro.riga`) di una `Scheda` scura — questo
+    // scheletro sta già su una `Schermata` scura, non è un rettangolo scuro
+    // autonomo come la copertina di `carica.tsx`.
+    <SchedaFoto
+      raggio={raggi.grande}
+      su={fondo}
+      sfondo={scura ? superfici.suScuro.riga : undefined}
+      ombra={scura ? 'nessuna' : 'alta'}
+    >
+      <Blocco altezza={altezzaFoto} raggio={0} su={fondo} />
       <View style={{ padding: 18, gap: spazi.s }}>
         <Blocco altezza={14} larghezza={104} raggio={raggi.pillola} su={su} />
         <Blocco altezza={32} larghezza="72%" raggio={raggi.piccolo} su={su} />
@@ -132,8 +150,10 @@ export function ScheletroProposta({
 }
 
 /** Una proposta alternativa: tre miniature, due righe, la pillola del match. */
-export function ScheletroRigaProposta({ su }: { su?: 'chiaro' | 'scuro' }) {
-  const scura = su === 'scuro'
+export function ScheletroRigaProposta({ su }: { su?: Su }) {
+  const ereditato = useFondo()
+  const fondo = su ?? ereditato
+  const scura = fondo === 'scuro'
   return (
     <View
       style={{
@@ -148,14 +168,14 @@ export function ScheletroRigaProposta({ su }: { su?: 'chiaro' | 'scuro' }) {
     >
       <View style={{ flexDirection: 'row', gap: 3 }}>
         {[0, 1, 2].map((indice) => (
-          <Blocco key={indice} larghezza={34} altezza={52} raggio={11} su={su} />
+          <Blocco key={indice} larghezza={34} altezza={52} raggio={11} su={fondo} />
         ))}
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 7 }}>
-        <Blocco altezza={15} larghezza="70%" raggio={raggi.piccolo} su={su} />
-        <Blocco altezza={11} raggio={raggi.pillola} su={su} />
+        <Blocco altezza={15} larghezza="70%" raggio={raggi.piccolo} su={fondo} />
+        <Blocco altezza={11} raggio={raggi.pillola} su={fondo} />
       </View>
-      <Blocco larghezza={46} altezza={22} raggio={raggi.pillola} su={su} />
+      <Blocco larghezza={46} altezza={22} raggio={raggi.pillola} su={fondo} />
     </View>
   )
 }
@@ -171,7 +191,7 @@ export function ScheletroGrigliaCapi({
 }: {
   /** Sei riempiono una schermata senza scorrere: bastano a dire «una griglia». */
   quanti?: number
-  su?: 'chiaro' | 'scuro'
+  su?: Su
 }) {
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: griglie.armadio.distanza }}>
@@ -190,18 +210,21 @@ export function ScheletroGrigliaCapi({
  * Dentro la stessa `SchedaFoto` della card vera (`app/outfit.tsx`) — non una
  * cornice ricostruita a mano una seconda volta.
  */
-export function ScheletroSchedaOutfit({ su }: { su?: 'chiaro' | 'scuro' }) {
-  const scura = su === 'scuro'
+export function ScheletroSchedaOutfit({ su }: { su?: Su }) {
+  const ereditato = useFondo()
+  const fondo = su ?? ereditato
+  const scura = fondo === 'scuro'
   return (
     <SchedaFoto
-      sfondo={scura ? superfici.suScuro.riga : colori.scheda}
+      su={fondo}
+      sfondo={scura ? superfici.suScuro.riga : undefined}
       ombra={scura ? 'nessuna' : 'scheda'}
     >
       {/* Un blocco solo, non quattro accostati: nella scheda vera le foto sono
           a filo, senza spazio in mezzo — quattro rettangoli senza separazione
           sono un rettangolo. `raggio={0}` perché a smussare ci pensa
           l'`overflow: 'hidden'` di `SchedaFoto`. */}
-      <Blocco altezza={250} raggio={0} su={su} />
+      <Blocco altezza={250} raggio={0} su={fondo} />
       <View
         style={{
           flexDirection: 'row',
@@ -212,10 +235,10 @@ export function ScheletroSchedaOutfit({ su }: { su?: 'chiaro' | 'scuro' }) {
         }}
       >
         <View style={{ flex: 1, minWidth: 0, gap: 7 }}>
-          <Blocco altezza={17} larghezza="62%" raggio={raggi.piccolo} su={su} />
-          <Blocco altezza={11} larghezza="86%" raggio={raggi.pillola} su={su} />
+          <Blocco altezza={17} larghezza="62%" raggio={raggi.piccolo} su={fondo} />
+          <Blocco altezza={11} larghezza="86%" raggio={raggi.pillola} su={fondo} />
         </View>
-        <Blocco larghezza={46} altezza={46} raggio={raggi.pillola} su={su} />
+        <Blocco larghezza={46} altezza={46} raggio={raggi.pillola} su={fondo} />
       </View>
     </SchedaFoto>
   )
@@ -232,7 +255,7 @@ export function ScheletroCalendario({
   su,
 }: {
   giorni?: number
-  su?: 'chiaro' | 'scuro'
+  su?: Su
 }) {
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: griglie.mese.distanza }}>
