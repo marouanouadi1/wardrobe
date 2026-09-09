@@ -13,11 +13,84 @@
 import type { Capo } from '@wardrobe/contracts'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
-import { View } from 'react-native'
+import type { ReactNode } from 'react'
+import { View, type StyleProp, type ViewStyle } from 'react-native'
 import { fotoDaMostrare } from '../dati/dominio'
 import { ETICHETTE, colori, durate, griglie, ombre, raggi } from '../tema/tokens'
 import { Badge, BottoneTondo, Toccabile } from './base'
 import { Corpo, Etichetta, Forte, Titolo } from './testo'
+
+const OMBRE_SCHEDA_FOTO = {
+  scheda: ombre.scheda,
+  alta: ombre.alta,
+  bassa: ombre.bassa,
+  nessuna: {},
+} as const
+
+/**
+ * La card foto a tutta larghezza: angoli smussati, un fondo, e dentro quello
+ * che la schermata vuole (di solito un'`<Image>` più un testo sovrapposto).
+ *
+ * Sostituisce sei ricostruzioni a mano quasi identiche — il dettaglio di un
+ * capo, il suggeritore, gli outfit salvati, la proposta di Oggi, le due
+ * schermate di `carica.tsx` — ciascuna con un raggio o un'ombra leggermente
+ * diversi senza una ragione: la stessa forma, copiata a mano sei volte,
+ * diverge in silenzio.
+ */
+export function SchedaFoto({
+  raggio = raggi.grande - 2,
+  ombra = 'scheda',
+  sfondo = colori.scheda,
+  style,
+  children,
+}: {
+  raggio?: number
+  ombra?: keyof typeof OMBRE_SCHEDA_FOTO
+  sfondo?: string
+  style?: StyleProp<ViewStyle>
+  children: ReactNode
+}) {
+  return (
+    <View
+      style={[
+        { borderRadius: raggio, overflow: 'hidden', backgroundColor: sfondo },
+        OMBRE_SCHEDA_FOTO[ombra],
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  )
+}
+
+/**
+ * L'elenco dei «perché» di una proposta: un pallino ambra e una riga di testo
+ * per ciascuno — l'ambra è corretta qui, è il motivo che il modello dà per la
+ * sua scelta. Una forma che vive qui invece che ridisegnata inline in una
+ * schermata, per la stessa regola di `SchedaFoto` sopra.
+ */
+export function MotiviProposta({ motivi, su }: { motivi: string[]; su?: 'chiaro' | 'scuro' }) {
+  return (
+    <View style={{ gap: 7 }}>
+      {motivi.map((motivo) => (
+        <View key={motivo} style={{ flexDirection: 'row', gap: 9 }}>
+          <View
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: raggi.pillola,
+              marginTop: 7,
+              backgroundColor: colori.ambra,
+            }}
+          />
+          <Corpo taglia={13} tono="medio" su={su} style={{ flex: 1 }}>
+            {motivo}
+          </Corpo>
+        </View>
+      ))}
+    </View>
+  )
+}
 
 export function CapoInGriglia({ capo, onPress }: { capo: Capo; onPress: () => void }) {
   return (

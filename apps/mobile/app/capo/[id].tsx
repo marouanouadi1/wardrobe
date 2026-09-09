@@ -24,9 +24,9 @@ import {
   fotoDaMostrare,
   quandoUsato,
 } from '../../src/dati/dominio'
-import { ETICHETTE, colori, linee, ombre, raggi, spazi, velo } from '../../src/tema/tokens'
+import { ETICHETTE, colori, durate, linee, raggi, spazi, velo } from '../../src/tema/tokens'
 import { BadgeIa, BottonePrimario, BottoneSecondario, Campo, Icona, Pillola, Scheda, Toccabile } from '../../src/ui/base'
-import { Attributo, Miniatura } from '../../src/ui/capi'
+import { Attributo, Miniatura, SchedaFoto } from '../../src/ui/capi'
 import { Schermata, Testata } from '../../src/ui/guscio'
 import { Vuoto } from '../../src/ui/stati'
 import { Corpo, Forte, Titolo } from '../../src/ui/testo'
@@ -107,20 +107,17 @@ export default function DettaglioCapo() {
 
   return (
     <Schermata occhiello={ETICHETTE.tipo[capo.tipo]} titolo={capo.nome} indietro contentStyle={{ paddingHorizontal: 0 }}>
-      <View
-        style={{
-          marginHorizontal: spazi.xl,
-          borderRadius: raggi.grande - 2,
-          overflow: 'hidden',
-          backgroundColor: colori.fondoFoto,
-          ...ombre.alta,
-        }}
+      <SchedaFoto
+        raggio={raggi.grande - 2}
+        ombra="alta"
+        sfondo={colori.fondoFoto}
+        style={{ marginHorizontal: spazi.xl }}
       >
         <Image
           source={{ uri: fotoDaMostrare(capo) }}
           style={{ width: '100%', height: 330 }}
           contentFit="cover"
-          transition={250}
+          transition={durate.breve}
         />
         <View
           style={{
@@ -157,7 +154,7 @@ export default function DettaglioCapo() {
             pieno={capo.preferito}
           />
         </Toccabile>
-      </View>
+      </SchedaFoto>
 
       <View style={{ paddingHorizontal: spazi.xl, gap: spazi.m }}>
         <View>

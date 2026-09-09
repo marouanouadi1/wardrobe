@@ -23,7 +23,7 @@ import { useArmadio } from '../../src/dati/archivio'
 import { conta } from '../../src/dati/formato'
 import { colori, raggi, spazi } from '../../src/tema/tokens'
 import { BottonePrimario, BottoneSecondario } from '../../src/ui/base'
-import { MiniaturaFoto } from '../../src/ui/capi'
+import { MiniaturaFoto, SchedaFoto } from '../../src/ui/capi'
 import { AttesaLunga } from '../../src/ui/stati'
 import { Corpo, Etichetta, Titolo } from '../../src/ui/testo'
 import { Schermata } from '../../src/ui/guscio'
@@ -246,14 +246,7 @@ export default function Carica() {
     <Schermata occhiello="Nuovo capo" titolo="Aggiungi" tab>
       {fase === 'scatta' ? (
         <>
-          <View
-            style={{
-              height: 430,
-              borderRadius: raggi.grande,
-              overflow: 'hidden',
-              backgroundColor: colori.inchiostro,
-            }}
-          >
+          <SchedaFoto raggio={raggi.grande} ombra="nessuna" sfondo={colori.inchiostro} style={{ height: 430 }}>
             <Image
               source={{ uri: 'https://images.pexels.com/photos/18257675/pexels-photo-18257675.jpeg?auto=compress&cs=tinysrgb&w=700&h=900&fit=crop' }}
               style={{ position: 'absolute', inset: 0, opacity: 0.5 }}
@@ -280,7 +273,7 @@ export default function Carica() {
                 {'Steso sul letto o appeso, con la luce che hai. Non serve altro: al resto pensa il modello.'}
               </Corpo>
             </LinearGradient>
-          </View>
+          </SchedaFoto>
 
           {!analizzandoCoda ? (
             <View style={{ flexDirection: 'row', gap: 9 }}>
@@ -331,18 +324,11 @@ export default function Carica() {
 
       {fase === 'analisi' ? (
         <>
-          <View
-            style={{
-              height: 390,
-              borderRadius: raggi.grande,
-              overflow: 'hidden',
-              backgroundColor: colori.inchiostro,
-            }}
-          >
+          <SchedaFoto raggio={raggi.grande} ombra="nessuna" sfondo={colori.inchiostro} style={{ height: 390 }}>
             {foto ? (
               <Image source={{ uri: foto }} style={{ flex: 1 }} contentFit="cover" />
             ) : null}
-          </View>
+          </SchedaFoto>
 
           <Titolo taglia={24}>Sto guardando il capo</Titolo>
 

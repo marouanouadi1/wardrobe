@@ -11,9 +11,9 @@ import { Image } from 'expo-image'
 import { router } from 'expo-router'
 import { View } from 'react-native'
 import { useArmadio } from '../src/dati/archivio'
-import { capiDormienti } from '../src/dati/dominio'
+import { capiDormienti, fotoDaMostrare } from '../src/dati/dominio'
 import { formattaMeseAnno, parola } from '../src/dati/formato'
-import { colori, linee, spazi } from '../src/tema/tokens'
+import { colori, durate, griglie, linee, spazi } from '../src/tema/tokens'
 import { BadgeIa, BottonePrimario, BottoneSecondario, Scheda } from '../src/ui/base'
 import { Schermata } from '../src/ui/guscio'
 import { Corpo, Etichetta, Numero, Titolo } from '../src/ui/testo'
@@ -44,9 +44,9 @@ export default function Calendario() {
 
   return (
     <Schermata occhiello={formattaMeseAnno(adesso)} titolo="Cosa ho messo" indietro>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: griglie.mese.distanza }}>
           {GIORNI_SETTIMANA.map((lettera, indiceGiorno) => (
-            <View key={`${lettera}-${indiceGiorno}`} style={{ width: '13.1%', alignItems: 'center' }}>
+            <View key={`${lettera}-${indiceGiorno}`} style={{ width: griglie.mese.colonna, alignItems: 'center' }}>
               <Etichetta taglia={9.5} tono="debole">
                 {lettera}
               </Etichetta>
@@ -57,24 +57,26 @@ export default function Calendario() {
             const giorno = indiceGiorno + 1
             const usati = usiPerGiorno.get(giorno) ?? []
             const primo = usati[0] ? indice.get(usati[0]) : undefined
+            const fotoPrimo = primo ? fotoDaMostrare(primo) : undefined
             return (
               <View
                 key={giorno}
                 style={{
-                  width: '13.1%',
-                  aspectRatio: 1 / 1.25,
-                  borderRadius: 13,
+                  width: griglie.mese.colonna,
+                  aspectRatio: griglie.mese.proporzione,
+                  borderRadius: griglie.mese.raggio,
                   overflow: 'hidden',
                   backgroundColor: primo ? colori.fondoFoto : linee.tenue,
                   borderWidth: giorno === oggi ? 2 : 0,
                   borderColor: colori.inchiostro,
                 }}
               >
-                {primo?.foto.url ? (
+                {fotoPrimo ? (
                   <Image
-                    source={{ uri: primo.foto.url }}
+                    source={{ uri: fotoPrimo }}
                     style={{ position: 'absolute', inset: 0 }}
                     contentFit="cover"
+                    transition={durate.breve}
                   />
                 ) : null}
                 <View

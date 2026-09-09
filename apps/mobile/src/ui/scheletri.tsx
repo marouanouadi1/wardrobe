@@ -101,10 +101,10 @@ export function Blocco({
 /**
  * La proposta grande di Oggi: la foto, e sotto la fascia di testo.
  *
- * Niente scheda intorno e niente `ombre.alta`: uno scheletro non deve stare in
- * rilievo, deve solo occupare il posto giusto. Con `altezzaFoto` di default
- * l'altezza totale si ferma vicino ai 400px contro i circa 392 della card
- * vera, così lo scambio si posa invece di saltare.
+ * `altezzaFoto` di default (330) è la stessa della foto vera in
+ * `app/(tabs)/oggi.tsx`: lo scambio scheletro→contenuto non salta di un
+ * pixel. Nessuna ombra propria — la porta già `SchedaFoto` intorno a
+ * entrambi, scheletro e contenuto, dalla stessa schermata.
  */
 export function ScheletroProposta({
   altezzaFoto = 330,

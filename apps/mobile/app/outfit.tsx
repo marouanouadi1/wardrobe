@@ -9,10 +9,11 @@
 import { Image } from 'expo-image'
 import { View } from 'react-native'
 import { useArmadio, useVestiEVai } from '../src/dati/archivio'
-import { capiDiVestizione, quandoUsato } from '../src/dati/dominio'
+import { capiDiVestizione, fotoDaMostrare, quandoUsato } from '../src/dati/dominio'
 import { conta } from '../src/dati/formato'
-import { colori, ombre, raggi, spazi, velo } from '../src/tema/tokens'
+import { colori, durate, spazi, velo } from '../src/tema/tokens'
 import { Badge, BottoneTondo } from '../src/ui/base'
+import { SchedaFoto } from '../src/ui/capi'
 import { Schermata } from '../src/ui/guscio'
 import { Vuoto } from '../src/ui/stati'
 import { Corpo, Titolo } from '../src/ui/testo'
@@ -34,23 +35,16 @@ export default function Outfit() {
         const capi = capiDiVestizione(salvato.vestizione, indice)
         const copertina = capi[0]
         return (
-          <View
-            key={salvato.id}
-            style={{
-              borderRadius: raggi.grande - 2,
-              overflow: 'hidden',
-              backgroundColor: colori.scheda,
-              ...ombre.scheda,
-            }}
-          >
+          <SchedaFoto key={salvato.id}>
             <View style={{ flexDirection: 'row', height: 250 }}>
               {capi.slice(0, 4).map((capo) => (
                 <Image
                   key={capo.id}
-                  source={{ uri: capo.foto.url ?? undefined }}
+                  source={{ uri: fotoDaMostrare(capo) }}
                   style={{ flex: 1, backgroundColor: colori.fondoFoto }}
                   contentFit="cover"
                   contentPosition={{ top: '25%', left: '50%' }}
+                  transition={durate.breve}
                 />
               ))}
               {!copertina ? <View style={{ flex: 1, backgroundColor: colori.sfondo }} /> : null}
@@ -89,7 +83,7 @@ export default function Outfit() {
                 onPress={() => vestiEVai(salvato.vestizione)}
               />
             </View>
-          </View>
+          </SchedaFoto>
         )
       })}
     </Schermata>

@@ -15,7 +15,7 @@ import { ScrollView, View } from 'react-native'
 import { useArmadio, useVestiEVai } from '../src/dati/archivio'
 import { type SceltaConversazione, useChat } from '../src/dati/chat'
 import { capiDiVestizione, capiDisponibili, fotoDaMostrare, slotMancanti } from '../src/dati/dominio'
-import { colori, linee, ombre, raggi, spazi } from '../src/tema/tokens'
+import { colori, durate, linee, raggi, spazi } from '../src/tema/tokens'
 import {
   BadgeIa,
   BarraChiedi,
@@ -28,6 +28,7 @@ import {
   Segmenti,
   Toccabile,
 } from '../src/ui/base'
+import { MotiviProposta, SchedaFoto } from '../src/ui/capi'
 import { Schermata } from '../src/ui/guscio'
 import { Corpo, Etichetta, Forte, Titolo } from '../src/ui/testo'
 
@@ -135,16 +136,9 @@ export default function Suggeritore() {
       {modo === 'proposte'
         ? suggerimenti.map((proposta) => {
             const capi = capiDiVestizione(proposta.vestizione, indice)
+            const badge = <BadgeIa testo={`${proposta.match}%`} />
             return (
-              <View
-                key={proposta.titolo}
-                style={{
-                  borderRadius: raggi.grande - 2,
-                  overflow: 'hidden',
-                  backgroundColor: colori.scheda,
-                  ...ombre.scheda,
-                }}
-              >
+              <SchedaFoto key={proposta.titolo}>
                 {capi[0] && fotoDaMostrare(capi[0]) ? (
                   <View>
                     <Image
@@ -152,12 +146,15 @@ export default function Suggeritore() {
                       style={{ width: '100%', height: 230, backgroundColor: colori.fondoFoto }}
                       contentFit="cover"
                       contentPosition={{ top: '20%', left: '50%' }}
+                      transition={durate.breve}
                     />
-                    <View style={{ position: 'absolute', top: 12, right: 12 }}>
-                      <BadgeIa testo={`${proposta.match}%`} />
-                    </View>
+                    <View style={{ position: 'absolute', top: 12, right: 12 }}>{badge}</View>
                   </View>
-                ) : null}
+                ) : (
+                  // Il match è l'informazione più importante della proposta:
+                  // non deve dipendere dal primo capo avere una foto.
+                  <View style={{ padding: 16, paddingBottom: 0 }}>{badge}</View>
+                )}
 
                 <View style={{ padding: 16, gap: spazi.m }}>
                   <Titolo taglia={21}>{proposta.titolo}</Titolo>
@@ -174,34 +171,18 @@ export default function Suggeritore() {
                           backgroundColor: colori.fondoFoto,
                         }}
                         contentFit="cover"
+                        transition={durate.breve}
                       />
                     ))}
                   </View>
 
-                  <View style={{ gap: 7 }}>
-                    {proposta.perche.map((motivo) => (
-                      <View key={motivo} style={{ flexDirection: 'row', gap: 9 }}>
-                        <View
-                          style={{
-                            width: 5,
-                            height: 5,
-                            borderRadius: raggi.pillola,
-                            marginTop: 7,
-                            backgroundColor: colori.ambra,
-                          }}
-                        />
-                        <Corpo taglia={13} tono="medio" style={{ flex: 1 }}>
-                          {motivo}
-                        </Corpo>
-                      </View>
-                    ))}
-                  </View>
+                  <MotiviProposta motivi={proposta.perche} />
 
                   {/* «Salva» tiene la proposta senza doverla prima provare:
                       due tocchi in meno per chi ha già deciso. */}
                   <AzioniProposta {...provaEsalva(proposta)} />
                 </View>
-              </View>
+              </SchedaFoto>
             )
           })
         : null}
