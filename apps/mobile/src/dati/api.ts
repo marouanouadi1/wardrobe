@@ -145,7 +145,14 @@ export function suTokenNonValido(gestore: (() => void) | null): void {
 
 async function chiama<T>(
   percorso: string,
-  opzioni: { metodo?: string; corpo?: unknown; intestazioni?: Record<string, string> } = {},
+  opzioni: {
+    metodo?: string
+    corpo?: unknown
+    intestazioni?: Record<string, string>
+    /** Per abortire una richiesta lunga (l'analisi di una foto) da un
+     * timeout o da un tocco su «Annulla» — vedi `carica.tsx`. */
+    segnale?: AbortSignal
+  } = {},
 ): Promise<T> {
   if (!URL_API) {
     throw new ErroreApi(
@@ -163,6 +170,7 @@ async function chiama<T>(
       ...opzioni.intestazioni,
     },
     body: opzioni.corpo === undefined ? undefined : JSON.stringify(opzioni.corpo),
+    signal: opzioni.segnale,
   })
 
   if (!risposta.ok) {
@@ -227,13 +235,14 @@ export const api = {
     }
     return firma.chiave
   },
-  avviaAnalisi: (chiaveFoto: string) =>
+  avviaAnalisi: (chiaveFoto: string, segnale?: AbortSignal) =>
     chiama<AnalisiAvviata>('/capi/analisi', {
       metodo: 'POST',
       corpo: { chiave_foto: chiaveFoto },
+      segnale,
     }),
-  statoAnalisi: (esecuzioneId: string) =>
-    chiama<EsitoAnalisi>(`/capi/analisi/${encodeURIComponent(esecuzioneId)}`),
+  statoAnalisi: (esecuzioneId: string, segnale?: AbortSignal) =>
+    chiama<EsitoAnalisi>(`/capi/analisi/${encodeURIComponent(esecuzioneId)}`, { segnale }),
 
   // ── suggerimenti e outfit ───────────────────────────────────────────────
   suggerimenti: (richiesta: RichiestaSuggerimenti) =>

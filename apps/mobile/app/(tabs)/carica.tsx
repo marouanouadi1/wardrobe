@@ -6,8 +6,8 @@
  * c'erano due percorsi separati per dirlo (un bottone «Dalla galleria» che
  * prendeva una foto sola, un secondo bottone che ne prendeva fino a venti)
  * più un terzo che non copriva affatto la fotocamera. Una foto sola in coda
- * si comporta come sempre: analisi con la checklist, poi il dettaglio per
- * confermare cosa il modello ha letto. Più foto insieme vanno a un capo per
+ * si comporta come sempre: un'attesa onesta (`AttesaLunga`), poi il dettaglio
+ * per confermare cosa il modello ha letto. Più foto insieme vanno a un capo per
  * volta, e finiscono in armadio via via che il modello finisce — senza
  * fermarsi alla prima che fallisce.
  */
@@ -16,24 +16,36 @@ import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { View } from 'react-native'
 import { api, messaggioDiErrore } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
 import { conta } from '../../src/dati/formato'
-import { colori, linee, raggi, spazi, velo } from '../../src/tema/tokens'
-import { BottonePrimario, BottoneSecondario, Icona } from '../../src/ui/base'
+import { colori, raggi, spazi } from '../../src/tema/tokens'
+import { BottonePrimario, BottoneSecondario } from '../../src/ui/base'
 import { MiniaturaFoto } from '../../src/ui/capi'
-import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
+import { AttesaLunga } from '../../src/ui/stati'
+import { Corpo, Etichetta, Titolo } from '../../src/ui/testo'
 import { Schermata } from '../../src/ui/guscio'
 
-const PASSI = [
-  { testo: 'Isolo il capo dallo sfondo' },
-  { testo: 'Categoria e sottocategoria' },
-  { testo: 'Colore dominante' },
-  { testo: 'Tessuto e composizione' },
-  { testo: 'Etichetta di lavaggio' },
+/**
+ * L'analisi è una sola chiamata al modello di visione (`handlers/analisi.py`
+ * la esegue in linea, senza checkpoint intermedi): niente fasi vere da
+ * mostrare, solo un'attesa che si allunga col tempo. Le soglie sono tarate
+ * sulla latenza reale (scontorno + visione, 20-40 s): l'ultimo messaggio non
+ * deve comparire durante un'analisi normale, o mentirebbe come la percentuale
+ * che sostituisce.
+ */
+const MESSAGGI_ATTESA = [
+  { dopoMs: 0, testo: 'Ci vogliono una ventina di secondi.' },
+  { dopoMs: 10_000, testo: 'Sto leggendo colore, tessuto e lavaggio.' },
+  { dopoMs: 35_000, testo: 'Ci sta mettendo più del solito. Resto qui finché non finisce.' },
 ]
+
+/** Oltre questo tempo l'analisi di una singola foto viene abortita: un
+ * `avviaAnalisi` che si impianta non deve lasciare l'utente bloccato per
+ * sempre sulla schermata di attesa. */
+const TIMEOUT_ANALISI_MS = 120_000
 
 type Fase = 'scatta' | 'analisi'
 
@@ -55,8 +67,13 @@ let contatoreFoto = 0
 export default function Carica() {
   const { avvisa, registraCapo } = useArmadio()
   const [fase, setFase] = useState<Fase>('scatta')
-  const [passo, setPasso] = useState(0)
   const [foto, setFoto] = useState<string | null>(null)
+  /** Il controller della foto singola in analisi, per il tocco su «Annulla».
+   * Un ref, non uno stato: serve solo a un gestore di eventi, mai al render. */
+  const controllerAnalisiRef = useRef<AbortController | null>(null)
+  /** Distingue un abort voluto («Annulla») da un timeout scaduto: il primo
+   * non deve mostrare l'avviso «sta prendendo troppo». */
+  const annullataRef = useRef(false)
   /** Le foto scattate o scelte, in attesa di «Analizza»: si può togliere
    * quella sbagliata prima di partire, cosa che il vecchio bottone «20 in
    * blocco» — diretto in analisi appena scelte le foto — non permetteva. */
@@ -109,44 +126,61 @@ export default function Carica() {
     setCoda((precedente) => precedente.filter((f) => f.id !== id))
   }
 
-  /** Una sola foto in coda: il percorso di sempre, invariato — analisi con
-   * la checklist, poi il dettaglio per confermare gli attributi letti. */
+  /** Una sola foto in coda: il percorso di sempre, invariato — attesa
+   * indeterminata (`AttesaLunga`), poi il dettaglio per confermare gli
+   * attributi letti. Una sola `statoAnalisi`, non un polling: il backend
+   * esegue la pipeline in linea (`handlers/analisi.py`) e risponde già
+   * terminale alla prima chiamata — la stessa ragione per cui `analizzaCoda`,
+   * sotto, non ha mai fatto polling. */
   async function analizzaUnaFoto(uri: string) {
     setCoda([])
     setFoto(uri)
     setFase('analisi')
+    annullataRef.current = false
+    const controller = new AbortController()
+    controllerAnalisiRef.current = controller
+    const scadenza = setTimeout(() => controller.abort(), TIMEOUT_ANALISI_MS)
     try {
       const firma = await api.firmaUpload('image/jpeg')
       await api.caricaFoto(firma, uri)
-      const avviata = await api.avviaAnalisi(firma.chiave)
+      const avviata = await api.avviaAnalisi(firma.chiave, controller.signal)
+      const stato = await api.statoAnalisi(avviata.esecuzione_id, controller.signal)
 
-      for (let tentativo = 0; tentativo < 40; tentativo += 1) {
-        const stato = await api.statoAnalisi(avviata.esecuzione_id)
-        if (stato.stato === 'completata' && stato.capo) {
-          registraCapo(stato.capo)
-          setFase('scatta')
-          setFoto(null)
-          setPasso(0)
-          router.push(`/capo/${stato.capo.id}`)
-          return
-        }
-        if (stato.stato === 'fallita') {
-          avvisa(stato.errore ?? "L'analisi non è riuscita: riprova con più luce.")
-          setFase('scatta')
-          setPasso(0)
-          return
-        }
-        setPasso((precedente) => Math.min(precedente + 1, PASSI.length))
-        await new Promise((risolvi) => setTimeout(risolvi, 1200))
+      if (stato.stato === 'completata' && stato.capo) {
+        registraCapo(stato.capo)
+        setFase('scatta')
+        setFoto(null)
+        router.push(`/capo/${stato.capo.id}`)
+        return
       }
-      avvisa("L'analisi sta prendendo troppo: la trovi in armadio quando finisce.")
+      avvisa(stato.errore ?? "L'analisi non è riuscita: riprova con più luce.")
       setFase('scatta')
-      setPasso(0)
     } catch (errore) {
-      avvisa(messaggioDiErrore(errore, 'Caricamento non riuscito'))
+      if (annullataRef.current) return
+      avvisa(
+        controller.signal.aborted
+          ? "L'analisi sta prendendo troppo: riprova."
+          : messaggioDiErrore(errore, 'Caricamento non riuscito'),
+      )
       setFase('scatta')
-      setPasso(0)
+    } finally {
+      clearTimeout(scadenza)
+      controllerAnalisiRef.current = null
     }
+  }
+
+  /** «Annulla» durante l'attesa: aborta la richiesta in corso e torna subito
+   * alla schermata di scatto, senza l'avviso di timeout — è un abort voluto,
+   * non un'analisi impantanata. L'upload della foto (`api.caricaFoto`, via
+   * `expo-file-system`) non prende un segnale di abort: se si annulla mentre
+   * carica, l'upload prosegue in background finché non finisce da solo (o
+   * scade il suo stesso timeout), ma l'utente è già tornato alla schermata
+   * di scatto — non se ne accorge. */
+  function annullaAnalisi() {
+    annullataRef.current = true
+    controllerAnalisiRef.current?.abort()
+    setFase('scatta')
+    setFoto(null)
   }
 
   /**
@@ -158,7 +192,11 @@ export default function Carica() {
    * aspettare le altre e senza riavviare l'app per vederlo.
    *
    * Una foto che fallisce non ferma le successive: diventa un conteggio nel
-   * messaggio finale, non un'interruzione a metà coda.
+   * messaggio finale, non un'interruzione a metà coda — un timeout scaduto
+   * (`TIMEOUT_ANALISI_MS`, un controller per foto) è solo un altro modo di
+   * fallire, non un'interruzione dell'intera coda: con `analizzandoCoda`
+   * a `true` ogni bottone della schermata resta nascosto, e una foto
+   * impantanata senza questo timeout bloccherebbe l'utente lì per sempre.
    */
   async function analizzaCoda(uris: string[]) {
     setAnalizzandoCoda(true)
@@ -167,11 +205,13 @@ export default function Carica() {
     setProgressoCoda({ totale: uris.length, riuscite, fallite })
 
     for (const uri of uris) {
+      const controller = new AbortController()
+      const scadenza = setTimeout(() => controller.abort(), TIMEOUT_ANALISI_MS)
       try {
         const firma = await api.firmaUpload('image/jpeg')
         await api.caricaFoto(firma, uri)
-        const avviata = await api.avviaAnalisi(firma.chiave)
-        const stato = await api.statoAnalisi(avviata.esecuzione_id)
+        const avviata = await api.avviaAnalisi(firma.chiave, controller.signal)
+        const stato = await api.statoAnalisi(avviata.esecuzione_id, controller.signal)
         if (stato.stato === 'completata' && stato.capo) {
           registraCapo(stato.capo)
           riuscite += 1
@@ -180,6 +220,8 @@ export default function Carica() {
         }
       } catch {
         fallite += 1
+      } finally {
+        clearTimeout(scadenza)
       }
       setProgressoCoda({ totale: uris.length, riuscite, fallite })
     }
@@ -302,70 +344,11 @@ export default function Carica() {
             ) : null}
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spazi.s }}>
-            <Titolo taglia={24} style={{ flex: 1 }}>
-              Sto guardando il capo
-            </Titolo>
-            <Forte taglia={13} colore={colori.ambraMedio}>
-              {Math.round((passo / PASSI.length) * 100)}%
-            </Forte>
-          </View>
+          <Titolo taglia={24}>Sto guardando il capo</Titolo>
 
-          <View style={{ height: 6, borderRadius: raggi.pillola, backgroundColor: linee.media }}>
-            <View
-              style={{
-                height: 6,
-                borderRadius: raggi.pillola,
-                width: `${(passo / PASSI.length) * 100}%`,
-                backgroundColor: colori.ambra,
-              }}
-            />
-          </View>
+          <AttesaLunga messaggi={MESSAGGI_ATTESA} />
 
-          <View style={{ gap: 9 }}>
-            {PASSI.map((voce, indice) => {
-              const fatto = indice < passo
-              const inCorso = indice === passo
-              return (
-                <View
-                  key={voce.testo}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 11,
-                    paddingHorizontal: 15,
-                    paddingVertical: 13,
-                    borderRadius: 18,
-                    backgroundColor: fatto
-                      ? velo(colori.ambra, 0.22)
-                      : inCorso
-                        ? colori.scheda
-                        : 'rgba(21,21,26,0.04)',
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: raggi.pillola,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: fatto
-                        ? colori.ambra
-                        : inCorso
-                          ? velo(colori.ambra, 0.55)
-                          : 'rgba(21,21,26,0.12)',
-                    }}
-                  >
-                    {fatto ? <Icona nome="spunta" misura={11} spessore={3.4} /> : null}
-                  </View>
-                  <Forte taglia={13.5} tono={fatto || inCorso ? 'forte' : 'debole'} style={{ flex: 1 }}>
-                    {voce.testo}
-                  </Forte>
-                </View>
-              )
-            })}
-          </View>
+          <BottoneSecondario testo="Annulla" onPress={annullaAnalisi} />
         </>
       ) : null}
     </Schermata>

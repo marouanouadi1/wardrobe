@@ -87,6 +87,33 @@ export function capiDisponibili(capi: Iterable<Capo>): Capo[] {
   return Array.from(capi).filter((capo) => capo.stato === 'pulito')
 }
 
+/**
+ * Gli slot che mancano per comporre almeno un outfit: stessa regola di
+ * `vestizione_indossabile` (`services/api/src/domain/wardrobe.py`) — un
+ * abito basta da solo, altrimenti servono un capo in `top` e uno in
+ * `bottom`, le scarpe non sono richieste. Chiamare su `capiDisponibili(...)`,
+ * non sull'armadio intero: il backend applica quel filtro per primo, e la
+ * guardia deve prevedere cosa vedrà davvero.
+ *
+ * `capiDisponibili` da solo controllava il criterio sbagliato — il pulito,
+ * non la componibilità — e un armadio con un solo top pulito passava il suo
+ * filtro comunque, portando `/suggerimenti` a un 502 garantito.
+ */
+export function slotMancanti(capi: Iterable<Capo>): SlotAvatar[] {
+  const slot = new Set<SlotAvatar>()
+  for (const capo of capi) slot.add(capo.slot)
+  if (slot.has('dress')) return []
+  const mancanti: SlotAvatar[] = []
+  if (!slot.has('top')) mancanti.push('top')
+  if (!slot.has('bottom')) mancanti.push('bottom')
+  return mancanti
+}
+
+/** Se l'armadio ha almeno una combinazione indossabile: nessuno slot manca. */
+export function componibile(capi: Iterable<Capo>): boolean {
+  return slotMancanti(capi).length === 0
+}
+
 /** Il nome di battesimo dal profilo — «Buongiorno, Marta» invece di «Buongiorno, Marta Rossi». */
 export function nomeDiBattesimo(profilo: Profilo | null | undefined): string | undefined {
   return profilo?.nome?.split(' ')[0]

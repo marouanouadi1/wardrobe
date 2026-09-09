@@ -11,10 +11,10 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
 import { ScrollView, View } from 'react-native'
-import { capiDiVestizione, capiDisponibili, daLavare, nomeDiBattesimo } from '../../src/dati/dominio'
+import { capiDiVestizione, capiDisponibili, daLavare, nomeDiBattesimo, slotMancanti } from '../../src/dati/dominio'
 import { useArmadio, useVestiEVai } from '../../src/dati/archivio'
 import { parola } from '../../src/dati/formato'
-import { colori, linee, ombre, raggi, spazi, velo } from '../../src/tema/tokens'
+import { colori, ETICHETTE, linee, ombre, raggi, spazi, velo } from '../../src/tema/tokens'
 import { BadgeIa, BarraChiedi, Bolla, BottonePrimario, BottoneSecondario, BottoneTondo, Scheda, Toccabile } from '../../src/ui/base'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Schermata } from '../../src/ui/guscio'
@@ -29,21 +29,29 @@ export default function Oggi() {
   const [scartati, setScartati] = useState<string[]>([])
 
   const disponibili = useMemo(() => capiDisponibili(capi), [capi])
+  // Gli slot che mancano per comporre anche un solo outfit — stessa regola
+  // di `vestizione_indossabile` (`services/api/src/domain/wardrobe.py`), su
+  // `disponibili` e non su `capi`: il backend applica lo stesso filtro sul
+  // pulito prima di guardare gli slot.
+  const mancanti = useMemo(() => slotMancanti(disponibili), [disponibili])
 
   // Al primo avvio la proposta non c'è ancora: nessuno l'ha mai chiesta. Parte
-  // solo a caricamento finito (`pronto`) e solo se c'è almeno un capo pulito:
-  // chiederla a un armadio vuoto è una chiamata al modello che non può che
-  // fallire — vedi `handlers/suggerimenti.py`, che la rifiuta comunque.
+  // solo a caricamento finito (`pronto`) e solo se l'armadio ha una
+  // combinazione indossabile (`mancanti.length === 0`): un top da solo, o
+  // qualunque accoppiata che non copra sopra e sotto, è una chiamata al
+  // modello che non può che fallire — vedi `vestizione_indossabile` in
+  // `handlers/suggerimenti.py`, che scarta ogni proposta del genere.
   // `suggerimenti.length` nelle dep fa rientrare l'effetto a chiamata riuscita
   // (ed esce subito); a chiamata fallita `suggerimenti` resta vuoto e nessuna
-  // dep cambia, quindi non riparte da solo. Aggiungere il primo capo pulito fa
+  // dep cambia, quindi non riparte da solo. Il primo capo che completa una
+  // combinazione (es. il primo paio di pantaloni con un top già pulito) fa
   // scattare la proposta subito, senza uscire e rientrare dalla tab.
   useEffect(() => {
     if (!pronto) return
-    if (disponibili.length === 0) return
+    if (mancanti.length > 0) return
     if (suggerimenti.length > 0) return
     void chiediSuggerimenti()
-  }, [pronto, disponibili.length, suggerimenti.length, chiediSuggerimenti])
+  }, [pronto, mancanti.length, suggerimenti.length, chiediSuggerimenti])
 
   const vivi = suggerimenti.filter((s) => !scartati.includes(s.titolo))
   const principale = vivi[0] ?? suggerimenti[0]
@@ -97,6 +105,20 @@ export default function Oggi() {
               titolo="Niente di pulito da proporre"
               spiegazione="Tutti i tuoi capi sono in lavatrice: appena tornano puliti chiedo di nuovo."
             />
+          ) : null}
+
+          {pronto && disponibili.length > 0 && mancanti.length > 0 ? (
+            <>
+              <Vuoto
+                titolo={
+                  mancanti.length === 1
+                    ? `Ti manca un ${ETICHETTE.slot[mancanti[0]!].toLowerCase()}`
+                    : 'Ti serve un sopra e un sotto'
+                }
+                spiegazione="Per comporre un outfit mi serve almeno un sopra e un sotto, oppure un abito."
+              />
+              <BottonePrimario testo="Aggiungi un capo" onPress={() => router.push('/(tabs)/carica')} />
+            </>
           ) : null}
         </>
       )}

@@ -10,11 +10,11 @@
 import type { Suggerimento } from '@wardrobe/contracts'
 import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ScrollView, View } from 'react-native'
 import { useArmadio, useVestiEVai } from '../src/dati/archivio'
 import { type SceltaConversazione, useChat } from '../src/dati/chat'
-import { capiDiVestizione, fotoDaMostrare } from '../src/dati/dominio'
+import { capiDiVestizione, capiDisponibili, fotoDaMostrare, slotMancanti } from '../src/dati/dominio'
 import { colori, linee, ombre, raggi, spazi } from '../src/tema/tokens'
 import {
   BadgeIa,
@@ -72,7 +72,11 @@ function AzioniProposta({
 
 export default function Suggeritore() {
   const parametri = useLocalSearchParams<{ chiedi?: string; conversazione?: string }>()
-  const { suggerimenti, indice, salvaOutfit, chiediSuggerimenti, avvisa } = useArmadio()
+  const { suggerimenti, indice, capi, salvaOutfit, chiediSuggerimenti, avvisa } = useArmadio()
+  // Stessa guardia di `app/(tabs)/oggi.tsx`: senza una combinazione
+  // indossabile (`vestizione_indossabile`, `services/api/src/domain/wardrobe.py`)
+  // il modo «guidato» chiamerebbe `/suggerimenti` solo per ricevere un 502.
+  const mancanti = useMemo(() => slotMancanti(capiDisponibili(capi)), [capi])
   const vestiEVai = useVestiEVai()
   const [modo, setModo] = useState<Modo>(parametri.chiedi ? 'chat' : 'proposte')
   const [risposte, setRisposte] = useState<Record<string, string>>({})
@@ -313,9 +317,15 @@ export default function Suggeritore() {
           ))}
 
           <BottonePrimario
-            testo={complete ? 'Trova il mio outfit' : 'Rispondi alle tre domande'}
-            ambra={complete}
-            disabilitato={!complete}
+            testo={
+              !complete
+                ? 'Rispondi alle tre domande'
+                : mancanti.length > 0
+                  ? 'Aggiungi prima un capo che manca'
+                  : 'Trova il mio outfit'
+            }
+            ambra={complete && mancanti.length === 0}
+            disabilitato={!complete || mancanti.length > 0}
             onPress={() => {
               setGenerato(true)
               void chiediSuggerimenti(

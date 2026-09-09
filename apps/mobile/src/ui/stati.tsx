@@ -8,8 +8,9 @@
  */
 
 import type { ReactNode } from 'react'
-import { ActivityIndicator } from 'react-native'
-import { colori, spazi } from '../tema/tokens'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Animated, Easing, View } from 'react-native'
+import { colori, linee, raggi, spazi } from '../tema/tokens'
 import { Scheda } from './base'
 import { Corpo, Forte } from './testo'
 
@@ -19,6 +20,90 @@ export function Caricamento({ su }: { su?: 'chiaro' | 'scuro' }) {
       color={su === 'scuro' ? colori.ambra : colori.inchiostro}
       style={{ marginTop: spazi.xl }}
     />
+  )
+}
+
+/**
+ * Un'attesa lunga e indeterminata — l'analisi di una foto, 20-40 secondi.
+ * Onesta sul fatto che non ci sono fasi osservabili da mostrare: una singola
+ * chiamata al modello di visione (`services/api/src/handlers/analisi.py`
+ * la esegue in linea, senza checkpoint intermedi), non cinque passi separati.
+ * Una barra che scorre senza mai fermarsi, e un messaggio che avanza a
+ * soglie di tempo crescenti invece di una percentuale finta.
+ */
+export function AttesaLunga({
+  messaggi,
+  su,
+}: {
+  /** In ordine di soglia crescente: il primo è quello iniziale (`dopoMs: 0`),
+   * l'ultimo resta finché l'attesa non finisce. */
+  messaggi: readonly { dopoMs: number; testo: string }[]
+  su?: 'chiaro' | 'scuro'
+}) {
+  const [larghezza, setLarghezza] = useState(0)
+  const [messaggio, setMessaggio] = useState(messaggi[0]?.testo ?? '')
+  // `useState` con inizializzatore, non `useRef(...).current`: stessa scelta
+  // di `PuntiniAttesa` in `ui/base.tsx`, per la stessa regola (`react-hooks/refs`).
+  const [scorrimento] = useState(() => new Animated.Value(0))
+
+  useEffect(() => {
+    if (larghezza === 0) return
+    const corsa = larghezza * 0.65
+    const animazione = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scorrimento, {
+          toValue: corsa,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scorrimento, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    )
+    animazione.start()
+    return () => animazione.stop()
+  }, [larghezza, scorrimento])
+
+  // Il primo messaggio lo dà già l'inizializzatore di `useState` sopra: qui
+  // solo i timer per quelli successivi, mai una `setState` sincrona nel corpo
+  // dell'effetto (`react-hooks/set-state-in-effect`).
+  useEffect(() => {
+    const timer = messaggi.slice(1).map((voce) => setTimeout(() => setMessaggio(voce.testo), voce.dopoMs))
+    return () => timer.forEach(clearTimeout)
+  }, [messaggi])
+
+  return (
+    <View style={{ gap: spazi.m }}>
+      {/* L'`Animated.View` monta subito, non dietro `larghezza > 0`: se
+          nascesse solo dopo la prima misura, comparirebbe nello stesso
+          commit in cui l'effetto avvia il loop col driver nativo — e
+          un'animazione avviata su una vista non ancora montata non arriva
+          mai allo schermo. Finché `larghezza` non è misurata il segmento ha
+          semplicemente larghezza zero, invece di dipendere da una
+          percentuale che dovrebbe comunque risolversi contro il fondo. */}
+      <View
+        onLayout={(evento) => setLarghezza(evento.nativeEvent.layout.width)}
+        style={{ height: 6, borderRadius: raggi.pillola, backgroundColor: linee.media, overflow: 'hidden' }}
+      >
+        <Animated.View
+          style={{
+            width: larghezza > 0 ? larghezza * 0.35 : 0,
+            height: 6,
+            borderRadius: raggi.pillola,
+            backgroundColor: colori.ambra,
+            transform: [{ translateX: scorrimento }],
+          }}
+        />
+      </View>
+      <Corpo taglia={13} tono="tenue" su={su} style={{ textAlign: 'center' }}>
+        {messaggio}
+      </Corpo>
+    </View>
   )
 }
 
