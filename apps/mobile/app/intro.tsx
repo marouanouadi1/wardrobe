@@ -16,7 +16,7 @@ import { BackHandler, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { segnaIntroVista } from '../src/dati/intro'
 import { colori, linee, raggi, spazi } from '../src/tema/tokens'
-import { BottoneIndietro, BottonePrimario, Toccabile } from '../src/ui/base'
+import { BottoneIndietro, BottonePrimario, LinkTesto, Toccabile } from '../src/ui/base'
 import { Corpo, Etichetta, Titolo } from '../src/ui/testo'
 
 const PASSI = [
@@ -153,11 +153,7 @@ export default function Intro() {
             onPress={() => (ultimo ? entra() : setPasso(passo + 1))}
           />
 
-          <Toccabile onPress={entra} scala={0} style={{ alignItems: 'center', paddingVertical: 8 }}>
-            <Corpo taglia={13.5} tono="tenue">
-              Ho già un account
-            </Corpo>
-          </Toccabile>
+          <LinkTesto onPress={entra}>Ho già un account</LinkTesto>
         </View>
       </View>
     </View>

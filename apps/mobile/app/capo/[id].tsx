@@ -25,7 +25,7 @@ import {
   quandoUsato,
 } from '../../src/dati/dominio'
 import { ETICHETTE, colori, durate, linee, raggi, spazi, velo } from '../../src/tema/tokens'
-import { BadgeIa, BottonePrimario, BottoneSecondario, Campo, Icona, Pillola, Scheda, Toccabile } from '../../src/ui/base'
+import { BadgeIa, BottonePrimario, BottoneSecondario, BottoneTondo, Campo, Pillola, Scheda, Toccabile } from '../../src/ui/base'
 import { Attributo, Miniatura, SchedaFoto } from '../../src/ui/capi'
 import { Schermata, Testata } from '../../src/ui/guscio'
 import { Caricamento, Vuoto } from '../../src/ui/stati'
@@ -146,28 +146,17 @@ export default function DettaglioCapo() {
         >
           <Forte taglia={11}>{ETICHETTE.tipo[capo.tipo]}</Forte>
         </View>
-        <Toccabile
-          onPress={() => void cambiaPreferito(capo.id)}
-          scala={0.9}
-          style={{
-            position: 'absolute',
-            top: 12,
-            right: 12,
-            width: 38,
-            height: 38,
-            borderRadius: raggi.pillola,
-            backgroundColor: velaturaSuFoto,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icona
+        <View style={{ position: 'absolute', top: 12, right: 12 }}>
+          <BottoneTondo
             nome="cuore"
-            misura={18}
+            onPress={() => void cambiaPreferito(capo.id)}
+            misura={38}
+            misuraIcona={18}
+            sfondo={velaturaSuFoto}
             colore={capo.preferito ? colori.corallo : 'rgba(21,21,26,0.6)'}
             pieno={capo.preferito}
           />
-        </Toccabile>
+        </View>
       </SchedaFoto>
 
       <View style={{ paddingHorizontal: spazi.xl, gap: spazi.m }}>
@@ -290,7 +279,11 @@ export default function DettaglioCapo() {
                         borderRadius: raggi.pillola,
                         backgroundColor: voce.hex,
                         borderWidth: voce.hex === capo.colore.hex ? 3 : 1,
-                        borderColor: voce.hex === capo.colore.hex ? colori.ambra : linee.chiara,
+                        // Non l'ambra: questo segna la scelta dell'utente,
+                        // non un valore letto dal modello — la stessa regola
+                        // di `Pillola` (`ui/base.tsx`), che per lo stesso
+                        // stato usa `colori.inchiostro`.
+                        borderColor: voce.hex === capo.colore.hex ? colori.inchiostro : linee.chiara,
                       }}
                     >
                       <View />
@@ -305,10 +298,9 @@ export default function DettaglioCapo() {
                     autoFocus
                     style={{ flex: 1 }}
                   />
-                  <BottoneSecondario
+                  <BottonePrimario
                     testo="Salva"
-                    sfondo={colori.inchiostro}
-                    colore={colori.crema}
+                    compatto
                     onPress={() => {
                       const attributo = attributoInModifica
                       void correggi(capo.id, attributo, testoModifica.trim())

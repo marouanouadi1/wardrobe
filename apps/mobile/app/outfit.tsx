@@ -15,77 +15,91 @@ import { colori, durate, spazi, velo } from '../src/tema/tokens'
 import { Badge, BottoneTondo } from '../src/ui/base'
 import { SchedaFoto } from '../src/ui/capi'
 import { Schermata } from '../src/ui/guscio'
+import { ScheletroSchedaOutfit } from '../src/ui/scheletri'
 import { Vuoto } from '../src/ui/stati'
 import { Corpo, Titolo } from '../src/ui/testo'
 
 export default function Outfit() {
-  const { outfit, indice } = useArmadio()
+  const { outfit, indice, pronto } = useArmadio()
   const vestiEVai = useVestiEVai()
 
   return (
-    <Schermata occhiello={conta(outfit.length, 'salvato', 'salvati')} titolo="I tuoi outfit" indietro>
-      {outfit.length === 0 ? (
+    <Schermata
+      occhiello={pronto ? conta(outfit.length, 'salvato', 'salvati') : ''}
+      titolo="I tuoi outfit"
+      indietro
+    >
+      {!pronto ? (
+        // Prima, a caricamento in corso, «Ancora nessun outfit» compariva
+        // anche a chi ne aveva già salvati — lo stesso `outfit: []`
+        // temporaneo che l'archivio parte sempre con.
+        <>
+          <ScheletroSchedaOutfit />
+          <ScheletroSchedaOutfit />
+        </>
+      ) : outfit.length === 0 ? (
         <Vuoto
           titolo="Ancora nessun outfit"
           spiegazione="Componine uno sull'avatar e salvalo: lo ritrovi qui, pronto per la prossima volta."
         />
       ) : null}
 
-      {outfit.map((salvato) => {
-        const capi = capiDiVestizione(salvato.vestizione, indice)
-        const copertina = capi[0]
-        return (
-          <SchedaFoto key={salvato.id}>
-            <View style={{ flexDirection: 'row', height: 250 }}>
-              {capi.slice(0, 4).map((capo) => (
-                <Image
-                  key={capo.id}
-                  source={{ uri: fotoDaMostrare(capo) }}
-                  style={{ flex: 1, backgroundColor: colori.fondoFoto }}
-                  contentFit="cover"
-                  contentPosition={{ top: '25%', left: '50%' }}
-                  transition={durate.breve}
-                />
-              ))}
-              {!copertina ? <View style={{ flex: 1, backgroundColor: colori.sfondo }} /> : null}
+      {pronto &&
+        outfit.map((salvato) => {
+          const capi = capiDiVestizione(salvato.vestizione, indice)
+          const copertina = capi[0]
+          return (
+            <SchedaFoto key={salvato.id}>
+              <View style={{ flexDirection: 'row', height: 250 }}>
+                {capi.slice(0, 4).map((capo) => (
+                  <Image
+                    key={capo.id}
+                    source={{ uri: fotoDaMostrare(capo) }}
+                    style={{ flex: 1, backgroundColor: colori.fondoFoto }}
+                    contentFit="cover"
+                    contentPosition={{ top: '25%', left: '50%' }}
+                    transition={durate.breve}
+                  />
+                ))}
+                {!copertina ? <View style={{ flex: 1, backgroundColor: colori.sfondo }} /> : null}
 
-              {salvato.occasione ? (
-                <View style={{ position: 'absolute', top: 12, left: 12 }}>
-                  <Badge testo={salvato.occasione} sfondo={velo(colori.scheda, 0.9)} colore={colori.inchiostro} />
-                </View>
-              ) : null}
-            </View>
-
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spazi.m,
-                paddingHorizontal: 16,
-                paddingVertical: 15,
-              }}
-            >
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Titolo taglia={19}>{salvato.nome}</Titolo>
-                <Corpo taglia={12} tono="tenue">
-                  {salvato.volte_indossato
-                    ? `Indossato ${salvato.volte_indossato} volte · ultima ${quandoUsato(salvato.ultimo_uso)}`
-                    : 'Mai indossato'}
-                  {salvato.origine === 'ia' ? ' · proposto da Wardrobe' : ''}
-                </Corpo>
+                {salvato.occasione ? (
+                  <View style={{ position: 'absolute', top: 12, left: 12 }}>
+                    <Badge testo={salvato.occasione} sfondo={velo(colori.scheda, 0.9)} colore={colori.inchiostro} />
+                  </View>
+                ) : null}
               </View>
-              <BottoneTondo
-                nome="freccia"
-                colore={colori.crema}
-                sfondo={colori.inchiostro}
-                misura={46}
-                misuraIcona={18}
-                onPress={() => vestiEVai(salvato.vestizione)}
-              />
-            </View>
-          </SchedaFoto>
-        )
-      })}
+
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spazi.m,
+                  paddingHorizontal: 16,
+                  paddingVertical: 15,
+                }}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Titolo taglia={19}>{salvato.nome}</Titolo>
+                  <Corpo taglia={12} tono="tenue">
+                    {salvato.volte_indossato
+                      ? `Indossato ${salvato.volte_indossato} volte · ultima ${quandoUsato(salvato.ultimo_uso)}`
+                      : 'Mai indossato'}
+                    {salvato.origine === 'ia' ? ' · proposto da Wardrobe' : ''}
+                  </Corpo>
+                </View>
+                <BottoneTondo
+                  nome="freccia"
+                  colore={colori.crema}
+                  sfondo={colori.inchiostro}
+                  misura={46}
+                  misuraIcona={18}
+                  onPress={() => vestiEVai(salvato.vestizione)}
+                />
+              </View>
+            </SchedaFoto>
+          )
+        })}
     </Schermata>
   )
 }

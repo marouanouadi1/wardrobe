@@ -22,11 +22,11 @@ import {
   BollaChat,
   BottonePrimario,
   BottoneSecondario,
+  LinkTesto,
   Pillola,
   PuntiniAttesa,
   Scheda,
   Segmenti,
-  Toccabile,
 } from '../src/ui/base'
 import { MotiviProposta, SchedaFoto } from '../src/ui/capi'
 import { Schermata } from '../src/ui/guscio'
@@ -240,20 +240,18 @@ export default function Suggeritore() {
             <Etichetta taglia={11} tono="tenue" style={{ flex: 1 }} numberOfLines={1}>
               {conversazioneAttuale?.titolo ?? 'Nuova conversazione'}
             </Etichetta>
-            <Toccabile onPress={() => router.push('/chat')} scala={0} style={{ paddingVertical: 4 }}>
-              <Corpo taglia={12.5} tono="medio" style={{ textDecorationLine: 'underline' }}>
-                Storico
-              </Corpo>
-            </Toccabile>
-            <Toccabile
+            <LinkTesto centrato={false} sottolineato taglia={12.5} tono="medio" onPress={() => router.push('/chat')}>
+              Storico
+            </LinkTesto>
+            <LinkTesto
+              centrato={false}
+              sottolineato
+              taglia={12.5}
+              tono="medio"
               onPress={() => setSceltaChat({ tipo: 'nuova' })}
-              scala={0}
-              style={{ paddingVertical: 4 }}
             >
-              <Corpo taglia={12.5} tono="medio" style={{ textDecorationLine: 'underline' }}>
-                Nuova
-              </Corpo>
-            </Toccabile>
+              Nuova
+            </LinkTesto>
           </View>
 
           {storiaInCaricamento ? (

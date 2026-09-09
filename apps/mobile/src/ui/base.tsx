@@ -29,7 +29,7 @@ import {
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
 import { colori, curve, durate, linee, ombre, raggi, spazi, superfici } from '../tema/tokens'
-import { Etichetta, Forte } from './testo'
+import { Corpo, Etichetta, Forte } from './testo'
 
 // ─────────────────────────────────────────────────────────────
 // Tocco
@@ -303,6 +303,7 @@ export function BottonePrimario({
   ambra,
   chiaro,
   disabilitato,
+  compatto,
   style,
 }: {
   testo: string
@@ -317,6 +318,11 @@ export function BottonePrimario({
   /** Sfondo chiaro (per pulsanti su foto scure): testo scuro invece che crema. */
   chiaro?: boolean
   disabilitato?: boolean
+  /** Per un'azione inline — accanto a un campo, dentro una riga — non a
+   * piena larghezza: padding e taglia ridotti, stesso peso visivo. Sostituisce
+   * il `BottoneSecondario` ridipinto in primario (`sfondo`/`colore` a mano)
+   * che una schermata usava per un «Salva» compatto. */
+  compatto?: boolean
   style?: StyleProp<ViewStyle>
 }) {
   const spento = disabilitato || caricando
@@ -346,8 +352,8 @@ export function BottonePrimario({
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: freccia ? 'space-between' : 'center',
-          paddingHorizontal: 22,
-          paddingVertical: 17,
+          paddingHorizontal: compatto ? 16 : 22,
+          paddingVertical: compatto ? 11 : 17,
           borderRadius: raggi.pillola,
           backgroundColor: sfondo,
         },
@@ -358,9 +364,9 @@ export function BottonePrimario({
         {caricando ? (
           <ActivityIndicator color={inchiostro} />
         ) : icona ? (
-          <Icona nome={icona} colore={inchiostro} misura={19} />
+          <Icona nome={icona} colore={inchiostro} misura={compatto ? 15 : 19} />
         ) : null}
-        <Forte taglia={16} colore={inchiostro}>
+        <Forte taglia={compatto ? 13.5 : 16} colore={inchiostro}>
           {testo}
         </Forte>
       </View>
@@ -634,6 +640,7 @@ export function Bolla({
   misura = 34,
   misuraIcona,
   bordo,
+  pieno,
 }: {
   nome: NomeIcona
   sfondo?: string
@@ -644,6 +651,10 @@ export function Bolla({
   misuraIcona?: number
   /** Un anello per staccare dal fondo — es. il tondo di «Oggi» sopra la foto. */
   bordo?: string
+  /** Inoltrato a `Icona`: il cuore dei preferiti pieno quando è attivo, non
+   * solo tracciato. Senza questo, `capo/[id].tsx` doveva ridisegnare il
+   * cerchio a mano solo per poter passare `pieno` all'icona dentro. */
+  pieno?: boolean
 }) {
   return (
     <View
@@ -657,7 +668,7 @@ export function Bolla({
         ...(bordo ? { borderWidth: 1, borderColor: bordo } : null),
       }}
     >
-      <Icona nome={nome} misura={misuraIcona ?? misura * 0.5} colore={colore} spessore={2.2} />
+      <Icona nome={nome} misura={misuraIcona ?? misura * 0.5} colore={colore} spessore={2.2} pieno={pieno} />
     </View>
   )
 }
@@ -671,6 +682,7 @@ export function BottoneTondo({
   misura = 42,
   misuraIcona,
   bordo,
+  pieno,
 }: {
   nome: NomeIcona
   onPress?: () => void
@@ -679,10 +691,19 @@ export function BottoneTondo({
   misura?: number
   misuraIcona?: number
   bordo?: string
+  pieno?: boolean
 }) {
   return (
     <Toccabile onPress={onPress} scala={0.9} style={{ borderRadius: raggi.pillola }}>
-      <Bolla nome={nome} sfondo={sfondo} colore={colore} misura={misura} misuraIcona={misuraIcona} bordo={bordo} />
+      <Bolla
+        nome={nome}
+        sfondo={sfondo}
+        colore={colore}
+        misura={misura}
+        misuraIcona={misuraIcona}
+        bordo={bordo}
+        pieno={pieno}
+      />
     </Toccabile>
   )
 }
@@ -713,6 +734,63 @@ export function BottoneIndietro({ onPress, su }: { onPress?: () => void; su?: 'c
       }}
     >
       <Icona nome="indietro" misura={17} colore={scura ? colori.crema : colori.inchiostro} spessore={2.2} />
+    </Toccabile>
+  )
+}
+
+/**
+ * Il link testuale fantasma: un tocco che naviga o cambia stato senza il peso
+ * di un bottone. Sei copie a mano lo ridisegnavano — `guscio.tsx`, `intro.tsx`,
+ * `preferenze.tsx`, due volte in `suggeritore.tsx`, `oggi.tsx` — quasi sempre
+ * con lo stesso `paddingVertical` piccolo, che sullo schermo è un bersaglio
+ * sotto i 20px: `hitSlop` allarga l'area toccabile senza allargare il testo.
+ *
+ * `children`, non `testo: string`: `GuscioAutenticazione` ci infila testo
+ * misto («Non hai un account? **Registrati**»), non una stringa sola.
+ */
+export function LinkTesto({
+  children,
+  onPress,
+  taglia = 13.5,
+  tono = 'tenue',
+  colore,
+  su,
+  centrato = true,
+  sottolineato = false,
+  forte = false,
+}: {
+  children: ReactNode
+  onPress?: () => void
+  taglia?: number
+  tono?: 'forte' | 'medio' | 'tenue' | 'debole'
+  colore?: string
+  su?: 'chiaro' | 'scuro'
+  /** `false` per un link in linea — «Storico»/«Nuova» nell'header di una
+   * chat — dove centrare allargherebbe il tocco oltre il testo stesso. */
+  centrato?: boolean
+  /** Le voci di navigazione veloce preferiscono il sottolineato al tono
+   * tenue: c'è meno spazio lì per dire «questo è un link». */
+  sottolineato?: boolean
+  /** «Chiedi tu →» pesa come un invito, non come una nota a piè di pagina. */
+  forte?: boolean
+}) {
+  const Testo = forte ? Forte : Corpo
+  return (
+    <Toccabile
+      onPress={onPress}
+      scala={0}
+      hitSlop={8}
+      style={centrato ? { alignItems: 'center', paddingVertical: 8 } : { paddingVertical: 4 }}
+    >
+      <Testo
+        taglia={taglia}
+        tono={colore ? undefined : tono}
+        colore={colore}
+        su={su}
+        style={sottolineato ? { textDecorationLine: 'underline' } : undefined}
+      >
+        {children}
+      </Testo>
     </Toccabile>
   )
 }

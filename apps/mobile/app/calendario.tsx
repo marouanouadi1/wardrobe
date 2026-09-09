@@ -15,13 +15,15 @@ import { capiDormienti, fotoDaMostrare } from '../src/dati/dominio'
 import { formattaMeseAnno, parola } from '../src/dati/formato'
 import { colori, durate, griglie, linee, spazi } from '../src/tema/tokens'
 import { BadgeIa, BottonePrimario, BottoneSecondario, Scheda } from '../src/ui/base'
+import { RigaStatistiche } from '../src/ui/righe'
+import { ScheletroCalendario } from '../src/ui/scheletri'
 import { Schermata } from '../src/ui/guscio'
-import { Corpo, Etichetta, Numero, Titolo } from '../src/ui/testo'
+import { Corpo, Etichetta, Titolo } from '../src/ui/testo'
 
 const GIORNI_SETTIMANA = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
 
 export default function Calendario() {
-  const { capi, indice } = useArmadio()
+  const { capi, indice, pronto } = useArmadio()
   const adesso = new Date()
   const giorniNelMese = new Date(adesso.getFullYear(), adesso.getMonth() + 1, 0).getDate()
   const oggi = adesso.getDate()
@@ -44,7 +46,13 @@ export default function Calendario() {
 
   return (
     <Schermata occhiello={formattaMeseAnno(adesso)} titolo="Cosa ho messo" indietro>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: griglie.mese.distanza }}>
+      {!pronto ? (
+        // Prima, a caricamento in corso, questa griglia era semplicemente
+        // vuota — nessun giorno, nessuna cella — indistinguibile da un mese
+        // senza usi registrati.
+        <ScheletroCalendario giorni={giorniNelMese} />
+      ) : (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: griglie.mese.distanza }}>
           {GIORNI_SETTIMANA.map((lettera, indiceGiorno) => (
             <View key={`${lettera}-${indiceGiorno}`} style={{ width: griglie.mese.colonna, alignItems: 'center' }}>
               <Etichetta taglia={9.5} tono="debole">
@@ -97,41 +105,35 @@ export default function Calendario() {
             )
           })}
         </View>
+      )}
 
-        {/* La scheda che chiude il cerchio: dai capi fermi nasce la ragione per
-            cui l'app suggerisce anche cose che non sceglieresti. */}
-        <Scheda imbottitura={20} style={{ backgroundColor: colori.ambraTenue, gap: spazi.s }}>
-          <BadgeIa testo="dormono in fondo" />
-          <Titolo taglia={25}>
-            {parola(dormienti.length, '1 capo fermo da più di sei mesi', `${dormienti.length} capi fermi da più di sei mesi`)}
-          </Titolo>
-          <Corpo taglia={13.5} tono="medio">
-            {'Se vuoi te ne infilo qualcuno negli outfit della settimana, senza che tu debba pensarci.'}
-          </Corpo>
-          <View style={{ flexDirection: 'row', gap: spazi.s, marginTop: spazi.s }}>
-            <BottonePrimario
-              testo="Rimettili in gioco"
-              style={{ flex: 1 }}
-              onPress={() => router.push('/suggeritore')}
-            />
-            <BottoneSecondario testo="Non ora" onPress={() => router.back()} />
-          </View>
-        </Scheda>
-
-        <View style={{ flexDirection: 'row', gap: 9 }}>
-          {[
-            { numero: String(usiPerGiorno.size), etichetta: 'giorni tracciati' },
-            { numero: String(ripetuti), etichetta: 'capi ripetuti' },
-            { numero: String(dormienti.length), etichetta: 'mai usati' },
-          ].map((voce) => (
-            <Scheda key={voce.etichetta} imbottitura={15} style={{ flex: 1 }}>
-              <Numero taglia={26}>{voce.numero}</Numero>
-              <Corpo taglia={10.5} tono="tenue" style={{ marginTop: 5 }}>
-                {voce.etichetta}
-              </Corpo>
-            </Scheda>
-          ))}
+      {/* La scheda che chiude il cerchio: dai capi fermi nasce la ragione per
+          cui l'app suggerisce anche cose che non sceglieresti. */}
+      <Scheda imbottitura={20} style={{ backgroundColor: colori.ambraTenue, gap: spazi.s }}>
+        <BadgeIa testo="dormono in fondo" />
+        <Titolo taglia={25}>
+          {parola(dormienti.length, '1 capo fermo da più di sei mesi', `${dormienti.length} capi fermi da più di sei mesi`)}
+        </Titolo>
+        <Corpo taglia={13.5} tono="medio">
+          {'Se vuoi te ne infilo qualcuno negli outfit della settimana, senza che tu debba pensarci.'}
+        </Corpo>
+        <View style={{ flexDirection: 'row', gap: spazi.s, marginTop: spazi.s }}>
+          <BottonePrimario
+            testo="Rimettili in gioco"
+            style={{ flex: 1 }}
+            onPress={() => router.push('/suggeritore')}
+          />
+          <BottoneSecondario testo="Non ora" onPress={() => router.back()} />
         </View>
+      </Scheda>
+
+      <RigaStatistiche
+        voci={[
+          { numero: String(usiPerGiorno.size), etichetta: 'giorni tracciati' },
+          { numero: String(ripetuti), etichetta: 'capi ripetuti' },
+          { numero: String(dormienti.length), etichetta: 'mai usati' },
+        ]}
+      />
     </Schermata>
   )
 }

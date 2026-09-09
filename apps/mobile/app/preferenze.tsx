@@ -16,7 +16,7 @@ import { useArmadio } from '../src/dati/archivio'
 import { useAzione } from '../src/dati/risorsa'
 import { segnaPreferenzeViste } from '../src/dati/intro'
 import { colori, spazi } from '../src/tema/tokens'
-import { BottonePrimario, Pillola, Toccabile } from '../src/ui/base'
+import { BottonePrimario, LinkTesto, Pillola } from '../src/ui/base'
 import { Corpo } from '../src/ui/testo'
 import { Testata } from '../src/ui/guscio'
 
@@ -109,13 +109,7 @@ export default function Preferenze() {
             disabilitato={salvando || !pronto}
             onPress={() => void entra()}
           />
-          {!rivisita ? (
-            <Toccabile onPress={() => void salta()} scala={0} style={{ alignItems: 'center', paddingVertical: 8 }}>
-              <Corpo taglia={13.5} tono="tenue">
-                Lo faccio dopo
-              </Corpo>
-            </Toccabile>
-          ) : null}
+          {!rivisita ? <LinkTesto onPress={() => void salta()}>Lo faccio dopo</LinkTesto> : null}
         </View>
       </View>
     </View>

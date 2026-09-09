@@ -70,6 +70,9 @@ export const linee = {
   tenue: 'rgba(21,21,26,0.06)',
   /** Un filo più marcata di `tenue`: bordi di schede su fondo chiaro. */
   media: 'rgba(21,21,26,0.08)',
+  /** Il chevron di fine riga su fondo chiaro — `righe.tsx` e `profilo.tsx`
+   *  scrivevano lo stesso esadecimale a mano in due file. */
+  chevron: 'rgba(21,21,26,0.3)',
 } as const
 
 /** Angoli morbidi: 26 per le schede, 99 per tutto ciò che è una pillola. */
@@ -248,6 +251,31 @@ export const caratteri = {
   testo: 'Manrope_500Medium',
   testoForte: 'Manrope_700Bold',
   testoNero: 'Manrope_800ExtraBold',
+} as const
+
+/**
+ * La scala tipografica. `ui/testo.tsx` documenta da tempo tre taglie per
+ * `Titolo` — «40 (onboarding), 27 (testata), 19 (sezione)» — ma il codice ne
+ * usa undici, e un terzo delle occorrenze di `taglia` in tutto l'app sono
+ * mezzi punti (`13.5`, `12.5`, `11.5`…) indistinguibili a schermo l'uno
+ * dall'altro: il sintomo di una taglia scelta a occhio, componente per
+ * componente, invece che da un elenco.
+ *
+ * `Titolo`/`Corpo`/`Forte`/`Etichetta` accettano una chiave di qui oltre a un
+ * numero — `taglia="sezione"` invece di `taglia={19}` — senza smettere di
+ * accettare un numero per i casi che hanno una vera ragione di scostarsi
+ * (un titolo che deve stare esattamente in una riga, per esempio). Non è un
+ * rifacimento delle taglie esistenti: i call site restano quello che erano
+ * finché non li si tocca per un altro motivo.
+ */
+export const tipografia = {
+  micro: 11,
+  minuto: 12.5,
+  corpo: 14,
+  guida: 16,
+  sezione: 19,
+  testata: 27,
+  eroe: 40,
 } as const
 
 /** Le etichette italiane delle enum generate dal backend. */

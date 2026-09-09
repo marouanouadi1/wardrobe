@@ -21,7 +21,18 @@ import {
 import { useArmadio, useVestiEVai } from '../../src/dati/archivio'
 import { parola } from '../../src/dati/formato'
 import { colori, durate, ETICHETTE, linee, ombre, raggi, spazi } from '../../src/tema/tokens'
-import { BadgeIa, BarraChiedi, Bolla, BottonePrimario, BottoneSecondario, BottoneTondo, Scheda, Toccabile } from '../../src/ui/base'
+import {
+  BadgeIa,
+  BarraChiedi,
+  Bolla,
+  BottonePrimario,
+  BottoneSecondario,
+  BottoneTondo,
+  Comparsa,
+  LinkTesto,
+  Scheda,
+  Toccabile,
+} from '../../src/ui/base'
 import { SchedaFoto } from '../../src/ui/capi'
 import { ScheletroProposta, ScheletroRigaProposta } from '../../src/ui/scheletri'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
@@ -239,54 +250,59 @@ export default function Oggi() {
             <Titolo taglia={19} style={{ flex: 1 }}>
               Altre due strade
             </Titolo>
-            <Toccabile onPress={() => router.push('/suggeritore')} scala={0}>
-              <Forte taglia={13} colore={colori.ambraMedio}>
-                Chiedi tu →
-              </Forte>
-            </Toccabile>
+            <LinkTesto
+              centrato={false}
+              forte
+              taglia={13}
+              colore={colori.ambraMedio}
+              onPress={() => router.push('/suggeritore')}
+            >
+              Chiedi tu →
+            </LinkTesto>
           </View>
 
-          {alternative.map((proposta) => {
+          {alternative.map((proposta, posizione) => {
             const capi = capiDiVestizione(proposta.vestizione, indice)
             return (
-              <Toccabile
-                key={proposta.titolo}
-                onPress={() => vestiEVai(proposta.vestizione)}
-                scala={0.985}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 14,
-                  padding: 12,
-                  borderRadius: raggi.medioAlto,
-                  backgroundColor: colori.scheda,
-                  ...ombre.bassa,
-                }}
-              >
-                <View style={{ flexDirection: 'row', gap: 3 }}>
-                  {capi.slice(0, 3).map((capo) => (
-                    <Image
-                      key={capo.id}
-                      source={{ uri: fotoDaMostrare(capo) }}
-                      style={{
-                        width: 34,
-                        height: 52,
-                        borderRadius: 11,
-                        backgroundColor: colori.fondoFoto,
-                      }}
-                      contentFit="cover"
-                      transition={durate.breve}
-                    />
-                  ))}
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Titolo taglia={16.5}>{proposta.titolo}</Titolo>
-                  <Corpo taglia={12.5} tono="tenue" numberOfLines={2}>
-                    {proposta.perche[0]}
-                  </Corpo>
-                </View>
-                <BadgeIa testo={`${proposta.match}%`} tenue />
-              </Toccabile>
+              <Comparsa key={proposta.titolo} ritardo={posizione * durate.scaglione}>
+                <Toccabile
+                  onPress={() => vestiEVai(proposta.vestizione)}
+                  scala={0.985}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 14,
+                    padding: 12,
+                    borderRadius: raggi.medioAlto,
+                    backgroundColor: colori.scheda,
+                    ...ombre.bassa,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', gap: 3 }}>
+                    {capi.slice(0, 3).map((capo) => (
+                      <Image
+                        key={capo.id}
+                        source={{ uri: fotoDaMostrare(capo) }}
+                        style={{
+                          width: 34,
+                          height: 52,
+                          borderRadius: 11,
+                          backgroundColor: colori.fondoFoto,
+                        }}
+                        contentFit="cover"
+                        transition={durate.breve}
+                      />
+                    ))}
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Titolo taglia={16.5}>{proposta.titolo}</Titolo>
+                    <Corpo taglia={12.5} tono="tenue" numberOfLines={2}>
+                      {proposta.perche[0]}
+                    </Corpo>
+                  </View>
+                  <BadgeIa testo={`${proposta.match}%`} tenue />
+                </Toccabile>
+              </Comparsa>
             )
           })}
         </>

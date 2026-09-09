@@ -5,8 +5,8 @@
 
 import { View } from 'react-native'
 import { colori, linee, raggi, spazi } from '../tema/tokens'
-import { Bolla, type NomeIcona, Icona, Toccabile } from './base'
-import { Corpo, Titolo } from './testo'
+import { Bolla, Scheda, type NomeIcona, Icona, Toccabile } from './base'
+import { Corpo, Forte, Numero, Titolo } from './testo'
 
 /**
  * Bolla + titolo + sottotitolo + chevron: la voce navigabile del design.
@@ -62,7 +62,51 @@ export function RigaNavigabile({
           {sottotitolo}
         </Corpo>
       </View>
-      <Icona nome="chevron" misura={17} colore={scura ? colori.ambra : 'rgba(21,21,26,0.3)'} spessore={2.4} />
+      <Icona nome="chevron" misura={17} colore={scura ? colori.ambra : linee.chevron} spessore={2.4} />
     </Toccabile>
+  )
+}
+
+/**
+ * La fila di due o tre numeri — Profilo, il calendario. Una tessera senza
+ * `sfondo` è la card di sempre (`Scheda`, bianca, con la sua ombra); con
+ * `sfondo` diventa una tinta piena e senza ombra, per il caso di Profilo dove
+ * una delle tre («fermi») è volutamente inchiostro pieno.
+ */
+export function RigaStatistiche({
+  voci,
+}: {
+  voci: readonly {
+    numero: string
+    etichetta: string
+    sfondo?: string
+    tinta?: string
+  }[]
+}) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 9 }}>
+      {voci.map((voce) =>
+        voce.sfondo ? (
+          <View
+            key={voce.etichetta}
+            style={{ flex: 1, padding: 15, borderRadius: raggi.medio + 2, backgroundColor: voce.sfondo }}
+          >
+            <Numero taglia={24} colore={voce.tinta}>
+              {voce.numero}
+            </Numero>
+            <Forte taglia={10.5} colore={voce.tinta} style={{ marginTop: 5, opacity: 0.6 }}>
+              {voce.etichetta}
+            </Forte>
+          </View>
+        ) : (
+          <Scheda key={voce.etichetta} imbottitura={15} style={{ flex: 1 }}>
+            <Numero taglia={26}>{voce.numero}</Numero>
+            <Corpo taglia={10.5} tono="tenue" style={{ marginTop: 5 }}>
+              {voce.etichetta}
+            </Corpo>
+          </Scheda>
+        ),
+      )}
+    </View>
   )
 }
