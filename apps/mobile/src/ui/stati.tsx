@@ -24,6 +24,20 @@ export function Caricamento({ su }: { su?: 'chiaro' | 'scuro' }) {
 }
 
 /**
+ * I messaggi di `/suggerimenti` — lo stilista, non l'analisi di una foto.
+ * Tipicamente più corta (nessuno scontorno prima), da qui le soglie più
+ * ravvicinate rispetto a `carica.tsx`. Condivisi da `app/(tabs)/oggi.tsx`
+ * (la prima attesa) e `app/suggeritore.tsx` (la stessa chiamata, un'altra
+ * schermata): stanno qui e non in un file di rotta, perché è `AttesaLunga`
+ * a consumarli.
+ */
+export const MESSAGGI_SUGGERIMENTI = [
+  { dopoMs: 0, testo: 'Guardo cosa hai pulito e cosa hai messo di recente.' },
+  { dopoMs: 4000, testo: 'Sto confrontando le combinazioni migliori.' },
+  { dopoMs: 10000, testo: 'Ci vuole ancora qualche secondo.' },
+] as const
+
+/**
  * Un'attesa lunga e indeterminata — l'analisi di una foto, 20-40 secondi.
  * Onesta sul fatto che non ci sono fasi osservabili da mostrare: una singola
  * chiamata al modello di visione (`services/api/src/handlers/analisi.py`

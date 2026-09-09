@@ -31,6 +31,7 @@
 import { useEffect, useState } from 'react'
 import { Animated, View, type DimensionValue, type StyleProp, type ViewStyle } from 'react-native'
 import { colori, curve, durate, griglie, ombre, raggi, spazi, superfici } from '../tema/tokens'
+import { SchedaFoto } from './capi'
 
 /**
  * Il rettangolo che respira: la sola forma da cui sono fatti tutti gli
@@ -101,27 +102,32 @@ export function Blocco({
 /**
  * La proposta grande di Oggi: la foto, e sotto la fascia di testo.
  *
- * `altezzaFoto` di default (330) è la stessa della foto vera in
- * `app/(tabs)/oggi.tsx`: lo scambio scheletro→contenuto non salta di un
- * pixel. Nessuna ombra propria — la porta già `SchedaFoto` intorno a
- * entrambi, scheletro e contenuto, dalla stessa schermata.
+ * Dentro la stessa `SchedaFoto` della card vera (`app/(tabs)/oggi.tsx`), con
+ * lo stesso `padding`/`gap`/altezza del bottone: non un'approssimazione della
+ * forma, la stessa forma con rettangoli al posto del contenuto. `altezzaFoto`
+ * di default è la stessa della foto vera — non è un numero indovinato, è
+ * l'unico modo perché lo scambio scheletro→contenuto non salti.
  */
 export function ScheletroProposta({
-  altezzaFoto = 330,
+  altezzaFoto = 260,
   su,
 }: {
   altezzaFoto?: number
   su?: 'chiaro' | 'scuro'
 }) {
   return (
-    <View style={{ gap: spazi.m }}>
-      <Blocco altezza={altezzaFoto} raggio={raggi.grande} su={su} />
-      <View style={{ gap: spazi.s, paddingHorizontal: spazi.xs }}>
-        <Blocco altezza={11} larghezza={104} raggio={raggi.pillola} su={su} />
-        <Blocco altezza={24} larghezza="72%" raggio={raggi.piccolo} su={su} />
-        <Blocco altezza={12} larghezza="90%" raggio={raggi.pillola} su={su} />
+    <SchedaFoto raggio={raggi.grande} ombra="alta">
+      <Blocco altezza={altezzaFoto} raggio={0} su={su} />
+      <View style={{ padding: 18, gap: spazi.s }}>
+        <Blocco altezza={14} larghezza={104} raggio={raggi.pillola} su={su} />
+        <Blocco altezza={32} larghezza="72%" raggio={raggi.piccolo} su={su} />
+        <Blocco altezza={20} larghezza="90%" raggio={raggi.pillola} su={su} />
+        <View style={{ flexDirection: 'row', gap: spazi.s, marginTop: spazi.s }}>
+          <Blocco altezza={52} raggio={raggi.pillola} su={su} style={{ flex: 1 }} />
+          <Blocco altezza={52} larghezza={52} raggio={raggi.pillola} su={su} />
+        </View>
       </View>
-    </View>
+    </SchedaFoto>
   )
 }
 
@@ -178,22 +184,23 @@ export function ScheletroGrigliaCapi({
   )
 }
 
-/** Un outfit salvato: la striscia di foto e la fascia con nome e freccia. */
+/**
+ * Un outfit salvato: la striscia di foto e la fascia con nome e freccia.
+ *
+ * Dentro la stessa `SchedaFoto` della card vera (`app/outfit.tsx`) — non una
+ * cornice ricostruita a mano una seconda volta.
+ */
 export function ScheletroSchedaOutfit({ su }: { su?: 'chiaro' | 'scuro' }) {
   const scura = su === 'scuro'
   return (
-    <View
-      style={{
-        borderRadius: raggi.grande - 2,
-        overflow: 'hidden',
-        backgroundColor: scura ? superfici.suScuro.riga : colori.scheda,
-        ...(scura ? null : ombre.scheda),
-      }}
+    <SchedaFoto
+      sfondo={scura ? superfici.suScuro.riga : colori.scheda}
+      ombra={scura ? 'nessuna' : 'scheda'}
     >
       {/* Un blocco solo, non quattro accostati: nella scheda vera le foto sono
           a filo, senza spazio in mezzo — quattro rettangoli senza separazione
           sono un rettangolo. `raggio={0}` perché a smussare ci pensa
-          l'`overflow: 'hidden'` del contenitore. */}
+          l'`overflow: 'hidden'` di `SchedaFoto`. */}
       <Blocco altezza={250} raggio={0} su={su} />
       <View
         style={{
@@ -210,7 +217,7 @@ export function ScheletroSchedaOutfit({ su }: { su?: 'chiaro' | 'scuro' }) {
         </View>
         <Blocco larghezza={46} altezza={46} raggio={raggi.pillola} su={su} />
       </View>
-    </View>
+    </SchedaFoto>
   )
 }
 

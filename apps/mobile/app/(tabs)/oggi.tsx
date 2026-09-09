@@ -26,25 +26,22 @@ import { SchedaFoto } from '../../src/ui/capi'
 import { ScheletroProposta, ScheletroRigaProposta } from '../../src/ui/scheletri'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Schermata } from '../../src/ui/guscio'
-import { AttesaLunga, Errore, Vuoto } from '../../src/ui/stati'
+import { AttesaLunga, Errore, MESSAGGI_SUGGERIMENTI, Vuoto } from '../../src/ui/stati'
 
 const SCORCIATOIE = ['Ho una cena', 'Fa freddo', 'Solo capi puliti', 'Sorprendimi']
 
-/**
- * `/suggerimenti` è una chiamata allo stilista (`services/api/src/handlers/
- * suggerimenti.py`), tipicamente più corta dell'analisi di una foto — non
- * c'è uno scontorno prima. Riusata da `app/suggeritore.tsx` per la stessa
- * attesa, sullo stesso endpoint.
- */
-export const MESSAGGI_SUGGERIMENTI = [
-  { dopoMs: 0, testo: 'Guardo cosa hai pulito e cosa hai messo di recente.' },
-  { dopoMs: 4000, testo: 'Sto confrontando le combinazioni migliori.' },
-  { dopoMs: 10000, testo: 'Ci vuole ancora qualche secondo.' },
-] as const
-
 export default function Oggi() {
-  const { suggerimenti, indice, profilo, capi, pronto, erroreCaricamento, suggerimentiInCorso, chiediSuggerimenti } =
-    useArmadio()
+  const {
+    suggerimenti,
+    indice,
+    profilo,
+    capi,
+    pronto,
+    erroreCaricamento,
+    suggerimentiInCorso,
+    chiediSuggerimenti,
+    ricarica,
+  } = useArmadio()
   const vestiEVai = useVestiEVai()
   const [domanda, setDomanda] = useState('')
   const [scartati, setScartati] = useState<string[]>([])
@@ -104,8 +101,17 @@ export default function Oggi() {
       {erroreCaricamento ? (
         // Lo stato che prima non esisteva: un server irraggiungibile non è
         // «l'armadio è vuoto», ed è la causa più comune di «non vedo niente
-        // quando apro Oggi».
-        <Errore titolo="Non riesco a leggere il tuo armadio" spiegazione={erroreCaricamento} />
+        // quando apro Oggi». `erroreCaricamento` porta il messaggio tecnico
+        // (com'era già nel banner `Avviso` di prima), ma qui non lo mostriamo:
+        // un errore di rete non è un contenuto per l'utente — stessa regola
+        // del default di `StatoRisorsa` in `ui/stati.tsx`.
+        <>
+          <Errore
+            titolo="Non riesco a leggere il tuo armadio"
+            spiegazione="Controlla che il backend sia raggiungibile e riprova."
+          />
+          <BottonePrimario testo="Riprova" onPress={() => void ricarica()} />
+        </>
       ) : armadioVuoto ? (
         // Niente da proporre e niente da chiedere: la barra e le scorciatoie
         // presuppongono un armadio, e chiedere «cosa metto» senza capi non
@@ -163,12 +169,15 @@ export default function Oggi() {
         // Il capo intero, scontornato, su fondo chiaro — non più ritagliato
         // su un fondo scuro. Uno sfondo trasparente aderisce solo se lo
         // sfondo dietro è `colori.fondoFoto` (`tokens.ts`); su `inchiostro`
-        // il capo galleggiava tagliato sul nero. L'altezza (330) è la stessa
+        // il capo galleggiava tagliato sul nero. L'altezza (260) è la stessa
         // di `ScheletroProposta` (`ui/scheletri.tsx`): lo scambio non salta.
+        // Più bassa dei 392 di prima perché il testo non è più sovrapposto
+        // alla foto ma sotto: la card è più alta a parità di immagine, e
+        // «Vedila addosso» deve restare sopra la piega senza scorrere.
         <SchedaFoto raggio={raggi.grande} ombra="alta">
           <Image
             source={{ uri: copertina ? fotoDaMostrare(copertina) : undefined }}
-            style={{ width: '100%', height: 330, backgroundColor: colori.fondoFoto }}
+            style={{ width: '100%', height: 260, backgroundColor: colori.fondoFoto }}
             contentFit="contain"
             transition={durate.breve}
           />
