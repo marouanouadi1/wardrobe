@@ -13,15 +13,26 @@
  * un colore di tessuto vero.
  */
 
+/** Il bianco caldo delle superfici: le schede e il fondo delle foto. */
+const BIANCO_CALDO = '#FFFDF9'
+
 export const colori = {
   /** Nero d'inchiostro: testo, superfici forti, barra di navigazione. */
   inchiostro: '#15151A',
   /** Crema: il testo sopra l'inchiostro. */
   crema: '#F7F4EF',
   /** Il bianco delle schede: caldo, non clinico. */
-  scheda: '#FFFDF9',
+  scheda: BIANCO_CALDO,
   /** Lo sfondo dell'app. */
   sfondo: '#F2EEE7',
+  /**
+   * Il fondo su cui si posa la foto di un capo: **uno solo per tutti i capi**,
+   * mai il colore del capo stesso. Le foto scontornate sono PNG trasparenti,
+   * quindi questo è ciò che si vede intorno al capo — e un capo blu su fondo
+   * blu è il difetto che questo token esiste per evitare. Vale anche da
+   * segnaposto mentre la foto arriva dalla rete.
+   */
+  fondoFoto: BIANCO_CALDO,
   /** Ambra: solo IA. */
   ambra: '#F5B324',
   /** Ambra tenue, per i fondi delle etichette di match. */

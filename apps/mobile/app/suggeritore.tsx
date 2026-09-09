@@ -149,7 +149,7 @@ export default function Suggeritore() {
                   <View>
                     <Image
                       source={{ uri: fotoDaMostrare(capi[0]) }}
-                      style={{ width: '100%', height: 230, backgroundColor: capi[0].colore.hex }}
+                      style={{ width: '100%', height: 230, backgroundColor: colori.fondoFoto }}
                       contentFit="cover"
                       contentPosition={{ top: '20%', left: '50%' }}
                     />
@@ -171,7 +171,7 @@ export default function Suggeritore() {
                           width: 52,
                           height: 64,
                           borderRadius: raggi.piccolo,
-                          backgroundColor: capo.colore.hex,
+                          backgroundColor: colori.fondoFoto,
                         }}
                         contentFit="cover"
                       />

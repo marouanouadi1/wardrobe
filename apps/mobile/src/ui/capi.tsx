@@ -2,9 +2,12 @@
  * I capi, nelle forme in cui il design li mostra: griglia, e le miniature
  * più piccole (suggerimenti, selettore dell'avatar).
  *
- * Il colore del capo fa da sfondo sotto la foto. Non è un dettaglio estetico:
- * mentre la foto arriva dalla rete, l'utente vede già il colore giusto, e
- * l'armadio non lampeggia di rettangoli grigi.
+ * Sotto la foto c'è `colori.fondoFoto`, uguale per tutti i capi. Non era così:
+ * c'era il colore dominante del capo, come segnaposto di caricamento. Ha
+ * smesso di funzionare quando lo scontorno (`handlers/analisi.py`) ha
+ * iniziato a produrre PNG trasparenti — il fondo non è più coperto dalla
+ * foto, e ogni capo finiva adagiato su una velatura del proprio colore. Il
+ * segnaposto resta, ma è lo stesso bianco per tutti.
  */
 
 import type { Capo } from '@wardrobe/contracts'
@@ -24,7 +27,7 @@ export function CapoInGriglia({ capo, onPress }: { capo: Capo; onPress: () => vo
         flex: 1,
         borderRadius: raggi.medio + 2,
         overflow: 'hidden',
-        backgroundColor: capo.colore.hex,
+        backgroundColor: colori.fondoFoto,
         ...ombre.bassa,
       }}
     >
@@ -76,7 +79,7 @@ export function Miniatura({
           width: larghezza,
           height: altezza,
           borderRadius: raggi.medio,
-          backgroundColor: capo.colore.hex,
+          backgroundColor: colori.fondoFoto,
           borderWidth: selezionato ? 2 : 0,
           borderColor: colori.inchiostro,
         }}
@@ -115,7 +118,7 @@ export function MiniaturaFoto({
           width: misura,
           height: misura,
           borderRadius: raggi.medio,
-          backgroundColor: colori.sfondo,
+          backgroundColor: colori.fondoFoto,
         }}
         contentFit="cover"
       />

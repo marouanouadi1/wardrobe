@@ -134,7 +134,7 @@ export default function Oggi() {
         >
           <Image
             source={{ uri: copertina?.foto.url ?? undefined }}
-            style={{ width: '100%', height: 392, backgroundColor: copertina?.colore.hex }}
+            style={{ width: '100%', height: 392 }}
             contentFit="cover"
             contentPosition={{ top: '22%', left: '50%' }}
             transition={250}
@@ -227,7 +227,7 @@ export default function Oggi() {
                         width: 34,
                         height: 52,
                         borderRadius: 11,
-                        backgroundColor: capo.colore.hex,
+                        backgroundColor: colori.fondoFoto,
                       }}
                       contentFit="cover"
                     />

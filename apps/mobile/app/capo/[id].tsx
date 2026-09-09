@@ -112,7 +112,7 @@ export default function DettaglioCapo() {
           marginHorizontal: spazi.xl,
           borderRadius: raggi.grande - 2,
           overflow: 'hidden',
-          backgroundColor: capo.colore.hex,
+          backgroundColor: colori.fondoFoto,
           ...ombre.alta,
         }}
       >

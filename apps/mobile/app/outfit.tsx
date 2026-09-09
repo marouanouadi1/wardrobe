@@ -48,7 +48,7 @@ export default function Outfit() {
                 <Image
                   key={capo.id}
                   source={{ uri: capo.foto.url ?? undefined }}
-                  style={{ flex: 1, backgroundColor: capo.colore.hex }}
+                  style={{ flex: 1, backgroundColor: colori.fondoFoto }}
                   contentFit="cover"
                   contentPosition={{ top: '25%', left: '50%' }}
                 />

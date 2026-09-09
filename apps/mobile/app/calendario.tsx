@@ -13,7 +13,7 @@ import { View } from 'react-native'
 import { useArmadio } from '../src/dati/archivio'
 import { capiDormienti } from '../src/dati/dominio'
 import { formattaMeseAnno, parola } from '../src/dati/formato'
-import { colori, spazi } from '../src/tema/tokens'
+import { colori, linee, spazi } from '../src/tema/tokens'
 import { BadgeIa, BottonePrimario, BottoneSecondario, Scheda } from '../src/ui/base'
 import { Schermata } from '../src/ui/guscio'
 import { Corpo, Etichetta, Numero, Titolo } from '../src/ui/testo'
@@ -65,7 +65,7 @@ export default function Calendario() {
                   aspectRatio: 1 / 1.25,
                   borderRadius: 13,
                   overflow: 'hidden',
-                  backgroundColor: primo?.colore.hex ?? 'rgba(21,21,26,0.05)',
+                  backgroundColor: primo ? colori.fondoFoto : linee.tenue,
                   borderWidth: giorno === oggi ? 2 : 0,
                   borderColor: colori.inchiostro,
                 }}
