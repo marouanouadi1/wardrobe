@@ -107,33 +107,41 @@ export default function Calendario() {
         </View>
       )}
 
-      {/* La scheda che chiude il cerchio: dai capi fermi nasce la ragione per
-          cui l'app suggerisce anche cose che non sceglieresti. */}
-      <Scheda imbottitura={20} style={{ backgroundColor: colori.ambraTenue, gap: spazi.s }}>
-        <BadgeIa testo="dormono in fondo" />
-        <Titolo taglia={25}>
-          {parola(dormienti.length, '1 capo fermo da più di sei mesi', `${dormienti.length} capi fermi da più di sei mesi`)}
-        </Titolo>
-        <Corpo taglia={13.5} tono="medio">
-          {'Se vuoi te ne infilo qualcuno negli outfit della settimana, senza che tu debba pensarci.'}
-        </Corpo>
-        <View style={{ flexDirection: 'row', gap: spazi.s, marginTop: spazi.s }}>
-          <BottonePrimario
-            testo="Rimettili in gioco"
-            style={{ flex: 1 }}
-            onPress={() => router.push('/suggeritore')}
-          />
-          <BottoneSecondario testo="Non ora" onPress={() => router.back()} />
-        </View>
-      </Scheda>
+      {/* Come la griglia sopra: finché l'archivio carica, `capi` è ancora `[]`
+          e `dormienti`/`ripetuti`/`usiPerGiorno` varrebbero tutti zero — non
+          «nessun capo fermo», ma «non lo so ancora». Stessa correzione già
+          fatta su `profilo.tsx` per lo stesso identico difetto. */}
+      {pronto ? (
+        <>
+          {/* La scheda che chiude il cerchio: dai capi fermi nasce la ragione
+              per cui l'app suggerisce anche cose che non sceglieresti. */}
+          <Scheda imbottitura={20} style={{ backgroundColor: colori.ambraTenue, gap: spazi.s }}>
+            <BadgeIa testo="dormono in fondo" />
+            <Titolo taglia={25}>
+              {parola(dormienti.length, '1 capo fermo da più di sei mesi', `${dormienti.length} capi fermi da più di sei mesi`)}
+            </Titolo>
+            <Corpo taglia={13.5} tono="medio">
+              {'Se vuoi te ne infilo qualcuno negli outfit della settimana, senza che tu debba pensarci.'}
+            </Corpo>
+            <View style={{ flexDirection: 'row', gap: spazi.s, marginTop: spazi.s }}>
+              <BottonePrimario
+                testo="Rimettili in gioco"
+                style={{ flex: 1 }}
+                onPress={() => router.push('/suggeritore')}
+              />
+              <BottoneSecondario testo="Non ora" onPress={() => router.back()} />
+            </View>
+          </Scheda>
 
-      <RigaStatistiche
-        voci={[
-          { numero: String(usiPerGiorno.size), etichetta: 'giorni tracciati' },
-          { numero: String(ripetuti), etichetta: 'capi ripetuti' },
-          { numero: String(dormienti.length), etichetta: 'mai usati' },
-        ]}
-      />
+          <RigaStatistiche
+            voci={[
+              { numero: String(usiPerGiorno.size), etichetta: 'giorni tracciati' },
+              { numero: String(ripetuti), etichetta: 'capi ripetuti' },
+              { numero: String(dormienti.length), etichetta: 'mai usati' },
+            ]}
+          />
+        </>
+      ) : null}
     </Schermata>
   )
 }
