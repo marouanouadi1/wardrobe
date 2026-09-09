@@ -22,8 +22,8 @@ import { api, messaggioDiErrore } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
 import { conta } from '../../src/dati/formato'
 import { colori, raggi, spazi } from '../../src/tema/tokens'
-import { BottonePrimario, BottoneSecondario } from '../../src/ui/base'
-import { MiniaturaFoto } from '../../src/ui/capi'
+import { BottonePrimario, BottoneSecondario, Icona, Scheda } from '../../src/ui/base'
+import { MiniaturaFoto, SchedaFoto } from '../../src/ui/capi'
 import { AttesaLunga } from '../../src/ui/stati'
 import { Corpo, Etichetta, Titolo } from '../../src/ui/testo'
 import { Schermata } from '../../src/ui/guscio'
@@ -74,6 +74,13 @@ export default function Carica() {
   /** Distingue un abort voluto («Annulla») da un timeout scaduto: il primo
    * non deve mostrare l'avviso «sta prendendo troppo». */
   const annullataRef = useRef(false)
+  /** Lo stesso, per la coda: il controller della foto che sta analizzando in
+   * questo momento (uno per volta, sostituito a ogni giro del `for`), e il
+   * flag che dice se è stata l'utente a fermarla — prima non esisteva un modo
+   * di interrompere una coda di venti foto una volta partita. */
+  const controllerCodaRef = useRef<AbortController | null>(null)
+  const annullataCodaRef = useRef(false)
+  const [immagineCopertinaFallita, setImmagineCopertinaFallita] = useState(false)
   /** Le foto scattate o scelte, in attesa di «Analizza»: si può togliere
    * quella sbagliata prima di partire, cosa che il vecchio bottone «20 in
    * blocco» — diretto in analisi appena scelte le foto — non permetteva. */
@@ -197,15 +204,23 @@ export default function Carica() {
    * fallire, non un'interruzione dell'intera coda: con `analizzandoCoda`
    * a `true` ogni bottone della schermata resta nascosto, e una foto
    * impantanata senza questo timeout bloccherebbe l'utente lì per sempre.
+   *
+   * `annullataCodaRef` è il modo in cui `annullaCoda()` ferma tutto questo
+   * dall'esterno: controlla il flag a ogni giro (per non partire con la foto
+   * successiva) e aborta il controller della foto in corso (per fermare
+   * anche quella, non solo le prossime).
    */
   async function analizzaCoda(uris: string[]) {
     setAnalizzandoCoda(true)
+    annullataCodaRef.current = false
     let riuscite = 0
     let fallite = 0
     setProgressoCoda({ totale: uris.length, riuscite, fallite })
 
     for (const uri of uris) {
+      if (annullataCodaRef.current) break
       const controller = new AbortController()
+      controllerCodaRef.current = controller
       const scadenza = setTimeout(() => controller.abort(), TIMEOUT_ANALISI_MS)
       try {
         const firma = await api.firmaUpload('image/jpeg')
@@ -215,25 +230,35 @@ export default function Carica() {
         if (stato.stato === 'completata' && stato.capo) {
           registraCapo(stato.capo)
           riuscite += 1
-        } else {
+        } else if (!annullataCodaRef.current) {
           fallite += 1
         }
       } catch {
-        fallite += 1
+        if (!annullataCodaRef.current) fallite += 1
       } finally {
         clearTimeout(scadenza)
       }
-      setProgressoCoda({ totale: uris.length, riuscite, fallite })
+      if (!annullataCodaRef.current) setProgressoCoda({ totale: uris.length, riuscite, fallite })
     }
+    controllerCodaRef.current = null
 
     avvisa(
-      `${conta(riuscite, 'capo aggiunto', 'capi aggiunti')}` +
-        (fallite > 0 ? `, ${conta(fallite, 'non riuscito', 'non riusciti')}` : ''),
+      annullataCodaRef.current
+        ? `Fermato: ${conta(riuscite, 'capo aggiunto', 'capi aggiunti')} prima di interrompere.`
+        : `${conta(riuscite, 'capo aggiunto', 'capi aggiunti')}` +
+            (fallite > 0 ? `, ${conta(fallite, 'non riuscito', 'non riusciti')}` : ''),
     )
     setCoda([])
     setProgressoCoda(null)
     setAnalizzandoCoda(false)
     if (riuscite > 0) router.push('/(tabs)/armadio')
+  }
+
+  /** «Annulla la coda»: stessa idea di `annullaAnalisi`, sulla foto in corso
+   * nel `for` di `analizzaCoda` invece che sull'unica foto di `analizzaUnaFoto`. */
+  function annullaCoda() {
+    annullataCodaRef.current = true
+    controllerCodaRef.current?.abort()
   }
 
   function analizza() {
@@ -246,19 +271,22 @@ export default function Carica() {
     <Schermata occhiello="Nuovo capo" titolo="Aggiungi" tab>
       {fase === 'scatta' ? (
         <>
-          <View
-            style={{
-              height: 430,
-              borderRadius: raggi.grande,
-              overflow: 'hidden',
-              backgroundColor: colori.inchiostro,
-            }}
-          >
-            <Image
-              source={{ uri: 'https://images.pexels.com/photos/18257675/pexels-photo-18257675.jpeg?auto=compress&cs=tinysrgb&w=700&h=900&fit=crop' }}
-              style={{ position: 'absolute', inset: 0, opacity: 0.5 }}
-              contentFit="cover"
-            />
+          <SchedaFoto raggio={raggi.grande} ombra="nessuna" sfondo={colori.inchiostro} style={{ height: 430 }}>
+            {!immagineCopertinaFallita ? (
+              <Image
+                source={{ uri: 'https://images.pexels.com/photos/18257675/pexels-photo-18257675.jpeg?auto=compress&cs=tinysrgb&w=700&h=900&fit=crop' }}
+                style={{ position: 'absolute', inset: 0, opacity: 0.5 }}
+                contentFit="cover"
+                onError={() => setImmagineCopertinaFallita(true)}
+              />
+            ) : (
+              // Senza rete l'immagine non arriva mai: prima restava un
+              // rettangolo nero e basta. Un'icona non è la foto vera, ma
+              // dice che il vuoto è voluto, non un difetto.
+              <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
+                <Icona nome="fotocamera" misura={64} colore="rgba(255,253,249,0.28)" spessore={1.4} />
+              </View>
+            )}
             <View
               style={{
                 position: 'absolute',
@@ -280,7 +308,7 @@ export default function Carica() {
                 {'Steso sul letto o appeso, con la luce che hai. Non serve altro: al resto pensa il modello.'}
               </Corpo>
             </LinearGradient>
-          </View>
+          </SchedaFoto>
 
           {!analizzandoCoda ? (
             <View style={{ flexDirection: 'row', gap: 9 }}>
@@ -308,16 +336,29 @@ export default function Carica() {
                   />
                 ))}
               </View>
-              <BottonePrimario
-                testo={`Analizza ${conta(coda.length, 'capo', 'capi')}`}
-                caricando={analizzandoCoda}
-                onPress={analizza}
-              />
-              {progressoCoda ? (
-                <Corpo taglia={12.5} tono="tenue" style={{ textAlign: 'center' }}>
-                  {`Sto analizzando · ${progressoCoda.riuscite + progressoCoda.fallite} di ${progressoCoda.totale}`}
-                </Corpo>
-              ) : null}
+
+              {!analizzandoCoda ? (
+                <BottonePrimario testo={`Analizza ${conta(coda.length, 'capo', 'capi')}`} onPress={analizza} />
+              ) : (
+                // Prima l'unico segnale, per una coda che può durare minuti,
+                // era una riga di testo sotto un bottone che girava. Stessa
+                // attesa onesta di una foto sola (`AttesaLunga`), rimontata a
+                // ogni capo (la `key`) così i suoi messaggi ripartono da
+                // capo — e un modo vero di fermarsi a metà, che prima non
+                // esisteva.
+                <Scheda imbottitura={18} style={{ gap: spazi.m }}>
+                  {progressoCoda ? (
+                    <Corpo taglia={13} tono="medio" style={{ textAlign: 'center' }}>
+                      {`Sto guardando il capo ${progressoCoda.riuscite + progressoCoda.fallite + 1} di ${progressoCoda.totale}`}
+                    </Corpo>
+                  ) : null}
+                  <AttesaLunga
+                    key={progressoCoda ? progressoCoda.riuscite + progressoCoda.fallite : 0}
+                    messaggi={MESSAGGI_ATTESA}
+                  />
+                  <BottoneSecondario testo="Annulla la coda" onPress={annullaCoda} />
+                </Scheda>
+              )}
             </View>
           ) : null}
 
@@ -331,18 +372,11 @@ export default function Carica() {
 
       {fase === 'analisi' ? (
         <>
-          <View
-            style={{
-              height: 390,
-              borderRadius: raggi.grande,
-              overflow: 'hidden',
-              backgroundColor: colori.inchiostro,
-            }}
-          >
+          <SchedaFoto raggio={raggi.grande} ombra="nessuna" sfondo={colori.inchiostro} style={{ height: 390 }}>
             {foto ? (
               <Image source={{ uri: foto }} style={{ flex: 1 }} contentFit="cover" />
             ) : null}
-          </View>
+          </SchedaFoto>
 
           <Titolo taglia={24}>Sto guardando il capo</Titolo>
 

@@ -15,8 +15,8 @@ import { useRef } from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, View, type ViewStyle } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colori, linee, raggi, spazi } from '../tema/tokens'
-import { BottoneIndietro, Icona, Toccabile } from './base'
-import { Corpo, Titolo } from './testo'
+import { BottoneIndietro, Icona, LinkTesto, Toccabile } from './base'
+import { Corpo, TestoErrore, Titolo } from './testo'
 
 export function Testata({
   occhiello,
@@ -193,15 +193,11 @@ export function GuscioAutenticazione({
 
         {children}
 
-        {errore ? <Corpo style={{ color: colori.corallo }}>{errore}</Corpo> : null}
+        {errore ? <TestoErrore>{errore}</TestoErrore> : null}
 
         {azione}
 
-        <Toccabile onPress={onLinkFantasma} scala={0} style={{ alignItems: 'center', paddingVertical: 8 }}>
-          <Corpo taglia={13.5} tono="tenue">
-            {testoLinkFantasma}
-          </Corpo>
-        </Toccabile>
+        <LinkTesto onPress={onLinkFantasma}>{testoLinkFantasma}</LinkTesto>
       </View>
     </KeyboardAvoidingView>
   )

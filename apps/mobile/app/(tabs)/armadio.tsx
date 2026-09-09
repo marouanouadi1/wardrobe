@@ -12,9 +12,10 @@ import { useMemo, useState } from 'react'
 import { ScrollView, View } from 'react-native'
 import { useArmadio } from '../../src/dati/archivio'
 import { conta } from '../../src/dati/formato'
-import { ETICHETTE, spazi } from '../../src/tema/tokens'
+import { ETICHETTE, griglie, spazi } from '../../src/tema/tokens'
 import { BarraChiedi, Pillola } from '../../src/ui/base'
 import { CapoInGriglia } from '../../src/ui/capi'
+import { ScheletroGrigliaCapi } from '../../src/ui/scheletri'
 import { Vuoto } from '../../src/ui/stati'
 import { Forte } from '../../src/ui/testo'
 import { RigaNavigabile } from '../../src/ui/righe'
@@ -33,7 +34,7 @@ const FILTRI: { valore: Filtro; etichetta: string }[] = [
 ]
 
 export default function Armadio() {
-  const { capi, profilo } = useArmadio()
+  const { capi, profilo, pronto } = useArmadio()
   const parametri = useLocalSearchParams<{ stato?: StatoCapo }>()
   const [filtro, setFiltro] = useState<Filtro>(parametri.stato === 'da_lavare' ? 'da_lavare' : 'tutti')
   const [ricerca, setRicerca] = useState('')
@@ -65,7 +66,7 @@ export default function Armadio() {
 
   return (
     <Schermata
-      occhiello={`${capi.length} capi${inLavatrice ? ` · ${inLavatrice} in lavatrice` : ''}`}
+      occhiello={pronto ? `${capi.length} capi${inLavatrice ? ` · ${inLavatrice} in lavatrice` : ''}` : ''}
       titolo="Il tuo armadio"
       fotoProfilo={profilo?.foto_url}
       tab
@@ -84,19 +85,26 @@ export default function Armadio() {
         ))}
       </ScrollView>
 
-      <Forte taglia={12.5} tono="tenue">
-        {conta(mostrati.length, 'capo', 'capi')}
-      </Forte>
+      {pronto ? (
+        <Forte taglia={12.5} tono="tenue">
+          {conta(mostrati.length, 'capo', 'capi')}
+        </Forte>
+      ) : null}
 
-      {mostrati.length === 0 ? (
+      {!pronto ? (
+        // Prima, a caricamento in corso, `mostrati.length === 0` faceva
+        // scattare il ramo qui sotto: «niente con questi filtri» a un
+        // armadio pieno che stava solo ancora arrivando.
+        <ScheletroGrigliaCapi />
+      ) : mostrati.length === 0 ? (
         <Vuoto
           titolo="Niente con questi filtri"
           spiegazione="Prova a togliere la ricerca, oppure aggiungi un capo con il «+» in basso."
         />
       ) : (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spazi.m }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: griglie.armadio.distanza }}>
           {mostrati.map((capo) => (
-            <View key={capo.id} style={{ width: '47.5%' }}>
+            <View key={capo.id} style={{ width: griglie.armadio.colonna }}>
               <CapoInGriglia capo={capo} onPress={() => router.push(`/capo/${capo.id}`)} />
             </View>
           ))}

@@ -9,8 +9,8 @@
 
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Animated, Easing, View } from 'react-native'
-import { colori, linee, raggi, spazi } from '../tema/tokens'
+import { ActivityIndicator, Animated, View } from 'react-native'
+import { colori, curve, durate, linee, raggi, spazi } from '../tema/tokens'
 import { Scheda } from './base'
 import { Corpo, Forte } from './testo'
 
@@ -22,6 +22,20 @@ export function Caricamento({ su }: { su?: 'chiaro' | 'scuro' }) {
     />
   )
 }
+
+/**
+ * I messaggi di `/suggerimenti` — lo stilista, non l'analisi di una foto.
+ * Tipicamente più corta (nessuno scontorno prima), da qui le soglie più
+ * ravvicinate rispetto a `carica.tsx`. Condivisi da `app/(tabs)/oggi.tsx`
+ * (la prima attesa) e `app/suggeritore.tsx` (la stessa chiamata, un'altra
+ * schermata): stanno qui e non in un file di rotta, perché è `AttesaLunga`
+ * a consumarli.
+ */
+export const MESSAGGI_SUGGERIMENTI = [
+  { dopoMs: 0, testo: 'Guardo cosa hai pulito e cosa hai messo di recente.' },
+  { dopoMs: 4000, testo: 'Sto confrontando le combinazioni migliori.' },
+  { dopoMs: 10000, testo: 'Ci vuole ancora qualche secondo.' },
+] as const
 
 /**
  * Un'attesa lunga e indeterminata — l'analisi di una foto, 20-40 secondi.
@@ -53,14 +67,14 @@ export function AttesaLunga({
       Animated.sequence([
         Animated.timing(scorrimento, {
           toValue: corsa,
-          duration: 900,
-          easing: Easing.inOut(Easing.ease),
+          duration: durate.corsa,
+          easing: curve.respiro,
           useNativeDriver: true,
         }),
         Animated.timing(scorrimento, {
           toValue: 0,
-          duration: 900,
-          easing: Easing.inOut(Easing.ease),
+          duration: durate.corsa,
+          easing: curve.respiro,
           useNativeDriver: true,
         }),
       ]),
@@ -153,9 +167,10 @@ export function StatoRisorsa({
   vuoto,
   titoloVuoto,
   spiegazioneVuoto,
-  titoloErrore = 'Non riesco a leggerli',
+  titoloErrore = 'Non riesco a leggere',
   spiegazioneErrore = 'Controlla che il backend sia raggiungibile e riprova.',
   su,
+  scheletro,
   children,
 }: {
   caricamento: boolean
@@ -166,9 +181,17 @@ export function StatoRisorsa({
   titoloErrore?: string
   spiegazioneErrore?: string
   su?: 'chiaro' | 'scuro'
+  /**
+   * La forma da mostrare al posto dello spinner — `<ScheletroGrigliaCapi />` e
+   * compagnia (`ui/scheletri.tsx`). Assente, resta lo spinner: va bene dove
+   * non c'è una forma da promettere (un salvataggio, una lista di due righe),
+   * e uno scheletro che indovina una forma sbagliata è peggio di uno spinner
+   * onesto.
+   */
+  scheletro?: ReactNode
   children: ReactNode
 }) {
-  if (caricamento) return <Caricamento su={su} />
+  if (caricamento) return <>{scheletro ?? <Caricamento su={su} />}</>
   if (errore) return <Errore titolo={titoloErrore} spiegazione={spiegazioneErrore} su={su} />
   if (vuoto) return <Vuoto titolo={titoloVuoto} spiegazione={spiegazioneVuoto} su={su} />
   return <>{children}</>

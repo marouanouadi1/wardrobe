@@ -4,7 +4,8 @@
 
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
-import { Alert, View } from 'react-native'
+import { useState } from 'react'
+import { View } from 'react-native'
 import { URL_API } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
 import { capiDormienti, nomeDiBattesimo } from '../../src/dati/dominio'
@@ -12,27 +13,22 @@ import { apriSegnalazione, segnalazioniAttive } from '../../src/dati/segnalazion
 import { useSessione } from '../../src/dati/sessione'
 import { colori, linee, raggi, spazi } from '../../src/tema/tokens'
 import { Bolla, BottoneSecondario, Icona, Scheda, Toccabile } from '../../src/ui/base'
-import { Corpo, Etichetta, Forte, Numero, Titolo } from '../../src/ui/testo'
-import { RigaNavigabile } from '../../src/ui/righe'
+import { Conferma } from '../../src/ui/avviso'
+import { Corpo, Etichetta, Titolo } from '../../src/ui/testo'
+import { RigaNavigabile, RigaStatistiche } from '../../src/ui/righe'
 import { Schermata } from '../../src/ui/guscio'
+import { Caricamento } from '../../src/ui/stati'
 
 export default function Profilo() {
-  const { capi, outfit, profilo } = useArmadio()
+  const { capi, outfit, profilo, pronto } = useArmadio()
   const { esci } = useSessione()
   const dormienti = capiDormienti(capi)
+  const [confermaUscita, setConfermaUscita] = useState(false)
 
-  function chiediDiUscire() {
-    Alert.alert('Esci', 'Dovrai accedere di nuovo con email e password.', [
-      { text: 'Annulla', style: 'cancel' },
-      {
-        text: 'Esci',
-        style: 'destructive',
-        onPress: () => {
-          esci()
-          router.replace('/accedi')
-        },
-      },
-    ])
+  function uscire() {
+    setConfermaUscita(false)
+    esci()
+    router.replace('/accedi')
   }
 
   // «Stile» e «Outfit salvati» portano a una schermata; le altre due non
@@ -42,7 +38,11 @@ export default function Profilo() {
     {
       chiave: 'Stile',
       valore: profilo?.preferenze?.stili?.join(', ') || 'da impostare',
-      vai: () => router.push('/preferenze'),
+      // `rivisita` dice a preferenze.tsx che «indietro» torna qui — a
+      // differenza del primo accesso (un redirect dopo il login), qui è
+      // un push vero, e router.canGoBack() da solo non basta a distinguerli
+      // (la cronologia porta con sé le tappe precedenti al login).
+      vai: () => router.push({ pathname: '/preferenze', params: { rivisita: '1' } }),
     },
     { chiave: 'Palette', valore: profilo?.preferenze?.palette?.join(', ') || 'da impostare' },
     { chiave: 'Evita', valore: profilo?.preferenze?.evita?.join(', ') || '—' },
@@ -75,65 +75,58 @@ export default function Profilo() {
         </View>
       </Scheda>
 
-      <View style={{ flexDirection: 'row', gap: 9 }}>
-        {[
-          { numero: String(capi.length), etichetta: 'capi', sfondo: colori.scheda, tinta: colori.inchiostro },
-          { numero: String(outfit.length), etichetta: 'outfit', sfondo: colori.ambra, tinta: colori.inchiostro },
-          { numero: String(dormienti.length), etichetta: 'fermi', sfondo: colori.inchiostro, tinta: colori.crema },
-        ].map((voce) => (
-          <View
-            key={voce.etichetta}
-            style={{
-              flex: 1,
-              padding: 15,
-              borderRadius: raggi.medio + 2,
-              backgroundColor: voce.sfondo,
-            }}
-          >
-            <Numero taglia={24} colore={voce.tinta}>
-              {voce.numero}
-            </Numero>
-            <Forte taglia={10.5} colore={voce.tinta} style={{ marginTop: 5, opacity: 0.6 }}>
-              {voce.etichetta}
-            </Forte>
-          </View>
-        ))}
-      </View>
+      {pronto ? (
+        <>
+          <RigaStatistiche
+            voci={[
+              { numero: String(capi.length), etichetta: 'capi' },
+              // Non ambra: un conteggio di dati dell'utente, non il modello
+              // che parla — la regola in cima a `tokens.ts`. E senza `sfondo`,
+              // così prende la stessa card bianca di «capi» invece di una
+              // tinta piena inventata per l'occasione.
+              { numero: String(outfit.length), etichetta: 'outfit' },
+              { numero: String(dormienti.length), etichetta: 'fermi', sfondo: colori.inchiostro, tinta: colori.crema },
+            ]}
+          />
 
-      <Etichetta taglia={11} tono="debole" style={{ marginTop: spazi.s }}>
-        Il tuo stile
-      </Etichetta>
-      <View style={{ borderRadius: raggi.medioAlto, backgroundColor: colori.scheda, overflow: 'hidden' }}>
-        {preferenze.map((riga, indice) => (
-          // Senza `onPress` Toccabile è già inerte (niente scala, niente
-          // vibrazione, vedi `ui/base.tsx`): non serve un componente diverso
-          // per le righe in sola lettura, basta non passargli `vai`.
-          <Toccabile
-            key={riga.chiave}
-            onPress={riga.vai}
-            scala={0}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spazi.m,
-              paddingHorizontal: 17,
-              paddingVertical: 15,
-              borderBottomWidth: indice === preferenze.length - 1 ? 0 : 1,
-              borderBottomColor: linee.tenue,
-            }}
-          >
-            <Corpo taglia={14.5} style={{ flex: 1 }}>
-              {riga.chiave}
-            </Corpo>
-            <Corpo taglia={13} tono="tenue">
-              {riga.valore}
-            </Corpo>
-            {riga.vai ? (
-              <Icona nome="chevron" misura={15} colore="rgba(21,21,26,0.3)" spessore={2.4} />
-            ) : null}
-          </Toccabile>
-        ))}
-      </View>
+          <Etichetta taglia={11} tono="debole" style={{ marginTop: spazi.s }}>
+            Il tuo stile
+          </Etichetta>
+          <Scheda imbottitura={0} style={{ overflow: 'hidden' }}>
+            {preferenze.map((riga, indice) => (
+              // Senza `onPress` Toccabile è già inerte (niente scala, niente
+              // vibrazione, vedi `ui/base.tsx`): non serve un componente diverso
+              // per le righe in sola lettura, basta non passargli `vai`.
+              <Toccabile
+                key={riga.chiave}
+                onPress={riga.vai}
+                scala={0}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spazi.m,
+                  paddingHorizontal: 17,
+                  paddingVertical: 15,
+                  borderBottomWidth: indice === preferenze.length - 1 ? 0 : 1,
+                  borderBottomColor: linee.tenue,
+                }}
+              >
+                <Corpo taglia={14.5} style={{ flex: 1 }}>
+                  {riga.chiave}
+                </Corpo>
+                <Corpo taglia={13} tono="tenue">
+                  {riga.valore}
+                </Corpo>
+                {riga.vai ? <Icona nome="chevron" misura={15} colore={linee.chevron} spessore={2.4} /> : null}
+              </Toccabile>
+            ))}
+          </Scheda>
+        </>
+      ) : (
+        // Prima, mentre l'archivio caricava, questa sezione mostrava 0/0/0 e
+        // «da impostare» ovunque — dati falsi, non uno stato di attesa.
+        <Caricamento />
+      )}
 
       <View style={{ flexDirection: 'row', gap: 9, marginTop: spazi.s }}>
         <BottoneSecondario
@@ -177,9 +170,18 @@ export default function Profilo() {
 
       <BottoneSecondario
         testo="Esci"
-        onPress={chiediDiUscire}
+        onPress={() => setConfermaUscita(true)}
         colore={colori.corallo}
         style={{ borderColor: colori.coralloTenue }}
+      />
+
+      <Conferma
+        visibile={confermaUscita}
+        titolo="Esci"
+        messaggio="Dovrai accedere di nuovo con email e password."
+        testoConferma="Esci"
+        onConferma={uscire}
+        onAnnulla={() => setConfermaUscita(false)}
       />
     </Schermata>
   )

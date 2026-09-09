@@ -11,17 +11,19 @@ import { Image } from 'expo-image'
 import { router } from 'expo-router'
 import { View } from 'react-native'
 import { useArmadio } from '../src/dati/archivio'
-import { capiDormienti } from '../src/dati/dominio'
+import { capiDormienti, fotoDaMostrare } from '../src/dati/dominio'
 import { formattaMeseAnno, parola } from '../src/dati/formato'
-import { colori, linee, spazi } from '../src/tema/tokens'
+import { colori, durate, griglie, linee, spazi } from '../src/tema/tokens'
 import { BadgeIa, BottonePrimario, BottoneSecondario, Scheda } from '../src/ui/base'
+import { RigaStatistiche } from '../src/ui/righe'
+import { ScheletroCalendario } from '../src/ui/scheletri'
 import { Schermata } from '../src/ui/guscio'
-import { Corpo, Etichetta, Numero, Titolo } from '../src/ui/testo'
+import { Corpo, Etichetta, Titolo } from '../src/ui/testo'
 
 const GIORNI_SETTIMANA = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
 
 export default function Calendario() {
-  const { capi, indice } = useArmadio()
+  const { capi, indice, pronto } = useArmadio()
   const adesso = new Date()
   const giorniNelMese = new Date(adesso.getFullYear(), adesso.getMonth() + 1, 0).getDate()
   const oggi = adesso.getDate()
@@ -44,9 +46,15 @@ export default function Calendario() {
 
   return (
     <Schermata occhiello={formattaMeseAnno(adesso)} titolo="Cosa ho messo" indietro>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+      {!pronto ? (
+        // Prima, a caricamento in corso, questa griglia era semplicemente
+        // vuota — nessun giorno, nessuna cella — indistinguibile da un mese
+        // senza usi registrati.
+        <ScheletroCalendario giorni={giorniNelMese} />
+      ) : (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: griglie.mese.distanza }}>
           {GIORNI_SETTIMANA.map((lettera, indiceGiorno) => (
-            <View key={`${lettera}-${indiceGiorno}`} style={{ width: '13.1%', alignItems: 'center' }}>
+            <View key={`${lettera}-${indiceGiorno}`} style={{ width: griglie.mese.colonna, alignItems: 'center' }}>
               <Etichetta taglia={9.5} tono="debole">
                 {lettera}
               </Etichetta>
@@ -57,24 +65,26 @@ export default function Calendario() {
             const giorno = indiceGiorno + 1
             const usati = usiPerGiorno.get(giorno) ?? []
             const primo = usati[0] ? indice.get(usati[0]) : undefined
+            const fotoPrimo = primo ? fotoDaMostrare(primo) : undefined
             return (
               <View
                 key={giorno}
                 style={{
-                  width: '13.1%',
-                  aspectRatio: 1 / 1.25,
-                  borderRadius: 13,
+                  width: griglie.mese.colonna,
+                  aspectRatio: griglie.mese.proporzione,
+                  borderRadius: griglie.mese.raggio,
                   overflow: 'hidden',
                   backgroundColor: primo ? colori.fondoFoto : linee.tenue,
                   borderWidth: giorno === oggi ? 2 : 0,
                   borderColor: colori.inchiostro,
                 }}
               >
-                {primo?.foto.url ? (
+                {fotoPrimo ? (
                   <Image
-                    source={{ uri: primo.foto.url }}
+                    source={{ uri: fotoPrimo }}
                     style={{ position: 'absolute', inset: 0 }}
                     contentFit="cover"
+                    transition={durate.breve}
                   />
                 ) : null}
                 <View
@@ -95,41 +105,43 @@ export default function Calendario() {
             )
           })}
         </View>
+      )}
 
-        {/* La scheda che chiude il cerchio: dai capi fermi nasce la ragione per
-            cui l'app suggerisce anche cose che non sceglieresti. */}
-        <Scheda imbottitura={20} style={{ backgroundColor: colori.ambraTenue, gap: spazi.s }}>
-          <BadgeIa testo="dormono in fondo" />
-          <Titolo taglia={25}>
-            {parola(dormienti.length, '1 capo fermo da più di sei mesi', `${dormienti.length} capi fermi da più di sei mesi`)}
-          </Titolo>
-          <Corpo taglia={13.5} tono="medio">
-            {'Se vuoi te ne infilo qualcuno negli outfit della settimana, senza che tu debba pensarci.'}
-          </Corpo>
-          <View style={{ flexDirection: 'row', gap: spazi.s, marginTop: spazi.s }}>
-            <BottonePrimario
-              testo="Rimettili in gioco"
-              style={{ flex: 1 }}
-              onPress={() => router.push('/suggeritore')}
-            />
-            <BottoneSecondario testo="Non ora" onPress={() => router.back()} />
-          </View>
-        </Scheda>
+      {/* Come la griglia sopra: finché l'archivio carica, `capi` è ancora `[]`
+          e `dormienti`/`ripetuti`/`usiPerGiorno` varrebbero tutti zero — non
+          «nessun capo fermo», ma «non lo so ancora». Stessa correzione già
+          fatta su `profilo.tsx` per lo stesso identico difetto. */}
+      {pronto ? (
+        <>
+          {/* La scheda che chiude il cerchio: dai capi fermi nasce la ragione
+              per cui l'app suggerisce anche cose che non sceglieresti. */}
+          <Scheda imbottitura={20} style={{ backgroundColor: colori.ambraTenue, gap: spazi.s }}>
+            <BadgeIa testo="dormono in fondo" />
+            <Titolo taglia={25}>
+              {parola(dormienti.length, '1 capo fermo da più di sei mesi', `${dormienti.length} capi fermi da più di sei mesi`)}
+            </Titolo>
+            <Corpo taglia={13.5} tono="medio">
+              {'Se vuoi te ne infilo qualcuno negli outfit della settimana, senza che tu debba pensarci.'}
+            </Corpo>
+            <View style={{ flexDirection: 'row', gap: spazi.s, marginTop: spazi.s }}>
+              <BottonePrimario
+                testo="Rimettili in gioco"
+                style={{ flex: 1 }}
+                onPress={() => router.push('/suggeritore')}
+              />
+              <BottoneSecondario testo="Non ora" onPress={() => router.back()} />
+            </View>
+          </Scheda>
 
-        <View style={{ flexDirection: 'row', gap: 9 }}>
-          {[
-            { numero: String(usiPerGiorno.size), etichetta: 'giorni tracciati' },
-            { numero: String(ripetuti), etichetta: 'capi ripetuti' },
-            { numero: String(dormienti.length), etichetta: 'mai usati' },
-          ].map((voce) => (
-            <Scheda key={voce.etichetta} imbottitura={15} style={{ flex: 1 }}>
-              <Numero taglia={26}>{voce.numero}</Numero>
-              <Corpo taglia={10.5} tono="tenue" style={{ marginTop: 5 }}>
-                {voce.etichetta}
-              </Corpo>
-            </Scheda>
-          ))}
-        </View>
+          <RigaStatistiche
+            voci={[
+              { numero: String(usiPerGiorno.size), etichetta: 'giorni tracciati' },
+              { numero: String(ripetuti), etichetta: 'capi ripetuti' },
+              { numero: String(dormienti.length), etichetta: 'mai usati' },
+            ]}
+          />
+        </>
+      ) : null}
     </Schermata>
   )
 }

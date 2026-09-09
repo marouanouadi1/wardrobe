@@ -7,23 +7,52 @@
  */
 
 import { Image } from 'expo-image'
-import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
 import { ScrollView, View } from 'react-native'
-import { capiDiVestizione, capiDisponibili, daLavare, nomeDiBattesimo, slotMancanti } from '../../src/dati/dominio'
+import {
+  capiDiVestizione,
+  capiDisponibili,
+  daLavare,
+  fotoDaMostrare,
+  nomeDiBattesimo,
+  slotMancanti,
+} from '../../src/dati/dominio'
 import { useArmadio, useVestiEVai } from '../../src/dati/archivio'
 import { parola } from '../../src/dati/formato'
-import { colori, ETICHETTE, linee, ombre, raggi, spazi, velo } from '../../src/tema/tokens'
-import { BadgeIa, BarraChiedi, Bolla, BottonePrimario, BottoneSecondario, BottoneTondo, Scheda, Toccabile } from '../../src/ui/base'
+import { colori, durate, ETICHETTE, linee, ombre, raggi, spazi } from '../../src/tema/tokens'
+import {
+  BadgeIa,
+  BarraChiedi,
+  Bolla,
+  BottonePrimario,
+  BottoneSecondario,
+  BottoneTondo,
+  Comparsa,
+  LinkTesto,
+  Scheda,
+  Toccabile,
+} from '../../src/ui/base'
+import { SchedaFoto } from '../../src/ui/capi'
+import { ScheletroProposta, ScheletroRigaProposta } from '../../src/ui/scheletri'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Schermata } from '../../src/ui/guscio'
-import { Vuoto } from '../../src/ui/stati'
+import { AttesaLunga, Errore, MESSAGGI_SUGGERIMENTI, Vuoto } from '../../src/ui/stati'
 
 const SCORCIATOIE = ['Ho una cena', 'Fa freddo', 'Solo capi puliti', 'Sorprendimi']
 
 export default function Oggi() {
-  const { suggerimenti, indice, profilo, capi, pronto, chiediSuggerimenti } = useArmadio()
+  const {
+    suggerimenti,
+    indice,
+    profilo,
+    capi,
+    pronto,
+    erroreCaricamento,
+    suggerimentiInCorso,
+    chiediSuggerimenti,
+    ricarica,
+  } = useArmadio()
   const vestiEVai = useVestiEVai()
   const [domanda, setDomanda] = useState('')
   const [scartati, setScartati] = useState<string[]>([])
@@ -63,7 +92,11 @@ export default function Oggi() {
   const copertina = principale ? capiDiVestizione(principale.vestizione, indice)[0] : undefined
   const inLavatrice = daLavare(indice.values())
   const nome = nomeDiBattesimo(profilo)
-  const armadioVuoto = pronto && capi.length === 0
+  // `erroreCaricamento` esclude questo ramo apposta: un server irraggiungibile
+  // e un armadio vuoto per davvero producevano lo stesso `capi: []`, e
+  // «Carica il primo capo» è il consiglio sbagliato quando il problema è la
+  // rete (`src/dati/archivio.tsx`).
+  const armadioVuoto = pronto && !erroreCaricamento && capi.length === 0
 
   function chiedi(testo: string) {
     router.push({ pathname: '/suggeritore', params: { chiedi: testo } })
@@ -76,7 +109,21 @@ export default function Oggi() {
       fotoProfilo={profilo?.foto_url}
       tab
     >
-      {armadioVuoto ? (
+      {erroreCaricamento ? (
+        // Lo stato che prima non esisteva: un server irraggiungibile non è
+        // «l'armadio è vuoto», ed è la causa più comune di «non vedo niente
+        // quando apro Oggi». `erroreCaricamento` porta il messaggio tecnico
+        // (com'era già nel banner `Avviso` di prima), ma qui non lo mostriamo:
+        // un errore di rete non è un contenuto per l'utente — stessa regola
+        // del default di `StatoRisorsa` in `ui/stati.tsx`.
+        <>
+          <Errore
+            titolo="Non riesco a leggere il tuo armadio"
+            spiegazione="Controlla che il backend sia raggiungibile e riprova."
+          />
+          <BottonePrimario testo="Riprova" onPress={() => void ricarica()} />
+        </>
+      ) : armadioVuoto ? (
         // Niente da proporre e niente da chiedere: la barra e le scorciatoie
         // presuppongono un armadio, e chiedere «cosa metto» senza capi non
         // porta da nessuna parte.
@@ -123,60 +170,53 @@ export default function Oggi() {
         </>
       )}
 
-      {principale ? (
-        <View
-          style={{
-            borderRadius: raggi.grande,
-            overflow: 'hidden',
-            backgroundColor: colori.inchiostro,
-            ...ombre.alta,
-          }}
-        >
+      {!pronto ? (
+        // Il primo momento in assoluto: la forma della proposta, prima
+        // ancora di sapere se ce ne sarà una. È lo scheletro che mancava —
+        // prima di questo, la schermata restava vuota finché non arrivava
+        // tutto insieme.
+        <ScheletroProposta />
+      ) : principale ? (
+        // Il capo intero, scontornato, su fondo chiaro — non più ritagliato
+        // su un fondo scuro. Uno sfondo trasparente aderisce solo se lo
+        // sfondo dietro è `colori.fondoFoto` (`tokens.ts`); su `inchiostro`
+        // il capo galleggiava tagliato sul nero. L'altezza (260) è la stessa
+        // di `ScheletroProposta` (`ui/scheletri.tsx`): lo scambio non salta.
+        // Più bassa dei 392 di prima perché il testo non è più sovrapposto
+        // alla foto ma sotto: la card è più alta a parità di immagine, e
+        // «Vedila addosso» deve restare sopra la piega senza scorrere.
+        <SchedaFoto raggio={raggi.grande} ombra="alta">
           <Image
-            source={{ uri: copertina?.foto.url ?? undefined }}
-            style={{ width: '100%', height: 392 }}
-            contentFit="cover"
-            contentPosition={{ top: '22%', left: '50%' }}
-            transition={250}
-          />
-          <LinearGradient
-            colors={['rgba(21,21,26,0)', 'rgba(21,21,26,0.88)']}
-            locations={[0.34, 1]}
-            style={{ position: 'absolute', inset: 0 }}
+            source={{ uri: copertina ? fotoDaMostrare(copertina) : undefined }}
+            style={{ width: '100%', height: 260, backgroundColor: colori.fondoFoto }}
+            contentFit="contain"
+            transition={durate.breve}
           />
           <View style={{ position: 'absolute', top: 14, left: 14 }}>
             <BadgeIa testo={`match ${principale.match}%`} />
           </View>
-          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 18, gap: spazi.s }}>
-            <Etichetta taglia={11.5} colore="rgba(255,253,249,0.62)">
+          <View style={{ padding: 18, gap: spazi.s }}>
+            <Etichetta taglia={11.5} tono="tenue">
               La proposta di oggi
             </Etichetta>
-            <Titolo taglia={29} colore={colori.scheda}>
-              {principale.titolo}
-            </Titolo>
-            <Corpo taglia={13.5} colore="rgba(255,253,249,0.8)">
+            <Titolo taglia={29}>{principale.titolo}</Titolo>
+            <Corpo taglia={13.5} tono="medio">
               {principale.perche[0]}
             </Corpo>
             <View style={{ flexDirection: 'row', gap: spazi.s, marginTop: spazi.s }}>
-              <Toccabile
+              <BottonePrimario
+                testo="Vedila addosso"
+                style={{ flex: 1 }}
                 onPress={() => vestiEVai(principale.vestizione)}
-                style={{
-                  flex: 1,
-                  alignItems: 'center',
-                  paddingVertical: 15,
-                  borderRadius: raggi.pillola,
-                  backgroundColor: colori.scheda,
-                }}
-              >
-                <Forte taglia={14.5}>Vedila addosso</Forte>
-              </Toccabile>
+              />
               <BottoneTondo
                 nome="ricarica"
                 misura={52}
                 misuraIcona={19}
-                sfondo="rgba(255,253,249,0.1)"
-                colore={colori.scheda}
-                bordo={velo(colori.scheda, 0.32)}
+                // Non ambra: questo pulsante scorre fra proposte già arrivate,
+                // non fa parlare il modello di nuovo — la regola di `tokens.ts`.
+                sfondo={linee.tenue}
+                colore={colori.inchiostro}
                 onPress={() =>
                   setScartati((precedenti) =>
                     precedenti.length >= suggerimenti.length - 1 ? [] : [...precedenti, principale.titolo],
@@ -185,62 +225,84 @@ export default function Oggi() {
               />
             </View>
           </View>
-        </View>
+        </SchedaFoto>
+      ) : suggerimentiInCorso ? (
+        // La seconda attesa, distinta dalla prima: l'archivio è già pronto,
+        // ora è lo stilista (`POST /suggerimenti`, una chiamata LLM) a
+        // comporre la proposta. `AttesaLunga` è onesta sul fatto che non ci
+        // sono fasi osservabili — la stessa scelta di `carica.tsx` per
+        // l'analisi di una foto — e qui l'ambra è legittima: è il modello che
+        // sta parlando, non un dato che arriva.
+        <Scheda imbottitura={24} style={{ alignItems: 'center', gap: spazi.m }}>
+          <Titolo taglia={17}>Sto pensando a cosa metterti</Titolo>
+          <AttesaLunga messaggi={MESSAGGI_SUGGERIMENTI} />
+        </Scheda>
       ) : null}
 
-      {alternative.length > 0 ? (
+      {!pronto ? (
+        <>
+          <ScheletroRigaProposta />
+          <ScheletroRigaProposta />
+        </>
+      ) : alternative.length > 0 ? (
         <>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
             <Titolo taglia={19} style={{ flex: 1 }}>
               Altre due strade
             </Titolo>
-            <Toccabile onPress={() => router.push('/suggeritore')} scala={0}>
-              <Forte taglia={13} colore={colori.ambraMedio}>
-                Chiedi tu →
-              </Forte>
-            </Toccabile>
+            <LinkTesto
+              centrato={false}
+              forte
+              taglia={13}
+              colore={colori.ambraMedio}
+              onPress={() => router.push('/suggeritore')}
+            >
+              Chiedi tu →
+            </LinkTesto>
           </View>
 
-          {alternative.map((proposta) => {
+          {alternative.map((proposta, posizione) => {
             const capi = capiDiVestizione(proposta.vestizione, indice)
             return (
-              <Toccabile
-                key={proposta.titolo}
-                onPress={() => vestiEVai(proposta.vestizione)}
-                scala={0.985}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 14,
-                  padding: 12,
-                  borderRadius: raggi.medioAlto,
-                  backgroundColor: colori.scheda,
-                  ...ombre.bassa,
-                }}
-              >
-                <View style={{ flexDirection: 'row', gap: 3 }}>
-                  {capi.slice(0, 3).map((capo) => (
-                    <Image
-                      key={capo.id}
-                      source={{ uri: capo.foto.url ?? undefined }}
-                      style={{
-                        width: 34,
-                        height: 52,
-                        borderRadius: 11,
-                        backgroundColor: colori.fondoFoto,
-                      }}
-                      contentFit="cover"
-                    />
-                  ))}
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Titolo taglia={16.5}>{proposta.titolo}</Titolo>
-                  <Corpo taglia={12.5} tono="tenue" numberOfLines={2}>
-                    {proposta.perche[0]}
-                  </Corpo>
-                </View>
-                <BadgeIa testo={`${proposta.match}%`} tenue />
-              </Toccabile>
+              <Comparsa key={proposta.titolo} ritardo={posizione * durate.scaglione}>
+                <Toccabile
+                  onPress={() => vestiEVai(proposta.vestizione)}
+                  scala={0.985}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 14,
+                    padding: 12,
+                    borderRadius: raggi.medioAlto,
+                    backgroundColor: colori.scheda,
+                    ...ombre.bassa,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', gap: 3 }}>
+                    {capi.slice(0, 3).map((capo) => (
+                      <Image
+                        key={capo.id}
+                        source={{ uri: fotoDaMostrare(capo) }}
+                        style={{
+                          width: 34,
+                          height: 52,
+                          borderRadius: 11,
+                          backgroundColor: colori.fondoFoto,
+                        }}
+                        contentFit="cover"
+                        transition={durate.breve}
+                      />
+                    ))}
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Titolo taglia={16.5}>{proposta.titolo}</Titolo>
+                    <Corpo taglia={12.5} tono="tenue" numberOfLines={2}>
+                      {proposta.perche[0]}
+                    </Corpo>
+                  </View>
+                  <BadgeIa testo={`${proposta.match}%`} tenue />
+                </Toccabile>
+              </Comparsa>
             )
           })}
         </>

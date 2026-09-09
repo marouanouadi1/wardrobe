@@ -7,26 +7,30 @@
  * vedrà dalla sua foto, non da un colore.
  */
 
+import { View } from 'react-native'
 import Svg, { Ellipse, Path } from 'react-native-svg'
 import { useArmadio } from '../../src/dati/archivio'
-import { coloriDiVestizione } from '../../src/dati/dominio'
-import { colori, linee, spazi } from '../../src/tema/tokens'
-import { BadgeIa } from '../../src/ui/base'
+import { SLOT_ORDINATI, coloriDiVestizione } from '../../src/dati/dominio'
+import { colori, ETICHETTE, linee, spazi } from '../../src/tema/tokens'
+import { BadgeIa, BottonePrimario, BottoneSecondario, Pillola } from '../../src/ui/base'
 import { Schermata } from '../../src/ui/guscio'
 import { Vuoto } from '../../src/ui/stati'
 
 const NON_SCELTO = linee.media
+const SLOT_CON_ABITO = [...SLOT_ORDINATI, 'dress'] as const
 
 export default function SchermataAvatar() {
-  const { profilo, vestizione, indice } = useArmadio()
+  const { profilo, vestizione, indice, mescola, svestiSlot, salvaOutfit } = useArmadio()
   const c = coloriDiVestizione(vestizione, indice)
   const vuoto = !c.top && !c.bottom && !c.outer && !c.dress && !c.shoes
+  const indossati = SLOT_CON_ABITO.filter((slot) => vestizione[slot])
 
   return (
     <Schermata
       occhiello="Prova virtuale"
       titolo="Come mi sta"
       fotoProfilo={profilo?.foto_url}
+      tab
       contentStyle={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: spazi.l }}
     >
       {vuoto ? (
@@ -61,6 +65,35 @@ export default function SchermataAvatar() {
             <Ellipse cx={116} cy={336} rx={20} ry={10} fill={c.shoes ?? NON_SCELTO} />
           </Svg>
           <BadgeIa testo="colori letti dalle foto" tenue />
+
+          {/* Prima questa schermata era solo da guardare: `svestiSlot`,
+              `mescola` e `salvaOutfit()` esistevano già nell'archivio e
+              nessuna vista li chiamava. Una pillola per slot indossato, con
+              la ‹×› per toglierlo — non un tocco sulla sagoma stessa, le sue
+              forme non sono rettangoli su cui puntare in modo affidabile. */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spazi.s, justifyContent: 'center' }}>
+            {indossati.map((slot) => {
+              const capo = indice.get(vestizione[slot]!)
+              if (!capo) return null
+              return (
+                <Pillola
+                  key={slot}
+                  testo={`${ETICHETTE.slot[slot]}: ${capo.nome} ×`}
+                  attiva
+                  onPress={() => svestiSlot(slot)}
+                />
+              )
+            })}
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: spazi.s, width: '100%', paddingHorizontal: spazi.xl }}>
+            <BottoneSecondario testo="Mescola" icona="mescola" style={{ flex: 1 }} onPress={mescola} />
+            <BottonePrimario
+              testo="Salva outfit"
+              style={{ flex: 1 }}
+              onPress={() => void salvaOutfit('Outfit di oggi')}
+            />
+          </View>
         </>
       )}
     </Schermata>

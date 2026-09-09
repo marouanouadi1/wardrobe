@@ -9,7 +9,7 @@
 
 import type { ReactNode } from 'react'
 import { StyleSheet, Text, type TextProps, type TextStyle } from 'react-native'
-import { caratteri, testoSu } from '../tema/tokens'
+import { caratteri, colori, testoSu, tipografia } from '../tema/tokens'
 
 type Tono = 'forte' | 'medio' | 'tenue' | 'debole'
 
@@ -19,7 +19,9 @@ interface Props extends TextProps {
   su?: 'chiaro' | 'scuro'
   tono?: Tono
   colore?: string
-  taglia?: number
+  /** Un numero esatto, o una chiave di `tipografia` (`tema/tokens.ts`) —
+   * `taglia="sezione"` invece di ridigitare `19`. */
+  taglia?: number | keyof typeof tipografia
 }
 
 function colore(props: Props): string {
@@ -28,14 +30,20 @@ function colore(props: Props): string {
   return scala[props.tono ?? 'forte']
 }
 
-/** Titolo display. Le taglie del design: 40 (onboarding), 27 (testata), 19 (sezione). */
-export function Titolo({ taglia = 27, style, ...props }: Props) {
+/** Risolve una `taglia` — numero o chiave di `tipografia` — nel numero vero. */
+function risolviTaglia(taglia: number | keyof typeof tipografia): number {
+  return typeof taglia === 'number' ? taglia : tipografia[taglia]
+}
+
+/** Titolo display. Le taglie del design: `eroe` (onboarding), `testata`, `sezione` — vedi `tipografia`. */
+export function Titolo({ taglia = 'testata', style, ...props }: Props) {
+  const numero = risolviTaglia(taglia)
   return (
     <Text
       {...props}
       style={[
         stili.display,
-        { fontSize: taglia, lineHeight: taglia * 1.1, color: colore(props) },
+        { fontSize: numero, lineHeight: numero * 1.1, color: colore(props) },
         style,
       ]}
     />
@@ -44,50 +52,63 @@ export function Titolo({ taglia = 27, style, ...props }: Props) {
 
 /** Numero grande: statistiche, contatori. */
 export function Numero({ taglia = 26, style, ...props }: Props) {
+  const numero = risolviTaglia(taglia)
   return (
     <Text
       {...props}
       style={[
         stili.display,
-        { fontSize: taglia, lineHeight: taglia, letterSpacing: -taglia * 0.04, color: colore(props) },
+        { fontSize: numero, lineHeight: numero, letterSpacing: -numero * 0.04, color: colore(props) },
         style,
       ]}
     />
   )
 }
 
-export function Corpo({ taglia = 14, style, ...props }: Props) {
+export function Corpo({ taglia = 'corpo', style, ...props }: Props) {
+  const numero = risolviTaglia(taglia)
   return (
     <Text
       {...props}
       style={[
         stili.testo,
-        { fontSize: taglia, lineHeight: taglia * 1.5, color: colore(props) },
+        { fontSize: numero, lineHeight: numero * 1.5, color: colore(props) },
         style,
       ]}
     />
   )
 }
 
-export function Forte({ taglia = 14, style, ...props }: Props) {
+export function Forte({ taglia = 'corpo', style, ...props }: Props) {
+  const numero = risolviTaglia(taglia)
   return (
     <Text
       {...props}
       style={[
         stili.forte,
-        { fontSize: taglia, lineHeight: taglia * 1.3, color: colore(props) },
+        { fontSize: numero, lineHeight: numero * 1.3, color: colore(props) },
         style,
       ]}
     />
   )
 }
 
+/**
+ * Un messaggio d'errore in linea — di validazione, o quello di
+ * `GuscioAutenticazione` (`ui/guscio.tsx`). Due schermate scrivevano a mano
+ * lo stesso `style={{ color: colori.corallo }}` su un `Corpo`.
+ */
+export function TestoErrore({ taglia = 'minuto', style, ...props }: Props) {
+  return <Corpo taglia={taglia} colore={colori.corallo} style={style} {...props} />
+}
+
 /** Maiuscoletto spaziato: le etichette di sezione del design. */
-export function Etichetta({ taglia = 11, style, ...props }: Props) {
+export function Etichetta({ taglia = 'micro', style, ...props }: Props) {
+  const numero = risolviTaglia(taglia)
   return (
     <Text
       {...props}
-      style={[stili.etichetta, { fontSize: taglia, color: colore(props) }, style]}
+      style={[stili.etichetta, { fontSize: numero, color: colore(props) }, style]}
     />
   )
 }

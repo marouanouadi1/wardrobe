@@ -13,9 +13,9 @@ import { View } from 'react-native'
 import { ErroreApi, api, messaggioDiErrore } from '../src/dati/api'
 import { useAzione } from '../src/dati/risorsa'
 import { useSessione } from '../src/dati/sessione'
-import { colori, spazi } from '../src/tema/tokens'
+import { spazi } from '../src/tema/tokens'
 import { BottonePrimario, Campo } from '../src/ui/base'
-import { Corpo, Forte } from '../src/ui/testo'
+import { Forte, TestoErrore } from '../src/ui/testo'
 import { GuscioAutenticazione } from '../src/ui/guscio'
 
 /** Solo una verifica di forma, come sul backend (`domain/autenticazione.py`):
@@ -108,9 +108,7 @@ export default function Registrati() {
           }}
         />
         {conferma.length > 0 && !passwordCorrispondono ? (
-          <Corpo taglia={12.5} style={{ color: colori.corallo }}>
-            Le due password non coincidono.
-          </Corpo>
+          <TestoErrore taglia={12.5}>Le due password non coincidono.</TestoErrore>
         ) : null}
       </View>
     </GuscioAutenticazione>
