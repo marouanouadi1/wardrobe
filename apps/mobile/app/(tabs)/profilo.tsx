@@ -15,9 +15,10 @@ import { Bolla, BottoneSecondario, Icona, Scheda, Toccabile } from '../../src/ui
 import { Corpo, Etichetta, Forte, Numero, Titolo } from '../../src/ui/testo'
 import { RigaNavigabile } from '../../src/ui/righe'
 import { Schermata } from '../../src/ui/guscio'
+import { Caricamento } from '../../src/ui/stati'
 
 export default function Profilo() {
-  const { capi, outfit, profilo } = useArmadio()
+  const { capi, outfit, profilo, pronto } = useArmadio()
   const { esci } = useSessione()
   const dormienti = capiDormienti(capi)
 
@@ -42,7 +43,11 @@ export default function Profilo() {
     {
       chiave: 'Stile',
       valore: profilo?.preferenze?.stili?.join(', ') || 'da impostare',
-      vai: () => router.push('/preferenze'),
+      // `rivisita` dice a preferenze.tsx che «indietro» torna qui — a
+      // differenza del primo accesso (un redirect dopo il login), qui è
+      // un push vero, e router.canGoBack() da solo non basta a distinguerli
+      // (la cronologia porta con sé le tappe precedenti al login).
+      vai: () => router.push({ pathname: '/preferenze', params: { rivisita: '1' } }),
     },
     { chiave: 'Palette', valore: profilo?.preferenze?.palette?.join(', ') || 'da impostare' },
     { chiave: 'Evita', valore: profilo?.preferenze?.evita?.join(', ') || '—' },
@@ -75,65 +80,75 @@ export default function Profilo() {
         </View>
       </Scheda>
 
-      <View style={{ flexDirection: 'row', gap: 9 }}>
-        {[
-          { numero: String(capi.length), etichetta: 'capi', sfondo: colori.scheda, tinta: colori.inchiostro },
-          { numero: String(outfit.length), etichetta: 'outfit', sfondo: colori.ambra, tinta: colori.inchiostro },
-          { numero: String(dormienti.length), etichetta: 'fermi', sfondo: colori.inchiostro, tinta: colori.crema },
-        ].map((voce) => (
-          <View
-            key={voce.etichetta}
-            style={{
-              flex: 1,
-              padding: 15,
-              borderRadius: raggi.medio + 2,
-              backgroundColor: voce.sfondo,
-            }}
-          >
-            <Numero taglia={24} colore={voce.tinta}>
-              {voce.numero}
-            </Numero>
-            <Forte taglia={10.5} colore={voce.tinta} style={{ marginTop: 5, opacity: 0.6 }}>
-              {voce.etichetta}
-            </Forte>
+      {pronto ? (
+        <>
+          <View style={{ flexDirection: 'row', gap: 9 }}>
+            {[
+              { numero: String(capi.length), etichetta: 'capi', sfondo: colori.scheda, tinta: colori.inchiostro },
+              // Non ambra: un conteggio di dati dell'utente, non il modello
+              // che parla — la regola in cima a `tokens.ts`.
+              { numero: String(outfit.length), etichetta: 'outfit', sfondo: colori.scheda, tinta: colori.inchiostro },
+              { numero: String(dormienti.length), etichetta: 'fermi', sfondo: colori.inchiostro, tinta: colori.crema },
+            ].map((voce) => (
+              <View
+                key={voce.etichetta}
+                style={{
+                  flex: 1,
+                  padding: 15,
+                  borderRadius: raggi.medio + 2,
+                  backgroundColor: voce.sfondo,
+                }}
+              >
+                <Numero taglia={24} colore={voce.tinta}>
+                  {voce.numero}
+                </Numero>
+                <Forte taglia={10.5} colore={voce.tinta} style={{ marginTop: 5, opacity: 0.6 }}>
+                  {voce.etichetta}
+                </Forte>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
 
-      <Etichetta taglia={11} tono="debole" style={{ marginTop: spazi.s }}>
-        Il tuo stile
-      </Etichetta>
-      <View style={{ borderRadius: raggi.medioAlto, backgroundColor: colori.scheda, overflow: 'hidden' }}>
-        {preferenze.map((riga, indice) => (
-          // Senza `onPress` Toccabile è già inerte (niente scala, niente
-          // vibrazione, vedi `ui/base.tsx`): non serve un componente diverso
-          // per le righe in sola lettura, basta non passargli `vai`.
-          <Toccabile
-            key={riga.chiave}
-            onPress={riga.vai}
-            scala={0}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spazi.m,
-              paddingHorizontal: 17,
-              paddingVertical: 15,
-              borderBottomWidth: indice === preferenze.length - 1 ? 0 : 1,
-              borderBottomColor: linee.tenue,
-            }}
-          >
-            <Corpo taglia={14.5} style={{ flex: 1 }}>
-              {riga.chiave}
-            </Corpo>
-            <Corpo taglia={13} tono="tenue">
-              {riga.valore}
-            </Corpo>
-            {riga.vai ? (
-              <Icona nome="chevron" misura={15} colore="rgba(21,21,26,0.3)" spessore={2.4} />
-            ) : null}
-          </Toccabile>
-        ))}
-      </View>
+          <Etichetta taglia={11} tono="debole" style={{ marginTop: spazi.s }}>
+            Il tuo stile
+          </Etichetta>
+          <View style={{ borderRadius: raggi.medioAlto, backgroundColor: colori.scheda, overflow: 'hidden' }}>
+            {preferenze.map((riga, indice) => (
+              // Senza `onPress` Toccabile è già inerte (niente scala, niente
+              // vibrazione, vedi `ui/base.tsx`): non serve un componente diverso
+              // per le righe in sola lettura, basta non passargli `vai`.
+              <Toccabile
+                key={riga.chiave}
+                onPress={riga.vai}
+                scala={0}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spazi.m,
+                  paddingHorizontal: 17,
+                  paddingVertical: 15,
+                  borderBottomWidth: indice === preferenze.length - 1 ? 0 : 1,
+                  borderBottomColor: linee.tenue,
+                }}
+              >
+                <Corpo taglia={14.5} style={{ flex: 1 }}>
+                  {riga.chiave}
+                </Corpo>
+                <Corpo taglia={13} tono="tenue">
+                  {riga.valore}
+                </Corpo>
+                {riga.vai ? (
+                  <Icona nome="chevron" misura={15} colore="rgba(21,21,26,0.3)" spessore={2.4} />
+                ) : null}
+              </Toccabile>
+            ))}
+          </View>
+        </>
+      ) : (
+        // Prima, mentre l'archivio caricava, questa sezione mostrava 0/0/0 e
+        // «da impostare» ovunque — dati falsi, non uno stato di attesa.
+        <Caricamento />
+      )}
 
       <View style={{ flexDirection: 'row', gap: 9, marginTop: spazi.s }}>
         <BottoneSecondario

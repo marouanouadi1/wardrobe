@@ -28,7 +28,7 @@ import { ETICHETTE, colori, durate, linee, raggi, spazi, velo } from '../../src/
 import { BadgeIa, BottonePrimario, BottoneSecondario, Campo, Icona, Pillola, Scheda, Toccabile } from '../../src/ui/base'
 import { Attributo, Miniatura, SchedaFoto } from '../../src/ui/capi'
 import { Schermata, Testata } from '../../src/ui/guscio'
-import { Vuoto } from '../../src/ui/stati'
+import { Caricamento, Vuoto } from '../../src/ui/stati'
 import { Corpo, Forte, Titolo } from '../../src/ui/testo'
 
 /** I campi che si correggono con un testo libero, non con una scelta chiusa. */
@@ -55,6 +55,7 @@ export default function DettaglioCapo() {
   const {
     indice,
     capi,
+    pronto,
     cambiaPreferito,
     cambiaStato,
     indossaOggi,
@@ -67,6 +68,19 @@ export default function DettaglioCapo() {
   const [testoModifica, setTestoModifica] = useState('')
   const [nuovaEtichetta, setNuovaEtichetta] = useState('')
   const capo = id ? indice.get(id) : undefined
+
+  // Prima di `pronto`, `indice` è ancora vuoto: senza questa guardia, aprendo
+  // il link diretto a un capo (es. da una notifica, o ricaricando la pagina)
+  // si vedeva per un istante «questo capo non c'è più» — un capo che c'è, ma
+  // che l'armadio non ha ancora finito di caricare.
+  if (!pronto) {
+    return (
+      <View style={{ flex: 1 }}>
+        <Testata occhiello="Capo" titolo="" indietro />
+        <Caricamento />
+      </View>
+    )
+  }
 
   if (!capo) {
     return (
@@ -99,7 +113,7 @@ export default function DettaglioCapo() {
     ['lavaggio', capo.lavaggio ?? null],
   ]
 
-  const ciStaBene = capi.filter((altro) => altro.slot !== capo.slot).slice(0, 6)
+  const altriCapi = capi.filter((altro) => altro.slot !== capo.slot).slice(0, 6)
   // «Segnato per oggi» si legge dal dato vero, non da uno stato locale: se
   // rientri nella schermata il segno è ancora lì.
   const messoOggi = capo.ultimo_uso?.slice(0, 10) === new Date().toISOString().slice(0, 10)
@@ -176,7 +190,7 @@ export default function DettaglioCapo() {
 
         {/* Due interruttori: l'etichetta dice l'azione quando sono spenti e
             conferma lo stato quando sono accesi. Il corallo è per il bucato,
-            mai il ambra: quel verde parla solo per l'IA. */}
+            mai l'ambra: quella parla solo per l'IA. */}
         <View style={{ flexDirection: 'row', gap: spazi.s }}>
           <BottoneSecondario
             testo={messoOggi ? 'Segnato per oggi' : "L'ho messo oggi"}
@@ -358,11 +372,15 @@ export default function DettaglioCapo() {
           />
         </Scheda>
 
-        {ciStaBene.length > 0 ? (
+        {altriCapi.length > 0 ? (
           <>
-            <Titolo taglia={19}>Ci sta bene con</Titolo>
+            {/* Non è un abbinamento — sono solo altri capi di slot diverso,
+                senza nessun giudizio dietro. «Ci sta bene con» prometteva un
+                criterio che non c'è: la schermata dichiara di non fingere di
+                sapere, e questo titolo faceva l'opposto. */}
+            <Titolo taglia={19}>Altri capi del tuo armadio</Titolo>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-              {ciStaBene.map((altro) => (
+              {altriCapi.map((altro) => (
                 <Miniatura
                   key={altro.id}
                   capo={altro}
