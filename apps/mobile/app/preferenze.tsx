@@ -52,13 +52,24 @@ export default function Preferenze() {
   }, [profilo])
 
   async function entra() {
-    if (profilo) {
-      const salvato = await esegui(() =>
-        api.salvaProfilo({ ...profilo, preferenze: { ...profilo.preferenze, stili: stiliScelti } }),
-      )
-      if (salvato) await ricarica()
-      else avvisa('Le preferenze non sono state salvate. Le trovi comunque in Profilo.')
+    if (!profilo) {
+      // `pronto` diventa `true` anche sull'errore di caricamento
+      // dell'archivio (Fase 2: `erroreCaricamento` porta `profilo: null`
+      // insieme a `pronto: true`, quindi il bottone qui sopra non è più
+      // disabilitato da solo). Senza questa guardia si segnava comunque
+      // «preferenze viste» e la selezione fatta in questa schermata
+      // spariva senza che l'utente lo sapesse, senza più un modo di
+      // tornarci (il primo accesso non passa più di qui). Si resta sulla
+      // schermata: la prossima `carica()` riuscita fa arrivare `profilo`
+      // e riabilita un salvataggio vero.
+      avvisa('Non riesco a leggere il tuo profilo: riprova tra poco.')
+      return
     }
+    const salvato = await esegui(() =>
+      api.salvaProfilo({ ...profilo, preferenze: { ...profilo.preferenze, stili: stiliScelti } }),
+    )
+    if (salvato) await ricarica()
+    else avvisa('Le preferenze non sono state salvate. Le trovi comunque in Profilo.')
     await segnaPreferenzeViste()
     if (rivisita) router.back()
     else router.replace('/(tabs)/oggi')
