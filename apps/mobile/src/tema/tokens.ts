@@ -57,7 +57,10 @@ export const testoSu = {
     debole: 'rgba(21,21,26,0.4)',
   },
   scuro: {
-    forte: colori.scheda,
+    // Tutti e quattro sulla stessa base — l'rgb di `crema`, non di `scheda`:
+    // erano due bianchi diversi, e il gradino opaco era il più bianco dei
+    // quattro invece del più forte della stessa famiglia.
+    forte: colori.crema,
     medio: 'rgba(247,244,239,0.78)',
     tenue: 'rgba(247,244,239,0.55)',
     debole: 'rgba(247,244,239,0.4)',
