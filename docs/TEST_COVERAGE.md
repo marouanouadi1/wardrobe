@@ -149,11 +149,18 @@ Due dettagli di configurazione che non sono cosmetici:
 
 - **i test vivono in `apps/mobile/test/`, mai sotto `app/`**: lì dentro ogni file
   diventa una rotta di expo-router e finirebbe nel bundle di `expo export`;
-- **`moduleNameMapper` forza una sola copia di React**. Il monorepo ne ha due —
-  19.2.3 in `apps/mobile` (pinnata da Expo) e 19.2.8 in root (tirata da
-  `react-test-renderer`) — e due React producono un dispatcher nullo:
-  `useContext` su `null` al primo hook. Gli `overrides` in `package.json`
-  allineano `react-test-renderer`, il mapper chiude il caso.
+- **`moduleNameMapper` forza una sola copia di React**. Il monorepo ne ha due, e
+  **le aveva già prima di questi test**: 19.2.3 in `apps/mobile` (versione esatta,
+  pinnata da Expo) e 19.2.8 in root. La root non dichiara `react`, ma decine di
+  pacchetti hoisted lì — `@expo/*`, `@radix-ui/*` — lo chiedono come
+  peerDependency con `*`: npm ne installa una copia per soddisfarli, e con quel
+  range sceglie l'ultima pubblicata.
+  Le due copie convivevano in pace finché nessuno faceva rendering React dalla
+  root. Introdurre `react-test-renderer` (che jest-expo e RTL richiedono) lo ha
+  fatto: quello vede il React di root, i sorgenti dell'app vedono il proprio, e
+  due React danno un dispatcher nullo — `useContext` su `null` al primo hook.
+  Gli `overrides` allineano `react-test-renderer`, il mapper chiude il caso.
+  Nessuno dei due risolve la causa: vedi `T-23` in `docs/DA_FARE.md`.
 
 In `@testing-library/react-native` 14 **`render` restituisce una Promise**: i
 test sono `async` e fanno `await render(...)`. Senza `await` le query non

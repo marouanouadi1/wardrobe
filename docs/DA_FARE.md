@@ -314,9 +314,28 @@ che dovrebbe usare.
 ### T-23 — Due copie di React nel monorepo
 **Dove:** `package.json:36-39`, `apps/mobile/package.json` (jest.moduleNameMapper) · **Gravità:** media · **Chi:** `mobile`
 
-19.2.3 in `apps/mobile` (pinnata da Expo) e 19.2.8 in root. Due React danno un
-dispatcher nullo al primo hook. Oggi è **tamponato** da un `moduleNameMapper` e da
-un override su `react-test-renderer` — vedi T-03 per l'override inerte.
+19.2.3 in `apps/mobile` e 19.2.8 in root. Due React danno un dispatcher nullo al
+primo hook. Oggi è **tamponato** da un `moduleNameMapper` e da un override su
+`react-test-renderer` — vedi T-03 per l'override inerte.
+
+**Perché esistono due copie** (verificato il 2026-09-11, e **precedono i test**:
+erano già nel lock a `b5ba358^`):
+
+1. `apps/mobile/package.json` dichiara `react: 19.2.3` — versione **esatta**,
+   pinnata da Expo SDK 57;
+2. il `package.json` della root **non dichiara `react`**;
+3. decine di pacchetti finiscono hoisted in `node_modules/` della root —
+   `@expo/devtools`, `@expo/ui`, `@expo/metro-runtime`, `@radix-ui/*` — e
+   dichiarano `react` come **peerDependency con `*`**;
+4. npm deve soddisfare quelle peer, non trova `react` dichiarato in root, e ne
+   installa una copia scegliendo l'**ultima pubblicata**: 19.2.8.
+
+Le due copie convivevano innocue finché nessuno faceva rendering React dalla
+root. `react-test-renderer` lo ha fatto, e ha reso il conflitto osservabile:
+**non l'ha creato**.
+
+Nota: `*` accetterebbe benissimo anche la 19.2.3. Non c'è un conflitto di range —
+c'è solo che niente, in root, dice a npm quale scegliere.
 
 **Causa individuata il 2026-09-11:** il nodo radice di `package-lock.json` **non
 ha il campo `overrides`** — npm ce lo scrive quando li applica, e non c'è. Al
