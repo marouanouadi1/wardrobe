@@ -35,9 +35,20 @@ travestita da registro.
 - Ripristinati in `overrides` alla radice i pin di `typescript` e
   `react-native-worklets`, cancellati per errore insieme all'aggiunta di
   `react`/`react-test-renderer`.
+- Il gate sulle primitive copre anche la prop `sfondo`, non solo `style`:
+  `Scheda` e `SchedaFoto` la accettano e calcolano `su` per conto loro, quindi
+  `<Scheda sfondo={colori.inchiostro}>` dipingeva una card quasi nera
+  dichiarando `chiaro` a chi ci stava dentro. I tre punti di chiamata che
+  passavano `sfondo` senza `su` ora lo dicono — tutti e tre su fondo chiaro,
+  quindi nessun pixel cambia: cambia che adesso è scritto.
+- `PALETTE_BOTTONE_PRIMARIO` usa `velo(colori.inchiostro, 0.08)` e
+  `testoSu.chiaro.debole` invece dei due `rgba()` identici scritti a mano.
 
 ### api
-- (niente: solo soglie di CI, nessun cambiamento di comportamento)
+- (niente di visibile: solo l'ordine dei gate di coverage in CI. La soglia
+  aggregata si applicava *dentro* lo step Pytest, e quando scattava saltava le
+  due soglie per sottoalbero — il gate più debole nascondeva i due che contano.
+  Ora è l'ultima.)
 
 ### progetto
 - Lo stato del progetto vive in `docs/PROGRESS.md`, `docs/QUESTIONI.md`,
@@ -57,3 +68,21 @@ travestita da registro.
 - **Prima di aggirare un problema, si prova a toglierlo** (`docs/adr/0008`): la
   regola che viene prima delle altre, ripetuta di proposito in `CLAUDE.md`, nelle
   cinque rules e in tutti e nove gli agenti.
+- **Gli hook adesso si eseguono, non si leggono** — `scripts/prova-hook.py`, nel
+  job `hook` di `docs.yml`. Erano gli unici gate del progetto senza copertura, e
+  la conseguenza era arrivata puntuale: negavano tre migrazioni corrette (due
+  spazi prima di `if not exists`; un `default` scritto prima di `not null`;
+  qualunque riscrittura integrale di `pyproject.toml`, anche a versione
+  identica) e ne lasciavano passare tre rotte (`numeric(10,2) not null`, un
+  `not null` composto su due `Edit` successive, e `drop table if exists` — che
+  le regole del repo vogliono si chieda all'utente).
+- Un diniego di un hook adesso **dice perché**: era tutto in `systemMessage`,
+  che è un avviso all'utente, e arrivava all'agente come «Hook PreToolUse:Write
+  denied this tool». Chi non sa cosa ha sbagliato può solo riprovare alla cieca.
+- Il gate sui contratti scatta anche a fine subagente (`SubagentStop`) e anche
+  quando il lavoro è già stato committato: guardava solo il working tree, cioè
+  era cieco proprio nel flusso che questo repo prescrive.
+- `deny` estesa alle operazioni distruttive che CLAUDE.md nomina e la lista non
+  aveva: `git clean`, `git push -f`, `docker compose down -v`, `docker volume
+  rm|prune`; più `Edit(./.claude/**)` e un glob solo per tutti i file
+  d'ambiente.

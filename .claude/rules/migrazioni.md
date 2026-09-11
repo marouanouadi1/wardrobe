@@ -64,12 +64,18 @@ finché qualcuno non entra sul server a sistemare.
    un no-op dal secondo giro in poi.
 
 5. **Mai modificare un file già applicato in produzione.** Si aggiunge un file
-   nuovo. Un file già eseguito è storia, non codice.
+   nuovo. Un file già eseguito è storia, non codice. Dalla parte della
+   macchina: l'hook `PreToolUse` **chiede conferma** se il `.sql` che stai
+   toccando esiste già su `main` — in questo repo un merge su main è un
+   rilascio.
 
 6. **`drop` e `drop column` sono distruttivi e irreversibili — e verrebbero
    rieseguiti all'infinito.** Ci si ferma e si chiede all'utente, dicendo cosa si
    perde. L'unico precedente è `0008_rimuovi_playground.sql`, che porta quattro
-   righe di commento a giustificare ogni `drop`.
+   righe di commento a giustificare ogni `drop`. Anche qui l'hook **chiede**
+   invece di negare: `drop table if exists` è idempotente e passava in
+   silenzio, cioè dava implicitamente il via libera all'operazione che questa
+   regola vuole si contratti con l'utente.
 
 7. **Verifica obbligatoria prima di chiudere:**
    ```bash

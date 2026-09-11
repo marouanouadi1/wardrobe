@@ -28,7 +28,7 @@
 
 ## Backend (`services/api`)
 
-Le rotte reali sono 24, nella tabella `ROTTE` di `src/handlers/local_server.py:51`.
+Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:51`.
 
 - [x] `GET /salute` — riporta la versione dai metadati del pacchetto. *Verificato a ogni
       deploy da `api.yml`, step «Verifica salute e versione servita»: è l'unica riga di
@@ -57,7 +57,7 @@ Le rotte reali sono 24, nella tabella `ROTTE` di `src/handlers/local_server.py:5
 - [~] `POST /suggerimenti` — risponde `503 provider_non_configurato` senza credenziali,
       non 500. Il prompt di `domain/stylist.py` non è mai stato visto all'opera
 - [~] Scontorno foto (`adapters/scontorno/fal_provider.py`) — passo facoltativo di
-      `handlers/analisi.py`, **0% di coverage**, non collegato a nessuna ricostruzione 3D
+      `handlers/analisi.py`, **mai esercitato dai test**, non collegato a nessuna ricostruzione 3D
 
 ## App (`apps/mobile`)
 
@@ -79,8 +79,11 @@ Le rotte reali sono 24, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       dichiarato dall'ADR 0004**, non il 3D che l'ADR descrive: il manichino che vestiva
       foto vere è stato rimosso col playground e non ne resta codice
 - [x] Test automatici dell'app — leggibilità del testo sul fondo dipinto e
-      convenzioni delle primitive. *Verificato con `npm run mobile:test`: verdi, e
-      il gate colto davvero reintroducendo la violazione di PR #4 in `avviso.tsx`*
+      convenzioni delle primitive, `style` e prop `sfondo`. *Verificato con
+      `npm run mobile:test`: verdi, e il gate colto davvero due volte — la
+      violazione di PR #4 reintrodotta in `avviso.tsx`, e una `<Scheda
+      sfondo={colori.inchiostro}>` senza `su` in `calendario.tsx`, che fa
+      passare la suite a «1 failed» indicando file e riga*
 
 ## Contratti (`packages/contracts`)
 
@@ -99,6 +102,17 @@ Le rotte reali sono 24, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       in README al 2026-09-08*
 - [x] Bump di versione dai conventional commit (ADR 0005), `pr-title.yml` che lo
       protegge — *ADR 0005 lo documenta; i 22 tag del repo ne sono la traccia*
+- [x] I quattro hook di `.claude/hooks/` sono esercitati da un banco di prova,
+      nel job `hook` di `docs.yml` (che non ha filtri sui path). *Verificato con
+      `python3 scripts/prova-hook.py`: verde, e rosso sui sei difetti che il
+      banco è nato per fissare — tre migrazioni corrette che venivano negate e
+      tre rotte che passavano. Comprende le sette migrazioni vere del repo, così
+      un pattern nuovo troppo largo si vede subito*
+- [x] La soglia di coverage aggregata non nasconde più le due per sottoalbero:
+      è l'ultimo step, non il primo. *Verificato in locale eseguendo i tre
+      `coverage report` nell'ordine del workflow: dominio, handler e totale
+      tutti sopra la propria soglia, uscita 0. I numeri stanno in
+      `docs/TEST_COVERAGE.md`, che è il posto dove è lecito scriverli*
 - [ ] Nessun rilascio iOS
 
 ## Cosa manca dall'esterno

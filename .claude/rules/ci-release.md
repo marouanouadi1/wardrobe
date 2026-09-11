@@ -37,14 +37,19 @@ toccando la catena che rilascia.
 
 ## Le versioni non si scrivono a mano
 
-`apps/mobile/app.json` (`expo.version`) e `services/api/pyproject.toml`
-(`version`) sono scritti **solo** da `scripts/bump-versione.mjs`, che deduce
-major/minor/patch dai conventional commit dall'ultimo tag. Il perché sta in
-`docs/adr/0005-le-versioni-vengono-dai-commit.md`: *un numero che si alza sempre
-di uno non è una versione, è un contatore di merge.*
+`apps/mobile/app.json` (`expo.version`), `apps/mobile/package.json` e
+`services/api/pyproject.toml` (`version`) sono scritti **solo** da
+`scripts/bump-versione.mjs`, che deduce major/minor/patch dai conventional
+commit dall'ultimo tag. Sono **tre** file: `app.json` è la fonte di verità
+dell'app e `package.json` le viene tenuto dietro (`bump-versione.mjs:30-38`).
+Il perché sta in `docs/adr/0005-le-versioni-vengono-dai-commit.md`: *un numero
+che si alza sempre di uno non è una versione, è un contatore di merge.*
 
-Un hook `PreToolUse` nega la scrittura di quei due campi. Toccare le dipendenze
-in `pyproject.toml` o la configurazione Expo in `app.json` resta libero.
+Un hook `PreToolUse` nega la scrittura di quei campi. Toccare le dipendenze in
+`pyproject.toml` o la configurazione Expo in `app.json` resta libero — e per
+«non cambia» l'hook confronta con **il file su disco**, non con `old_string`:
+una `Write` non porta `old_string`, quindi confrontando con quello negava anche
+una riscrittura integrale a versione identica.
 
 ## I titoli delle PR sono conventional, e non è formalismo
 

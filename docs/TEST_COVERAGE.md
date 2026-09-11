@@ -17,7 +17,7 @@ Due tipi di numero, e si comportano diversamente:
 ## Numeri correnti
 
 - **Test backend:** 163
-- **Test app:** 20
+- **Test app:** 21
 - **Soglia coverage totale:** 73% — `services/api/pyproject.toml`
 - **Soglia coverage `src/domain/`:** 97% — `.github/workflows/api.yml`
 - **Soglia coverage `src/handlers/`:** 92% — idem, escluso `local_server.py`
@@ -97,7 +97,7 @@ onboarding light button»).
 |---|---:|---|
 | `test/ui/leggibilita.test.tsx` | 12 | il colore risolto di un testo dentro `Scheda`, `BottonePrimario` (nelle quattro varianti, inclusa la combinazione `pericolo + disabilitato`), `Pillola` (attiva e no, nei due ambienti), `Segmenti`, `BottoneSecondario` |
 | `test/ui/fondo.test.tsx` | 5 | il meccanismo: `useFondo()` senza provider, ereditarietà, annidamento a tre livelli |
-| `test/convenzioni/primitive.test.ts` | 3 | che nessuno ridipinga il fondo di una primitiva dal di fuori con `style={{ backgroundColor }}` — la forma esatta della regressione di PR #4 |
+| `test/convenzioni/primitive.test.ts` | 4 | che nessuno ridipinga il fondo di una primitiva dal di fuori: né con `style={{ backgroundColor }}` — la forma esatta della regressione di PR #4 — né passando `sfondo` senza dire con `su` su che fondo ci si posa |
 
 I test non verificano che una prop venga inoltrata: **verificano il colore
 risolto contro il fondo effettivamente dipinto**. È un invariante più forte, e
@@ -112,6 +112,20 @@ un `backgroundColor` passato, ovunque stia nell'elenco degli attributi, a una
 primitiva **derivata**, non scritta a mano: quelle che, in `src/ui/**`, dipingono
 un `<Fondo su=…>` *e* dichiarano `style` fra i propri parametri (oggi sei:
 `Campo`, `BarraChiedi`, `Scheda`, `BottonePrimario`, `SchedaFoto`, `PiedeFoto`).
+
+`style` non è però l'unico modo di ridipingere: `Scheda` e `SchedaFoto`
+espongono una prop **`sfondo`**, e calcolano `<Fondo su={su ?? 'chiaro'}>` per
+conto proprio. I due ingressi non si consultano: `<Scheda
+sfondo={colori.inchiostro}>` dipinge una card quasi nera e continua a
+dichiarare `chiaro` a chi ci sta dentro — la stessa regressione, dalla porta
+principale. Non è ipotetico: il docblock di `SchedaFoto` racconta che
+`carica.tsx` le passava `colori.inchiostro` «senza modo di dirlo ai testi
+dentro». Il quarto test deriva le primitive che accettano `sfondo` *e*
+asseriscono un `<Fondo>`, e rifiuta ogni chiamata che passi `sfondo` senza `su`.
+I tre punti di chiamata che lo facevano (`calendario.tsx`, `avviso.tsx`,
+`capo/[id].tsx`) sono stati resi espliciti prima di accendere il gate: tutti e
+tre dipingevano un fondo chiaro, quindi l'asserzione coincide con il
+comportamento di prima — non cambia un pixel, cambia che adesso è scritta.
 
 Il criterio ha **un'eccezione dichiarata**, `BottoneSecondario`: dipinge un fondo
 e accetta `style`, ma non asserisce nessun `<Fondo>` — l'inchiostro lo ricava da
@@ -128,18 +142,13 @@ altri sei non hanno alcuna prop `style`, quindi `tsc` rifiuta già la chiamata d
 sé e quelle righe non verificavano niente. Ne mancavano due vere (`Campo`,
 `BarraChiedi`) più `PiedeFoto`, che nessuno aveva considerato.
 
-Verificato solo in parte, per un limite dell'ambiente in cui questa modifica è
-stata fatta, non del codice: l'esecuzione di `jest` (e di `tsc`) era negata dal
-sistema di permessi della sessione, quindi il nuovo gate non è stato visto
-fallire e poi tornare verde con un'esecuzione reale. Quello che **è** stato
-verificato empiricamente: reintroducendo la violazione descritta sopra in una
-schermata vera (`app/intro.tsx`, `style` dopo `onPress`, chiamata su più righe),
-`grep -Pzo '<BottonePrimario\b[^>]*?>'` — lo stesso pattern del vecchio test —
-si ferma alla `>` di `onPress={() => ` e non vede mai il `backgroundColor`
-scritto due righe sotto: è la prova diretta del punto cieco che T-01 descrive.
-La modifica è stata poi ripristinata (`git diff --exit-code` pulito). Che il
-nuovo test AST veda quella stessa riga è stato tracciato a mano sull'algoritmo,
-non eseguito.
+**Il gate è stato visto diventare rosso e poi tornare verde** (2026-09-11): la
+violazione è stata reintrodotta davvero in una schermata vera — `<Scheda
+sfondo={colori.inchiostro}>` senza `su` in `calendario.tsx` — e `npm run
+mobile:test` è passato da 21 verdi a «1 failed, 20 passed», indicando il file e
+la riga; ripristinata la riga, di nuovo 21 verdi. Era la verifica che mancava:
+la prima stesura di questo gate non aveva potuto eseguire `jest`, e un gate mai
+visto fallire è indistinguibile da un gate che non morde.
 
 ### Come girano
 
@@ -165,6 +174,46 @@ Due dettagli di configurazione che non sono cosmetici:
 In `@testing-library/react-native` 14 **`render` restituisce una Promise**: i
 test sono `async` e fanno `await render(...)`. Senza `await` le query non
 esistono ancora e l'errore che si legge è `getByText is not a function`.
+
+## Gli hook di `.claude/hooks/`
+
+`scripts/prova-hook.py` — eseguito da `docs.yml` (job `hook`) e a mano con
+`python3 scripts/prova-hook.py`. Senza un numero in prosa: il conteggio dei casi
+cambia a ogni caso nuovo, e nessun gate lo verificherebbe.
+
+Non stanno né in pytest né in jest perché non sono codice del prodotto: sono i
+gate che decidono cosa un agente può scrivere. Prima non li esercitava nulla —
+erano gli **unici** gate del progetto senza copertura — e la conseguenza è
+arrivata puntuale: tre falsi positivi (una migrazione corretta negata perché
+aveva due spazi prima di `if not exists`; un `default` scritto prima di `not
+null`; qualunque riscrittura integrale di `pyproject.toml`, anche a versione
+identica) e tre falsi negativi (`numeric(10,2) not null` che passava perché il
+segnaposto del tipo non aveva la virgola; un `not null` composto su due `Edit`
+successive; `drop table if exists`, che le regole del repo vogliono si chieda
+all'utente).
+
+Il banco verifica due cose separate:
+
+- **la decisione** — `allow` / `deny` / `ask` / `block`: la tabella dei casi è
+  la specifica leggibile di cosa ciascun hook impedisce, e include le sette
+  migrazioni vere del repo col contenuto che hanno oggi, come difesa contro un
+  pattern nuovo troppo largo;
+- **il canale** — ogni `deny` e ogni `ask` devono portare
+  `permissionDecisionReason`, che è il campo che torna *al modello*. Senza, il
+  diniego arriva all'agente come «Hook PreToolUse:Write denied this tool» e
+  basta: chi non sa cosa ha sbagliato può solo riprovare alla cieca, e ogni
+  falso positivo diventa irrecuperabile.
+
+Il banco verifica che il campo **venga emesso**; che poi Claude Code lo **legga**
+è stato provato a parte, dal vivo (2026-09-11): scrivendo in `src/domain/` un
+file con un `import sys` inutilizzato, il rapporto di ruff è arrivato dentro il
+contesto del modello — `F401`, con riga e suggerimento — invece di finire nel
+transcript come prima.
+
+Le prove sulle migrazioni girano in un albero temporaneo che imita il repo, mai
+dentro `services/api/migrations/`: un `.sql` di prova lasciato lì verrebbe
+eseguito al prossimo avvio — cioè esattamente il guasto che quell'hook esiste
+per impedire.
 
 ## Rilevazione del 2026-09-09 — run `34321516325`
 

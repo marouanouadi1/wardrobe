@@ -93,7 +93,7 @@ utente: "postgres.py è a zero per cento"
 tu: "Serve un container, quindi non è un test del dominio. Lo dico invece di mockare psycopg."
 <commentary>
 Coprirlo con dei mock alzerebbe la percentuale e verificherebbe che il mock si
-comporta come il mock. Il 40% degli adapter è dichiarato fra i debiti in
+comporta come il mock. La coverage degli adapter è dichiarata fra i debiti in
 TEST_COVERAGE, che è il posto giusto per un numero che non si vuole difendere.
 </commentary>
 </example>
