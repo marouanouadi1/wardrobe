@@ -4,6 +4,26 @@ Il README spiega il prodotto e l'architettura (`## Struttura`, `## Le quattro sc
 tengono su tutto`) — leggilo prima. Qui solo le convenzioni che un agente sbaglierebbe senza
 istruzioni esplicite.
 
+**Lo stato reale del progetto non è in questo file**: sta in `docs/PROGRESS.md`. Aprilo prima
+di dare per esistente — o per inesistente — qualunque cosa.
+
+## Dove stanno le regole
+
+Qui c'è **l'invariante**; in `.claude/rules/` c'è **come si rispetta e cosa succede se lo
+violi**. Se una riga di una rule è copiabile pari pari qui, sta nel file sbagliato; se una riga
+di questo file ha bisogno di un esempio per essere capita, l'esempio va nella rule.
+
+| Area | File | Chi lo legge |
+|---|---|---|
+| Backend Python: dominio, adapter, handler | `.claude/rules/python.md` | `api`, `test` |
+| App React Native: schermate, primitive, token | `.claude/rules/react-native.md` | `mobile` |
+| La catena dei contratti generati | `.claude/rules/contratti.md` | `contracts`, e chi attraversa il confine |
+| CI, rilascio, versioni | `.claude/rules/ci-release.md` | `ci-cd` |
+| Migrazioni SQL (**irreversibili**) | `.claude/rules/migrazioni.md` | `api`, quando tocca `migrations/` |
+
+**Dove una regola di progetto e un docblock nel codice divergono, vince il codice** — e questo
+file va corretto nella stessa modifica. È già successo una volta, con la regola di `su`.
+
 ## Lingua del dominio
 
 Tutto il codice applicativo è in italiano: nomi di funzione, variabili, tabelle SQL, modelli
@@ -12,45 +32,58 @@ proporre di anglicizzare identificatori esistenti. Codice nuovo segue la stessa 
 Le librerie esterne (`react`, `pydantic`, nomi di pacchetti npm/pip) restano ovviamente in
 inglese, così come termini tecnici senza una resa italiana naturale.
 
+Vale anche per quello che scrivi tu: titoli di PR, messaggi di commit, commenti.
+
 ## Backend: `domain/` è puro, `adapters/` fa I/O
 
 `services/api/src/domain/` non deve mai importare `psycopg` o `httpx` — è un vincolo imposto
 dal linter (`pyproject.toml`, `flake8-tidy-imports.banned-api`), non solo una convenzione: un
-import vietato fa fallire `ruff check` in CI. Ogni logica che tocca database, HTTP o filesystem
-va in `src/adapters/`. Gli `handlers/` restano sottili: leggono l'evento, chiamano una funzione
-pura del dominio, formattano la risposta — mai logica di business dentro un handler.
+import vietato fa fallire `ruff check` in CI. Gli `handlers/` restano sottili: leggono
+l'evento, chiamano una funzione pura, formattano la risposta.
+
+Dettaglio in `.claude/rules/python.md`.
 
 ## I contratti si generano, non si copiano
 
-Se cambi un modello in `services/api/src/domain/models.py`, esegui subito
-`npm run contracts:generate` e committa i file rigenerati sotto `packages/contracts/`. Non
-scrivere mai a mano un tipo TypeScript che duplica un modello Pydantic, e non modificare a mano
-i file sotto `packages/contracts/src/generated/` — vengono sovrascritti alla prossima
-generazione. `npm run contracts:check` gira in CI e fallisce se il committato è disallineato dal
-backend. La stessa regola vale per le liste di valori di un'enum: se ti serve l'elenco ordinato
-di un `TipoCapo` o di uno `Stagione`, prendilo da `apps/mobile/src/dati/dominio.ts`
-(`TIPI_CAPO`, `STAGIONI`) o da `VALORI_ATTRIBUTO_CAPO` in `@wardrobe/contracts` — non ridigitarlo:
-due copie della stessa enum divergono in silenzio (è già successo, in una schermata interna poi
-rimossa insieme al playground, prima che venisse allineata a `ETICHETTE.attributo`).
+`services/api/src/domain/models.py` è la fonte di verità. Se lo modifichi, esegui subito
+`npm run contracts:generate` e committa i file rigenerati. Non scrivere mai a mano un tipo
+TypeScript che duplica un modello Pydantic, e non modificare a mano i file sotto
+`packages/contracts/src/generated/`.
 
-## Lo stato di una risorsa: `useRisorsa`, non `useState` a coppie
+Lo stesso vale per gli elenchi di valori di una enum e per le soglie: si importano, non si
+ridigitano. Due copie divergono in silenzio — è già successo.
 
-Il backend ha già l'astrazione che manca all'app: `services/api/src/handlers/_http.py` concentra
-in un posto solo come si racconta un errore, ed è adottata dal 100% delle rotte. Sul frontend
-l'equivalente è `apps/mobile/src/dati/risorsa.ts` — `useRisorsa(fetcher)` per una risorsa che si
-carica da sola al montaggio, `useAzione()` per un'azione che aspetta un tocco (login, salvataggio).
-Entrambe restituiscono `caricamento`/`errore` pronti per `<StatoRisorsa>` o `<Caricamento>`
-(`src/ui/stati.tsx`). Non scrivere una nuova coppia `useState<boolean>` per caricamento ed errore
-in una schermata: è esattamente la duplicazione che `useRisorsa` esiste per evitare, e un
-`catch {}` vuoto — che ingoia l'errore perché la schermata non ha dove metterlo — è il segnale che
-serviva questo hook fin dall'inizio.
+Dettaglio, e i sintomi di una catena rotta, in `.claude/rules/contratti.md`.
+
+## Lo stato di una risorsa
+
+Ci sono due meccanismi legittimi: `useRisorsa`/`useAzione` (`apps/mobile/src/dati/risorsa.ts`)
+e lo store `useArmadio()` (`src/dati/archivio.tsx`), che espone già
+`pronto`/`erroreCaricamento`. Una schermata usa uno dei due. Quello che non si fa è una terza
+strada: una nuova coppia `useState<boolean>` per caricamento ed errore, o una sequenza di
+chiamate API scritta a mano. Un `catch {}` vuoto — che ingoia l'errore perché la schermata non
+ha dove metterlo — è il segnale che serviva uno dei due fin dall'inizio.
+
+Dettaglio in `.claude/rules/react-native.md`.
+
+## Design: i valori nei token, le forme nelle primitive
+
+Due regole non negoziabili:
+
+- **`colori.ambra` (`#F5B324`) compare solo dove parla il modello** — badge di match, «letto
+  dalla foto» — mai su un'azione dell'utente.
+- **Una schermata compone le primitive di `apps/mobile/src/ui/`**: non ridefinisce una card, un
+  bottone o un badge a mano, e non compone un colore da sé. Se manca una forma si aggiunge lì;
+  se manca un colore si aggiunge a `src/tema/tokens.ts`, o si compone con `velo()`.
+
+Le primitive sono **nove**, e la convenzione di `su` vive in `src/ui/fondo.tsx`: entrambe le
+cose sono elencate in `.claude/rules/react-native.md`.
 
 ## Versioni: non toccarle a mano
 
-`apps/mobile/app.json` (`expo.version`) e `services/api/pyproject.toml` (`version`) sono scritti
-solo dalla pipeline di release (`scripts/bump-versione.mjs`), che deduce major/minor/patch dai
-conventional commit dall'ultimo tag. Non alzare mai questi numeri in un commit manuale — vedi
-`docs/adr/0005-le-versioni-vengono-dai-commit.md`.
+`apps/mobile/app.json` (`expo.version`) e `services/api/pyproject.toml` (`version`) sono
+scritti solo dalla pipeline di release (`scripts/bump-versione.mjs`) — vedi
+`docs/adr/0005-le-versioni-vengono-dai-commit.md`. Un hook nega la scrittura di quei campi.
 
 ## Commit: conventional commit obbligatorio
 
@@ -59,46 +92,110 @@ Il titolo di ogni PR deve rispettare
 (`pr-title.yml` lo valida in CI e fallisce altrimenti). Il tipo del commit determina anche il
 livello di bump: `feat:` alza il minor, un `!` o `BREAKING CHANGE` alza il major.
 
-## Rilascio mobile e API: due pipeline indipendenti
+## Rilascio: due pipeline indipendenti, e un merge è un rilascio
 
-`api.yml` e `mobile.yml` hanno filtri `paths:` distinti e possono scattare entrambi sulla stessa
-PR (es. quando tocchi `packages/contracts/**`). Entrambi i job di release fanno rebase+retry
-attorno al push su `main` per gestire questo caso — non serve un gruppo di concorrenza
-condiviso, e aggiungerne uno con `cancel-in-progress` romperebbe di nuovo tutto (una release
-cancellerebbe l'altra invece di metterla in coda).
+`api.yml` e `mobile.yml` hanno filtri `paths:` distinti e possono scattare entrambi sulla
+stessa PR (es. toccando `packages/contracts/**`). Non serve un gruppo di concorrenza condiviso,
+e aggiungerne uno con `cancel-in-progress` romperebbe di nuovo tutto: una release cancellerebbe
+l'altra invece di metterla in coda.
 
-## Design: i valori nei token, le forme nelle primitive
+**Un merge su `main` rilascia da solo**: sul backend rideploya sul VPS, sull'app builda un APK
+e pubblica una Release. Dettaglio in `.claude/rules/ci-release.md`.
 
-`apps/mobile/src/tema/tokens.ts` è la fonte di verità per colori, tipografia, spazi, ombre. La
-regola scritta in cima al file vale come vincolo di prodotto: **`colori.ambra` (`#F5B324`)
-compare solo dove parla il modello** — badge di match, «letto dalla foto» — mai su un'azione
-dell'utente. Non introdurre nuovi colori hardcoded nelle schermate: se manca un
-token, aggiungilo a `tokens.ts` (o componilo con `velo(colore, alfa)`, per una velatura), non
-inline. `colori.citron` non esiste più — è stato sostituito dall'ambra perché troppo acceso, vedi
-il commento in cima a `tokens.ts`.
+## Migrazioni: irreversibili, e rieseguite a ogni avvio
 
-La stessa regola vale un gradino sopra, per le forme: le primitive visive vivono in
-`apps/mobile/src/ui/{base,stati,righe,guscio,capi,testo,avviso}.tsx`. Una schermata **compone**
-quelle primitive, non ridefinisce una card, un bottone o un badge a mano — se manca una forma, si
-aggiunge lì, non inline nella schermata. La violazione da riconoscere ha sempre questa forma: una
-costante di colore locale in cima a una schermata (`const PELLE = '#E7DFD2'`, prima in
-`app/(tabs)/avatar.tsx`), o un `View` con `backgroundColor: colori.scheda` e un `borderRadius`
-scritto a mano invece di `<Scheda>`.
+`applica_migrazioni.py` esegue **tutti** i file `.sql` in ordine lessicografico **a ogni
+avvio**, senza tabella di versione e senza rollback. Regge solo perché ogni file è idempotente
+per costruzione. Una migrazione non idempotente non rompe un deploy: **rompe ogni avvio
+successivo**.
 
-Le convenzioni di naming delle props, da rispettare in ogni primitiva nuova: `colore` è il primo
-piano (testo, icona), `sfondo` è il fondo, `taglia` è il corpo del carattere, `misura` è la
-dimensione di un'icona o di una bolla, `su` dice su che fondo un componente si posa
-(`'chiaro' | 'scuro'`, mai un booleano `scuro`/`scura`: elimina l'accordo di genere che
-costringerebbe a scriverlo due volte). **Un composto che avvolge testo (`Schermata`, `Vuoto`,
-`RigaNavigabile`, `StatoRisorsa`…) inoltra `su` a ogni `Corpo`/`Forte`/`Etichetta`/`Titolo` al suo
-interno** — ometterlo produce testo scuro su fondo scuro, un difetto che `tsc` non vede perché
-`su` è opzionale.
+Prima di scriverne una, leggi `.claude/rules/migrazioni.md` per intero.
+
+## Operazioni distruttive
+
+**Mai eseguire un'operazione distruttiva o irreversibile senza accordo esplicito e preventivo
+dell'utente** — vale in modalità autonoma, dentro un task lungo e per semplice comodità
+operativa. Nessuna eccezione.
+
+Sono distruttive, e si chiede sempre prima:
+
+- `drop` / `drop column` in una migrazione, e qualunque `DELETE`/`TRUNCATE` massivo
+- `docker compose down -v`, `docker volume rm` / `prune`, e ogni ricreazione che perde volumi
+- sovrascrivere i `.env` **del server**: `rsync` li esclude di proposito, non sono nel repo e
+  non hanno copia
+- git che scarta lavoro: `reset --hard`, `clean -fdx`, force-push
+- alzare a mano un numero di versione
+- qualunque scrittura verso un servizio esterno (Sentry, fal.ai, provider LLM) fuori dal flusso
+  previsto: un effetto fuori dal nostro sistema non lo annulla nessun ripristino
+
+**Procedura:** fermarsi, dire cosa viene toccato o perso, proporre l'alternativa non
+distruttiva, chiedere — *prima* di eseguire. Se il disordine viene da una propria operazione
+(righe di prova), si puliscono *quelle* righe, non la tabella.
+
+È invece **reversibile**, e non va trattato come distruttivo per paura: rigenerare
+`packages/contracts/src/generated/` e rilanciare le migrazioni su un database sano.
+
+## `apps/web` è vuoto apposta
+
+Due file e un `dev` che esce con 1. Non è un lavoro da finire: `apps/mobile` è già React Native
+Web. Nessun agente ci scrive — il quando e il perché aprirlo stanno in `apps/web/README.md`, e
+riaprirlo è una decisione dell'utente.
+
+## Gli agenti e l'instradamento
+
+| Agente | Quando |
+|---|---|
+| `api` | dominio, adapter, handler, migrazioni |
+| `mobile` | schermate, primitive, token, navigazione |
+| `contracts` | ogni volta che `domain/models.py` si muove, o `contracts:check` è rosso |
+| `ci-cd` | workflow, deploy, Docker, Caddy, logica di bump |
+| `test` | i test del backend, e quelli dell'app sotto `apps/mobile/test/` |
+| `doc-writer` | README, `docs/**`, ADR — **non** questo file né `.claude/**` |
+| `security` | auth, IDOR, segreti, injection — **sola lettura: non corregge** |
+| `reviewer` | qualità, prima di una PR — **sola lettura** |
+| `orchestrator` | task che attraversano più di un proprietario |
+
+**Tre catene non si spezzano:**
+
+1. `domain/models.py` cambia → `api` → **`contracts`** → `mobile` (typecheck) → `test`
+2. `migrations/` → `api` col protocollo, poi `reviewer`
+3. finding di sicurezza → `security` (trova) → `api`/`mobile` (corregge) → `test` (regressione)
+
+## I file di stato: quale si tocca, dopo cosa
+
+L'agente non ha memoria fra le sessioni: lo stato del progetto vive in questi file, e un file
+non aggiornato è uno stato perso. Si aggiornano **nella stessa PR** del cambiamento.
+
+| Hai fatto questo | Tocchi |
+|---|---|
+| implementato o finito qualcosa | `docs/PROGRESS.md` (la riga dice **come** è stata verificata) + `CHANGELOG.md` |
+| scoperto un difetto che non sistemi adesso | `docs/PROGRESS.md`: `[!]` con da cosa è bloccato, o una riga nei debiti |
+| aggiunto o tolto un test | `docs/TEST_COVERAGE.md` — **altrimenti `docs.yml` fa cadere la PR** |
+| incontrato una scelta dell'utente su codice **già scritto** | `docs/QUESTIONI.md`, **subito**: una questione ricordata a voce è una questione persa |
+| incontrato qualcosa che la **specifica** non dice | `docs/DOMANDE_APERTE.md` |
+| ricevuto una risposta dall'utente | sposti la voce fra le chiuse con la data. Non la cancelli: la risposta senza la domanda non si capisce |
+| preso una decisione che un domani qualcuno ridiscuterebbe | un ADR nuovo in `docs/adr/`. **`DECISION_LOG.md` non esiste e non va creato** — vedi ADR 0007 |
+| cambiato prodotto o architettura | `README.md`. **Mai** un numero di test, di righe o di schermate |
+
+## Come si riferisce il lavoro
+
+Quattro voci, nessuna opzionale:
+
+1. **cosa è stato fatto**, una riga per punto
+2. **cosa è stato verificato**, col comando e l'esito reale
+3. **cosa è rimasto fuori**, e perché
+4. **cosa serve dall'utente**: una decisione, una credenziale, una conferma
+
+La terza è quella che si tende a omettere, ed è quella che decide se ci si può fidare delle
+altre. Se i test falliscono, si dice, con l'output. Se un passaggio è stato saltato, si dice.
 
 ## Test e verifica
 
-- `npm run typecheck && npm run lint` — su tutti i workspace.
-- `npm run api:test` — il dominio e gli handler, offline, senza container, in meno di un secondo.
-- `npm run api:lint` — ruff check + format + `mypy --strict` sul backend.
-- `npm run contracts:check` — da rilanciare dopo ogni modifica a `domain/models.py`.
-- `npm run dev:app` — stack locale completo (Postgres via Docker + API + Expo) per provare un
-  flusso a mano prima di considerarlo finito.
+- `npm run typecheck && npm run lint` — su tutti i workspace
+- `npm run api:test` — dominio e handler, offline, senza container
+- `npm run api:cov` — con la coverage e le soglie che impone la CI
+- `npm run api:lint` — ruff check + format + `mypy --strict`
+- `npm run mobile:test` — i test dell'app (leggibilità e convenzioni delle primitive)
+- `npm run contracts:check` — da rilanciare dopo ogni modifica a `domain/models.py`
+- `npm run dev:app` — stack locale completo (Postgres + API + Expo) per provare un flusso a
+  mano prima di considerarlo finito
