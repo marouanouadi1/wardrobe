@@ -36,7 +36,7 @@ export function Avviso() {
       {/* `sfondo`, non `style`: uno `style={{ backgroundColor }}` scavalca
           `Scheda` invece di passare per lei, e `su` non può osservare un
           pixel dipinto fuori dal suo stesso contratto. */}
-      <Scheda imbottitura={spazi.m} sfondo={colori.coralloTenue}>
+      <Scheda imbottitura={spazi.m} su="chiaro" sfondo={colori.coralloTenue}>
         <Corpo taglia={12.5}>{avviso}</Corpo>
       </Scheda>
     </Toccabile>

@@ -28,7 +28,7 @@ import {
   type ViewStyle,
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
-import { caratteri, colori, curve, durate, linee, ombre, raggi, spazi, superfici, testoSu } from '../tema/tokens'
+import { caratteri, colori, curve, durate, linee, ombre, raggi, spazi, superfici, testoSu, velo } from '../tema/tokens'
 import { Fondo, useFondo, type Su } from './fondo'
 import { Corpo, Etichetta, Forte, type Taglia } from './testo'
 
@@ -341,7 +341,7 @@ const PALETTE_BOTTONE_PRIMARIO: Record<VarianteBottonePrimario, { sfondo: string
   // `disabilitato` vince su tutto il resto, come già nella ternaria di
   // `sfondo` di prima: un bottone `ambra`/`pericolo` spento non deve tornare
   // al proprio colore acceso.
-  spento: { sfondo: 'rgba(21,21,26,0.08)', inchiostro: 'rgba(21,21,26,0.4)', su: 'chiaro' },
+  spento: { sfondo: velo(colori.inchiostro, 0.08), inchiostro: testoSu.chiaro.debole, su: 'chiaro' },
   ambra: { sfondo: colori.ambra, inchiostro: colori.inchiostro, su: 'chiaro' },
   pericolo: { sfondo: colori.corallo, inchiostro: colori.crema, su: 'scuro' },
   chiaro: { sfondo: colori.scheda, inchiostro: colori.inchiostro, su: 'chiaro' },

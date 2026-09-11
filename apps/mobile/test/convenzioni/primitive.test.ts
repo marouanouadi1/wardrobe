@@ -77,13 +77,13 @@ function contieneFondoSu(nodo: ts.Node): boolean {
   return trovato
 }
 
-/** Vero se il primo parametro distrugge una proprietà chiamata `style`. */
-function dichiaraStyle(parametri: ts.NodeArray<ts.ParameterDeclaration>): boolean {
+/** Vero se il primo parametro distrugge una proprietà con questo nome. */
+function dichiaraProp(parametri: ts.NodeArray<ts.ParameterDeclaration>, cercata: string): boolean {
   const primo = parametri[0]
   if (!primo || !ts.isObjectBindingPattern(primo.name)) return false
   return primo.name.elements.some((elemento) => {
     const nome = elemento.propertyName ?? elemento.name
-    return ts.isIdentifier(nome) && nome.text === 'style'
+    return ts.isIdentifier(nome) && nome.text === cercata
   })
 }
 
@@ -100,7 +100,40 @@ function derivaPrimitiveRidipingibili(): string[] {
     const visita = (nodo: ts.Node): void => {
       if (ts.isFunctionDeclaration(nodo) && nodo.name && nodo.body) {
         const esportata = (ts.getCombinedModifierFlags(nodo) & ts.ModifierFlags.Export) !== 0
-        if (esportata && dichiaraStyle(nodo.parameters) && contieneFondoSu(nodo.body)) {
+        if (esportata && dichiaraProp(nodo.parameters, 'style') && contieneFondoSu(nodo.body)) {
+          nomi.push(nodo.name.text)
+        }
+      }
+      ts.forEachChild(nodo, visita)
+    }
+    visita(sorgente)
+  }
+  return nomi
+}
+
+/**
+ * Le primitive che ridipingono il fondo da una **prop dichiarata**, non da
+ * `style`: `Scheda` e `SchedaFoto` accettano `sfondo` e, separatamente,
+ * calcolano `<Fondo su={su ?? 'chiaro'}>`. I due ingressi non si consultano
+ * mai, quindi `<Scheda sfondo={colori.inchiostro}>` dipinge una card quasi
+ * nera e continua a dichiarare `chiaro` a tutto ciò che ci sta dentro — la
+ * regressione di PR #4, dalla porta principale invece che da `style`.
+ *
+ * Non è ipotetica: il docblock di `SchedaFoto` racconta che `carica.tsx` le
+ * passava `colori.inchiostro` «senza modo di dirlo ai testi dentro, che
+ * finivano cablati a mano». `sfondo` è la via d'uscita legittima — ma chi
+ * dipinge in opaco *asserisce* ciò che dipinge, come dice
+ * `.claude/rules/react-native.md`. Da qui il gate: `sfondo` senza `su` non si
+ * scrive.
+ */
+function derivaPrimitiveConSfondo(): string[] {
+  const nomi: string[] = []
+  for (const file of sorgenti(join(RADICE, 'src', 'ui'))) {
+    const sorgente = analizza(file)
+    const visita = (nodo: ts.Node): void => {
+      if (ts.isFunctionDeclaration(nodo) && nodo.name && nodo.body) {
+        const esportata = (ts.getCombinedModifierFlags(nodo) & ts.ModifierFlags.Export) !== 0
+        if (esportata && dichiaraProp(nodo.parameters, 'sfondo') && contieneFondoSu(nodo.body)) {
           nomi.push(nodo.name.text)
         }
       }
@@ -200,6 +233,35 @@ describe('le primitive non vengono ridipinte dal punto di chiamata', () => {
                 const { line } = sorgente.getLineAndCharacterOfPosition(nodo.getStart())
                 colpevoli.push(`${file.replace(RADICE + '/', '')}:${line + 1}`)
               }
+            }
+          }
+        }
+        ts.forEachChild(nodo, visita)
+      }
+      visita(sorgente)
+    }
+
+    expect(colpevoli).toEqual([])
+  })
+
+  test('nessun `sfondo` passato a una primitiva senza dire anche su che fondo si posa', () => {
+    const conSfondo = new Set(derivaPrimitiveConSfondo())
+    // Il criterio deve trovare qualcosa: se la derivazione si rompe, un
+    // insieme vuoto renderebbe questo test verde senza verificare niente.
+    expect(conSfondo.size).toBeGreaterThanOrEqual(2)
+
+    const colpevoli: string[] = []
+    for (const file of filesApp) {
+      const sorgente = analizza(file)
+      const visita = (nodo: ts.Node): void => {
+        if (ts.isJsxSelfClosingElement(nodo) || ts.isJsxOpeningElement(nodo)) {
+          if (conSfondo.has(nodo.tagName.getText())) {
+            const propArgomenti = nodo.attributes.properties
+              .filter(ts.isJsxAttribute)
+              .map((attributo) => attributo.name.getText())
+            if (propArgomenti.includes('sfondo') && !propArgomenti.includes('su')) {
+              const { line } = sorgente.getLineAndCharacterOfPosition(nodo.getStart())
+              colpevoli.push(`${file.replace(RADICE + '/', '')}:${line + 1}`)
             }
           }
         }

@@ -115,7 +115,7 @@ export default function Calendario() {
         <>
           {/* La scheda che chiude il cerchio: dai capi fermi nasce la ragione
               per cui l'app suggerisce anche cose che non sceglieresti. */}
-          <Scheda imbottitura={20} sfondo={colori.ambraTenue} style={{ gap: spazi.s }}>
+          <Scheda imbottitura={20} su="chiaro" sfondo={colori.ambraTenue} style={{ gap: spazi.s }}>
             <BadgeIa testo="dormono in fondo" />
             <Titolo taglia={25}>
               {parola(dormienti.length, '1 capo fermo da più di sei mesi', `${dormienti.length} capi fermi da più di sei mesi`)}
