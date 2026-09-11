@@ -6,6 +6,11 @@
  * c'è dove appoggiare quel salvataggio. Quel passo vive ora in
  * `preferenze.tsx`, dopo il login. Qui restano solo le due schermate di puro
  * marketing: cosa fa l'app, e perché fotografare basta.
+ *
+ * Le due foto di sfondo erano caricate da Pexels a ogni apertura — la prima
+ * impressione dell'app dipendeva dalla rete. Ora sono nel bundle
+ * (`assets/intro-passo-*.jpg`, foto Pexels 17745134 e 31064320, licenza
+ * Pexels: nessuna attribuzione richiesta).
  */
 
 import { Image } from 'expo-image'
@@ -16,7 +21,7 @@ import { BackHandler, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { segnaIntroVista } from '../src/dati/intro'
 import { colori, linee, raggi, spazi } from '../src/tema/tokens'
-import { BottoneIndietro, BottonePrimario, Toccabile } from '../src/ui/base'
+import { BottoneIndietro, BottonePrimario, LinkTesto, Toccabile } from '../src/ui/base'
 import { Corpo, Etichetta, Titolo } from '../src/ui/testo'
 
 const PASSI = [
@@ -26,7 +31,7 @@ const PASSI = [
     corpo:
       'Fotografi i vestiti una volta sola. Poi ogni mattina ti dico cosa mettere, con quello che hai già in casa.',
     azione: 'Come funziona',
-    foto: 17745134,
+    foto: require('../assets/intro-passo-1.jpg') as number,
   },
   {
     occhiello: 'come funziona',
@@ -34,13 +39,9 @@ const PASSI = [
     corpo:
       'Un capo per foto. Il modello riconosce categoria, colore, tessuto, stagione e lavaggio. Tu correggi solo se sbaglia.',
     azione: 'Accedi o registrati',
-    foto: 31064320,
+    foto: require('../assets/intro-passo-2.jpg') as number,
   },
 ] as const
-
-function foto(id: number): string {
-  return `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=900&h=1300&fit=crop`
-}
 
 export default function Intro() {
   const [passo, setPasso] = useState(0)
@@ -69,12 +70,7 @@ export default function Intro() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colori.sfondo }}>
-      <Image
-        source={{ uri: foto(corrente.foto) }}
-        style={{ position: 'absolute', inset: 0 }}
-        contentFit="cover"
-        transition={300}
-      />
+      <Image source={corrente.foto} style={{ position: 'absolute', inset: 0 }} contentFit="cover" />
       {/* La sfumatura non è decorazione: senza, il testo scuro su una foto
           qualunque diventa illeggibile. */}
       <LinearGradient
@@ -94,7 +90,7 @@ export default function Intro() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
           {passo > 0 ? <BottoneIndietro onPress={() => setPasso(passo - 1)} /> : null}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Titolo taglia={22}>wardrobe</Titolo>
+            <Titolo taglia="sezione">wardrobe</Titolo>
             <View
               style={{ width: 6, height: 6, borderRadius: raggi.pillola, backgroundColor: colori.ambra }}
             />
@@ -136,13 +132,13 @@ export default function Intro() {
             }}
           >
             <View style={{ width: 6, height: 6, borderRadius: raggi.pillola, backgroundColor: colori.ambra }} />
-            <Etichetta taglia={11}>{corrente.occhiello}</Etichetta>
+            <Etichetta taglia="micro">{corrente.occhiello}</Etichetta>
           </View>
 
-          <Titolo taglia={40} style={{ letterSpacing: -1.6 }}>
+          <Titolo taglia="eroe" style={{ letterSpacing: -1.6 }}>
             {corrente.titolo}
           </Titolo>
-          <Corpo taglia={15} tono="medio" style={{ maxWidth: 330 }}>
+          <Corpo taglia="guida" tono="medio" style={{ maxWidth: 330 }}>
             {corrente.corpo}
           </Corpo>
 
@@ -153,11 +149,7 @@ export default function Intro() {
             onPress={() => (ultimo ? entra() : setPasso(passo + 1))}
           />
 
-          <Toccabile onPress={entra} scala={0} style={{ alignItems: 'center', paddingVertical: 8 }}>
-            <Corpo taglia={13.5} tono="tenue">
-              Ho già un account
-            </Corpo>
-          </Toccabile>
+          <LinkTesto onPress={entra}>Ho già un account</LinkTesto>
         </View>
       </View>
     </View>

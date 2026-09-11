@@ -36,6 +36,23 @@ interface Stato {
   outfit: Outfit[]
   profilo: Profilo | null
   suggerimenti: Suggerimento[]
+  /**
+   * Il modello sta componendo una proposta (`POST /suggerimenti`, una
+   * chiamata LLM da secondi a decine di secondi). Senza questo flag uno
+   * scheletro condizionato su `suggerimenti.length === 0` resterebbe acceso
+   * per sempre a chiamata fallita — vedi il commento in `app/(tabs)/oggi.tsx`
+   * su perché l'effetto lì non riparte da solo.
+   */
+  suggerimentiInCorso: boolean
+  /**
+   * Perché il caricamento iniziale (`carica()`) non è riuscito, se non è
+   * riuscito. Distinto da `avviso`: quello è un coriandolo per un errore
+   * transitorio, questo è lo stato persistente che una schermata legge per
+   * non raccontare «l'armadio è vuoto» quando in realtà il server non ha
+   * risposto — i due stati erano indistinguibili (`capi: []`, `pronto: true`
+   * in entrambi i casi).
+   */
+  erroreCaricamento: string | null
   /** Cosa indossa l'avatar in questo momento. Vive solo sul telefono. */
   vestizione: Vestizione
   /**
@@ -53,9 +70,11 @@ interface Stato {
 type Azione =
   | { tipo: 'inCaricamento' }
   | { tipo: 'caricato'; capi: Capo[]; outfit: Outfit[]; profilo: Profilo | null }
+  | { tipo: 'erroreCaricamento'; testo: string }
   | { tipo: 'capoAggiornato'; capo: Capo }
   | { tipo: 'capoCreato'; capo: Capo }
   | { tipo: 'outfitAggiunto'; outfit: Outfit }
+  | { tipo: 'suggerimentiInCorso'; inCorso: boolean }
   | { tipo: 'suggerimenti'; suggerimenti: Suggerimento[] }
   | { tipo: 'vestizione'; vestizione: Vestizione }
   | { tipo: 'fotoAvatar'; uri: string | null; chiave?: string }
@@ -67,6 +86,8 @@ const INIZIALE: Stato = {
   outfit: [],
   profilo: null,
   suggerimenti: [],
+  suggerimentiInCorso: false,
+  erroreCaricamento: null,
   vestizione: {},
   fotoAvatar: null,
   avviso: null,
@@ -77,7 +98,22 @@ function riduci(stato: Stato, azione: Azione): Stato {
     case 'inCaricamento':
       return { ...stato, pronto: false }
     case 'caricato':
-      return { ...stato, pronto: true, capi: azione.capi, outfit: azione.outfit, profilo: azione.profilo }
+      return {
+        ...stato,
+        pronto: true,
+        capi: azione.capi,
+        outfit: azione.outfit,
+        profilo: azione.profilo,
+        // Un caricamento riuscito cancella l'errore del giro precedente: è
+        // lo stesso posto dove `ricarica()` deve poter tornare a uno stato
+        // pulito dopo che il server torna raggiungibile.
+        erroreCaricamento: null,
+      }
+    case 'erroreCaricamento':
+      // Stesso «armadio vuoto» di sempre — niente dati finti sopra ai capi
+      // veri, vedi il commento in `carica()` — ma con la causa in chiaro
+      // invece che indistinguibile da un armadio davvero vuoto.
+      return { ...stato, pronto: true, capi: [], outfit: [], profilo: null, erroreCaricamento: azione.testo }
     case 'capoAggiornato':
       return {
         ...stato,
@@ -87,8 +123,10 @@ function riduci(stato: Stato, azione: Azione): Stato {
       return { ...stato, capi: [azione.capo, ...stato.capi] }
     case 'outfitAggiunto':
       return { ...stato, outfit: [azione.outfit, ...stato.outfit] }
+    case 'suggerimentiInCorso':
+      return { ...stato, suggerimentiInCorso: azione.inCorso }
     case 'suggerimenti':
-      return { ...stato, suggerimenti: azione.suggerimenti }
+      return { ...stato, suggerimenti: azione.suggerimenti, suggerimentiInCorso: false }
     case 'vestizione':
       return { ...stato, vestizione: azione.vestizione }
     case 'fotoAvatar':
@@ -170,16 +208,20 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       ])
       invia({ tipo: 'caricato', capi: elenco.capi, outfit: outfit.outfit, profilo })
     } catch (errore) {
-      // Niente più fallback ai dati di esempio: con un backend vero un
-      // errore di rete non deve mai far ricomparire l'armadio finto sopra
-      // ai capi veri. Meglio un armadio vuoto con la causa in chiaro.
-      invia({ tipo: 'caricato', capi: [], outfit: [], profilo: null })
       // Un 401 qui è un token scaduto: `suTokenNonValido` (vedi
-      // `sessione.tsx`) sta già riportando al login, un avviso di «rete» lo
-      // descriverebbe come il problema sbagliato.
-      if (errore instanceof ErroreApi && errore.stato === 401) return
+      // `sessione.tsx`) sta già riportando al login, un armadio vuoto con
+      // una causa in chiaro descriverebbe come «rete» un problema che non lo
+      // è — qui basta tornare pronti, senza dati e senza errore da mostrare.
+      if (errore instanceof ErroreApi && errore.stato === 401) {
+        invia({ tipo: 'caricato', capi: [], outfit: [], profilo: null })
+        return
+      }
+      // Niente più fallback ai dati di esempio: con un backend vero un
+      // errore di rete non deve mai far ricomparire l'armadio finto sopra ai
+      // capi veri — resta un armadio vuoto, ma ora con la causa in chiaro
+      // (`erroreCaricamento`), distinguibile da un armadio davvero vuoto.
       invia({
-        tipo: 'avviso',
+        tipo: 'erroreCaricamento',
         testo: `Non riesco a raggiungere il server. (${
           errore instanceof Error ? errore.message : 'errore sconosciuto'
         })`,
@@ -375,14 +417,21 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
   )
 
   const chiediSuggerimenti = useCallback<Archivio['chiediSuggerimenti']>(async (richiesta) => {
+    invia({ tipo: 'suggerimentiInCorso', inCorso: true })
     try {
       const risposta = await api.suggerimenti({
         richiesta_utente: richiesta,
         numero_proposte: 3,
       })
+      // Il caso 'suggerimenti' del reducer spegne anche `suggerimentiInCorso`:
+      // non serve un'azione separata sul ramo riuscito.
       invia({ tipo: 'suggerimenti', suggerimenti: risposta.suggerimenti })
       return risposta.suggerimenti
     } catch {
+      // Va spento anche sul fallimento, o uno scheletro/spinner condizionato
+      // su questo flag resterebbe acceso per sempre — `suggerimenti` non
+      // cambia mai in questo ramo.
+      invia({ tipo: 'suggerimentiInCorso', inCorso: false })
       // Non il testo tecnico dell'eccezione (`suggerimento_non_valido` e simili
       // sono un dettaglio di dominio, non un contenuto per l'utente — stessa
       // regola di `src/ui/stati.tsx`): una frase fissa, sempre.

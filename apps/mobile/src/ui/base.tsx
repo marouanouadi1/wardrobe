@@ -18,7 +18,6 @@ import { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   Animated,
-  Easing,
   Platform,
   Pressable,
   type PressableProps,
@@ -29,8 +28,9 @@ import {
   type ViewStyle,
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
-import { colori, linee, ombre, raggi, spazi, superfici } from '../tema/tokens'
-import { Etichetta, Forte } from './testo'
+import { caratteri, colori, curve, durate, linee, ombre, raggi, spazi, superfici, testoSu, velo } from '../tema/tokens'
+import { Fondo, useFondo, type Su } from './fondo'
+import { Corpo, Etichetta, Forte, type Taglia } from './testo'
 
 // ─────────────────────────────────────────────────────────────
 // Tocco
@@ -82,25 +82,34 @@ export function Campo({
   style,
   ...props
 }: TextInputProps & { etichetta?: string; style?: StyleProp<ViewStyle> }) {
+  // Il fondo che questo campo dipinge è sempre chiaro — un `TextInput` non
+  // legge il contesto (il suo `color` è cablato), ma un `Corpo` infilato qui
+  // dentro in futuro lo farebbe: asserisce, non lascia indovinare. Non
+  // avvolge l'`Etichetta` sotto: quella sta sul fondo della schermata, non su
+  // quello del campo.
   const campo = (
-    <TextInput
-      placeholderTextColor="rgba(21,21,26,0.4)"
-      {...props}
-      style={[
-        {
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          borderRadius: raggi.piccolo,
-          borderWidth: 1,
-          borderColor: linee.chiara,
-          backgroundColor: colori.scheda,
-          fontFamily: 'Manrope_500Medium',
-          fontSize: 15,
-          color: colori.inchiostro,
-        },
-        style,
-      ]}
-    />
+    <Fondo su="chiaro">
+      <TextInput
+        placeholderTextColor="rgba(21,21,26,0.4)"
+        {...props}
+        style={[
+          {
+            paddingHorizontal: 16,
+            paddingVertical: 14,
+            borderRadius: raggi.piccolo,
+            borderWidth: 1,
+            borderColor: linee.chiara,
+            backgroundColor: colori.scheda,
+            fontFamily: caratteri.testo,
+            // 15: un `TextInput` nativo non passa da `risolviTaglia` — non
+            // c'è una `taglia` da leggere dalla scala qui, solo un numero.
+            fontSize: 15,
+            color: colori.inchiostro,
+          },
+          style,
+        ]}
+      />
+    </Fondo>
   )
   if (!etichetta) return campo
   return (
@@ -136,35 +145,39 @@ export function BarraChiedi({
   style?: ViewStyle
 }) {
   return (
-    <View
-      style={[
-        onInvia
-          ? { paddingLeft: spazi.l, paddingRight: 7, paddingVertical: 7 }
-          : { paddingHorizontal: spazi.l, paddingVertical: 12 },
-        {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: spazi.s,
-          borderRadius: raggi.pillola,
-          backgroundColor: colori.scheda,
-          ...ombre.bassa,
-        },
-        style,
-      ]}
-    >
-      <Icona nome={icona} misura={17} colore={onInvia ? colori.ambraMedio : 'rgba(21,21,26,0.45)'} spessore={2.2} />
-      <TextInput
-        value={valore}
-        onChangeText={onCambia}
-        onSubmitEditing={onInvia}
-        placeholder={placeholder}
-        placeholderTextColor="rgba(21,21,26,0.4)"
-        style={{ flex: 1, fontFamily: 'Manrope_500Medium', fontSize: 14.5, color: colori.inchiostro }}
-      />
-      {onInvia ? (
-        <BottoneTondo nome="freccia" onPress={onInvia} misura={42} misuraIcona={19} sfondo={colori.ambra} />
-      ) : null}
-    </View>
+    <Fondo su="chiaro">
+      <View
+        style={[
+          onInvia
+            ? { paddingLeft: spazi.l, paddingRight: 7, paddingVertical: 7 }
+            : { paddingHorizontal: spazi.l, paddingVertical: 12 },
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spazi.s,
+            borderRadius: raggi.pillola,
+            backgroundColor: colori.scheda,
+            ...ombre.bassa,
+          },
+          style,
+        ]}
+      >
+        <Icona nome={icona} misura={17} colore={onInvia ? colori.ambraMedio : 'rgba(21,21,26,0.45)'} spessore={2.2} />
+        <TextInput
+          value={valore}
+          onChangeText={onCambia}
+          onSubmitEditing={onInvia}
+          placeholder={placeholder}
+          placeholderTextColor="rgba(21,21,26,0.4)"
+          // 14.5: stessa nota di `Campo` sopra — un `TextInput` non legge
+          // `tipografia`, solo `caratteri.testo` per la famiglia.
+          style={{ flex: 1, fontFamily: caratteri.testo, fontSize: 14.5, color: colori.inchiostro }}
+        />
+        {onInvia ? (
+          <BottoneTondo nome="freccia" onPress={onInvia} misura={42} misuraIcona={19} sfondo={colori.ambra} />
+        ) : null}
+      </View>
+    </Fondo>
   )
 }
 
@@ -176,31 +189,40 @@ export function Scheda({
   children,
   style,
   su,
+  sfondo,
   imbottitura = spazi.l,
 }: {
   children: ReactNode
   style?: StyleProp<ViewStyle>
-  su?: 'chiaro' | 'scuro'
+  su?: Su
+  /** Un fondo esplicito, invece della coppia chiara/scura di sempre — l'ambra
+   * tenue del promemoria di `calendario.tsx`, il corallo tenue di `Avviso`.
+   * Con `sfondo`, `su` resta comunque quello che si dichiara a chi sta dentro
+   * (di norma `'chiaro'`, per un fondo tenue). */
+  sfondo?: string
   imbottitura?: number
 }) {
-  const scura = su === 'scuro'
+  const fondo: Su = su ?? 'chiaro'
+  const scura = fondo === 'scuro'
   return (
-    <View
-      style={[
-        {
-          // Una velatura di crema, non l'inchiostro pieno: `Schermata su="scuro"`
-          // usa già l'inchiostro come fondo pagina — una scheda dello stesso
-          // colore ci sparirebbe sopra.
-          backgroundColor: scura ? superfici.suScuro.riga : colori.scheda,
-          borderRadius: raggi.scheda,
-          padding: imbottitura,
-        },
-        scura ? null : ombre.scheda,
-        style,
-      ]}
-    >
-      {children}
-    </View>
+    <Fondo su={fondo}>
+      <View
+        style={[
+          {
+            // Una velatura di crema, non l'inchiostro pieno: `Schermata su="scuro"`
+            // usa già l'inchiostro come fondo pagina — una scheda dello stesso
+            // colore ci sparirebbe sopra.
+            backgroundColor: sfondo ?? (scura ? superfici.suScuro.riga : colori.scheda),
+            borderRadius: raggi.scheda,
+            padding: imbottitura,
+          },
+          scura ? null : ombre.scheda,
+          style,
+        ]}
+      >
+        {children}
+      </View>
+    </Fondo>
   )
 }
 
@@ -217,11 +239,12 @@ export function Pillola({
   testo: string
   attiva?: boolean
   onPress?: () => void
-  su?: 'chiaro' | 'scuro'
+  su?: Su
 }) {
-  const scura = su === 'scuro'
+  const ereditato = useFondo()
+  const fondo = su ?? ereditato
+  const scura = fondo === 'scuro'
   const sfondoAttivo = scura ? colori.ambra : colori.inchiostro
-  const testoAttivo = scura ? colori.inchiostro : colori.crema
   return (
     <Toccabile
       onPress={onPress}
@@ -235,12 +258,14 @@ export function Pillola({
         backgroundColor: attiva ? sfondoAttivo : 'transparent',
       }}
     >
-      <Forte
-        taglia={13}
-        colore={attiva ? testoAttivo : scura ? 'rgba(247,244,239,0.75)' : 'rgba(21,21,26,0.72)'}
-      >
-        {testo}
-      </Forte>
+      {/* Opaca quando `attiva` — asserisce il fondo che dipinge, invertito
+          rispetto a quello ambientale (l'ambra e l'inchiostro vogliono il
+          testo dell'altro verso). Trasparente altrimenti — inoltra. */}
+      <Fondo su={attiva ? (scura ? 'chiaro' : 'scuro') : fondo}>
+        <Forte taglia="minuto" tono={attiva ? 'forte' : 'medio'}>
+          {testo}
+        </Forte>
+      </Fondo>
     </Toccabile>
   )
 }
@@ -281,9 +306,15 @@ export function Segmenti<T extends string>({
               ...(attivo ? ombre.bassa : {}),
             }}
           >
-            <Forte taglia={13} tono={attivo ? 'forte' : 'tenue'}>
-              {voce.etichetta}
-            </Forte>
+            {/* La pillola attiva è opaca (`colori.scheda`, sempre chiara,
+                anche se `Segmenti` vive su una schermata scura): asserisce. La
+                pista intorno è una velatura — `linee.tenue` — e inoltra da
+                sola, senza bisogno di scriverlo qui. */}
+            <Fondo su={attivo ? 'chiaro' : undefined}>
+              <Forte taglia="minuto" tono={attivo ? 'forte' : 'tenue'}>
+                {voce.etichetta}
+              </Forte>
+            </Fondo>
           </Toccabile>
         )
       })}
@@ -295,6 +326,28 @@ export function Segmenti<T extends string>({
 // Pulsanti
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Le cinque varianti di sfondo di `BottonePrimario`. Prima `sfondo` e `su`
+ * erano due ternarie separate con una precedenza diversa (`disabilitato` e
+ * `ambra` vincevano su `pericolo` nella prima, `pericolo` vinceva su tutto
+ * nella seconda): `pericolo + disabilitato` dipingeva un fondo chiaro e
+ * dichiarava `su="scuro"` a chi ci stava dentro. Con una voce sola per
+ * variante, `sfondo`, `inchiostro` e `su` leggono la stessa chiave e non
+ * possono più divergere.
+ */
+type VarianteBottonePrimario = 'spento' | 'ambra' | 'pericolo' | 'chiaro' | 'inchiostro'
+
+const PALETTE_BOTTONE_PRIMARIO: Record<VarianteBottonePrimario, { sfondo: string; inchiostro: string; su: Su }> = {
+  // `disabilitato` vince su tutto il resto, come già nella ternaria di
+  // `sfondo` di prima: un bottone `ambra`/`pericolo` spento non deve tornare
+  // al proprio colore acceso.
+  spento: { sfondo: velo(colori.inchiostro, 0.08), inchiostro: testoSu.chiaro.debole, su: 'chiaro' },
+  ambra: { sfondo: colori.ambra, inchiostro: colori.inchiostro, su: 'chiaro' },
+  pericolo: { sfondo: colori.corallo, inchiostro: colori.crema, su: 'scuro' },
+  chiaro: { sfondo: colori.scheda, inchiostro: colori.inchiostro, su: 'chiaro' },
+  inchiostro: { sfondo: colori.inchiostro, inchiostro: colori.crema, su: 'scuro' },
+}
+
 export function BottonePrimario({
   testo,
   onPress,
@@ -303,7 +356,9 @@ export function BottonePrimario({
   caricando,
   ambra,
   chiaro,
+  pericolo,
   disabilitato,
+  compatto,
   style,
 }: {
   testo: string
@@ -317,7 +372,19 @@ export function BottonePrimario({
   ambra?: boolean
   /** Sfondo chiaro (per pulsanti su foto scure): testo scuro invece che crema. */
   chiaro?: boolean
+  /** Per un'azione che disfa qualcosa: sfondo corallo, testo crema — lo stesso
+   * accostamento del badge «da lavare» in `capi.tsx`. Esiste come variante e non
+   * come `style={{ backgroundColor }}` dal punto di chiamata perché il colore del
+   * testo va calcolato *insieme* al fondo: ridipingere da fuori lascia dentro un
+   * testo scelto per il fondo vecchio, ed è la forma esatta della regressione di
+   * PR #4 («Fix invisible text on the onboarding light button»). */
+  pericolo?: boolean
   disabilitato?: boolean
+  /** Per un'azione inline — accanto a un campo, dentro una riga — non a
+   * piena larghezza: padding e taglia ridotti, stesso peso visivo. Sostituisce
+   * il `BottoneSecondario` ridipinto in primario (`sfondo`/`colore` a mano)
+   * che una schermata usava per un «Salva» compatto. */
+  compatto?: boolean
   style?: StyleProp<ViewStyle>
 }) {
   const spento = disabilitato || caricando
@@ -326,18 +393,16 @@ export function BottonePrimario({
   // quel grigio, o sparisce sul fondo inchiostro. `caricando` da solo blocca
   // il tocco (sopra) e mostra lo spinner (sotto); il fondo resta quello di
   // `disabilitato`.
-  const sfondo = disabilitato
-    ? 'rgba(21,21,26,0.08)'
+  const variante: VarianteBottonePrimario = disabilitato
+    ? 'spento'
     : ambra
-      ? colori.ambra
-      : chiaro
-        ? colori.scheda
-        : colori.inchiostro
-  const inchiostro = disabilitato
-    ? 'rgba(21,21,26,0.4)'
-    : ambra || chiaro
-      ? colori.inchiostro
-      : colori.crema
+      ? 'ambra'
+      : pericolo
+        ? 'pericolo'
+        : chiaro
+          ? 'chiaro'
+          : 'inchiostro'
+  const { sfondo, inchiostro, su: suBottone } = PALETTE_BOTTONE_PRIMARIO[variante]
 
   return (
     <Toccabile
@@ -347,25 +412,39 @@ export function BottonePrimario({
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: freccia ? 'space-between' : 'center',
-          paddingHorizontal: 22,
-          paddingVertical: 17,
+          paddingHorizontal: compatto ? 16 : 22,
+          paddingVertical: compatto ? 11 : 17,
           borderRadius: raggi.pillola,
           backgroundColor: sfondo,
         },
         style,
       ]}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
-        {caricando ? (
-          <ActivityIndicator color={inchiostro} />
-        ) : icona ? (
-          <Icona nome={icona} colore={inchiostro} misura={19} />
-        ) : null}
-        <Forte taglia={16} colore={inchiostro}>
-          {testo}
-        </Forte>
-      </View>
-      {freccia ? <Icona nome="freccia" colore={inchiostro} misura={19} /> : null}
+      {/* `inchiostro` qui sopra copre già ogni caso (disabilitato incluso),
+          ma un `Fondo` asserisce anche per chi in futuro infila un `Corpo`
+          qui dentro senza pensarci — lo stesso fondo che il pulsante dipinge
+          davvero, non quello della schermata sotto. `suBottone` viene dalla
+          stessa voce di `PALETTE_BOTTONE_PRIMARIO` di `sfondo`/`inchiostro`
+          qui sopra, non da una seconda ternaria: è quello che tiene fermo
+          questo file contro la regressione di `pericolo + disabilitato`.
+          Nota sulla velatura: `spento` dipinge `rgba(21,21,26,0.08)`, che per
+          la regola di `fondo.tsx` sarebbe da inoltrare, non asserire — ma qui
+          il componente ha già scelto un inchiostro scuro per quello stato
+          (sopra), quindi asserire `'chiaro'` è ciò che tiene coerenti fondo e
+          inchiostro, non un'eccezione alla regola. */}
+      <Fondo su={suBottone}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
+          {caricando ? (
+            <ActivityIndicator color={inchiostro} />
+          ) : icona ? (
+            <Icona nome={icona} colore={inchiostro} misura={compatto ? 15 : 19} />
+          ) : null}
+          <Forte taglia={compatto ? 'corpo' : 'guida'} colore={inchiostro}>
+            {testo}
+          </Forte>
+        </View>
+        {freccia ? <Icona nome="freccia" colore={inchiostro} misura={19} /> : null}
+      </Fondo>
     </Toccabile>
   )
 }
@@ -396,6 +475,14 @@ export function BottoneSecondario({
   bordo?: string
   style?: StyleProp<ViewStyle>
 }) {
+  // `colore` esplicito quando il chiamante ha una ragione (uno stato acceso
+  // con `sfondo` proprio); altrimenti dal fondo ereditato — **risolto qui una
+  // volta sola**, non lasciato al solo `Forte`: `ActivityIndicator` e `Icona`
+  // sotto prendono una stringa, non un `Corpo`, e il contesto non li
+  // raggiungerebbe da soli. Prima, `colore` assente cadeva silenziosamente
+  // su un default che su fondo scuro era invisibile.
+  const fondo = useFondo()
+  const tinta = colore ?? (fondo === 'scuro' ? testoSu.scuro.forte : testoSu.chiaro.forte)
   return (
     <Toccabile
       onPress={caricando ? undefined : onPress}
@@ -417,11 +504,11 @@ export function BottoneSecondario({
       ]}
     >
       {caricando ? (
-        <ActivityIndicator color={colore} />
+        <ActivityIndicator color={tinta} />
       ) : icona ? (
-        <Icona nome={icona} colore={colore} misura={14} spessore={2.2} />
+        <Icona nome={icona} colore={tinta} misura={14} spessore={2.2} />
       ) : null}
-      <Forte taglia={13.5} colore={colore}>
+      <Forte taglia="corpo" colore={tinta}>
         {testo}
       </Forte>
     </Toccabile>
@@ -460,7 +547,7 @@ export function Badge({
       }}
     >
       {icona ? <Icona nome={icona} misura={12} colore={colore} spessore={2.4} /> : null}
-      <Etichetta taglia={10.5} colore={colore}>
+      <Etichetta taglia="nano" colore={colore}>
         {testo}
       </Etichetta>
     </View>
@@ -501,7 +588,11 @@ export function BollaChat({ daUtente, children }: { daUtente: boolean; children:
         ...ombre.bassa,
       }}
     >
-      {children}
+      {/* Prima chi usava `BollaChat` doveva ricordarsi di scrivere
+          `su="scuro"` a mano su ogni testo dentro il ramo `daUtente` — un
+          solo call site in tutto l'app lo faceva. La bolla sa già di essere
+          scura o chiara: lo dice, non lo lascia indovinare. */}
+      <Fondo su={daUtente ? 'scuro' : 'chiaro'}>{children}</Fondo>
     </View>
   )
 }
@@ -525,20 +616,20 @@ export function PuntiniAttesa() {
     const animazioni = valori.map((valore, indice) =>
       Animated.loop(
         Animated.sequence([
-          Animated.delay(indice * 160),
+          Animated.delay(indice * durate.scaglione),
           Animated.timing(valore, {
             toValue: 1,
-            duration: 380,
-            easing: Easing.inOut(Easing.ease),
+            duration: durate.pulsazione,
+            easing: curve.respiro,
             useNativeDriver: true,
           }),
           Animated.timing(valore, {
             toValue: 0.3,
-            duration: 380,
-            easing: Easing.inOut(Easing.ease),
+            duration: durate.pulsazione,
+            easing: curve.respiro,
             useNativeDriver: true,
           }),
-          Animated.delay((valori.length - 1 - indice) * 160),
+          Animated.delay((valori.length - 1 - indice) * durate.scaglione),
         ]),
       ),
     )
@@ -635,6 +726,7 @@ export function Bolla({
   misura = 34,
   misuraIcona,
   bordo,
+  pieno,
 }: {
   nome: NomeIcona
   sfondo?: string
@@ -645,6 +737,10 @@ export function Bolla({
   misuraIcona?: number
   /** Un anello per staccare dal fondo — es. il tondo di «Oggi» sopra la foto. */
   bordo?: string
+  /** Inoltrato a `Icona`: il cuore dei preferiti pieno quando è attivo, non
+   * solo tracciato. Senza questo, `capo/[id].tsx` doveva ridisegnare il
+   * cerchio a mano solo per poter passare `pieno` all'icona dentro. */
+  pieno?: boolean
 }) {
   return (
     <View
@@ -658,7 +754,7 @@ export function Bolla({
         ...(bordo ? { borderWidth: 1, borderColor: bordo } : null),
       }}
     >
-      <Icona nome={nome} misura={misuraIcona ?? misura * 0.5} colore={colore} spessore={2.2} />
+      <Icona nome={nome} misura={misuraIcona ?? misura * 0.5} colore={colore} spessore={2.2} pieno={pieno} />
     </View>
   )
 }
@@ -672,6 +768,7 @@ export function BottoneTondo({
   misura = 42,
   misuraIcona,
   bordo,
+  pieno,
 }: {
   nome: NomeIcona
   onPress?: () => void
@@ -680,10 +777,19 @@ export function BottoneTondo({
   misura?: number
   misuraIcona?: number
   bordo?: string
+  pieno?: boolean
 }) {
   return (
     <Toccabile onPress={onPress} scala={0.9} style={{ borderRadius: raggi.pillola }}>
-      <Bolla nome={nome} sfondo={sfondo} colore={colore} misura={misura} misuraIcona={misuraIcona} bordo={bordo} />
+      <Bolla
+        nome={nome}
+        sfondo={sfondo}
+        colore={colore}
+        misura={misura}
+        misuraIcona={misuraIcona}
+        bordo={bordo}
+        pieno={pieno}
+      />
     </Toccabile>
   )
 }
@@ -698,8 +804,9 @@ export function BottoneTondo({
  * L'ambra qui sarebbe sbagliata: è un'azione dell'utente, non il modello che
  * parla (la regola di `tema/tokens.ts`) — resta `linee.tenue`, come sempre.
  */
-export function BottoneIndietro({ onPress, su }: { onPress?: () => void; su?: 'chiaro' | 'scuro' }) {
-  const scura = su === 'scuro'
+export function BottoneIndietro({ onPress, su }: { onPress?: () => void; su?: Su }) {
+  const ereditato = useFondo()
+  const scura = (su ?? ereditato) === 'scuro'
   return (
     <Toccabile
       onPress={onPress ?? (() => router.back())}
@@ -715,5 +822,139 @@ export function BottoneIndietro({ onPress, su }: { onPress?: () => void; su?: 'c
     >
       <Icona nome="indietro" misura={17} colore={scura ? colori.crema : colori.inchiostro} spessore={2.2} />
     </Toccabile>
+  )
+}
+
+/**
+ * Il link testuale fantasma: un tocco che naviga o cambia stato senza il peso
+ * di un bottone. Sei copie a mano lo ridisegnavano — `guscio.tsx`, `intro.tsx`,
+ * `preferenze.tsx`, due volte in `suggeritore.tsx`, `oggi.tsx` — quasi sempre
+ * con lo stesso `paddingVertical` piccolo, che sullo schermo è un bersaglio
+ * sotto i 20px: `hitSlop` allarga l'area toccabile senza allargare il testo.
+ *
+ * `children`, non `testo: string`: `GuscioAutenticazione` ci infila testo
+ * misto («Non hai un account? **Registrati**»), non una stringa sola.
+ */
+export function LinkTesto({
+  children,
+  onPress,
+  taglia = 'corpo',
+  tono = 'tenue',
+  colore,
+  su,
+  centrato = true,
+  sottolineato = false,
+  forte = false,
+}: {
+  children: ReactNode
+  onPress?: () => void
+  taglia?: Taglia
+  tono?: 'forte' | 'medio' | 'tenue' | 'debole'
+  colore?: string
+  su?: Su
+  /** `false` per un link in linea — «Storico»/«Nuova» nell'header di una
+   * chat — dove centrare allargherebbe il tocco oltre il testo stesso. */
+  centrato?: boolean
+  /** Le voci di navigazione veloce preferiscono il sottolineato al tono
+   * tenue: c'è meno spazio lì per dire «questo è un link». */
+  sottolineato?: boolean
+  /** «Chiedi tu →» pesa come un invito, non come una nota a piè di pagina. */
+  forte?: boolean
+}) {
+  const Testo = forte ? Forte : Corpo
+  return (
+    <Toccabile
+      onPress={onPress}
+      scala={0}
+      hitSlop={8}
+      style={centrato ? { alignItems: 'center', paddingVertical: 8 } : { paddingVertical: 4 }}
+    >
+      <Testo
+        taglia={taglia}
+        tono={colore ? undefined : tono}
+        colore={colore}
+        su={su}
+        style={sottolineato ? { textDecorationLine: 'underline' } : undefined}
+      >
+        {children}
+      </Testo>
+    </Toccabile>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// Movimento
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Fa entrare un contenuto al montaggio: una dissolvenza e una risalita di
+ * pochi pixel. `ritardo` scaglia una lista — `indice * durate.scaglione` —
+ * così le voci arrivano una dopo l'altra invece che tutte insieme, che è la
+ * differenza fra una schermata che si compone e una che sbatte.
+ *
+ * Solo opacità e `translateY`, perché sono le due proprietà che il driver
+ * nativo anima davvero: una `height` o un `marginTop` tornerebbero a passare
+ * dal thread JS a ogni frame, e su una lista scaglionata si vedrebbe.
+ *
+ * **Non ci si avvolge uno scheletro.** Uno scheletro deve esserci al primo
+ * frame: farlo comparire allunga di altri `durate.media` ms un'attesa che è
+ * già l'unica cosa che l'utente sta guardando. Si avvolge il contenuto vero,
+ * quello che allo scheletro prende il posto.
+ */
+export function Comparsa({
+  ritardo = 0,
+  salita = 10,
+  children,
+  style,
+}: {
+  /** In millisecondi. Per una lista: `indice * durate.scaglione`. */
+  ritardo?: number
+  /** Di quanti pixel risale entrando. `0` lascia la sola dissolvenza. */
+  salita?: number
+  children: ReactNode
+  style?: StyleProp<ViewStyle>
+}) {
+  // Il nodo interpolato nasce nell'inizializzatore di `useState`, insieme al
+  // valore che lo guida, e non in un `useMemo`: durante il render qui non si
+  // legge e non si chiama niente (`react-hooks/refs`), e l'istanza resta la
+  // stessa a ogni render senza mai passare da un setter. Il prezzo è che
+  // `salita` viene catturata al primo render — cambiarla dopo non ha effetto,
+  // accettabile per un valore di design, costante per definizione.
+  const [movimento] = useState(() => {
+    const avanzamento = new Animated.Value(0)
+    return {
+      avanzamento,
+      risalita: avanzamento.interpolate({ inputRange: [0, 1], outputRange: [salita, 0] }),
+    }
+  })
+
+  // Nessuna `setState` qui dentro: non c'è niente da mettere nello stato, il
+  // valore animato è già suo — il caso in cui `react-hooks/set-state-in-effect`
+  // non ha nulla da dire perché non c'è stato React da aggiornare.
+  useEffect(() => {
+    const animazione = Animated.timing(movimento.avanzamento, {
+      toValue: 1,
+      duration: durate.media,
+      delay: ritardo,
+      easing: curve.entrata,
+      useNativeDriver: true,
+    })
+    animazione.start()
+    return () => animazione.stop()
+  }, [movimento, ritardo])
+
+  // L'`Animated.View` monta subito e non aspetta nessuna misura: è la trappola
+  // descritta in `ui/stati.tsx` — un'animazione avviata col driver nativo su
+  // una vista non ancora montata non arriva mai allo schermo. Qui non c'è
+  // proprio un `onLayout` da attendere, ed è di proposito.
+  return (
+    <Animated.View
+      style={[
+        { opacity: movimento.avanzamento, transform: [{ translateY: movimento.risalita }] },
+        style,
+      ]}
+    >
+      {children}
+    </Animated.View>
   )
 }

@@ -1,6 +1,6 @@
 [project]
 name = "wardrobe-api"
-version = "0.3.1"
+version = "0.4.0"
 description = "API di Wardrobe: handlers sottili sopra un domain puro"
 requires-python = ">=3.12"
 dependencies = [
@@ -40,7 +40,27 @@ packages = ["src/domain", "src/handlers", "src/adapters"]
 [tool.pytest.ini_options]
 pythonpath = ["src", "tests"]
 testpaths = ["tests"]
+# Niente --cov qui: `npm run api:test` deve restare il ciclo veloce. La coverage
+# si chiede esplicitamente, con `npm run api:cov`.
 addopts = "-q"
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.report]
+show_missing = true
+# La soglia non è un obiettivo: è un cricchetto. Si alza nella stessa modifica
+# che alza la coverage vera, e non si abbassa mai — abbassarla è una voce in
+# docs/QUESTIONI.md, non un commit.
+#
+# 73 perché il rilevato del 2026-09-09 è 74%, meno un punto per non far cadere
+# una PR che cancella un file ben coperto.
+#
+# Da sola questa soglia è debole: 74% è la media fra domain/ al 97% e
+# adapters/ al 40%, quindi il dominio potrebbe scendere all'80% mentre un
+# provider HTTP compensa. Le due soglie che contano davvero sono in
+# .github/workflows/api.yml, applicate per sottoalbero sullo stesso .coverage.
+fail_under = 73
 
 [tool.ruff]
 line-length = 100

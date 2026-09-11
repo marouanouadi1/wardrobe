@@ -35,3 +35,6 @@ services/api/dati/
 # sistema
 .DS_Store
 Thumbs.db
+
+# Coverage: prodotto da `npm run api:cov` e dagli step di soglia in CI.
+.coverage

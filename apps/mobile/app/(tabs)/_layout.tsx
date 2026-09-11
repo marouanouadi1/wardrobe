@@ -88,7 +88,7 @@ export default function DisposizioneSchede() {
                   />
                   {voce.etichetta ? (
                     <Etichetta
-                      taglia={8.5}
+                      taglia="nano"
                       colore={attiva ? colori.crema : testoSu.scuro.tenue}
                       style={{ letterSpacing: 0.4 }}
                     >

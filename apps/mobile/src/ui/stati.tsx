@@ -8,17 +8,128 @@
  */
 
 import type { ReactNode } from 'react'
-import { ActivityIndicator } from 'react-native'
-import { colori, spazi } from '../tema/tokens'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Animated, View } from 'react-native'
+import { colori, curve, durate, linee, raggi, spazi } from '../tema/tokens'
 import { Scheda } from './base'
+import { Fondo, useFondo, type Su } from './fondo'
 import { Corpo, Forte } from './testo'
 
-export function Caricamento({ su }: { su?: 'chiaro' | 'scuro' }) {
+export function Caricamento({ su }: { su?: Su }) {
+  const ereditato = useFondo()
   return (
     <ActivityIndicator
-      color={su === 'scuro' ? colori.ambra : colori.inchiostro}
+      color={(su ?? ereditato) === 'scuro' ? colori.ambra : colori.inchiostro}
       style={{ marginTop: spazi.xl }}
     />
+  )
+}
+
+/**
+ * I messaggi di `/suggerimenti` — lo stilista, non l'analisi di una foto.
+ * Tipicamente più corta (nessuno scontorno prima), da qui le soglie più
+ * ravvicinate rispetto a `carica.tsx`. Condivisi da `app/(tabs)/oggi.tsx`
+ * (la prima attesa) e `app/suggeritore.tsx` (la stessa chiamata, un'altra
+ * schermata): stanno qui e non in un file di rotta, perché è `AttesaLunga`
+ * a consumarli.
+ */
+export const MESSAGGI_SUGGERIMENTI = [
+  { dopoMs: 0, testo: 'Guardo cosa hai pulito e cosa hai messo di recente.' },
+  { dopoMs: 4000, testo: 'Sto confrontando le combinazioni migliori.' },
+  { dopoMs: 10000, testo: 'Ci vuole ancora qualche secondo.' },
+] as const
+
+/**
+ * Un'attesa lunga e indeterminata — l'analisi di una foto, 20-40 secondi.
+ * Onesta sul fatto che non ci sono fasi osservabili da mostrare: una singola
+ * chiamata al modello di visione (`services/api/src/handlers/analisi.py`
+ * la esegue in linea, senza checkpoint intermedi), non cinque passi separati.
+ * Una barra che scorre senza mai fermarsi, e un messaggio che avanza a
+ * soglie di tempo crescenti invece di una percentuale finta.
+ */
+export function AttesaLunga({
+  messaggi,
+  su,
+}: {
+  /** In ordine di soglia crescente: il primo è quello iniziale (`dopoMs: 0`),
+   * l'ultimo resta finché l'attesa non finisce. */
+  messaggi: readonly { dopoMs: number; testo: string }[]
+  su?: Su
+}) {
+  const ereditato = useFondo()
+  const fondo = su ?? ereditato
+  const [larghezza, setLarghezza] = useState(0)
+  const [messaggio, setMessaggio] = useState(messaggi[0]?.testo ?? '')
+  // `useState` con inizializzatore, non `useRef(...).current`: stessa scelta
+  // di `PuntiniAttesa` in `ui/base.tsx`, per la stessa regola (`react-hooks/refs`).
+  const [scorrimento] = useState(() => new Animated.Value(0))
+
+  useEffect(() => {
+    if (larghezza === 0) return
+    const corsa = larghezza * 0.65
+    const animazione = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scorrimento, {
+          toValue: corsa,
+          duration: durate.corsa,
+          easing: curve.respiro,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scorrimento, {
+          toValue: 0,
+          duration: durate.corsa,
+          easing: curve.respiro,
+          useNativeDriver: true,
+        }),
+      ]),
+    )
+    animazione.start()
+    return () => animazione.stop()
+  }, [larghezza, scorrimento])
+
+  // Il primo messaggio lo dà già l'inizializzatore di `useState` sopra: qui
+  // solo i timer per quelli successivi, mai una `setState` sincrona nel corpo
+  // dell'effetto (`react-hooks/set-state-in-effect`).
+  useEffect(() => {
+    const timer = messaggi.slice(1).map((voce) => setTimeout(() => setMessaggio(voce.testo), voce.dopoMs))
+    return () => timer.forEach(clearTimeout)
+  }, [messaggi])
+
+  return (
+    <View style={{ gap: spazi.m }}>
+      {/* L'`Animated.View` monta subito, non dietro `larghezza > 0`: se
+          nascesse solo dopo la prima misura, comparirebbe nello stesso
+          commit in cui l'effetto avvia il loop col driver nativo — e
+          un'animazione avviata su una vista non ancora montata non arriva
+          mai allo schermo. Finché `larghezza` non è misurata il segmento ha
+          semplicemente larghezza zero, invece di dipendere da una
+          percentuale che dovrebbe comunque risolversi contro il fondo. */}
+      <View
+        onLayout={(evento) => setLarghezza(evento.nativeEvent.layout.width)}
+        style={{
+          height: 6,
+          borderRadius: raggi.pillola,
+          // Una velatura d'inchiostro (`linee.media`) è invisibile su un
+          // fondo d'inchiostro: la pista ha bisogno della sua controparte
+          // scura, non della stessa velatura su ogni fondo.
+          backgroundColor: fondo === 'scuro' ? linee.scura : linee.media,
+          overflow: 'hidden',
+        }}
+      >
+        <Animated.View
+          style={{
+            width: larghezza > 0 ? larghezza * 0.35 : 0,
+            height: 6,
+            borderRadius: raggi.pillola,
+            backgroundColor: colori.ambra,
+            transform: [{ translateX: scorrimento }],
+          }}
+        />
+      </View>
+      <Corpo taglia="minuto" tono="tenue" su={fondo} style={{ textAlign: 'center' }}>
+        {messaggio}
+      </Corpo>
+    </View>
   )
 }
 
@@ -29,14 +140,14 @@ export function Vuoto({
 }: {
   titolo: string
   spiegazione: string
-  su?: 'chiaro' | 'scuro'
+  su?: Su
 }) {
   return (
     <Scheda su={su} imbottitura={spazi.xl} style={{ alignItems: 'center', gap: spazi.s }}>
-      <Forte taglia={15} su={su}>
+      <Forte taglia="guida" su={su}>
         {titolo}
       </Forte>
-      <Corpo taglia={13} tono="tenue" su={su} style={{ textAlign: 'center' }}>
+      <Corpo taglia="minuto" tono="tenue" su={su} style={{ textAlign: 'center' }}>
         {spiegazione}
       </Corpo>
     </Scheda>
@@ -51,7 +162,7 @@ export function Errore({
 }: {
   titolo: string
   spiegazione: string
-  su?: 'chiaro' | 'scuro'
+  su?: Su
 }) {
   return <Vuoto titolo={titolo} spiegazione={spiegazione} su={su} />
 }
@@ -68,9 +179,10 @@ export function StatoRisorsa({
   vuoto,
   titoloVuoto,
   spiegazioneVuoto,
-  titoloErrore = 'Non riesco a leggerli',
+  titoloErrore = 'Non riesco a leggere',
   spiegazioneErrore = 'Controlla che il backend sia raggiungibile e riprova.',
   su,
+  scheletro,
   children,
 }: {
   caricamento: boolean
@@ -80,10 +192,21 @@ export function StatoRisorsa({
   spiegazioneVuoto: string
   titoloErrore?: string
   spiegazioneErrore?: string
-  su?: 'chiaro' | 'scuro'
+  su?: Su
+  /**
+   * La forma da mostrare al posto dello spinner — `<ScheletroGrigliaCapi />` e
+   * compagnia (`ui/scheletri.tsx`). Assente, resta lo spinner: va bene dove
+   * non c'è una forma da promettere (un salvataggio, una lista di due righe),
+   * e uno scheletro che indovina una forma sbagliata è peggio di uno spinner
+   * onesto.
+   */
+  scheletro?: ReactNode
   children: ReactNode
 }) {
-  if (caricamento) return <Caricamento su={su} />
+  // `scheletro` è un `ReactNode`: `su` non può attraversarlo per props, solo
+  // per contesto — prima non lo raggiungeva affatto (`armadio.tsx` monta
+  // `<ScheletroGrigliaCapi />` nudo).
+  if (caricamento) return <Fondo su={su}>{scheletro ?? <Caricamento su={su} />}</Fondo>
   if (errore) return <Errore titolo={titoloErrore} spiegazione={spiegazioneErrore} su={su} />
   if (vuoto) return <Vuoto titolo={titoloVuoto} spiegazione={spiegazioneVuoto} su={su} />
   return <>{children}</>

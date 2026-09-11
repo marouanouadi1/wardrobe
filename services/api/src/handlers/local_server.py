@@ -8,6 +8,7 @@ framework web, solo la libreria standard.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -181,7 +182,12 @@ class Ponte(BaseHTTPRequestHandler):
         self.send_header("access-control-allow-origin", "*")
         self.send_header("content-length", str(len(contenuto)))
         self.end_headers()
-        self.wfile.write(contenuto)
+        # Il client (una miniatura scorsa via prima che la foto finisca di
+        # arrivare, o una richiesta abortita dall'app) può chiudere la
+        # connessione mentre scriviamo: normale, non un guasto del server —
+        # non deve riempire i log con un traceback che sembra tale.
+        with contextlib.suppress(BrokenPipeError, ConnectionResetError):
+            self.wfile.write(contenuto)
 
     def do_GET(self) -> None:
         indirizzo = urlparse(self.path)

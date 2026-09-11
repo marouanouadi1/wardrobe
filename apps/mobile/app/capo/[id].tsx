@@ -24,11 +24,11 @@ import {
   fotoDaMostrare,
   quandoUsato,
 } from '../../src/dati/dominio'
-import { ETICHETTE, colori, linee, ombre, raggi, spazi, velo } from '../../src/tema/tokens'
-import { BadgeIa, BottonePrimario, BottoneSecondario, Campo, Icona, Pillola, Scheda, Toccabile } from '../../src/ui/base'
-import { Attributo, Miniatura } from '../../src/ui/capi'
+import { ETICHETTE, colori, durate, linee, raggi, spazi, velo } from '../../src/tema/tokens'
+import { BadgeIa, BottonePrimario, BottoneSecondario, BottoneTondo, Campo, Pillola, Scheda, Toccabile } from '../../src/ui/base'
+import { Attributo, Miniatura, SchedaFoto } from '../../src/ui/capi'
 import { Schermata, Testata } from '../../src/ui/guscio'
-import { Vuoto } from '../../src/ui/stati'
+import { Caricamento, Vuoto } from '../../src/ui/stati'
 import { Corpo, Forte, Titolo } from '../../src/ui/testo'
 
 /** I campi che si correggono con un testo libero, non con una scelta chiusa. */
@@ -55,6 +55,7 @@ export default function DettaglioCapo() {
   const {
     indice,
     capi,
+    pronto,
     cambiaPreferito,
     cambiaStato,
     indossaOggi,
@@ -67,6 +68,19 @@ export default function DettaglioCapo() {
   const [testoModifica, setTestoModifica] = useState('')
   const [nuovaEtichetta, setNuovaEtichetta] = useState('')
   const capo = id ? indice.get(id) : undefined
+
+  // Prima di `pronto`, `indice` è ancora vuoto: senza questa guardia, aprendo
+  // il link diretto a un capo (es. da una notifica, o ricaricando la pagina)
+  // si vedeva per un istante «questo capo non c'è più» — un capo che c'è, ma
+  // che l'armadio non ha ancora finito di caricare.
+  if (!pronto) {
+    return (
+      <View style={{ flex: 1 }}>
+        <Testata occhiello="Capo" titolo="" indietro />
+        <Caricamento />
+      </View>
+    )
+  }
 
   if (!capo) {
     return (
@@ -99,7 +113,7 @@ export default function DettaglioCapo() {
     ['lavaggio', capo.lavaggio ?? null],
   ]
 
-  const ciStaBene = capi.filter((altro) => altro.slot !== capo.slot).slice(0, 6)
+  const altriCapi = capi.filter((altro) => altro.slot !== capo.slot).slice(0, 6)
   // «Segnato per oggi» si legge dal dato vero, non da uno stato locale: se
   // rientri nella schermata il segno è ancora lì.
   const messoOggi = capo.ultimo_uso?.slice(0, 10) === new Date().toISOString().slice(0, 10)
@@ -107,20 +121,18 @@ export default function DettaglioCapo() {
 
   return (
     <Schermata occhiello={ETICHETTE.tipo[capo.tipo]} titolo={capo.nome} indietro contentStyle={{ paddingHorizontal: 0 }}>
-      <View
-        style={{
-          marginHorizontal: spazi.xl,
-          borderRadius: raggi.grande - 2,
-          overflow: 'hidden',
-          backgroundColor: capo.colore.hex,
-          ...ombre.alta,
-        }}
+      <SchedaFoto
+        raggio={raggi.grande - 2}
+        ombra="alta"
+        su="chiaro"
+        sfondo={colori.fondoFoto}
+        style={{ marginHorizontal: spazi.xl }}
       >
         <Image
           source={{ uri: fotoDaMostrare(capo) }}
           style={{ width: '100%', height: 330 }}
           contentFit="cover"
-          transition={250}
+          transition={durate.breve}
         />
         <View
           style={{
@@ -133,36 +145,25 @@ export default function DettaglioCapo() {
             backgroundColor: velaturaSuFoto,
           }}
         >
-          <Forte taglia={11}>{ETICHETTE.tipo[capo.tipo]}</Forte>
+          <Forte taglia="micro">{ETICHETTE.tipo[capo.tipo]}</Forte>
         </View>
-        <Toccabile
-          onPress={() => void cambiaPreferito(capo.id)}
-          scala={0.9}
-          style={{
-            position: 'absolute',
-            top: 12,
-            right: 12,
-            width: 38,
-            height: 38,
-            borderRadius: raggi.pillola,
-            backgroundColor: velaturaSuFoto,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icona
+        <View style={{ position: 'absolute', top: 12, right: 12 }}>
+          <BottoneTondo
             nome="cuore"
-            misura={18}
+            onPress={() => void cambiaPreferito(capo.id)}
+            misura={38}
+            misuraIcona={18}
+            sfondo={velaturaSuFoto}
             colore={capo.preferito ? colori.corallo : 'rgba(21,21,26,0.6)'}
             pieno={capo.preferito}
           />
-        </Toccabile>
-      </View>
+        </View>
+      </SchedaFoto>
 
       <View style={{ paddingHorizontal: spazi.xl, gap: spazi.m }}>
         <View>
-          <Titolo taglia={28}>{capo.nome}</Titolo>
-          <Corpo taglia={13.5} tono="tenue">
+          <Titolo taglia="testata">{capo.nome}</Titolo>
+          <Corpo taglia="corpo" tono="tenue">
             {capo.brand ? `${capo.brand} · ` : ''}
             {`ultimo uso ${quandoUsato(capo.ultimo_uso)}`}
           </Corpo>
@@ -179,7 +180,7 @@ export default function DettaglioCapo() {
 
         {/* Due interruttori: l'etichetta dice l'azione quando sono spenti e
             conferma lo stato quando sono accesi. Il corallo è per il bucato,
-            mai il ambra: quel verde parla solo per l'IA. */}
+            mai l'ambra: quella parla solo per l'IA. */}
         <View style={{ flexDirection: 'row', gap: spazi.s }}>
           <BottoneSecondario
             testo={messoOggi ? 'Segnato per oggi' : "L'ho messo oggi"}
@@ -200,7 +201,7 @@ export default function DettaglioCapo() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
             <BadgeIa testo="letto dalla foto" />
             {media !== null ? (
-              <Forte taglia={11.5} tono="debole" style={{ marginLeft: 'auto' }}>
+              <Forte taglia="micro" tono="debole" style={{ marginLeft: 'auto' }}>
                 {media}% sicuro
               </Forte>
             ) : null}
@@ -225,7 +226,7 @@ export default function DettaglioCapo() {
             )}
           </View>
 
-          <Corpo taglia={11.5} tono="debole">
+          <Corpo taglia="micro" tono="debole">
             {incerti.length === 0
               ? 'Il modello è sicuro di tutto. Tocca un valore se vuoi cambiarlo.'
               : 'Tocca un valore per correggerlo. Quelli in corallo sono incerti: il modello preferisce chiedere.'}
@@ -233,7 +234,7 @@ export default function DettaglioCapo() {
 
           {attributoInModifica ? (
             <View style={{ gap: spazi.s, paddingTop: spazi.s, borderTopWidth: 1, borderTopColor: linee.tenue }}>
-              <Forte taglia={12.5}>{`Correggi ${ETICHETTE.attributo[attributoInModifica]}`}</Forte>
+              <Forte taglia="minuto">{`Correggi ${ETICHETTE.attributo[attributoInModifica]}`}</Forte>
 
               {attributoInModifica === 'tipo' ? (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
@@ -279,7 +280,11 @@ export default function DettaglioCapo() {
                         borderRadius: raggi.pillola,
                         backgroundColor: voce.hex,
                         borderWidth: voce.hex === capo.colore.hex ? 3 : 1,
-                        borderColor: voce.hex === capo.colore.hex ? colori.ambra : linee.chiara,
+                        // Non l'ambra: questo segna la scelta dell'utente,
+                        // non un valore letto dal modello — la stessa regola
+                        // di `Pillola` (`ui/base.tsx`), che per lo stesso
+                        // stato usa `colori.inchiostro`.
+                        borderColor: voce.hex === capo.colore.hex ? colori.inchiostro : linee.chiara,
                       }}
                     >
                       <View />
@@ -294,10 +299,9 @@ export default function DettaglioCapo() {
                     autoFocus
                     style={{ flex: 1 }}
                   />
-                  <BottoneSecondario
+                  <BottonePrimario
                     testo="Salva"
-                    sfondo={colori.inchiostro}
-                    colore={colori.crema}
+                    compatto
                     onPress={() => {
                       const attributo = attributoInModifica
                       void correggi(capo.id, attributo, testoModifica.trim())
@@ -311,8 +315,8 @@ export default function DettaglioCapo() {
         </Scheda>
 
         <Scheda imbottitura={16} style={{ gap: spazi.m }}>
-          <Titolo taglia={16}>Etichette</Titolo>
-          <Corpo taglia={11.5} tono="debole">
+          <Titolo taglia="guida">Etichette</Titolo>
+          <Corpo taglia="micro" tono="debole">
             Solo tue: il modello non le legge dalla foto, ma lo stilista sì.
           </Corpo>
 
@@ -349,7 +353,7 @@ export default function DettaglioCapo() {
             />
           </View>
 
-          <Corpo taglia={11.5} tono="tenue">
+          <Corpo taglia="micro" tono="tenue">
             Appunti
           </Corpo>
           <Campo
@@ -361,11 +365,15 @@ export default function DettaglioCapo() {
           />
         </Scheda>
 
-        {ciStaBene.length > 0 ? (
+        {altriCapi.length > 0 ? (
           <>
-            <Titolo taglia={19}>Ci sta bene con</Titolo>
+            {/* Non è un abbinamento — sono solo altri capi di slot diverso,
+                senza nessun giudizio dietro. «Ci sta bene con» prometteva un
+                criterio che non c'è: la schermata dichiara di non fingere di
+                sapere, e questo titolo faceva l'opposto. */}
+            <Titolo taglia="sezione">Altri capi del tuo armadio</Titolo>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-              {ciStaBene.map((altro) => (
+              {altriCapi.map((altro) => (
                 <Miniatura
                   key={altro.id}
                   capo={altro}

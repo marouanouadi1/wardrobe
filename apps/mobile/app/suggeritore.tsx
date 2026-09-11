@@ -10,25 +10,27 @@
 import type { Suggerimento } from '@wardrobe/contracts'
 import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ScrollView, View } from 'react-native'
 import { useArmadio, useVestiEVai } from '../src/dati/archivio'
 import { type SceltaConversazione, useChat } from '../src/dati/chat'
-import { capiDiVestizione, fotoDaMostrare } from '../src/dati/dominio'
-import { colori, linee, ombre, raggi, spazi } from '../src/tema/tokens'
+import { capiDiVestizione, capiDisponibili, fotoDaMostrare, slotMancanti } from '../src/dati/dominio'
+import { colori, durate, ETICHETTE, linee, raggi, spazi } from '../src/tema/tokens'
 import {
   BadgeIa,
   BarraChiedi,
   BollaChat,
   BottonePrimario,
   BottoneSecondario,
+  LinkTesto,
   Pillola,
   PuntiniAttesa,
   Scheda,
   Segmenti,
-  Toccabile,
 } from '../src/ui/base'
+import { MotiviProposta, SchedaFoto } from '../src/ui/capi'
 import { Schermata } from '../src/ui/guscio'
+import { AttesaLunga, Caricamento, MESSAGGI_SUGGERIMENTI, Vuoto } from '../src/ui/stati'
 import { Corpo, Etichetta, Forte, Titolo } from '../src/ui/testo'
 
 type Modo = 'proposte' | 'chat' | 'guidato'
@@ -72,7 +74,15 @@ function AzioniProposta({
 
 export default function Suggeritore() {
   const parametri = useLocalSearchParams<{ chiedi?: string; conversazione?: string }>()
-  const { suggerimenti, indice, salvaOutfit, chiediSuggerimenti, avvisa } = useArmadio()
+  const { suggerimenti, indice, capi, pronto, suggerimentiInCorso, salvaOutfit, chiediSuggerimenti, avvisa } =
+    useArmadio()
+  // Stessa guardia di `app/(tabs)/oggi.tsx`: senza una combinazione
+  // indossabile (`vestizione_indossabile`, `services/api/src/domain/wardrobe.py`)
+  // il modo «guidato» chiamerebbe `/suggerimenti` solo per ricevere un 502.
+  // `pronto` prima di guardare `capi`: a caricamento in corso `capi` è ancora
+  // `[]`, e senza questa guardia il bottone diceva per un istante «aggiungi
+  // prima un capo che manca» a chi l'armadio ce l'ha già completo.
+  const mancanti = useMemo(() => (pronto ? slotMancanti(capiDisponibili(capi)) : []), [pronto, capi])
   const vestiEVai = useVestiEVai()
   const [modo, setModo] = useState<Modo>(parametri.chiedi ? 'chat' : 'proposte')
   const [risposte, setRisposte] = useState<Record<string, string>>({})
@@ -128,32 +138,70 @@ export default function Suggeritore() {
     <Schermata occhiello="Il tuo stilista" titolo="Chiedi a Wardrobe" indietro ancoraInFondo={modo === 'chat'}>
       <Segmenti voci={MODI} scelta={modo} onScegli={setModo} />
 
-      {modo === 'proposte'
+      {modo === 'proposte' && !pronto ? (
+        // L'armadio sta ancora caricando: senza questo, la schermata restava
+        // bianca fino a quando `capi`/`suggerimenti` non erano pronti.
+        <Caricamento />
+      ) : null}
+
+      {modo === 'proposte' && pronto && suggerimenti.length === 0 ? (
+        suggerimentiInCorso ? (
+          // Lo stilista sta componendo — la stessa attesa di `app/(tabs)/oggi.tsx`,
+          // sullo stesso endpoint.
+          <Scheda imbottitura={24} style={{ alignItems: 'center', gap: spazi.m }}>
+            <Titolo taglia={17}>Sto pensando a un outfit</Titolo>
+            <AttesaLunga messaggi={MESSAGGI_SUGGERIMENTI} />
+          </Scheda>
+        ) : mancanti.length > 0 ? (
+          <Vuoto
+            titolo={
+              mancanti.length === 1
+                ? `Ti manca un ${ETICHETTE.slot[mancanti[0]!].toLowerCase()}`
+                : 'Ti serve un sopra e un sotto'
+            }
+            spiegazione="Per comporre un outfit mi serve almeno un sopra e un sotto, oppure un abito."
+          />
+        ) : (
+          // Prima non c'era nessuna via d'uscita da qui: arrivando da «Chiedi
+          // tu a Wardrobe» (armadio.tsx) con `suggerimenti` ancora vuoto, la
+          // scheda restava bianca — a differenza di Oggi, questa schermata non
+          // chiede mai da sola allo stilista.
+          <>
+            <Vuoto
+              titolo="Ancora nessuna proposta"
+              spiegazione="Chiedimi un outfit e ti mostro qui le combinazioni che funzionano di più."
+            />
+            <BottonePrimario
+              testo="Proponimi qualcosa"
+              ambra
+              onPress={() => void chiediSuggerimenti()}
+            />
+          </>
+        )
+      ) : null}
+
+      {modo === 'proposte' && pronto
         ? suggerimenti.map((proposta) => {
             const capi = capiDiVestizione(proposta.vestizione, indice)
+            const badge = <BadgeIa testo={`${proposta.match}%`} />
             return (
-              <View
-                key={proposta.titolo}
-                style={{
-                  borderRadius: raggi.grande - 2,
-                  overflow: 'hidden',
-                  backgroundColor: colori.scheda,
-                  ...ombre.scheda,
-                }}
-              >
+              <SchedaFoto key={proposta.titolo}>
                 {capi[0] && fotoDaMostrare(capi[0]) ? (
                   <View>
                     <Image
                       source={{ uri: fotoDaMostrare(capi[0]) }}
-                      style={{ width: '100%', height: 230, backgroundColor: capi[0].colore.hex }}
+                      style={{ width: '100%', height: 230, backgroundColor: colori.fondoFoto }}
                       contentFit="cover"
                       contentPosition={{ top: '20%', left: '50%' }}
+                      transition={durate.breve}
                     />
-                    <View style={{ position: 'absolute', top: 12, right: 12 }}>
-                      <BadgeIa testo={`${proposta.match}%`} />
-                    </View>
+                    <View style={{ position: 'absolute', top: 12, right: 12 }}>{badge}</View>
                   </View>
-                ) : null}
+                ) : (
+                  // Il match è l'informazione più importante della proposta:
+                  // non deve dipendere dal primo capo avere una foto.
+                  <View style={{ padding: 16, paddingBottom: 0 }}>{badge}</View>
+                )}
 
                 <View style={{ padding: 16, gap: spazi.m }}>
                   <Titolo taglia={21}>{proposta.titolo}</Titolo>
@@ -167,37 +215,21 @@ export default function Suggeritore() {
                           width: 52,
                           height: 64,
                           borderRadius: raggi.piccolo,
-                          backgroundColor: capo.colore.hex,
+                          backgroundColor: colori.fondoFoto,
                         }}
                         contentFit="cover"
+                        transition={durate.breve}
                       />
                     ))}
                   </View>
 
-                  <View style={{ gap: 7 }}>
-                    {proposta.perche.map((motivo) => (
-                      <View key={motivo} style={{ flexDirection: 'row', gap: 9 }}>
-                        <View
-                          style={{
-                            width: 5,
-                            height: 5,
-                            borderRadius: raggi.pillola,
-                            marginTop: 7,
-                            backgroundColor: colori.ambra,
-                          }}
-                        />
-                        <Corpo taglia={13} tono="medio" style={{ flex: 1 }}>
-                          {motivo}
-                        </Corpo>
-                      </View>
-                    ))}
-                  </View>
+                  <MotiviProposta motivi={proposta.perche} />
 
                   {/* «Salva» tiene la proposta senza doverla prima provare:
                       due tocchi in meno per chi ha già deciso. */}
                   <AzioniProposta {...provaEsalva(proposta)} />
                 </View>
-              </View>
+              </SchedaFoto>
             )
           })
         : null}
@@ -208,23 +240,25 @@ export default function Suggeritore() {
             <Etichetta taglia={11} tono="tenue" style={{ flex: 1 }} numberOfLines={1}>
               {conversazioneAttuale?.titolo ?? 'Nuova conversazione'}
             </Etichetta>
-            <Toccabile onPress={() => router.push('/chat')} scala={0} style={{ paddingVertical: 4 }}>
-              <Corpo taglia={12.5} tono="medio" style={{ textDecorationLine: 'underline' }}>
-                Storico
-              </Corpo>
-            </Toccabile>
-            <Toccabile
+            <LinkTesto centrato={false} sottolineato taglia={12.5} tono="medio" onPress={() => router.push('/chat')}>
+              Storico
+            </LinkTesto>
+            <LinkTesto
+              centrato={false}
+              sottolineato
+              taglia={12.5}
+              tono="medio"
               onPress={() => setSceltaChat({ tipo: 'nuova' })}
-              scala={0}
-              style={{ paddingVertical: 4 }}
             >
-              <Corpo taglia={12.5} tono="medio" style={{ textDecorationLine: 'underline' }}>
-                Nuova
-              </Corpo>
-            </Toccabile>
+              Nuova
+            </LinkTesto>
           </View>
 
-          {!storiaInCaricamento && conversazione.length === 0 && !inAttesa ? (
+          {storiaInCaricamento ? (
+            // Prima non c'era nulla qui: uno schermo vuoto indistinguibile da
+            // una chat senza messaggi, finché la cronologia non arrivava.
+            <Caricamento />
+          ) : conversazione.length === 0 && !inAttesa ? (
             <Corpo taglia={13} tono="debole" style={{ textAlign: 'center' }}>
               {"Scrivi per iniziare: questa chat resta qui anche se chiudi l'app."}
             </Corpo>
@@ -241,9 +275,9 @@ export default function Suggeritore() {
                 <BollaChat key={messaggio.id} daUtente={daUtente}>
                   <View style={{ opacity: inVolo ? 0.6 : 1, gap: spazi.s }}>
                     {daUtente ? (
-                      <Corpo taglia={14} su="scuro">
-                        {messaggio.testo}
-                      </Corpo>
+                      // `su="scuro"` non serve più scriverlo qui: `BollaChat`
+                      // lo dichiara da sé (`ui/base.tsx`), da `daUtente`.
+                      <Corpo taglia={14}>{messaggio.testo}</Corpo>
                     ) : (
                       // La risposta vera dello stilista: prima la prosa —
                       // c'è sempre — poi le proposte, solo quando ci sono.
@@ -313,9 +347,16 @@ export default function Suggeritore() {
           ))}
 
           <BottonePrimario
-            testo={complete ? 'Trova il mio outfit' : 'Rispondi alle tre domande'}
-            ambra={complete}
-            disabilitato={!complete}
+            testo={
+              !complete
+                ? 'Rispondi alle tre domande'
+                : mancanti.length > 0
+                  ? 'Aggiungi prima un capo che manca'
+                  : 'Trova il mio outfit'
+            }
+            ambra={complete && mancanti.length === 0}
+            caricando={suggerimentiInCorso}
+            disabilitato={!complete || mancanti.length > 0 || suggerimentiInCorso}
             onPress={() => {
               setGenerato(true)
               void chiediSuggerimenti(
@@ -324,7 +365,14 @@ export default function Suggeritore() {
             }}
           />
 
-          {generato && suggerimenti[0] ? (
+          {suggerimentiInCorso ? (
+            // Prima, fra il tocco e la risposta, non c'era nessun segnale:
+            // il bottone restava toccabile e ripartiva se lo si premeva di
+            // nuovo. Stessa attesa di Oggi, sullo stesso endpoint.
+            <Scheda imbottitura={16} style={{ alignItems: 'center', gap: spazi.m }}>
+              <AttesaLunga messaggi={MESSAGGI_SUGGERIMENTI} />
+            </Scheda>
+          ) : generato && suggerimenti[0] ? (
             <Scheda imbottitura={16} style={{ gap: spazi.m }}>
               <Titolo taglia={20}>{suggerimenti[0].titolo}</Titolo>
               <Corpo taglia={13} tono="medio">

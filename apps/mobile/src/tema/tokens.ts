@@ -13,15 +13,28 @@
  * un colore di tessuto vero.
  */
 
+import { Easing } from 'react-native'
+
+/** Il bianco caldo delle superfici: le schede e il fondo delle foto. */
+const BIANCO_CALDO = '#FFFDF9'
+
 export const colori = {
   /** Nero d'inchiostro: testo, superfici forti, barra di navigazione. */
   inchiostro: '#15151A',
   /** Crema: il testo sopra l'inchiostro. */
   crema: '#F7F4EF',
   /** Il bianco delle schede: caldo, non clinico. */
-  scheda: '#FFFDF9',
+  scheda: BIANCO_CALDO,
   /** Lo sfondo dell'app. */
   sfondo: '#F2EEE7',
+  /**
+   * Il fondo su cui si posa la foto di un capo: **uno solo per tutti i capi**,
+   * mai il colore del capo stesso. Le foto scontornate sono PNG trasparenti,
+   * quindi questo è ciò che si vede intorno al capo — e un capo blu su fondo
+   * blu è il difetto che questo token esiste per evitare. Vale anche da
+   * segnaposto mentre la foto arriva dalla rete.
+   */
+  fondoFoto: BIANCO_CALDO,
   /** Ambra: solo IA. */
   ambra: '#F5B324',
   /** Ambra tenue, per i fondi delle etichette di match. */
@@ -44,7 +57,10 @@ export const testoSu = {
     debole: 'rgba(21,21,26,0.4)',
   },
   scuro: {
-    forte: colori.scheda,
+    // Tutti e quattro sulla stessa base — l'rgb di `crema`, non di `scheda`:
+    // erano due bianchi diversi, e il gradino opaco era il più bianco dei
+    // quattro invece del più forte della stessa famiglia.
+    forte: colori.crema,
     medio: 'rgba(247,244,239,0.78)',
     tenue: 'rgba(247,244,239,0.55)',
     debole: 'rgba(247,244,239,0.4)',
@@ -57,6 +73,9 @@ export const linee = {
   tenue: 'rgba(21,21,26,0.06)',
   /** Un filo più marcata di `tenue`: bordi di schede su fondo chiaro. */
   media: 'rgba(21,21,26,0.08)',
+  /** Il chevron di fine riga su fondo chiaro — `righe.tsx` e `profilo.tsx`
+   *  scrivevano lo stesso esadecimale a mano in due file. */
+  chevron: 'rgba(21,21,26,0.3)',
 } as const
 
 /** Angoli morbidi: 26 per le schede, 99 per tutto ciò che è una pillola. */
@@ -77,6 +96,36 @@ export const spazi = {
   l: 16,
   xl: 22,
   xxl: 30,
+} as const
+
+/**
+ * Le due griglie che una schermata e il suo scheletro di caricamento devono
+ * disegnare identiche, o al momento dello scambio il contenuto salta di
+ * qualche pixel.
+ *
+ * Stanno qui e non nelle due schermate perché la copia è già il difetto che
+ * questo progetto racconta per le enum: due elenchi della stessa cosa
+ * divergono in silenzio, e nessun `tsc` se ne accorge. Leggono da qui
+ * `ui/capi.tsx` (`CapoInGriglia`), `app/(tabs)/armadio.tsx`, `app/calendario.tsx`
+ * e `ui/scheletri.tsx`.
+ */
+export const griglie = {
+  /** L'armadio: due colonne, con `spazi.m` in mezzo. */
+  armadio: {
+    colonna: '47.5%',
+    distanza: spazi.m,
+    altezzaFoto: 182,
+    /** L'idioma `raggi.medio + 2` di `CapoInGriglia`. */
+    raggio: raggi.medio + 2,
+  },
+  /** Il mese: sette colonne, una cella un filo più alta che larga. */
+  mese: {
+    colonna: '13.1%',
+    distanza: 6,
+    /** `aspectRatio`, non un'altezza: la cella si stringe col telefono. */
+    proporzione: 1 / 1.25,
+    raggio: 13,
+  },
 } as const
 
 /**
@@ -112,6 +161,76 @@ export const superfici = {
     /** Il fondo, un filo più chiaro dell'inchiostro, di una riga su fondo scuro. */
     riga: 'rgba(247,244,239,0.05)',
   },
+  /**
+   * Il grigio degli scheletri di caricamento, indicizzato da `su` come
+   * `testoSu` — così una primitiva scrive `superfici.scheletro[su]` e ha finito.
+   *
+   * Non è `linee.tenue` né `linee.media`: quelle sono tarate per un bordo da
+   * 1px, e un rettangolo di 330px riempito con il colore di un bordo sparisce
+   * sul fondo. Non è nemmeno un colore nuovo — è l'inchiostro velato, la
+   * stessa famiglia di tutto il resto — ma è una superficie, e una superficie
+   * merita un nome di superficie.
+   *
+   * L'ambra qui sarebbe sbagliata due volte. Per la regola in cima a questo
+   * file: uno scheletro non è il modello che parla, è il posto dove il
+   * contenuto non è ancora arrivato. E perché mezzo schermo di ambra pulsante
+   * sarebbe comunque insostenibile da guardare.
+   */
+  scheletro: {
+    chiaro: 'rgba(21,21,26,0.085)',
+    scuro: 'rgba(247,244,239,0.10)',
+  },
+} as const
+
+/**
+ * Le durate del movimento, in millisecondi.
+ *
+ * Erano numeri sparsi: 200/250/300 per lo stesso identico gesto — una foto che
+ * prende il posto del suo segnaposto, in tre file diversi — 160 e 380 nei
+ * puntini di `PuntiniAttesa`, 900 nella barra di `AttesaLunga`.
+ *
+ * L'unico posto dove la scala **non** si stringe è fra `pulsazione` e
+ * `respiro`, e vale la pena dire perché: l'energia percepita di un movimento
+ * cresce con l'area, non con il tempo. Il ritmo che fa respirare tre puntini
+ * da 7px (380ms per mezzo ciclo) su un rettangolo da 330px non respira,
+ * lampeggia. Riusare `pulsazione` per uno scheletro sembrerebbe economico ed è
+ * il motivo per cui `respiro` esiste separato.
+ */
+export const durate = {
+  /** 160 — lo scarto fra una voce e la successiva in una sequenza scaglionata:
+   *  i puntini di `PuntiniAttesa`, le righe di una lista che entra con
+   *  `Comparsa`. */
+  scaglione: 160,
+  /** 220 — la dissolvenza breve: la foto che sostituisce il proprio segnaposto
+   *  (`transition` di `expo-image`). Assorbe i 200/250/300 di prima. */
+  breve: 220,
+  /** 320 — la comparsa di un blocco al montaggio (`Comparsa`, `ui/base.tsx`). */
+  media: 320,
+  /** 380 — mezza pulsazione di qualcosa di piccolo: i tre puntini, 7px l'uno. */
+  pulsazione: 380,
+  /** 900 — la corsa avanti, e poi indietro, della barra di `AttesaLunga`. */
+  corsa: 900,
+  /** 1000 — mezza pulsazione di una superficie grande: uno scheletro di
+   *  caricamento. Non è `pulsazione` allungata a occhio: è la soglia sotto la
+   *  quale un rettangolo grande smette di respirare e comincia a lampeggiare. */
+  respiro: 1000,
+} as const
+
+/**
+ * Le curve del movimento. Tre, perché tre sono i gesti che questa app anima:
+ * qualcosa che va e torna, qualcosa che entra una volta sola, qualcosa che esce.
+ *
+ * Tutte e tre funzionano col driver nativo: `Animated` campiona la funzione di
+ * easing in una tabella di frame prima di spedirla al lato nativo — è già
+ * quello che fanno `PuntiniAttesa` e `AttesaLunga` con `Easing.inOut(Easing.ease)`.
+ */
+export const curve = {
+  /** Va e torna senza spigoli agli estremi: una pulsazione, una barra che rimbalza. */
+  respiro: Easing.inOut(Easing.ease),
+  /** Entra veloce e si posa: tutto ciò che compare una volta sola. */
+  entrata: Easing.out(Easing.cubic),
+  /** Esce accelerando: tutto ciò che sparisce. */
+  uscita: Easing.in(Easing.cubic),
 } as const
 
 /**
@@ -135,6 +254,39 @@ export const caratteri = {
   testo: 'Manrope_500Medium',
   testoForte: 'Manrope_700Bold',
   testoNero: 'Manrope_800ExtraBold',
+} as const
+
+/**
+ * La scala tipografica. `ui/testo.tsx` documenta da tempo tre taglie per
+ * `Titolo` — «40 (onboarding), 27 (testata), 19 (sezione)» — ma il codice ne
+ * usa 28 valori distinti, e un terzo delle occorrenze di `taglia` in tutto
+ * l'app sono mezzi punti (`13.5`, `12.5`, `11.5`…) indistinguibili a schermo
+ * l'uno dall'altro: il sintomo di una taglia scelta a occhio, componente per
+ * componente, invece che da un elenco.
+ *
+ * `nano` è l'unica chiave aggiunta insieme allo sweep che ha portato le 88
+ * occorrenze numeriche di `taglia` sulla scala: un pavimento mancava
+ * davvero — otto etichette maiuscole vivevano fra 8.5 e 10.5, sotto `micro`.
+ * Il vuoto fra `sezione` (19) e `testata` (27) invece non è un buco da
+ * riempire: gli otto `Titolo` che ci cadono in mezzo (20-25) non hanno un
+ * ruolo comune, sono la stessa deriva «a occhio» che questa scala esiste per
+ * fermare — ci sono finiti su `testata` o `sezione` per ruolo, non per il
+ * numero più vicino.
+ *
+ * `Titolo`/`Corpo`/`Forte`/`Etichetta`/`Numero` accettano una chiave di qui
+ * oltre a un numero — `taglia="sezione"` invece di `taglia={19}` — senza
+ * smettere di accettare un numero per i casi che hanno una vera ragione di
+ * scostarsi (un titolo che deve stare esattamente in una riga, per esempio).
+ */
+export const tipografia = {
+  nano: 10,
+  micro: 11,
+  minuto: 12.5,
+  corpo: 14,
+  guida: 16,
+  sezione: 19,
+  testata: 27,
+  eroe: 40,
 } as const
 
 /** Le etichette italiane delle enum generate dal backend. */
