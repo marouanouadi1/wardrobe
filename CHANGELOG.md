@@ -36,3 +36,6 @@ travestita da registro.
 - Quattro hook: due che impediscono (una versione alzata a mano, una migrazione
   non idempotente), uno che verifica i contratti a fine sessione, uno che porta
   il linter dentro il ciclo di chi scrive.
+- `docs/DA_FARE.md`: il lavoro trovato mentre se ne fa un altro, scritto subito
+  invece che ricordato. Assorbe i «debiti dichiarati» che stavano in
+  `PROGRESS.md`, che torna a dire solo cosa esiste.

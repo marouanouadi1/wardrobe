@@ -169,13 +169,37 @@ non aggiornato è uno stato perso. Si aggiornano **nella stessa PR** del cambiam
 | Hai fatto questo | Tocchi |
 |---|---|
 | implementato o finito qualcosa | `docs/PROGRESS.md` (la riga dice **come** è stata verificata) + `CHANGELOG.md` |
-| scoperto un difetto che non sistemi adesso | `docs/PROGRESS.md`: `[!]` con da cosa è bloccato, o una riga nei debiti |
+| **trovato qualcosa fuori dallo scope di quello che stai facendo** | `docs/DA_FARE.md`, **subito** — vedi sotto |
+| scoperto che qualcosa è bloccato da una dipendenza esterna | `docs/PROGRESS.md`: `[!]`, e la riga dice **da cosa** |
 | aggiunto o tolto un test | `docs/TEST_COVERAGE.md` — **altrimenti `docs.yml` fa cadere la PR** |
 | incontrato una scelta dell'utente su codice **già scritto** | `docs/QUESTIONI.md`, **subito**: una questione ricordata a voce è una questione persa |
 | incontrato qualcosa che la **specifica** non dice | `docs/DOMANDE_APERTE.md` |
 | ricevuto una risposta dall'utente | sposti la voce fra le chiuse con la data. Non la cancelli: la risposta senza la domanda non si capisce |
 | preso una decisione che un domani qualcuno ridiscuterebbe | un ADR nuovo in `docs/adr/`. **`DECISION_LOG.md` non esiste e non va creato** — vedi ADR 0007 |
 | cambiato prodotto o architettura | `README.md`. **Mai** un numero di test, di righe o di schermate |
+
+## Quello che trovi mentre fai altro
+
+Lavorando a una cosa se ne notano altre: un difetto di sfuggita, un rimedio che si
+vede ma non si può fare adesso. **Si scrivono subito, nella stessa PR.** Una cosa
+notata e non scritta è persa, e ritrovarla la seconda volta costa più che
+scriverla la prima.
+
+Ci sono due posti, e il criterio è operativo:
+
+> **Se un agente che sta per toccare quel file deve saperlo → `docs/DA_FARE.md`.**
+> **Se è l'utente a dover decidere quando farlo → una issue su GitHub.**
+
+Una voce **non sta mai in entrambi**: quando un debito diventa lavoro pianificato,
+si apre la issue e la voce nel file rimanda con una riga (`→ #12`). Due copie
+divergono.
+
+Non ci vanno: una **scelta** che aspetta l'utente (è `QUESTIONI.md`) e una lacuna
+di **specifica** (è `DOMANDE_APERTE.md`). Se una voce di `DA_FARE.md` non ha un
+rimedio ma una decisione da prendere, è nel file sbagliato.
+
+Una voce chiusa si sposta in `## Fatte` con la data e il commit. Non si cancella:
+una voce sparita non si distingue da una dimenticata.
 
 ## Come si riferisce il lavoro
 

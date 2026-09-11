@@ -115,40 +115,11 @@ Le cose che **non dipendono da noi**. Si aggiornano appena se ne conosce una.
 
 ## Debiti dichiarati
 
-Non sono lavori «non iniziati»: sono cose che funzionano e che conviene sapere.
+Si sono trasferiti in **[`docs/DA_FARE.md`](DA_FARE.md)**, insieme a tutto il
+resto del lavoro identificato e non fatto.
 
-- **Il percorso dati che gira in produzione non ha nessun test.** Tutti i test del
-  backend girano su `ArchivioInMemoria` (97%). `adapters/postgres.py` (123 istruzioni),
-  `handlers/local_server.py` (120), `adapters/filesystem.py` (57) e
-  `adapters/scontorno/fal_provider.py` (25) sono a **0%**. Il 74% totale è una media che
-  lo nasconde. Dettaglio in `docs/TEST_COVERAGE.md`
-- **L'app ha il primo lotto di test, non una suite.** Copre la leggibilità del testo
-  sul fondo dipinto e le convenzioni delle primitive: nessuna schermata, nessun flusso.
-  I conteggi stanno in `docs/TEST_COVERAGE.md`, l'unico file che può dichiararli
-- **Il monorepo ha due copie di React** — 19.2.3 in `apps/mobile` (pinnata da Expo) e
-  19.2.8 in root (tirata da `react-test-renderer`). Due React producono un dispatcher
-  nullo nei test, e oggi la cosa è tamponata da un `moduleNameMapper` in
-  `apps/mobile/package.json` più due `overrides` in root. Funziona, ma è un tampone:
-  la soluzione pulita è una sola copia, e non è stata cercata oltre
-- **Un solo fondo veniva ridipinto dal di fuori** (`src/ui/avviso.tsx`), ed è stato
-  sanato con la variante `pericolo` su `BottonePrimario`. Ora un test impedisce che
-  torni, su tutte e dieci le primitive che calcolano il colore del testo da sé
-- **Sette letterali `rgba()` nelle schermate** ricalcolano a mano token esistenti:
-  `app/calendario.tsx:94,99`, `app/(tabs)/_layout.tsx:58,80`, `app/intro.tsx:77`,
-  `app/capo/[id].tsx:156`, `app/(tabs)/carica.tsx:289`. Il caso più netto è
-  `calendario.tsx:99` → `rgba(21,21,26,0.4)`, che **è** `testoSu.chiaro.debole`.
-  Non sono gatati perché il gate fallirebbe oggi: prima si sanano, poi si accende
-- **Un esadecimale vive dentro una primitiva**, `src/ui/capi.tsx:280` (`#FFF1EC`): vicino
-  a `colori.coralloTenue` ma non identico, mai promosso a token. È il posto che la vecchia
-  regola («niente esadecimali nelle schermate») considerava al sicuro
-- **`CLAUDE.md` ha descritto per due giorni una regola superata** (l'inoltro di `su`,
-  cambiato dal commit `ee7f492`). Corretto il 2026-09-11, ma è il segnale che le
-  convenzioni scritte a mano derivano quanto i numeri — vedi `QUESTIONI.md` Q-01
-- **`app/(tabs)/carica.tsx`** (378 righe) scrive a mano la sequenza
-  `firmaUpload → caricaFoto → avviaAnalisi → statoAnalisi`, **duplicata** alle righe
-  149-152 e 224-227
-- **`src/dati/chat.ts:46-47`** re-implementa la coppia `caricamento`/`inAttesa` invece di
-  comporre `useRisorsa`: un'astrazione sorella dentro `dati/`
-- **Nessuna CI iOS, e `apps/web` è un segnaposto** il cui `npm run dev` esce con 1
-- **Le migrazioni saltano `0003` e `0004`**, come gli ADR saltano `0001`-`0003`: file
-  rimossi, numerazione non compattata — e non va compattata
+Il motivo: un debito con un rimedio noto *è* un task, e tenerlo in due file
+significa tenerlo allineato in due file. Qui resta lo **stato** — cosa esiste e
+come è stato verificato — e basta.
+
+Le voci che erano qui sono `T-18` … `T-23`.
