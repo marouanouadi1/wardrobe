@@ -318,7 +318,18 @@ che dovrebbe usare.
 dispatcher nullo al primo hook. Oggi è **tamponato** da un `moduleNameMapper` e da
 un override su `react-test-renderer` — vedi T-03 per l'override inerte.
 
-**Cosa serve:** una sola copia. Non è stata cercata oltre il tampone.
+**Causa individuata il 2026-09-11:** il nodo radice di `package-lock.json` **non
+ha il campo `overrides`** — npm ce lo scrive quando li applica, e non c'è. Al
+`npm install` si è appoggiato al lock esistente senza ricalcolare quel ramo. In
+più `node_modules/react` è installato come **peer** (`"peer": true`), richiesto da
+una dozzina di pacchetti Expo che dichiarano `react: "*"` e quindi accettano
+qualunque versione: niente spinge npm a sceglierne una in particolare.
+
+**Cosa serve:** rigenerare il lock (`npm install --package-lock-only`) perché gli
+`overrides` mordano, sapendo che ricalcola l'albero. Poi verificare che
+`node_modules/react` sia 19.2.3 e che i test restino verdi — se lo sono, il
+`moduleNameMapper` in `apps/mobile/package.json` diventa superfluo e va tolto:
+è il tampone, non il rimedio.
 
 ### T-24 — Il criterio della derivazione è più stretto di quello vero
 **Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/test/convenzioni/primitive.test.ts` · **Gravità:** bassa · **Chi:** `mobile`
