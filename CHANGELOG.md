@@ -18,10 +18,11 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
-- (niente)
+- `BottonePrimario` ha la variante `pericolo` (sfondo corallo, testo crema): la
+  conferma di `Avviso` non ridipinge più il fondo dal punto di chiamata.
 
 ### api
-- (niente)
+- (niente: solo soglie di CI, nessun cambiamento di comportamento)
 
 ### progetto
 - Lo stato del progetto vive in `docs/PROGRESS.md`, `docs/QUESTIONI.md`,
@@ -29,3 +30,9 @@ travestita da registro.
 - Gli standard per area vivono in `.claude/rules/`; `CLAUDE.md` resta la sintesi.
 - Corretta in `CLAUDE.md` la regola di `su`, che descriveva ancora il regime
   precedente al commit `ee7f492`.
+- Tre gate nuovi in CI, tutti verdi al primo giro: soglie di coverage sul backend
+  (totale, dominio, handler), i primi test dell'app, e un controllo che i numeri
+  dichiarati nelle docs siano quelli veri.
+- Quattro hook: due che impediscono (una versione alzata a mano, una migrazione
+  non idempotente), uno che verifica i contratti a fine sessione, uno che porta
+  il linter dentro il ciclo di chi scrive.

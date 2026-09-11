@@ -16,10 +16,12 @@
     "mobile:web": "npm run web --workspace @wardrobe/mobile",
     "mobile:android": "npm run android --workspace @wardrobe/mobile",
     "mobile:ios": "npm run ios --workspace @wardrobe/mobile",
+    "mobile:test": "npm run test --workspace @wardrobe/mobile",
     "contracts:generate": "npm run generate --workspace @wardrobe/contracts",
     "contracts:check": "npm run check --workspace @wardrobe/contracts",
     "api:sync": "cd services/api && uv sync",
     "api:test": "cd services/api && uv run pytest",
+    "api:cov": "cd services/api && uv run pytest --cov=src --cov-report=term-missing",
     "api:lint": "cd services/api && uv run ruff check . && uv run ruff format --check . && uv run mypy src",
     "api:local": "cd services/api && uv run python -m handlers.local_server",
     "db:up": "docker compose up -d --wait postgres",
@@ -32,7 +34,7 @@
     "typescript": "~6.0.3"
   },
   "overrides": {
-    "typescript": "~6.0.3",
-    "react-native-worklets": "0.10.1"
+    "react": "19.2.3",
+    "react-test-renderer": "19.2.3"
   }
 }

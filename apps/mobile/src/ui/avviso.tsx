@@ -86,10 +86,13 @@ export function Conferma({
           <View style={{ flexDirection: 'row', gap: spazi.s, marginTop: spazi.s }}>
             <BottoneSecondario testo="Annulla" style={{ flex: 1 }} onPress={onAnnulla} />
             {/* Corallo, non l'inchiostro di default: è l'unico posto dove
-                questo bottone parla, ed è per disfare qualcosa. */}
+                questo bottone parla, ed è per disfare qualcosa. La variante
+                `pericolo` invece di un `backgroundColor` da qui: così il colore
+                del testo si calcola insieme al fondo. */}
             <BottonePrimario
               testo={testoConferma}
-              style={{ flex: 1, backgroundColor: colori.corallo }}
+              pericolo
+              style={{ flex: 1 }}
               onPress={onConferma}
             />
           </View>

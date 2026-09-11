@@ -334,6 +334,7 @@ export function BottonePrimario({
   caricando,
   ambra,
   chiaro,
+  pericolo,
   disabilitato,
   compatto,
   style,
@@ -349,6 +350,13 @@ export function BottonePrimario({
   ambra?: boolean
   /** Sfondo chiaro (per pulsanti su foto scure): testo scuro invece che crema. */
   chiaro?: boolean
+  /** Per un'azione che disfa qualcosa: sfondo corallo, testo crema — lo stesso
+   * accostamento del badge «da lavare» in `capi.tsx`. Esiste come variante e non
+   * come `style={{ backgroundColor }}` dal punto di chiamata perché il colore del
+   * testo va calcolato *insieme* al fondo: ridipingere da fuori lascia dentro un
+   * testo scelto per il fondo vecchio, ed è la forma esatta della regressione di
+   * PR #4 («Fix invisible text on the onboarding light button»). */
+  pericolo?: boolean
   disabilitato?: boolean
   /** Per un'azione inline — accanto a un campo, dentro una riga — non a
    * piena larghezza: padding e taglia ridotti, stesso peso visivo. Sostituisce
@@ -367,9 +375,11 @@ export function BottonePrimario({
     ? 'rgba(21,21,26,0.08)'
     : ambra
       ? colori.ambra
-      : chiaro
-        ? colori.scheda
-        : colori.inchiostro
+      : pericolo
+        ? colori.corallo
+        : chiaro
+          ? colori.scheda
+          : colori.inchiostro
   const inchiostro = disabilitato
     ? 'rgba(21,21,26,0.4)'
     : ambra || chiaro
@@ -396,7 +406,7 @@ export function BottonePrimario({
           ma un `Fondo` asserisce anche per chi in futuro infila un `Corpo`
           qui dentro senza pensarci — lo stesso fondo che il pulsante dipinge
           davvero, non quello della schermata sotto. */}
-      <Fondo su={ambra || chiaro || disabilitato ? 'chiaro' : 'scuro'}>
+      <Fondo su={(ambra || chiaro || disabilitato) && !pericolo ? 'chiaro' : 'scuro'}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
           {caricando ? (
             <ActivityIndicator color={inchiostro} />

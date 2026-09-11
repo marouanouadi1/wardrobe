@@ -17,7 +17,7 @@ Due tipi di numero, e si comportano diversamente:
 ## Numeri correnti
 
 - **Test backend:** 163
-- **Test app:** 0
+- **Test app:** 27
 - **Soglia coverage totale:** 73% — `services/api/pyproject.toml`
 - **Soglia coverage `src/domain/`:** 97% — `.github/workflows/api.yml`
 - **Soglia coverage `src/handlers/`:** 92% — idem, escluso `local_server.py`
@@ -52,12 +52,12 @@ questo file per difetto.
 
 ## Backend — cosa non lo è, e perché
 
-Il 74% totale è una media che nasconde la forma vera:
+Il 74% totale (73,51% esatto) è una media che nasconde la forma vera:
 
 | Area | Coverage | Istruzioni |
 |---|---:|---:|
-| `src/domain/` | **97%** | 746, di cui 16 scoperte |
-| `src/handlers/` | **73%** — **93%** senza `local_server.py` | 579, di cui 152 scoperte |
+| `src/domain/` | **98%** (97,85) | 746, di cui 16 scoperte |
+| `src/handlers/` | **73%** — **93%** (93,03) senza `local_server.py` | 579, di cui 152 scoperte |
 | `src/adapters/` | **40%** | 551, di cui 329 scoperte |
 
 **A zero:**
@@ -88,22 +88,50 @@ non è coperto da nessun test.
 
 ## App — cosa è coperto
 
-Zero test su 7.253 righe, al 2026-09-11.
-
 Il primo lotto non insegue la copertura: prende la classe di difetti che `tsc`
 non vede, cioè **il colore del testo contro il fondo che una primitiva dipinge
 davvero**. È già costata una regressione reale (PR #4, «Fix invisible text on the
 onboarding light button»).
 
-| File | Cosa verifica |
-|---|---|
-| `test/ui/leggibilita.test.tsx` | il colore risolto di un testo dentro `Scheda`, `BottonePrimario` (nelle varianti), `Pillola`, `Segmenti`, `BottoneSecondario`, nei due ambienti di `Fondo` |
-| `test/ui/fondo.test.tsx` | il meccanismo: `useFondo()` senza provider, ereditarietà, annidamento |
-| `test/convenzioni/primitive.test.ts` | che nessuno ridipinga il fondo di una primitiva dal di fuori con `style={{ backgroundColor }}` — la forma esatta della regressione di PR #4 |
+| File | Test | Cosa verifica |
+|---|---:|---|
+| `test/ui/leggibilita.test.tsx` | 11 | il colore risolto di un testo dentro `Scheda`, `BottonePrimario` (nelle tre varianti), `Pillola` (attiva e no, nei due ambienti), `Segmenti`, `BottoneSecondario` |
+| `test/ui/fondo.test.tsx` | 5 | il meccanismo: `useFondo()` senza provider, ereditarietà, annidamento a tre livelli |
+| `test/convenzioni/primitive.test.ts` | 11 | che nessuno ridipinga il fondo di una primitiva dal di fuori con `style={{ backgroundColor }}` — la forma esatta della regressione di PR #4 |
+
+I test non verificano che una prop venga inoltrata: **verificano il colore
+risolto contro il fondo effettivamente dipinto**. È un invariante più forte, e
+sopravvive al prossimo refactor del meccanismo — che è appena successo, dal
+prop-drilling al contesto (`ee7f492`).
+
+`primitive.test.ts` è l'unico che può prendere il difetto vero, perché quello non
+è un bug di una primitiva ma di un punto di chiamata: legge i sorgenti di `app/`
+e `src/` e rifiuta un `backgroundColor` passato a una delle dieci primitive che
+calcolano il colore del testo da sé. Verificato reintroducendo la violazione:
+il test cade, e nomina file e riga.
+
+### Come girano
+
+`jest-expo` (non vitest: React Native 0.86 distribuisce sorgente Flow non
+transpilata, e `jest-expo` è l'unico preset che Expo tiene allineato a ogni SDK).
+Due dettagli di configurazione che non sono cosmetici:
+
+- **i test vivono in `apps/mobile/test/`, mai sotto `app/`**: lì dentro ogni file
+  diventa una rotta di expo-router e finirebbe nel bundle di `expo export`;
+- **`moduleNameMapper` forza una sola copia di React**. Il monorepo ne ha due —
+  19.2.3 in `apps/mobile` (pinnata da Expo) e 19.2.8 in root (tirata da
+  `react-test-renderer`) — e due React producono un dispatcher nullo:
+  `useContext` su `null` al primo hook. Gli `overrides` in `package.json`
+  allineano `react-test-renderer`, il mapper chiude il caso.
+
+In `@testing-library/react-native` 14 **`render` restituisce una Promise**: i
+test sono `async` e fanno `await render(...)`. Senza `await` le query non
+esistono ancora e l'errore che si legge è `getByText is not a function`.
 
 ## Rilevazione del 2026-09-09 — run `34321516325`
 
-`163 passed in 7.60s` · `TOTAL 1876 497 74%`
+`163 passed in 7.60s` · `TOTAL 1876 497 74%` — il totale esatto è **73,51%**,
+ed è quello che `fail_under` confronta: la tabella arrotonda, il gate no.
 
 I numeri per modulo di questa sezione vengono da quella run. **Sono datati di
 proposito e non sono gatati**: gatare una percentuale per modulo farebbe fallire

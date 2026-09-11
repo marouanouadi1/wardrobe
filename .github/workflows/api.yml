@@ -59,6 +59,26 @@ jobs:
       - name: Pytest
         run: uv run pytest --cov=src --cov-report=term-missing
 
+      # Il domain è puro: non ha nessuna scusa per non essere coperto, ed è
+      # l'unica parte che resta uguale quando cambia l'infrastruttura. La soglia
+      # globale in pyproject.toml non lo protegge, perché si può tenerla
+      # coprendo un provider HTTP mentre domain/ scende.
+      #
+      # Questi due step non rieseguono i test: leggono il .coverage appena
+      # scritto.
+      - name: Coverage del dominio
+        run: uv run coverage report --include="src/domain/*" --fail-under=97
+
+      # local_server.py è escluso: è a 0% e resta a 0% finché non esiste un
+      # test che parla HTTP. Sta scritto fra i debiti in docs/TEST_COVERAGE.md,
+      # non nascosto qui dentro.
+      #
+      # Nessuna soglia su adapters/ (40%), ed è deliberato: imporla spingerebbe
+      # verso mock della SDK, cioè verso il contrario di quello che dice il
+      # commento allo step Pytest qui sopra.
+      - name: Coverage degli handler
+        run: uv run coverage report --include="src/handlers/*" --omit="src/handlers/local_server.py" --fail-under=92
+
   contracts:
     name: contratti allineati
     runs-on: ubuntu-latest

@@ -71,7 +71,9 @@ Le rotte reali sono 24, nella tabella `ROTTE` di `src/handlers/local_server.py:5
 - [~] `(tabs)/avatar.tsx` — sagoma SVG tinta dai colori dominanti. È il **ripiego
       dichiarato dall'ADR 0004**, non il 3D che l'ADR descrive: il manichino che vestiva
       foto vere è stato rimosso col playground e non ne resta codice
-- [ ] Test automatici dell'app — vedi `docs/TEST_COVERAGE.md`
+- [x] Test automatici dell'app — leggibilità del testo sul fondo dipinto e
+      convenzioni delle primitive. *Verificato con `npm run mobile:test`: verdi, e
+      il gate colto davvero reintroducendo la violazione di PR #4 in `avviso.tsx`*
 
 ## Contratti (`packages/contracts`)
 
@@ -109,9 +111,17 @@ Non sono lavori «non iniziati»: sono cose che funzionano e che conviene sapere
   `handlers/local_server.py` (120), `adapters/filesystem.py` (57) e
   `adapters/scontorno/fal_provider.py` (25) sono a **0%**. Il 74% totale è una media che
   lo nasconde. Dettaglio in `docs/TEST_COVERAGE.md`
-- **`apps/mobile` non ha test automatici.** Il primo lotto copre la leggibilità del
-  testo sul fondo dipinto, che è la classe di difetti che `tsc` non vede. I conteggi
-  stanno in `docs/TEST_COVERAGE.md`, che è l'unico file che può dichiararli
+- **L'app ha il primo lotto di test, non una suite.** Copre la leggibilità del testo
+  sul fondo dipinto e le convenzioni delle primitive: nessuna schermata, nessun flusso.
+  I conteggi stanno in `docs/TEST_COVERAGE.md`, l'unico file che può dichiararli
+- **Il monorepo ha due copie di React** — 19.2.3 in `apps/mobile` (pinnata da Expo) e
+  19.2.8 in root (tirata da `react-test-renderer`). Due React producono un dispatcher
+  nullo nei test, e oggi la cosa è tamponata da un `moduleNameMapper` in
+  `apps/mobile/package.json` più due `overrides` in root. Funziona, ma è un tampone:
+  la soluzione pulita è una sola copia, e non è stata cercata oltre
+- **Un solo fondo veniva ridipinto dal di fuori** (`src/ui/avviso.tsx`), ed è stato
+  sanato con la variante `pericolo` su `BottonePrimario`. Ora un test impedisce che
+  torni, su tutte e dieci le primitive che calcolano il colore del testo da sé
 - **Sette letterali `rgba()` nelle schermate** ricalcolano a mano token esistenti:
   `app/calendario.tsx:94,99`, `app/(tabs)/_layout.tsx:58,80`, `app/intro.tsx:77`,
   `app/capo/[id].tsx:156`, `app/(tabs)/carica.tsx:289`. Il caso più netto è

@@ -1,0 +1,112 @@
+name: docs
+
+# Nessun filtro sui path, per la stessa ragione scritta in pr-title.yml: che i
+# numeri dichiarati nelle docs siano veri è una regola del repo, non di una
+# sottocartella. Una PR che aggiunge un test e una PR che tocca solo un .md
+# possono entrambe far mentire docs/TEST_COVERAGE.md, e nessuna delle due
+# farebbe partire api.yml o mobile.yml, che hanno `paths:`.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  numeri:
+    name: i numeri dichiarati sono quelli veri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/api/uv.lock
+
+      - run: npm ci
+      - run: uv sync --frozen
+        working-directory: services/api
+
+      # Il numero vero è quello che i runner raccolgono, non quello che un grep
+      # conta: oggi coincidono (nessun @parametrize nel repo), ma il primo test
+      # parametrizzato li farebbe divergere — e il grep mentirebbe per difetto
+      # proprio mentre i test aumentano.
+      - name: Conta i test veri
+        id: conta
+        run: |
+          BACKEND=$(cd services/api && uv run pytest --collect-only 2>/dev/null \
+            | grep -oE '[0-9]+ tests? collected' | tail -1 | grep -oE '^[0-9]+')
+          APP=$(cd apps/mobile && npx jest --ci --silent --json 2>/dev/null \
+            | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).numTotalTests))")
+          echo "backend=$BACKEND" >> "$GITHUB_OUTPUT"
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+          echo "raccolti: backend=$BACKEND app=$APP"
+
+      - name: I conteggi dichiarati coincidono
+        env:
+          BACKEND: ${{ steps.conta.outputs.backend }}
+          APP: ${{ steps.conta.outputs.app }}
+        run: |
+          DICH_B=$(grep -oP '^\- \*\*Test backend:\*\* \K[0-9]+' docs/TEST_COVERAGE.md)
+          DICH_A=$(grep -oP '^\- \*\*Test app:\*\* \K[0-9]+' docs/TEST_COVERAGE.md)
+          ESITO=0
+          if [ "$DICH_B" != "$BACKEND" ]; then
+            echo "::error file=docs/TEST_COVERAGE.md::Test backend: dichiarati $DICH_B, ce ne sono $BACKEND"
+            ESITO=1
+          fi
+          if [ "$DICH_A" != "$APP" ]; then
+            echo "::error file=docs/TEST_COVERAGE.md::Test app: dichiarati $DICH_A, ce ne sono $APP"
+            ESITO=1
+          fi
+          [ "$ESITO" = 0 ] && echo "ok: backend $BACKEND, app $APP"
+          exit $ESITO
+
+      # Il conteggio si scrive in un posto solo. Il README ne conteneva tre
+      # diversi (92, 148, 148) mentre i test erano 163: è il difetto che questo
+      # gate esiste per non far tornare.
+      #
+      # Esclusi docs/adr/ e CHANGELOG.md: sono registri storici e datati, e un
+      # numero lì è una misura di allora, non un'affermazione su adesso.
+      - name: Nessun conteggio di test fuori da TEST_COVERAGE.md
+        run: |
+          FUORI=$(grep -rnE '\b[0-9]+ test\b' --include='*.md' . \
+            --exclude-dir=node_modules --exclude-dir=adr \
+            --exclude=CHANGELOG.md --exclude=TEST_COVERAGE.md || true)
+          if [ -n "$FUORI" ]; then
+            echo "$FUORI"
+            echo "::error::Il conteggio dei test si scrive solo in docs/TEST_COVERAGE.md"
+            exit 1
+          fi
+          echo "ok: nessun conteggio sparso"
+
+      # Le soglie stanno per forza in due posti: il file che le applica e quello
+      # che le racconta. Qui si verifica che dicano lo stesso numero.
+      - name: Le soglie dichiarate coincidono con quelle applicate
+        run: |
+          APPLICATA=$(grep -oP '^fail_under = \K[0-9]+' services/api/pyproject.toml)
+          DICHIARATA=$(grep -oP 'Soglia coverage totale:\*\* \K[0-9]+' docs/TEST_COVERAGE.md)
+          if [ "$APPLICATA" != "$DICHIARATA" ]; then
+            echo "::error::soglia totale: pyproject dice $APPLICATA%, TEST_COVERAGE dice $DICHIARATA%"
+            exit 1
+          fi
+          for AMBITO in domain handlers; do
+            A=$(grep -oP -- "--include=\"src/$AMBITO/\\*\".*--fail-under=\K[0-9]+" .github/workflows/api.yml)
+            D=$(grep -oP "Soglia coverage \`src/$AMBITO/\`:\*\* \K[0-9]+" docs/TEST_COVERAGE.md)
+            if [ "$A" != "$D" ]; then
+              echo "::error::soglia $AMBITO: workflow dice $A, TEST_COVERAGE dice $D"
+              exit 1
+            fi
+          done
+          echo "ok: soglie allineate"
