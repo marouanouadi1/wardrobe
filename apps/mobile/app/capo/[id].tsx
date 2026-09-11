@@ -124,6 +124,7 @@ export default function DettaglioCapo() {
       <SchedaFoto
         raggio={raggi.grande - 2}
         ombra="alta"
+        su="chiaro"
         sfondo={colori.fondoFoto}
         style={{ marginHorizontal: spazi.xl }}
       >

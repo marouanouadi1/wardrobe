@@ -28,7 +28,7 @@ import {
   type ViewStyle,
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
-import { caratteri, colori, curve, durate, linee, ombre, raggi, spazi, superfici, testoSu } from '../tema/tokens'
+import { caratteri, colori, curve, durate, linee, ombre, raggi, spazi, superfici, testoSu, velo } from '../tema/tokens'
 import { Fondo, useFondo, type Su } from './fondo'
 import { Corpo, Etichetta, Forte, type Taglia } from './testo'
 
@@ -326,6 +326,28 @@ export function Segmenti<T extends string>({
 // Pulsanti
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Le cinque varianti di sfondo di `BottonePrimario`. Prima `sfondo` e `su`
+ * erano due ternarie separate con una precedenza diversa (`disabilitato` e
+ * `ambra` vincevano su `pericolo` nella prima, `pericolo` vinceva su tutto
+ * nella seconda): `pericolo + disabilitato` dipingeva un fondo chiaro e
+ * dichiarava `su="scuro"` a chi ci stava dentro. Con una voce sola per
+ * variante, `sfondo`, `inchiostro` e `su` leggono la stessa chiave e non
+ * possono più divergere.
+ */
+type VarianteBottonePrimario = 'spento' | 'ambra' | 'pericolo' | 'chiaro' | 'inchiostro'
+
+const PALETTE_BOTTONE_PRIMARIO: Record<VarianteBottonePrimario, { sfondo: string; inchiostro: string; su: Su }> = {
+  // `disabilitato` vince su tutto il resto, come già nella ternaria di
+  // `sfondo` di prima: un bottone `ambra`/`pericolo` spento non deve tornare
+  // al proprio colore acceso.
+  spento: { sfondo: velo(colori.inchiostro, 0.08), inchiostro: testoSu.chiaro.debole, su: 'chiaro' },
+  ambra: { sfondo: colori.ambra, inchiostro: colori.inchiostro, su: 'chiaro' },
+  pericolo: { sfondo: colori.corallo, inchiostro: colori.crema, su: 'scuro' },
+  chiaro: { sfondo: colori.scheda, inchiostro: colori.inchiostro, su: 'chiaro' },
+  inchiostro: { sfondo: colori.inchiostro, inchiostro: colori.crema, su: 'scuro' },
+}
+
 export function BottonePrimario({
   testo,
   onPress,
@@ -334,6 +356,7 @@ export function BottonePrimario({
   caricando,
   ambra,
   chiaro,
+  pericolo,
   disabilitato,
   compatto,
   style,
@@ -349,6 +372,13 @@ export function BottonePrimario({
   ambra?: boolean
   /** Sfondo chiaro (per pulsanti su foto scure): testo scuro invece che crema. */
   chiaro?: boolean
+  /** Per un'azione che disfa qualcosa: sfondo corallo, testo crema — lo stesso
+   * accostamento del badge «da lavare» in `capi.tsx`. Esiste come variante e non
+   * come `style={{ backgroundColor }}` dal punto di chiamata perché il colore del
+   * testo va calcolato *insieme* al fondo: ridipingere da fuori lascia dentro un
+   * testo scelto per il fondo vecchio, ed è la forma esatta della regressione di
+   * PR #4 («Fix invisible text on the onboarding light button»). */
+  pericolo?: boolean
   disabilitato?: boolean
   /** Per un'azione inline — accanto a un campo, dentro una riga — non a
    * piena larghezza: padding e taglia ridotti, stesso peso visivo. Sostituisce
@@ -363,18 +393,16 @@ export function BottonePrimario({
   // quel grigio, o sparisce sul fondo inchiostro. `caricando` da solo blocca
   // il tocco (sopra) e mostra lo spinner (sotto); il fondo resta quello di
   // `disabilitato`.
-  const sfondo = disabilitato
-    ? 'rgba(21,21,26,0.08)'
+  const variante: VarianteBottonePrimario = disabilitato
+    ? 'spento'
     : ambra
-      ? colori.ambra
-      : chiaro
-        ? colori.scheda
-        : colori.inchiostro
-  const inchiostro = disabilitato
-    ? 'rgba(21,21,26,0.4)'
-    : ambra || chiaro
-      ? colori.inchiostro
-      : colori.crema
+      ? 'ambra'
+      : pericolo
+        ? 'pericolo'
+        : chiaro
+          ? 'chiaro'
+          : 'inchiostro'
+  const { sfondo, inchiostro, su: suBottone } = PALETTE_BOTTONE_PRIMARIO[variante]
 
   return (
     <Toccabile
@@ -395,8 +423,16 @@ export function BottonePrimario({
       {/* `inchiostro` qui sopra copre già ogni caso (disabilitato incluso),
           ma un `Fondo` asserisce anche per chi in futuro infila un `Corpo`
           qui dentro senza pensarci — lo stesso fondo che il pulsante dipinge
-          davvero, non quello della schermata sotto. */}
-      <Fondo su={ambra || chiaro || disabilitato ? 'chiaro' : 'scuro'}>
+          davvero, non quello della schermata sotto. `suBottone` viene dalla
+          stessa voce di `PALETTE_BOTTONE_PRIMARIO` di `sfondo`/`inchiostro`
+          qui sopra, non da una seconda ternaria: è quello che tiene fermo
+          questo file contro la regressione di `pericolo + disabilitato`.
+          Nota sulla velatura: `spento` dipinge `rgba(21,21,26,0.08)`, che per
+          la regola di `fondo.tsx` sarebbe da inoltrare, non asserire — ma qui
+          il componente ha già scelto un inchiostro scuro per quello stato
+          (sopra), quindi asserire `'chiaro'` è ciò che tiene coerenti fondo e
+          inchiostro, non un'eccezione alla regola. */}
+      <Fondo su={suBottone}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
           {caricando ? (
             <ActivityIndicator color={inchiostro} />

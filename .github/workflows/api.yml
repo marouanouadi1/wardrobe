@@ -56,8 +56,43 @@ jobs:
       # Il domain è puro: pytest gira senza rete, senza container, senza mock
       # della SDK. Se un test qui ha bisogno di credenziali, la separazione
       # handlers/domain è stata violata.
+      #
+      # `--cov-fail-under=0` disarma qui la soglia aggregata: pytest-cov
+      # scopre da solo `[tool.coverage.report]` di pyproject.toml, quindi
+      # `fail_under = 73` si applicava **dentro questo step**. Una soglia
+      # aggregata è il gate più debole che esista (73% è la media fra domain/
+      # al 97% e adapters/ al 40%) ed era quello che scattava per primo: i due
+      # step sotto, senza `if:`, si saltano quando questo fallisce. Il gate più
+      # debole nascondeva i due che contano. Ora la soglia totale sta in fondo,
+      # dopo di loro, e resta scritta in un posto solo — pyproject.toml.
       - name: Pytest
-        run: uv run pytest --cov=src --cov-report=term-missing
+        run: uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=0
+
+      # Il domain è puro: non ha nessuna scusa per non essere coperto, ed è
+      # l'unica parte che resta uguale quando cambia l'infrastruttura. La soglia
+      # globale in pyproject.toml non lo protegge, perché si può tenerla
+      # coprendo un provider HTTP mentre domain/ scende.
+      #
+      # Questi due step non rieseguono i test: leggono il .coverage appena
+      # scritto.
+      - name: Coverage del dominio
+        run: uv run coverage report --include="src/domain/*" --fail-under=97
+
+      # local_server.py è escluso: è a 0% e resta a 0% finché non esiste un
+      # test che parla HTTP. Sta scritto fra i debiti in docs/TEST_COVERAGE.md,
+      # non nascosto qui dentro.
+      #
+      # Nessuna soglia su adapters/ (40%), ed è deliberato: imporla spingerebbe
+      # verso mock della SDK, cioè verso il contrario di quello che dice il
+      # commento allo step Pytest qui sopra.
+      - name: Coverage degli handler
+        run: uv run coverage report --include="src/handlers/*" --omit="src/handlers/local_server.py" --fail-under=92
+
+      # Ultima, e senza numero scritto qui: `coverage report` legge
+      # `fail_under` da pyproject.toml. Due copie della stessa soglia
+      # divergerebbero, e docs.yml verifica proprio quell'ancora.
+      - name: Coverage totale
+        run: uv run coverage report
 
   contracts:
     name: contratti allineati

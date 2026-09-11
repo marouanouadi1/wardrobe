@@ -27,7 +27,7 @@ Il perché sta in [`docs/adr/0004`](docs/adr/0004-l-avatar-veste-le-foto-non-i-c
 
 ```txt
 apps/
-  mobile/            app Expo (iOS, Android, web) — 15 schermate
+  mobile/            app Expo (iOS, Android, web)
   web/               vuoto, ma il posto c'è
 services/api/
   src/domain/        logica pura: zero SDK, testabile con pytest
@@ -41,8 +41,8 @@ docs/adr/            le decisioni che valeva la pena scrivere
 
 **1. `handlers/` separato da `domain/`.** Un handler fa tre righe: legge
 l'evento, chiama una funzione pura, formatta la risposta. Tutta la logica sta in
-`domain`, che gira con pytest senza rete, senza container e senza mock della SDK —
-92 test in un secondo. Il vincolo non è una convenzione scritta in un README:
+`domain`, che gira con pytest senza rete, senza container e senza mock della SDK.
+Il vincolo non è una convenzione scritta in un README:
 `pyproject.toml` vieta gli import di `psycopg` e `httpx` fuori da
 `adapters/`, e il lint fallisce se qualcuno prova.
 
@@ -61,8 +61,9 @@ indipendenti e due gestori di pacchetti (npm per TypeScript, uv per Python)
 che convivono senza mediatori.
 
 **4. `docs/adr/`.** Le decisioni scritte in breve — contesto, decisione,
-alternative scartate — quando valeva la pena farlo. Oggi ce n'è una: perché
-l'avatar deve vestire fotografie e non colori.
+alternative scartate — quando valeva la pena farlo. Oggi: l'avatar che veste le
+foto e non i colori (0004), le versioni che vengono dai commit (0005), lo storico
+della chat (0006).
 
 ## Partire
 
@@ -144,10 +145,12 @@ un file in `adapters/llm/` più una riga nel registro, e nessuna schermata cambi
 | `npm run mobile` | avvia l'app Expo |
 | `npm run mobile:web` | l'app nel browser |
 | `npm run api:local` | solo l'API (Postgres già acceso) |
-| `npm run api:test` | 148 test del dominio e degli handler |
+| `npm run api:test` | i test del dominio e degli handler |
+| `npm run api:cov` | gli stessi, con la coverage e le soglie della CI |
 | `npm run api:lint` | ruff + ruff format + mypy strict |
 | `npm run contracts:generate` | rigenera i tipi TypeScript dal backend |
 | `npm run contracts:check` | verifica che siano allineati (gira in CI) |
+| `npm run mobile:test` | i test dell'app |
 | `npm run typecheck` | tsc su app e contratti |
 | `npm run db:up` | solo Postgres in Docker |
 | `npm run db:down` | spegne Postgres |
@@ -175,84 +178,20 @@ dettagli operativi in [`docs/deploy.md`](docs/deploy.md) e nei workflow
 
 ## Stato
 
-### Verificato su questa macchina
+Il README non dice cosa è finito: mente appena qualcosa cambia, e l'ha già fatto
+— questo file ha contenuto per settimane tre conteggi diversi dello stesso numero
+di test. Lo stato vive altrove, in un posto solo per ogni cosa:
 
-- `npm run api:test` → **148 test passati**
-- `npm run api:lint` → ruff pulito, **mypy strict** senza errori
-- `npm run contracts:check` → contratti allineati; verificato anche il contrario,
-  rinominando un campo nel backend per vedere la CI cadere
-- `npm run typecheck` → pulito su app e contratti
-- `expo export --platform web` → bundle **web** pulito, tasti Expo compresi
-- `expo lint` → nessun problema
-- API in locale interrogata con richieste vere: senza `EMAIL_AMMESSE` la
-  registrazione risponde **403**; con l'email in lista, **POST
-  /auth/registrati** restituisce un token e `/capi` con quel token risponde
-  con un armadio vuoto (niente più semina finta); senza token, **401**;
-  `/suggerimenti` risponde **503 provider_non_configurato** senza credenziali
-  (non un 500), e `/capi/analisi` esegue la pipeline in linea riportando il
-  motivo del fallimento
+- **Cosa è implementato, e come è stato verificato** →
+  [`docs/PROGRESS.md`](docs/PROGRESS.md)
+- **Test e coverage, con i numeri veri** →
+  [`docs/TEST_COVERAGE.md`](docs/TEST_COVERAGE.md)
+- **Scelte rimandate su cose già costruite** →
+  [`docs/QUESTIONI.md`](docs/QUESTIONI.md)
+- **Ciò che la specifica non dice ancora** →
+  [`docs/DOMANDE_APERTE.md`](docs/DOMANDE_APERTE.md)
+- **Cosa è cambiato fra due versioni** → [`CHANGELOG.md`](CHANGELOG.md)
+- **Perché una decisione è stata presa** → [`docs/adr/`](docs/adr/)
 
-### Verificato sul VPS di produzione
-
-- Deploy vero su Hetzner (Ubuntu 24.04, Docker), dominio vero
-  (`ilmioarmadio.xyz`) e certificato Let's Encrypt emesso da Caddy al primo
-  avvio — non solo un `Caddyfile` sintatticamente valido mai avviato
-  davvero. Dettagli in [`docs/deploy.md`](docs/deploy.md).
-- `GET /salute`, `POST /auth/registrati` e la firma delle URL delle foto
-  (`BASE_URL_PUBBLICA`, verificato leggendo il campo `url` di **POST
-  /foto/upload**: comincia per `https://api.ilmioarmadio.xyz`, non per un IP
-  interno) provati con richieste vere contro il server pubblico, non solo in
-  locale.
-
-### Non verificato, e conta saperlo
-
-**Login e registrazione non sono mai stati provati su un telefono vero.**
-Verificati da riga di comando (curl) e dai test degli handler: la parte app
-— `registrati.tsx`, `accedi.tsx`, il redirect di `index.tsx`, il guard delle
-tab, il logout — ha solo passato `tsc` ed `expo lint`, non è mai stata
-toccata con un dito. Il primo giro reale (`npm run mobile`) è anche la prima
-prova del percorso completo: registrazione → armadio vuoto → primo capo
-caricato.
-
-**Nessun modello è mai stato interrogato.** Su questa macchina non c'erano
-credenziali di nessun provider, quindi il suggeritore e l'analisi delle foto sono
-stati provati solo fino al confine: prompt costruito, chiamata partita, errore
-gestito. Il primo `ANTHROPIC_API_KEY` esportato è anche il primo vero collaudo
-delle due feature di punta — aspettati di ritoccare i prompt in
-`domain/vision.py` e `domain/stylist.py` dopo averli visti all'opera.
-
-**L'avatar spedito è 2D, non 3D.** La scheda «Avatar» (`app/(tabs)/avatar.tsx`) disegna una
-sagoma SVG tinta dai colori letti dalle foto dei capi — nessun WebGL, nessun confine d'errore da
-attraversare: è il ripiego dichiarato dall'ADR 0004, non un fallback di un manichino 3D che non
-è mai partito. Un manichino 3D che vestiva foto vere è esistito come strumento interno
-(react-three-fiber, dietro «Profilo → Sviluppo → Prova 3D») ed è stato rimosso insieme al
-playground: non era mai stato visto girare fuori da questa macchina, e nessun codice di quella
-strada resta nel repo — solo gli script Python che generavano i suoi asset, in
-`tools/avatar-3d/` prima che anche quelli venissero tolti.
-
-**Dell'avatar vero c'è un primo pezzo, solo lato backend.**
-`services/api/src/adapters/scontorno/fal_provider.py` scontorna la foto di un capo — un passo
-facoltativo, vedi `handlers/analisi.py`. Non è ancora collegato a una ricostruzione 3D o a un
-corpo fedele alla persona: la direzione dell'ADR 0004 resta scritta, non implementata per
-intero. Quello che l'utente vede oggi è il manichino a primitive tinte, in 2D.
-
-**Gli id dei modelli non-Anthropic vanno confermati.** Quelli di Claude vengono
-dall'SDK ufficiale; `gpt-5.1` e `gemini-2.5-pro` sono i nomi indicati nel design e
-sono sovrascrivibili da ambiente (`MODELLI_OPENAI`, `MODELLI_GOOGLE`). Anche i
-loro prezzi restano fuori dal catalogo esposto al prodotto: nessun punto dell'app
-li converte più in euro, da quando la vista che li mostrava è stata tolta insieme
-al playground.
-
-## Le domande che il design lascia aperte
-
-Il file di design contiene una scheda intitolata «Mi serve una risposta». Nessuna
-di queste blocca lo scaffold:
-
-- l'armadio è personale o condiviso (coppie, famiglie)?
-- c'è una parte social, sì o no?
-- nel freemium, cosa si paga?
-- **con quale strumento si costruisce il corpo dell'avatar?** — ricostruzione dalla
-  foto a figura intera o un servizio esterno. Che debba essere *fedele alla
-  persona* e non neutro non è più una domanda: lo decide l'ADR 0004. Resta aperto
-  il mezzo, ed è la scelta che pesa di più su quanto dovrà allungarsi
-  l'astrazione dell'avatar.
+Sono collegamenti, non riassunti: un riassunto è una seconda copia, e la seconda
+copia è esattamente il difetto che spostarli ha tolto.

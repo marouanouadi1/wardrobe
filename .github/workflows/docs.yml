@@ -1,0 +1,168 @@
+name: docs
+
+# Nessun filtro sui path, per la stessa ragione scritta in pr-title.yml: che i
+# numeri dichiarati nelle docs siano veri è una regola del repo, non di una
+# sottocartella. Una PR che aggiunge un test e una PR che tocca solo un .md
+# possono entrambe far mentire docs/TEST_COVERAGE.md, e nessuna delle due
+# farebbe partire api.yml o mobile.yml, che hanno `paths:`.
+#
+# Vale anche per il banco degli hook, in fondo: gli hook valgono per chiunque
+# tocchi il repo, quindi il loro gate non può stare dietro a un filtro.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  numeri:
+    name: i numeri dichiarati sono quelli veri
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/api/uv.lock
+
+      - run: npm ci
+      - run: uv sync --frozen
+        working-directory: services/api
+
+      # Il numero vero è quello che i runner raccolgono, non quello che un grep
+      # conta: oggi coincidono (nessun @parametrize nel repo), ma il primo test
+      # parametrizzato li farebbe divergere — e il grep mentirebbe per difetto
+      # proprio mentre i test aumentano.
+      #
+      # Ogni valore si convalida prima di fidarsene. Il default di GitHub è
+      # `bash -e` **senza** pipefail: una pipeline che muore a metà lascia una
+      # stringa vuota ed esce 0, e il confronto sotto verrebbe fatto contro il
+      # nulla. Il `|| true` serve a non far abortire lo step prima del
+      # messaggio: senza, `-e` lo uccide e chi guarda la PR vede un job rosso
+      # senza sapere perché.
+      - name: Conta i test veri
+        id: conta
+        run: |
+          BACKEND=$(cd services/api && uv run pytest --collect-only 2>/dev/null \
+            | grep -oE '[0-9]+ tests? collected' | tail -1 | grep -oE '^[0-9]+' || true)
+          APP=$(cd apps/mobile && npx jest --ci --silent --json 2>/dev/null \
+            | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).numTotalTests))" \
+            || true)
+          for COPPIA in "backend:$BACKEND" "app:$APP"; do
+            case "${COPPIA#*:}" in
+              ''|*[!0-9]*)
+                echo "::error::la raccolta dei test ${COPPIA%%:*} non ha prodotto un numero: '${COPPIA#*:}'"
+                exit 1 ;;
+            esac
+          done
+          echo "backend=$BACKEND" >> "$GITHUB_OUTPUT"
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+          echo "raccolti: backend=$BACKEND app=$APP"
+
+      # `VAR=$(grep …)` sotto `bash -e` abortisce lo step **prima**
+      # dell'annotazione scritta apposta per spiegare il fallimento: il caso in
+      # cui il numero manca del tutto è proprio quello in cui serve il
+      # messaggio. Da qui il `|| echo assente`.
+      - name: I conteggi dichiarati coincidono
+        env:
+          BACKEND: ${{ steps.conta.outputs.backend }}
+          APP: ${{ steps.conta.outputs.app }}
+        run: |
+          DICH_B=$(grep -oP '^\- \*\*Test backend:\*\* \K[0-9]+' docs/TEST_COVERAGE.md || echo assente)
+          DICH_A=$(grep -oP '^\- \*\*Test app:\*\* \K[0-9]+' docs/TEST_COVERAGE.md || echo assente)
+          ESITO=0
+          if [ "$DICH_B" != "$BACKEND" ]; then
+            echo "::error file=docs/TEST_COVERAGE.md::Test backend: dichiarati $DICH_B, ce ne sono $BACKEND"
+            ESITO=1
+          fi
+          if [ "$DICH_A" != "$APP" ]; then
+            echo "::error file=docs/TEST_COVERAGE.md::Test app: dichiarati $DICH_A, ce ne sono $APP"
+            ESITO=1
+          fi
+          [ "$ESITO" = 0 ] && echo "ok: backend $BACKEND, app $APP"
+          exit $ESITO
+
+      # Il conteggio si scrive in un posto solo. Il README ne conteneva tre
+      # diversi (92, 148, 148) mentre i test erano di più: è il difetto che
+      # questo gate esiste per non far tornare.
+      #
+      # `git ls-files` invece di `grep -r`: si guardano i file **tracciati**,
+      # e basta. Con `grep -r` bisognava escludere node_modules a mano, e
+      # services/api/.venv — che lo step `uv sync` di questo stesso job crea —
+      # non era escluso: la prima dipendenza Python con un README che
+      # contenesse «3 test» avrebbe reso rosso il gate su un file di terzi.
+      # L'elenco delle esclusioni è un tampone che cresce; i file tracciati
+      # sono la cosa vera.
+      #
+      # Esclusi docs/adr/ e CHANGELOG.md: sono registri storici e datati, e un
+      # numero lì è una misura di allora, non un'affermazione su adesso.
+      - name: Nessun conteggio di test fuori da TEST_COVERAGE.md
+        run: |
+          FUORI=$(git ls-files '*.md' ':!docs/adr/**' ':!CHANGELOG.md' ':!docs/TEST_COVERAGE.md' \
+            | xargs -r grep -nE '\b[0-9]+ test\b|\b[0-9]+% di coverage' || true)
+          if [ -n "$FUORI" ]; then
+            echo "$FUORI"
+            echo "::error::Il conteggio dei test e le percentuali di coverage si scrivono solo in docs/TEST_COVERAGE.md"
+            exit 1
+          fi
+          echo "ok: nessun conteggio sparso"
+
+      # Le soglie stanno per forza in due posti: il file che le applica e quello
+      # che le racconta. Qui si verifica che dicano lo stesso numero.
+      - name: Le soglie dichiarate coincidono con quelle applicate
+        run: |
+          APPLICATA=$(grep -oP '^fail_under = \K[0-9]+' services/api/pyproject.toml || echo assente)
+          DICHIARATA=$(grep -oP 'Soglia coverage totale:\*\* \K[0-9]+' docs/TEST_COVERAGE.md || echo assente)
+          if [ "$APPLICATA" != "$DICHIARATA" ]; then
+            echo "::error::soglia totale: pyproject dice $APPLICATA%, TEST_COVERAGE dice $DICHIARATA%"
+            exit 1
+          fi
+          for AMBITO in domain handlers; do
+            A=$(grep -oP -- "--include=\"src/$AMBITO/\\*\".*--fail-under=\K[0-9]+" .github/workflows/api.yml || echo assente)
+            D=$(grep -oP "Soglia coverage \`src/$AMBITO/\`:\*\* \K[0-9]+" docs/TEST_COVERAGE.md || echo assente)
+            if [ "$A" != "$D" ]; then
+              echo "::error::soglia $AMBITO: workflow dice $A, TEST_COVERAGE dice $D"
+              exit 1
+            fi
+          done
+          echo "ok: soglie allineate"
+
+  hook:
+    name: gli hook si comportano come dichiarato
+    runs-on: ubuntu-latest
+    steps:
+      # I quattro hook di .claude/hooks/ erano gli unici gate del progetto che
+      # nessuno esercitava. «Provati su dieci casi» era vero e inutile insieme,
+      # perché quei casi non esistevano come artefatto: niente si sarebbe
+      # accorto se un hook avesse smesso di negare — e infatti tre falsi
+      # negativi e tre falsi positivi ci sono stati per giorni.
+      #
+      # `fetch-depth: 0` perché una delle prove chiede se un file esiste già su
+      # `main` (regola 5 delle migrazioni). Senza, la prova si dichiara saltata
+      # invece di girare.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/api/uv.lock
+
+      - run: uv sync --frozen
+        working-directory: services/api
+
+      - run: python3 scripts/prova-hook.py

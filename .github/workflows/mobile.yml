@@ -27,7 +27,7 @@ permissions:
 
 jobs:
   checks:
-    name: typecheck + lint + export web
+    name: typecheck + lint + test + export web
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -47,6 +47,16 @@ jobs:
 
       - name: Lint
         run: npm run lint --workspace @wardrobe/mobile
+
+      # `tsc` non vede questa classe di difetti: `su` è opzionale, e un testo
+      # scuro su fondo scuro compila benissimo. È già costata una regressione —
+      # PR #4, «Fix invisible text on the onboarding light button» — e adesso è
+      # un test.
+      #
+      # Prima dell'export web perché è più veloce e dice di più: se fallisce,
+      # fallisce in tre secondi e nomina il componente.
+      - name: Test
+        run: npm run test:ci --workspace @wardrobe/mobile
 
       # L'export web è il controllo di build più economico che abbiamo:
       # non serve un runner macOS né credenziali EAS.
