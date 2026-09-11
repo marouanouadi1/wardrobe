@@ -326,6 +326,28 @@ export function Segmenti<T extends string>({
 // Pulsanti
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Le cinque varianti di sfondo di `BottonePrimario`. Prima `sfondo` e `su`
+ * erano due ternarie separate con una precedenza diversa (`disabilitato` e
+ * `ambra` vincevano su `pericolo` nella prima, `pericolo` vinceva su tutto
+ * nella seconda): `pericolo + disabilitato` dipingeva un fondo chiaro e
+ * dichiarava `su="scuro"` a chi ci stava dentro. Con una voce sola per
+ * variante, `sfondo`, `inchiostro` e `su` leggono la stessa chiave e non
+ * possono più divergere.
+ */
+type VarianteBottonePrimario = 'spento' | 'ambra' | 'pericolo' | 'chiaro' | 'inchiostro'
+
+const PALETTE_BOTTONE_PRIMARIO: Record<VarianteBottonePrimario, { sfondo: string; inchiostro: string; su: Su }> = {
+  // `disabilitato` vince su tutto il resto, come già nella ternaria di
+  // `sfondo` di prima: un bottone `ambra`/`pericolo` spento non deve tornare
+  // al proprio colore acceso.
+  spento: { sfondo: 'rgba(21,21,26,0.08)', inchiostro: 'rgba(21,21,26,0.4)', su: 'chiaro' },
+  ambra: { sfondo: colori.ambra, inchiostro: colori.inchiostro, su: 'chiaro' },
+  pericolo: { sfondo: colori.corallo, inchiostro: colori.crema, su: 'scuro' },
+  chiaro: { sfondo: colori.scheda, inchiostro: colori.inchiostro, su: 'chiaro' },
+  inchiostro: { sfondo: colori.inchiostro, inchiostro: colori.crema, su: 'scuro' },
+}
+
 export function BottonePrimario({
   testo,
   onPress,
@@ -371,20 +393,16 @@ export function BottonePrimario({
   // quel grigio, o sparisce sul fondo inchiostro. `caricando` da solo blocca
   // il tocco (sopra) e mostra lo spinner (sotto); il fondo resta quello di
   // `disabilitato`.
-  const sfondo = disabilitato
-    ? 'rgba(21,21,26,0.08)'
+  const variante: VarianteBottonePrimario = disabilitato
+    ? 'spento'
     : ambra
-      ? colori.ambra
+      ? 'ambra'
       : pericolo
-        ? colori.corallo
+        ? 'pericolo'
         : chiaro
-          ? colori.scheda
-          : colori.inchiostro
-  const inchiostro = disabilitato
-    ? 'rgba(21,21,26,0.4)'
-    : ambra || chiaro
-      ? colori.inchiostro
-      : colori.crema
+          ? 'chiaro'
+          : 'inchiostro'
+  const { sfondo, inchiostro, su: suBottone } = PALETTE_BOTTONE_PRIMARIO[variante]
 
   return (
     <Toccabile
@@ -405,8 +423,16 @@ export function BottonePrimario({
       {/* `inchiostro` qui sopra copre già ogni caso (disabilitato incluso),
           ma un `Fondo` asserisce anche per chi in futuro infila un `Corpo`
           qui dentro senza pensarci — lo stesso fondo che il pulsante dipinge
-          davvero, non quello della schermata sotto. */}
-      <Fondo su={(ambra || chiaro || disabilitato) && !pericolo ? 'chiaro' : 'scuro'}>
+          davvero, non quello della schermata sotto. `suBottone` viene dalla
+          stessa voce di `PALETTE_BOTTONE_PRIMARIO` di `sfondo`/`inchiostro`
+          qui sopra, non da una seconda ternaria: è quello che tiene fermo
+          questo file contro la regressione di `pericolo + disabilitato`.
+          Nota sulla velatura: `spento` dipinge `rgba(21,21,26,0.08)`, che per
+          la regola di `fondo.tsx` sarebbe da inoltrare, non asserire — ma qui
+          il componente ha già scelto un inchiostro scuro per quello stato
+          (sopra), quindi asserire `'chiaro'` è ciò che tiene coerenti fondo e
+          inchiostro, non un'eccezione alla regola. */}
+      <Fondo su={suBottone}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
           {caricando ? (
             <ActivityIndicator color={inchiostro} />

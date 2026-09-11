@@ -17,7 +17,7 @@ Due tipi di numero, e si comportano diversamente:
 ## Numeri correnti
 
 - **Test backend:** 163
-- **Test app:** 27
+- **Test app:** 20
 - **Soglia coverage totale:** 73% — `services/api/pyproject.toml`
 - **Soglia coverage `src/domain/`:** 97% — `.github/workflows/api.yml`
 - **Soglia coverage `src/handlers/`:** 92% — idem, escluso `local_server.py`
@@ -95,9 +95,9 @@ onboarding light button»).
 
 | File | Test | Cosa verifica |
 |---|---:|---|
-| `test/ui/leggibilita.test.tsx` | 11 | il colore risolto di un testo dentro `Scheda`, `BottonePrimario` (nelle tre varianti), `Pillola` (attiva e no, nei due ambienti), `Segmenti`, `BottoneSecondario` |
+| `test/ui/leggibilita.test.tsx` | 12 | il colore risolto di un testo dentro `Scheda`, `BottonePrimario` (nelle quattro varianti, inclusa la combinazione `pericolo + disabilitato`), `Pillola` (attiva e no, nei due ambienti), `Segmenti`, `BottoneSecondario` |
 | `test/ui/fondo.test.tsx` | 5 | il meccanismo: `useFondo()` senza provider, ereditarietà, annidamento a tre livelli |
-| `test/convenzioni/primitive.test.ts` | 11 | che nessuno ridipinga il fondo di una primitiva dal di fuori con `style={{ backgroundColor }}` — la forma esatta della regressione di PR #4 |
+| `test/convenzioni/primitive.test.ts` | 3 | che nessuno ridipinga il fondo di una primitiva dal di fuori con `style={{ backgroundColor }}` — la forma esatta della regressione di PR #4 |
 
 I test non verificano che una prop venga inoltrata: **verificano il colore
 risolto contro il fondo effettivamente dipinto**. È un invariante più forte, e
@@ -106,9 +106,40 @@ prop-drilling al contesto (`ee7f492`).
 
 `primitive.test.ts` è l'unico che può prendere il difetto vero, perché quello non
 è un bug di una primitiva ma di un punto di chiamata: legge i sorgenti di `app/`
-e `src/` e rifiuta un `backgroundColor` passato a una delle dieci primitive che
-calcolano il colore del testo da sé. Verificato reintroducendo la violazione:
-il test cade, e nomina file e riga.
+e `src/` con l'AST di TypeScript (non più un regex: si fermava alla prima `>`,
+quasi sempre quella di `onPress={() => …}` su una chiamata multi-riga) e rifiuta
+un `backgroundColor` passato, ovunque stia nell'elenco degli attributi, a una
+primitiva **derivata**, non scritta a mano: quelle che, in `src/ui/**`, dipingono
+un `<Fondo su=…>` *e* dichiarano `style` fra i propri parametri (oggi sei:
+`Campo`, `BarraChiedi`, `Scheda`, `BottonePrimario`, `SchedaFoto`, `PiedeFoto`).
+
+Il criterio ha **un'eccezione dichiarata**, `BottoneSecondario`: dipinge un fondo
+e accetta `style`, ma non asserisce nessun `<Fondo>` — l'inchiostro lo ricava da
+`useFondo()`, cioè dal fondo di sotto, che è la forma più pura della regressione
+di PR #4. L'elenco a mano lo conteneva e quella riga era **viva**; derivarlo e
+fermarsi al criterio avrebbe *perso* copertura invece di aggiungerne. Sta in
+`RIDIPINGIBILI_SENZA_FONDO`, un nome solo col motivo accanto. Il rimedio
+definitivo — un criterio su «dipinge un `backgroundColor` che non eredita» —
+allarga l'insieme derivato e va acceso solo potendo eseguire il gate prima.
+
+Del vecchio elenco di dieci nomi, quattro dichiaravano `style` e quindi erano
+righe vive (`BottonePrimario`, `BottoneSecondario`, `Scheda`, `SchedaFoto`); gli
+altri sei non hanno alcuna prop `style`, quindi `tsc` rifiuta già la chiamata da
+sé e quelle righe non verificavano niente. Ne mancavano due vere (`Campo`,
+`BarraChiedi`) più `PiedeFoto`, che nessuno aveva considerato.
+
+Verificato solo in parte, per un limite dell'ambiente in cui questa modifica è
+stata fatta, non del codice: l'esecuzione di `jest` (e di `tsc`) era negata dal
+sistema di permessi della sessione, quindi il nuovo gate non è stato visto
+fallire e poi tornare verde con un'esecuzione reale. Quello che **è** stato
+verificato empiricamente: reintroducendo la violazione descritta sopra in una
+schermata vera (`app/intro.tsx`, `style` dopo `onPress`, chiamata su più righe),
+`grep -Pzo '<BottonePrimario\b[^>]*?>'` — lo stesso pattern del vecchio test —
+si ferma alla `>` di `onPress={() => ` e non vede mai il `backgroundColor`
+scritto due righe sotto: è la prova diretta del punto cieco che T-01 descrive.
+La modifica è stata poi ripristinata (`git diff --exit-code` pulito). Che il
+nuovo test AST veda quella stessa riga è stato tracciato a mano sull'algoritmo,
+non eseguito.
 
 ### Come girano
 

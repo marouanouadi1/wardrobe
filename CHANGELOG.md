@@ -20,6 +20,21 @@ travestita da registro.
 ### mobile
 - `BottonePrimario` ha la variante `pericolo` (sfondo corallo, testo crema): la
   conferma di `Avviso` non ridipinge più il fondo dal punto di chiamata.
+- Corretto `BottonePrimario`: `sfondo` e `su` venivano da due ternarie con una
+  precedenza diversa, e `pericolo + disabilitato` dipingeva un fondo chiaro
+  dichiarando `su="scuro"` a chi ci stava dentro. Una sola `variante` decide
+  ora entrambi, insieme al colore del testo.
+- Il gate `test/convenzioni/primitive.test.ts` non legge più i sorgenti come
+  testo (un regex che si fermava alla prima `>`, quasi sempre quella di
+  `onPress={() => …}` su una chiamata multi-riga) ma con l'AST di TypeScript,
+  e non controlla più un elenco di primitive scritto a mano: lo deriva da
+  `src/ui/**`. Ha trovato due primitive dimenticate (`Campo`, `BarraChiedi`)
+  e una terza mai considerata (`PiedeFoto`); `BottoneSecondario`, che dipinge
+  un fondo senza asserire un `<Fondo>`, resta controllato come eccezione
+  dichiarata, col motivo scritto accanto.
+- Ripristinati in `overrides` alla radice i pin di `typescript` e
+  `react-native-worklets`, cancellati per errore insieme all'aggiunta di
+  `react`/`react-test-renderer`.
 
 ### api
 - (niente: solo soglie di CI, nessun cambiamento di comportamento)

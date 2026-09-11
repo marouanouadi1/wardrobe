@@ -45,78 +45,6 @@ Le voci qui sotto vengono dall'audit di `security` e dalla review di `reviewer`
 sul commit `b5ba358`, eseguiti il 2026-09-11. Erano 19 finding; qui sono 17,
 perché tre si sovrapponevano fra i due.
 
-### T-01 — Il gate sulle primitive è cieco dopo la prima freccia
-**Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/test/convenzioni/primitive.test.ts:58` · **Gravità:** alta · **Chi:** `mobile`
-
-`new RegExp('<${primitiva}\\b[^>]*?>')` — `[^>]` non attraversa un `>`, e in una
-chiamata su più righe il primo `>` è quasi sempre quello di `onPress={() => …}`.
-Tutto ciò che segue è fuori da quello che il test ispeziona.
-
-Il guaio serio: il gate era stato «provato» reintroducendo la violazione di
-`avviso.tsx`, che aveva `style` **prima** di `onPress` — l'unico ordine di props
-che il regex sopravvive. La verifica del gate e il suo punto cieco sono lo stesso
-fatto.
-
-**Cosa serve:** catturare fino alla chiusura vera del tag contando le graffe,
-oppure smettere di leggere i sorgenti come testo e usare l'AST — `typescript` è
-già una dipendenza del workspace.
-
-### T-02 — `PRIMITIVE` è un elenco scritto a mano, e sbagliato in entrambi i versi
-**Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/test/convenzioni/primitive.test.ts:20-31` · **Gravità:** alta · **Chi:** `mobile`
-
-Mancano **`Campo`** (`base.tsx:84,91,102,109`) e **`BarraChiedi`**
-(`base.tsx:145,148,159,162`): dipingono un fondo, asseriscono `<Fondo su=…>` e
-**fondono lo `style` del chiamante dopo il proprio fondo**. Sono esattamente la
-forma di PR #4, e nessuno li guarda.
-
-All'opposto, sette dei dieci nomi elencati non dichiarano nessuna prop `style`:
-su quelli `tsc` rifiuta già la chiamata e la riga è inerte. Copertura reale: **3
-componenti sui 5 ridipingibili**.
-
-Aggravante: `test.each(PRIMITIVE)` fa sì che aggiungere un nome cambi
-`numTotalTests` e renda rosso `docs.yml` finché non si aggiorna
-`TEST_COVERAGE.md` — un attrito che scoraggia proprio la manutenzione
-dell'elenco.
-
-**Cosa serve:** derivare l'elenco invece di scriverlo: i componenti da
-controllare sono quelli che contengono `<Fondo su=` e dichiarano una prop `style`.
-
-### T-03 — Due `overrides` deliberati sono stati cancellati, non estesi
-**Trovato il:** 2026-09-11 · **Dove:** `package.json:36-39` · **Gravità:** alta · **Chi:** `mobile`
-
-`b5ba358` ha **sostituito** il blocco `overrides` invece di aggiungersi:
-spariti `typescript: ~6.0.3` e `react-native-worklets: 0.10.1`. Il secondo era
-deliberato e documentato in `5766462`: *«si muovono insieme, come impone la nota
-su libworklets.so legata alla SDK»*, con l'avvertenza che quella classe di guasto
-(SIGSEGV pre-render) è invisibile ai controlli statici.
-
-Oggi non rompe niente — il lock risolve ancora 0.10.1 perché
-`apps/mobile/package.json` lo dichiara come dipendenza diretta esatta. **È
-sparita la garanzia**, non il valore: al prossimo `npm install` che ricalcola
-l'albero, un transitivo può portarsi una seconda copia.
-
-In più `"react": "19.2.3"` è **inerte**: la root risolve ancora 19.2.8. Dei due
-override aggiunti, uno solo fa qualcosa.
-
-**Cosa serve:** ripristinare i due pin accanto ai nuovi. Se la nota su
-`libworklets.so` è superata, va detto per iscritto — non tolto in silenzio.
-
-### T-04 — `BottonePrimario`: la scala che calcola `su` non è quella che calcola `sfondo`
-**Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/src/ui/base.tsx:374-387` vs `:409` · **Gravità:** media · **Chi:** `mobile`
-
-Nella prima ternaria `disabilitato` e `ambra` vincono su `pericolo`; nella
-seconda `pericolo` vince su tutto. Quindi `pericolo + disabilitato` dipinge un
-fondo **chiaro** e dichiara `su="scuro"` a chi sta dentro.
-
-Latente: nessun punto di chiamata combina le varianti, e il testo del bottone ha
-comunque un `colore` esplicito. Ma il commento a `base.tsx:405-408` dice che il
-`<Fondo>` esiste proprio «per chi in futuro infila un `Corpo` qui dentro senza
-pensarci» — e per quella persona l'asserzione è sbagliata.
-
-**Cosa serve:** ricavare `su` dalla **stessa** ternaria che produce `sfondo`. Una
-riga. E un caso in `leggibilita.test.tsx` che provi una combinazione, non una
-variante sola.
-
 ### T-05 — I file di stato raccontano il gate più forte di quello che è
 **Trovato il:** 2026-09-11 · **Dove:** `docs/PROGRESS.md:128-134`, `docs/TEST_COVERAGE.md:104-108` · **Gravità:** media · **Chi:** `doc-writer`
 
@@ -392,8 +320,105 @@ un override su `react-test-renderer` — vedi T-03 per l'override inerte.
 
 **Cosa serve:** una sola copia. Non è stata cercata oltre il tampone.
 
+### T-24 — Il criterio della derivazione è più stretto di quello vero
+**Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/test/convenzioni/primitive.test.ts` · **Gravità:** bassa · **Chi:** `mobile`
+
+Il gate deriva le primitive da «contiene `<Fondo su=…>` **e** destruttura
+`style`». Il criterio definitivo sarebbe «dipinge un `backgroundColor` che non
+eredita», che è più largo: `BottoneSecondario` ci rientra e infatti è tenuto come
+eccezione a mano in `RIDIPINGIBILI_SENZA_FONDO`.
+
+Allargare il criterio va fatto **potendo eseguire il gate prima**, per vedere
+quanti falsi positivi porta.
+
+**Cosa serve:** provare il criterio largo in locale, e se è pulito togliere
+l'eccezione a mano.
+
+### T-25 — `dichiaraStyle` guarda solo la destrutturazione del primo parametro
+**Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/test/convenzioni/primitive.test.ts` · **Gravità:** bassa · **Chi:** `mobile`
+
+Un componente che usasse `props.style` senza destrutturare sfuggirebbe alla
+derivazione. Nessuno lo fa oggi, e il pavimento a sei nomi è la difesa contro una
+regressione silenziosa, ma il buco esiste.
+
+**Cosa serve:** guardare anche gli accessi `props.style`, o accettarlo e dirlo
+nel commento (oggi non è scritto).
+
 ---
 
 ## Fatte
 
-*(nessuna, per ora — le voci chiuse si spostano qui con la data e il commit)*
+Chiuse il **2026-09-11**, commit `1284b6e`, dall'agente `mobile` — verifiche
+eseguite a parte perché la sua sessione non aveva i permessi per `npm`.
+
+### T-01 — Il gate sulle primitive è cieco dopo la prima freccia
+**Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/test/convenzioni/primitive.test.ts:58` · **Gravità:** alta · **Chi:** `mobile`
+
+`new RegExp('<${primitiva}\\b[^>]*?>')` — `[^>]` non attraversa un `>`, e in una
+chiamata su più righe il primo `>` è quasi sempre quello di `onPress={() => …}`.
+Tutto ciò che segue è fuori da quello che il test ispeziona.
+
+Il guaio serio: il gate era stato «provato» reintroducendo la violazione di
+`avviso.tsx`, che aveva `style` **prima** di `onPress` — l'unico ordine di props
+che il regex sopravvive. La verifica del gate e il suo punto cieco sono lo stesso
+fatto.
+
+**Cosa serve:** catturare fino alla chiusura vera del tag contando le graffe,
+oppure smettere di leggere i sorgenti come testo e usare l'AST — `typescript` è
+già una dipendenza del workspace.
+
+### T-02 — `PRIMITIVE` è un elenco scritto a mano, e sbagliato in entrambi i versi
+**Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/test/convenzioni/primitive.test.ts:20-31` · **Gravità:** alta · **Chi:** `mobile`
+
+Mancano **`Campo`** (`base.tsx:84,91,102,109`) e **`BarraChiedi`**
+(`base.tsx:145,148,159,162`): dipingono un fondo, asseriscono `<Fondo su=…>` e
+**fondono lo `style` del chiamante dopo il proprio fondo**. Sono esattamente la
+forma di PR #4, e nessuno li guarda.
+
+All'opposto, sette dei dieci nomi elencati non dichiarano nessuna prop `style`:
+su quelli `tsc` rifiuta già la chiamata e la riga è inerte. Copertura reale: **3
+componenti sui 5 ridipingibili**.
+
+Aggravante: `test.each(PRIMITIVE)` fa sì che aggiungere un nome cambi
+`numTotalTests` e renda rosso `docs.yml` finché non si aggiorna
+`TEST_COVERAGE.md` — un attrito che scoraggia proprio la manutenzione
+dell'elenco.
+
+**Cosa serve:** derivare l'elenco invece di scriverlo: i componenti da
+controllare sono quelli che contengono `<Fondo su=` e dichiarano una prop `style`.
+
+### T-03 — Due `overrides` deliberati sono stati cancellati, non estesi
+**Trovato il:** 2026-09-11 · **Dove:** `package.json:36-39` · **Gravità:** alta · **Chi:** `mobile`
+
+`b5ba358` ha **sostituito** il blocco `overrides` invece di aggiungersi:
+spariti `typescript: ~6.0.3` e `react-native-worklets: 0.10.1`. Il secondo era
+deliberato e documentato in `5766462`: *«si muovono insieme, come impone la nota
+su libworklets.so legata alla SDK»*, con l'avvertenza che quella classe di guasto
+(SIGSEGV pre-render) è invisibile ai controlli statici.
+
+Oggi non rompe niente — il lock risolve ancora 0.10.1 perché
+`apps/mobile/package.json` lo dichiara come dipendenza diretta esatta. **È
+sparita la garanzia**, non il valore: al prossimo `npm install` che ricalcola
+l'albero, un transitivo può portarsi una seconda copia.
+
+In più `"react": "19.2.3"` è **inerte**: la root risolve ancora 19.2.8. Dei due
+override aggiunti, uno solo fa qualcosa.
+
+**Cosa serve:** ripristinare i due pin accanto ai nuovi. Se la nota su
+`libworklets.so` è superata, va detto per iscritto — non tolto in silenzio.
+
+### T-04 — `BottonePrimario`: la scala che calcola `su` non è quella che calcola `sfondo`
+**Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/src/ui/base.tsx:374-387` vs `:409` · **Gravità:** media · **Chi:** `mobile`
+
+Nella prima ternaria `disabilitato` e `ambra` vincono su `pericolo`; nella
+seconda `pericolo` vince su tutto. Quindi `pericolo + disabilitato` dipinge un
+fondo **chiaro** e dichiara `su="scuro"` a chi sta dentro.
+
+Latente: nessun punto di chiamata combina le varianti, e il testo del bottone ha
+comunque un `colore` esplicito. Ma il commento a `base.tsx:405-408` dice che il
+`<Fondo>` esiste proprio «per chi in futuro infila un `Corpo` qui dentro senza
+pensarci» — e per quella persona l'asserzione è sbagliata.
+
+**Cosa serve:** ricavare `su` dalla **stessa** ternaria che produce `sfondo`. Una
+riga. E un caso in `leggibilita.test.tsx` che provi una combinazione, non una
+variante sola.

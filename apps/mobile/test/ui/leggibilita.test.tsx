@@ -24,6 +24,10 @@ import { Fondo } from '../../src/ui/fondo'
 import { Corpo } from '../../src/ui/testo'
 import { colori, testoSu } from '../../src/tema/tokens'
 
+// `testoSu.chiaro.debole` **è** `rgba(21,21,26,0.4)`: la stessa costante che
+// `BottonePrimario` usa per il testo dello stato `disabilitato` — non un
+// numero coincidente per caso, un token letto due volte.
+
 /** Il colore che un nodo di testo risolve davvero: `style` è un array. */
 function coloreDi(vista: RenderResult, testo: string): string | undefined {
   const nodo = vista.getByText(testo)
@@ -61,6 +65,23 @@ describe('il testo è leggibile sul fondo che la primitiva dipinge', () => {
     // di chiamata, in `avviso.tsx`.
     const vista = await render(<BottonePrimario testo="Elimina" pericolo />)
     expect(coloreDi(vista, 'Elimina')).toBe(colori.crema)
+  })
+
+  test('BottonePrimario pericolo + disabilitato: `disabilitato` vince, non torna al corallo', async () => {
+    // Il difetto di T-04: `sfondo` e `su` venivano da due ternarie con una
+    // precedenza diversa, e questa combinazione era l'unica in cui
+    // divergevano — `sfondo` restava quello di `disabilitato` (chiaro) ma
+    // `su` dichiarava `'scuro'`. `BottonePrimario` passa sempre `colore`
+    // esplicito al testo (mai un `Corpo` nudo che legga il contesto), quindi
+    // questo test non può osservare `su` attraverso l'API pubblica — pin
+    // invece l'altra metà dell'invariante, quella osservabile: la stessa
+    // `variante` unica decide sia il fondo sia il testo, quindi
+    // `disabilitato` continua a vincere su `pericolo` anche nel colore del
+    // testo (il debole della scala chiara, non il crema di `pericolo`). Se un
+    // domani la precedenza si invertisse, un testo quasi bianco finirebbe su
+    // un fondo quasi bianco.
+    const vista = await render(<BottonePrimario testo="Elimina" pericolo disabilitato />)
+    expect(coloreDi(vista, 'Elimina')).toBe(testoSu.chiaro.debole)
   })
 
   test('Pillola attiva su fondo chiaro: si dipinge scura, quindi testo chiaro', async () => {
