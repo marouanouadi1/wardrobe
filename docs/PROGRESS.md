@@ -34,18 +34,23 @@ Le rotte reali sono 24, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       deploy da `api.yml`, step «Verifica salute e versione servita»: è l'unica riga di
       questo file che una macchina ricontrolla da sola.*
 - [x] `POST /auth/accedi`, `POST /auth/registrati` — JWT autofirmato, bcrypt, allowlist
-      `EMAIL_AMMESSE` fail-closed. *Provato con richieste vere in locale (403 senza
-      allowlist, 401 senza token) e contro il server pubblico — dichiarato in README al
-      2026-09-08.*
+      `EMAIL_AMMESSE` fail-closed. *coperto da `tests/handlers/test_handlers.py`:
+      allowlist vuota, email fuori lista, 409, password corta, normalizzazione. In più
+      provato con richieste vere in locale e contro il server pubblico — dichiarato in
+      README al 2026-09-08, non rieseguito dopo.*
 - [x] `GET /capi`, `GET|PATCH /capi/{id}`, `POST /capi/{id}/indossato`,
-      `GET /armadio/riepilogo`
+      `GET /armadio/riepilogo` — *coperto da `test_handlers.py`: filtro, ricerca
+      testuale, URL firmate, 404 e 422 compresi*
 - [x] `GET|POST /chat`, `GET /chat/conversazioni`, `GET|DELETE /chat/conversazioni/{id}`
-      — ADR 0006, migrazione `0009`
-- [x] `GET|POST /outfit`, `GET /outfit/{id}/colori`
-- [x] `GET|PUT /profilo`
+      — ADR 0006, migrazione `0009`. *coperto da `test_chat_handler.py`*
+- [x] `GET|POST /outfit`, `GET /outfit/{id}/colori` — *coperto da `test_handlers.py`,
+      compreso il rifiuto di un outfit non indossabile*
+- [x] `GET|PUT /profilo` — *coperto da `test_handlers.py`, creazione al primo accesso compresa*
 - [x] `POST|GET /segnalazioni`, `PATCH /segnalazioni/{id}` — amministratori da
-      `EMAIL_AMMINISTRATORI`, fail-closed
-- [x] `POST /foto/upload` — URL firmata, la PUT la fa l'app
+      `EMAIL_AMMINISTRATORI`, fail-closed. *coperto da `test_handlers.py`: chi vede cosa, il 403 di chi non è
+      amministratore, il 404*
+- [x] `POST /foto/upload` — URL firmata, la PUT la fa l'app. *coperto da `test_handlers.py`: la firma e il
+      rifiuto di un tipo non immagine*
 - [~] `POST /capi/analisi` + `GET /capi/analisi/{id}` — la pipeline a due fasi gira e
       riporta il motivo del fallimento, ma **nessun modello è mai stato interrogato
       davvero**: manca una chiave (vedi «Cosa manca dall'esterno»)
@@ -63,11 +68,13 @@ Le rotte reali sono 24, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       logout — **bloccati da: una prova su dispositivo reale.** Hanno passato solo `tsc`
       ed `expo lint`. Il primo `npm run mobile` è anche la prima prova del percorso
       completo: registrazione → armadio vuoto → primo capo
-- [x] `(tabs)/armadio.tsx`, `(tabs)/carica.tsx`, `(tabs)/oggi.tsx`, `(tabs)/profilo.tsx`,
-      `capo/[id].tsx` — *verificati contro il backend vero in locale, commit `709e11c`
-      (2026-09-08). Non rieseguito da allora.*
-- [x] `chat.tsx`, `calendario.tsx`, `outfit.tsx`, `suggeritore.tsx`, `preferenze.tsx`,
-      `intro.tsx`, `segnalazioni.tsx`
+- [~] `(tabs)/armadio.tsx`, `(tabs)/carica.tsx`, `(tabs)/oggi.tsx`, `(tabs)/profilo.tsx`,
+      `capo/[id].tsx` — *provate contro il backend vero in locale, commit `709e11c`
+      (2026-09-08), ma non su un telefono, e non rieseguite da allora*
+- [~] `chat.tsx`, `calendario.tsx`, `outfit.tsx`, `suggeritore.tsx`, `preferenze.tsx`,
+      `intro.tsx`, `segnalazioni.tsx` — **manca una prova su un dispositivo**: esistono
+      e passano `tsc` ed `expo lint`, ma nessuno le ha mai aperte. `[x]` significa
+      «verificato», e non lo sono
 - [~] `(tabs)/avatar.tsx` — sagoma SVG tinta dai colori dominanti. È il **ripiego
       dichiarato dall'ADR 0004**, non il 3D che l'ADR descrive: il manichino che vestiva
       foto vere è stato rimosso col playground e non ne resta codice
@@ -79,15 +86,19 @@ Le rotte reali sono 24, nella tabella `ROTTE` di `src/handlers/local_server.py:5
 
 - [x] Generati da `domain/models.py`; `contracts:check` blocca in CI il disallineamento.
       *Verificato anche al contrario, rinominando un campo nel backend per vedere la CI
-      cadere — dichiarato in README al 2026-09-08.*
+      cadere — dichiarato in README al 2026-09-08. Rieseguito il 2026-09-11:
+      `npm run contracts:check` verde.*
 
 ## Infrastruttura e rilascio
 
 - [x] VPS Hetzner, Caddy, Let's Encrypt emesso al primo avvio, dominio reale. Deploy
-      automatico da `api.yml` con verifica della versione servita. Dettagli in
-      `docs/deploy.md`
-- [x] Build EAS Android + GitHub Release automatiche da `mobile.yml`
-- [x] Bump di versione dai conventional commit (ADR 0005), `pr-title.yml` che lo protegge
+      automatico da `api.yml` con verifica della versione servita — *dichiarato in
+      README al 2026-09-08; il deploy si riverifica da solo a ogni merge sul backend*.
+      Dettagli in `docs/deploy.md`
+- [x] Build EAS Android + GitHub Release automatiche da `mobile.yml` — *dichiarato
+      in README al 2026-09-08*
+- [x] Bump di versione dai conventional commit (ADR 0005), `pr-title.yml` che lo
+      protegge — *ADR 0005 lo documenta; i 22 tag del repo ne sono la traccia*
 - [ ] Nessun rilascio iOS
 
 ## Cosa manca dall'esterno
