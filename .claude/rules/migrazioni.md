@@ -3,6 +3,21 @@
 Lo legge: `api` **ogni volta che tocca `migrations/`**, e `reviewer`.
 Queste regole hanno conseguenze **irreversibili**. Leggile per intero.
 
+
+## Prima di aggirare un problema, chiedi se puoi toglierlo
+
+> Se togliessi la mia soluzione, il problema tornerebbe? Se sì, è un **tampone**:
+> la causa è ancora dove era.
+
+Un tampone è legittimo quando la causa non si può togliere adesso — ma allora si
+**dichiara** dov'è, si apre la voce del rimedio in `docs/DA_FARE.md`, e quando il
+rimedio arriva **il tampone si toglie**.
+
+Il segnale che distingue i due casi: **il rimedio toglie righe, il tampone ne
+aggiunge.**
+
+Per esteso, con l'esempio, in `CLAUDE.md` e in `docs/adr/0008`.
+
 ## Il meccanismo, che spiega tutte le regole
 
 `services/api/scripts/applica_migrazioni.py` fa una cosa sola:

@@ -7,11 +7,59 @@ istruzioni esplicite.
 **Lo stato reale del progetto non è in questo file**: sta in `docs/PROGRESS.md`. Aprilo prima
 di dare per esistente — o per inesistente — qualunque cosa.
 
+## Prima di aggirare un problema, chiedi se puoi toglierlo
+
+È la regola che viene prima di tutte le altre, comprese quelle scritte qui sotto.
+
+Quando qualcosa non funziona, la prima risposta che viene in mente è quasi sempre
+un modo per **conviverci**: una configurazione in più, un'eccezione, un flag, un
+adattatore. Funziona, e per questo è pericolosa: da quel momento il problema è
+ancora lì, ma ha un custode — e il custode va mantenuto, spiegato a chi arriva, e
+non si può più togliere senza sapere perché c'era.
+
+**Il test, in una domanda sola:**
+
+> Se togliessi la mia soluzione, il problema tornerebbe?
+
+Se la risposta è sì, hai messo un **tampone**: la causa è ancora dove era. Se è
+no, hai tolto la causa — e non c'è più niente da mantenere.
+
+**Un tampone resta legittimo**, perché non sempre la causa si può togliere
+adesso. Ma allora:
+
+1. si **dichiara** che è un tampone, dove sta, con una riga che dice qual è la
+   causa vera;
+2. si apre la voce del rimedio in `docs/DA_FARE.md`;
+3. quando il rimedio arriva, **il tampone si toglie** — altrimenti restano
+   entrambi, e il secondo nasconde il primo.
+
+Un tampone non dichiarato diventa, in tre settimane, un pezzo di architettura che
+nessuno osa toccare perché nessuno sa più cosa reggeva.
+
+**L'esempio di questo repo**, perché il principio non resti astratto. I test
+dell'app fallivano: due copie di React nel monorepo, dispatcher nullo al primo
+hook.
+
+| | |
+|---|---|
+| **Tampone** | un `moduleNameMapper` in `apps/mobile/package.json` che forza i test a risolvere una copia sola. Funziona. Ma le due copie restano, il mapper va mantenuto, e il problema si ripresenta ovunque *fuori* dai test |
+| **Causa** | la root non dichiara `react`; decine di pacchetti hoisted lì lo chiedono come peer con `*`; npm, non avendo una risposta, installa l'ultima. `apps/mobile` ha il suo pin esatto, e le copie diventano due |
+| **Rimedio** | dichiarare `react` nelle `dependencies` della root. Le peer `*` si accontentano di quella, resta una copia sola — **e il mapper si può cancellare** |
+
+Il segnale che distingue i due casi è nell'ultima colonna: il rimedio **toglie
+righe**, il tampone ne aggiunge.
+
 ## Dove stanno le regole
 
 Qui c'è **l'invariante**; in `.claude/rules/` c'è **come si rispetta e cosa succede se lo
 violi**. Se una riga di una rule è copiabile pari pari qui, sta nel file sbagliato; se una riga
 di questo file ha bisogno di un esempio per essere capita, l'esempio va nella rule.
+
+**L'unica eccezione è la regola qui sopra**, che è ripetuta di proposito in ogni file di
+`.claude/rules/`, nei criteri degli agenti e in `docs/adr/0008`: è la regola che decide la forma
+di ogni soluzione, e va incontrata da chiunque apra uno qualunque di quei file, non solo da chi
+legge questo. Se cambia, cambia **ovunque nella stessa modifica** — una copia divergente di
+quella regola è peggio di nessuna copia.
 
 | Area | File | Chi lo legge |
 |---|---|---|

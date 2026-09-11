@@ -2,6 +2,21 @@
 
 Lo legge: `mobile`, e `reviewer` quando il diff tocca `apps/mobile/`.
 
+
+## Prima di aggirare un problema, chiedi se puoi toglierlo
+
+> Se togliessi la mia soluzione, il problema tornerebbe? Se sì, è un **tampone**:
+> la causa è ancora dove era.
+
+Un tampone è legittimo quando la causa non si può togliere adesso — ma allora si
+**dichiara** dov'è, si apre la voce del rimedio in `docs/DA_FARE.md`, e quando il
+rimedio arriva **il tampone si toglie**.
+
+Il segnale che distingue i due casi: **il rimedio toglie righe, il tampone ne
+aggiunge.**
+
+Per esteso, con l'esempio, in `CLAUDE.md` e in `docs/adr/0008`.
+
 ## L'invariante
 
 **Una schermata compone le primitive: non ridefinisce una card, un bottone o un
@@ -115,6 +130,21 @@ sincrono (regola `react-hooks/set-state-in-effect`).
 arrivano da `@wardrobe/contracts`. Dettaglio e catena in
 `.claude/rules/contratti.md`. Due copie della stessa enum divergono in silenzio —
 è già successo.
+
+## Un tampone in piedi, e va saputo
+
+`apps/mobile/package.json` contiene un `jest.moduleNameMapper` che forza i test a
+risolvere una copia sola di React. **È un tampone, non un rimedio**
+(`docs/adr/0008`): le due copie continuano a esistere, e il conflitto resta
+attivo ovunque fuori dai test.
+
+La causa è che il `package.json` della root non dichiara `react`, mentre decine di
+pacchetti hoisted lì lo chiedono come peer con `*`. Il rimedio è dichiararlo in
+root — e **quando arriva, il mapper si cancella**.
+
+Sta scritto qui perché `package.json` è JSON e non può portare un commento: il
+posto dove lo si incontra non può spiegarlo. Voce completa: `T-23` in
+`docs/DA_FARE.md`.
 
 ## Dove NON vanno i test
 

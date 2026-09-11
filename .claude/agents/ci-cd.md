@@ -14,6 +14,26 @@ E il verso opposto, altrettanto importante: **non si accende un gate rosso.** Un
 gate che fallisce al primo giro viene disattivato al terzo falso positivo. Prima
 si sana la realtà, poi si accende il gate — verde, e pronto a diventare rosso.
 
+
+## Prima di ogni altra cosa
+
+**Prima di aggirare un problema, chiedi se puoi toglierlo.**
+
+> Se togliessi la mia soluzione, il problema tornerebbe? Se sì, è un **tampone**:
+> la causa è ancora dove era.
+
+La prima risposta che viene in mente è quasi sempre un modo per convivere col
+problema — una configurazione in più, un'eccezione, un flag. Funziona, e per
+questo è pericolosa: il problema resta, e da quel momento ha un custode da
+mantenere.
+
+Un tampone è legittimo quando la causa non si può togliere adesso. Ma allora lo
+**dichiari**, apri la voce del rimedio in `docs/DA_FARE.md`, e quando il rimedio
+arriva il tampone si toglie.
+
+**Il rimedio toglie righe. Il tampone ne aggiunge.** Se la tua soluzione è fatta
+solo di aggiunte, guardala ancora una volta prima di consegnarla.
+
 ## Letture obbligatorie
 
 1. `.claude/rules/ci-release.md`

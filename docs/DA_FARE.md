@@ -32,6 +32,19 @@ E rispetto agli altri file di stato:
 Se una voce qui non ha un rimedio ma una scelta da fare, è nel file sbagliato:
 va in `QUESTIONI.md`.
 
+## Tampone o rimedio
+
+Ogni voce che nasce da un problema aggirato lo dice, perché è la differenza che
+decide se il lavoro è finito o solo spostato (`docs/adr/0008`):
+
+> Se togliessi la soluzione, il problema tornerebbe? Se sì, è un **tampone**.
+
+Una voce che descrive un tampone in piedi porta **dov'è il tampone**, così chi
+applica il rimedio sa anche cosa andrà **cancellato**: un rimedio che lascia in
+piedi il tampone non è un rimedio, è una terza cosa da mantenere.
+
+**Il rimedio toglie righe. Il tampone ne aggiunge.**
+
 ## Come si chiude una voce
 
 Si sposta in `## Fatte` con la data e il commit che l'ha chiusa. Non si cancella:
@@ -360,6 +373,11 @@ eccezione a mano in `RIDIPINGIBILI_SENZA_FONDO`.
 
 Allargare il criterio va fatto **potendo eseguire il gate prima**, per vedere
 quanti falsi positivi porta.
+
+**È un tampone** (`docs/adr/0008`): `RIDIPINGIBILI_SENZA_FONDO` esiste perché il
+criterio derivato è più stretto del vero. Il rimedio — allargare il criterio —
+**cancella quella costante**. Se la chiusura di questa voce la lascia in piedi, il
+problema è stato spostato, non tolto.
 
 **Cosa serve:** provare il criterio largo in locale, e se è pulito togliere
 l'eccezione a mano.

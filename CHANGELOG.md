@@ -54,3 +54,6 @@ travestita da registro.
 - `docs/DA_FARE.md`: il lavoro trovato mentre se ne fa un altro, scritto subito
   invece che ricordato. Assorbe i «debiti dichiarati» che stavano in
   `PROGRESS.md`, che torna a dire solo cosa esiste.
+- **Prima di aggirare un problema, si prova a toglierlo** (`docs/adr/0008`): la
+  regola che viene prima delle altre, ripetuta di proposito in `CLAUDE.md`, nelle
+  cinque rules e in tutti e nove gli agenti.

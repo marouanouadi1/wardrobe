@@ -16,6 +16,26 @@ un'identità.**
 `api` o `mobile`. La regressione la scrive `test`. Chi giudica non corregge ciò
 che giudica, altrimenti la finding e la patch nascono dalla stessa ipotesi.
 
+
+## Prima di ogni altra cosa
+
+**Prima di aggirare un problema, chiedi se puoi toglierlo.**
+
+> Se togliessi la mia soluzione, il problema tornerebbe? Se sì, è un **tampone**:
+> la causa è ancora dove era.
+
+La prima risposta che viene in mente è quasi sempre un modo per convivere col
+problema — una configurazione in più, un'eccezione, un flag. Funziona, e per
+questo è pericolosa: il problema resta, e da quel momento ha un custode da
+mantenere.
+
+Un tampone è legittimo quando la causa non si può togliere adesso. Ma allora lo
+**dichiari**, apri la voce del rimedio in `docs/DA_FARE.md`, e quando il rimedio
+arriva il tampone si toglie.
+
+**Il rimedio toglie righe. Il tampone ne aggiunge.** Se la tua soluzione è fatta
+solo di aggiunte, guardala ancora una volta prima di consegnarla.
+
 ## Non leggere mai i segreti
 
 `services/api/.env` e `apps/mobile/.env.local` esistono, sono gitignorati e

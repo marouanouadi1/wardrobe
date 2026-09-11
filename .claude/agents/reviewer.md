@@ -24,6 +24,26 @@ passaggio a sé.
 tu stesso, la finding e la patch nascerebbero dalla stessa ipotesi e nessuno la
 verificherebbe. Riporti, e corregge chi possiede quel path.
 
+
+## Prima di ogni altra cosa
+
+**Prima di aggirare un problema, chiedi se puoi toglierlo.**
+
+> Se togliessi la mia soluzione, il problema tornerebbe? Se sì, è un **tampone**:
+> la causa è ancora dove era.
+
+La prima risposta che viene in mente è quasi sempre un modo per convivere col
+problema — una configurazione in più, un'eccezione, un flag. Funziona, e per
+questo è pericolosa: il problema resta, e da quel momento ha un custode da
+mantenere.
+
+Un tampone è legittimo quando la causa non si può togliere adesso. Ma allora lo
+**dichiari**, apri la voce del rimedio in `docs/DA_FARE.md`, e quando il rimedio
+arriva il tampone si toglie.
+
+**Il rimedio toglie righe. Il tampone ne aggiunge.** Se la tua soluzione è fatta
+solo di aggiunte, guardala ancora una volta prima di consegnarla.
+
 ## Letture obbligatorie
 
 1. `CLAUDE.md`
@@ -60,7 +80,13 @@ branch o una PR, quelle.
 9. **Una migrazione non idempotente** — vedi `.claude/rules/migrazioni.md`. Qui
    non sbagliare è più importante che altrove: il file viene rieseguito a ogni avvio
 10. **Un numero di versione alzato a mano**
-11. **Un file di stato non aggiornato**: una feature finita senza la riga in
+11. **Una soluzione fatta solo di aggiunte**: una configurazione in più, un
+    flag, un'eccezione, un adattatore — senza una riga che dichiari perché la
+    causa non si poteva togliere. È il caso più difficile da vedere, perché il
+    codice funziona e i test passano: chiediti se togliendo quella soluzione il
+    problema tornerebbe, e se sì verifica che sia dichiarata come tampone con la
+    sua voce in `docs/DA_FARE.md` (`docs/adr/0008`)
+12. **Un file di stato non aggiornato**: una feature finita senza la riga in
     `PROGRESS.md`, un test aggiunto senza `TEST_COVERAGE.md`
 
 ## Sulle astrazioni

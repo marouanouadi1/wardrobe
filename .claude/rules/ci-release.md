@@ -2,6 +2,21 @@
 
 Lo legge: `ci-cd`, e `reviewer` quando il diff tocca `.github/`.
 
+
+## Prima di aggirare un problema, chiedi se puoi toglierlo
+
+> Se togliessi la mia soluzione, il problema tornerebbe? Se sì, è un **tampone**:
+> la causa è ancora dove era.
+
+Un tampone è legittimo quando la causa non si può togliere adesso — ma allora si
+**dichiara** dov'è, si apre la voce del rimedio in `docs/DA_FARE.md`, e quando il
+rimedio arriva **il tampone si toglie**.
+
+Il segnale che distingue i due casi: **il rimedio toglie righe, il tampone ne
+aggiunge.**
+
+Per esteso, con l'esempio, in `CLAUDE.md` e in `docs/adr/0008`.
+
 ## L'invariante
 
 **`api.yml` e `mobile.yml` sono due pipeline indipendenti che possono scattare
