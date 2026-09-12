@@ -124,10 +124,11 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       non persistono credenziali. *Verificato parsando i quattro YAML e
       stampando permessi e `with:` di ogni checkout job per job — `write` su due
       job soli, `persist-credentials: false` sui cinque checkout non pushanti e
-      su nessuno dei due che pushano. `scripts/prova-hook.py` resta verde: è la
-      prova che la lettura di `main` del job `hook` non passava dal token. I due
-      job che pushano girano solo su `main`, quindi la loro prima esecuzione
-      vera è il prossimo rilascio*
+      su nessuno dei due che pushano. Poi in CI sulla PR #16: i sei job passano, e
+      nel job `hook` — quello che poteva perderci qualcosa — il checkout porta
+      `main -> origin/main` anche senza credenziali, e la prova «file già su
+      main» risulta girata e non saltata. I due job che pushano girano solo su
+      `main`, quindi la loro prima esecuzione vera è il prossimo rilascio*
 - [ ] Nessun rilascio iOS
 
 ## Cosa manca dall'esterno

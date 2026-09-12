@@ -670,10 +670,15 @@ Release, che è `contents` anche lei per quanto la pubblichi `gh`.
 **Oltre il «Dove» di questa voce**, con la stessa riga e la stessa ragione:
 i due checkout di `docs.yml`, che ha già `contents: read` ma esegue comunque
 `npm ci`, la raccolta di pytest e `jest` della PR con una credenziale su disco.
-Verificato prima che non tolga niente al job `hook`: la regola 5 delle
-migrazioni chiede se un file esiste già su `main` con `git ls-tree origin/main`
-(`.claude/hooks/migrazione-idempotente.py:149-152`), che legge il repo locale —
-già completo grazie a `fetch-depth: 0`.
+Verificato che non tolga niente al job `hook`: la regola 5 delle migrazioni
+chiede se un file esiste già su `main` con `git ls-tree origin/main`
+(`.claude/hooks/migrazione-idempotente.py:149-152`), che legge il repo locale.
+**E verificato in CI, non solo in locale**, dove `origin/main` c'è comunque: nel
+job della run `34702496928` il checkout senza credenziali persistite porta
+`main -> origin/main`, e la prova «file già su main» è **girata**, non saltata.
+La distinzione conta perché `prova-hook.py` una prova che non può girare la
+dichiara saltata e prosegue verde — un salto silenzioso in CI sarebbe passato
+per una conferma.
 
 **Verificato** parsando i quattro YAML e stampando permessi e `with:` di ogni
 checkout job per job: radice `contents: read` ovunque, `write` solo su `deploy`
