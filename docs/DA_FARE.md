@@ -145,24 +145,6 @@ non un'opinione di stile.
 **Cosa serve:** `contents: read` alla radice, `write` dentro il job che rilascia,
 e `persist-credentials: false` sui checkout che non pushano.
 
-### T-14 — L'URL che arriva da EAS è interpolato dentro `run:`
-**Trovato il:** 2026-09-11 · **Dove:** `.github/workflows/mobile.yml:155` · **Gravità:** media · **Chi:** `ci-cd` · **Pre-esistente**
-
-`curl -L -o wardrobe.apk "${{ steps.eas.outputs.apk_url }}"`, dove il valore nasce
-da `jq -r` sul JSON che risponde EAS. `${{ }}` in un `run:` è sostituzione
-testuale *prima* che la shell parta: un `buildUrl` con `"; curl … | sh; #`
-diventa comando. Il job ha `contents: write` e `GH_TOKEN`.
-
-È la violazione letterale della regola che il repo applica già al titolo delle
-PR, scritta in `.claude/rules/ci-release.md`.
-
-Verificato **non** sfruttabile, e quindi da non toccare:
-`${{ steps.bump.outputs.version }}` — `bump-versione.mjs:164-183` valida
-`^\d+\.\d+\.\d+$`.
-
-**Cosa serve:** passare l'URL via `env:` e usarlo come `"$APK_URL"`; e verificare
-che l'host sia quello atteso prima di seguirlo.
-
 ### T-16 — Gli strumenti di test sono in `dependencies`
 **Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/package.json:22-23,38-39` · **Gravità:** bassa · **Chi:** `mobile`
 
@@ -602,3 +584,48 @@ futuro `services/api/.env.production` nascerebbe scoperto.
 **Cosa serve:** `Read(./**/.env*)`. (Non chiude il buco di Bash — vedi T-12.)
 
 **Chiusa il 2026-09-11.** `Read(./.env*)` e `Read(./**/.env*)` sostituiscono i tre percorsi esatti: due righe al posto di tre, e un `.env` nuovo nasce coperto.
+
+---
+
+Chiusa il **2026-09-12**, commit `1c45085`.
+
+### T-14 — L'URL che arriva da EAS è interpolato dentro `run:`
+**Trovato il:** 2026-09-11 · **Dove:** `.github/workflows/mobile.yml:155` · **Gravità:** media · **Chi:** `ci-cd` · **Pre-esistente**
+
+`curl -L -o wardrobe.apk "${{ steps.eas.outputs.apk_url }}"`, dove il valore nasce
+da `jq -r` sul JSON che risponde EAS. `${{ }}` in un `run:` è sostituzione
+testuale *prima* che la shell parta: un `buildUrl` con `"; curl … | sh; #`
+diventa comando. Il job ha `contents: write` e `GH_TOKEN`.
+
+È la violazione letterale della regola che il repo applica già al titolo delle
+PR, scritta in `.claude/rules/ci-release.md`.
+
+Verificato **non** sfruttabile, e quindi da non toccare:
+`${{ steps.bump.outputs.version }}` — `bump-versione.mjs:164-183` valida
+`^\d+\.\d+\.\d+$`.
+
+**Cosa serve:** passare l'URL via `env:` e usarlo come `"$APK_URL"`; e verificare
+che l'host sia quello atteso prima di seguirlo.
+
+**Chiusa il 2026-09-12.** L'URL passa da `env:` e si usa come `"$APK_URL"`:
+resta un dato invece di finire nel testo dello script. Prima di seguirlo si
+controllano schema e dominio — non la forma del percorso, che oggi è
+`https://expo.dev/artifacts/eas/<hash>.apk` (letto nei log della run
+`34641460562`) ma che un cambio di EAS renderebbe rosso un rilascio che non si
+può provare prima del merge.
+
+**Verificato eseguendo lo script vero dello step**, estratto dal YAML con un
+parser e lanciato con `curl` sostituito da uno stub: l'URL vero e un
+sottodominio di `expo.dev` passano e arrivano a `curl` come **un solo**
+argomento; `https://evil.example/x"; touch …; #`, `https://expo.dev.evil.example/…`
+e un `http://` in chiaro escono 1 senza scaricare. **E verificato al contrario**,
+che è la parte che conta: la riga com'era prima, con lo stesso valore sostituito
+nel testo, esegue davvero il comando iniettato — la sentinella viene creata.
+
+Nello stesso step `curl` ha preso anche `--fail`, che non era nel testo di
+questa voce: senza, un 404 scriveva il corpo dell'errore dentro `wardrobe.apk` e
+la Release pubblicava una pagina HTML col nome di un APK.
+
+**Quello che resta non verificato, e non lo poteva essere:** lo step vive nel
+job `release`, che gira solo su `main` (`if: github.ref == 'refs/heads/main'`).
+Il primo rilascio dopo il merge è la sua prima esecuzione vera.

@@ -5,7 +5,7 @@
 > modulo citato da un ADR può non esistere più. Prima di dare per esistente — o per
 > inesistente — qualunque cosa, si apre questo file.
 
-**Ultimo aggiornamento:** 2026-09-11
+**Ultimo aggiornamento:** 2026-09-12
 
 > ### Sulla provenienza di questa prima versione
 >
@@ -99,7 +99,12 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       README al 2026-09-08; il deploy si riverifica da solo a ogni merge sul backend*.
       Dettagli in `docs/deploy.md`
 - [x] Build EAS Android + GitHub Release automatiche da `mobile.yml` — *dichiarato
-      in README al 2026-09-08*
+      in README al 2026-09-08*. L'URL dell'APK che EAS restituisce passa da `env:`
+      e viene controllato (schema e dominio) prima di essere seguito: è un dato,
+      non un frammento di comando. *Verificato eseguendo lo script dello step
+      estratto dal YAML, con `curl` sostituito da uno stub — e al contrario, con
+      la forma precedente, che il comando iniettato lo esegue davvero. Lo step
+      vive nel job `release`: la prima esecuzione vera è il prossimo rilascio.*
 - [x] Bump di versione dai conventional commit (ADR 0005), `pr-title.yml` che lo
       protegge — *ADR 0005 lo documenta; i 22 tag del repo ne sono la traccia*
 - [x] I quattro hook di `.claude/hooks/` sono esercitati da un banco di prova,

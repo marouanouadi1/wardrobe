@@ -86,3 +86,7 @@ travestita da registro.
   aveva: `git clean`, `git push -f`, `docker compose down -v`, `docker volume
   rm|prune`; più `Edit(./.claude/**)` e un glob solo per tutti i file
   d'ambiente.
+- L'URL dell'APK che EAS restituisce non viene più interpolato dentro il `run:`
+  che lo scarica: passa da `env:`, e schema e dominio si controllano prima di
+  seguirlo. Era l'ultimo punto in cui un valore di provenienza esterna finiva
+  nel testo di uno script, in un job che ha `contents: write` e `GH_TOKEN`.

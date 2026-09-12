@@ -151,8 +151,28 @@ jobs:
           BUILD_URL=$(jq -r 'if type == "array" then .[0].artifacts.buildUrl else .artifacts.buildUrl end' /tmp/eas-build.json)
           echo "apk_url=$BUILD_URL" >> "$GITHUB_OUTPUT"
 
+      # Il buildUrl arriva dal JSON che risponde EAS: non lo produciamo noi.
+      # `${{ }}` dentro un `run:` è sostituzione testuale *prima* che la shell
+      # parta, quindi un URL con `"; curl … | sh; #` diventerebbe un comando —
+      # in un job che ha contents: write e GH_TOKEN. Via `env:` il valore resta
+      # un dato: è la stessa regola che pr-title.yml applica al titolo delle PR.
+      #
+      # L'host si controlla perché `-L` segue dove gli si dice. Si guardano
+      # schema e dominio, non la forma del percorso: oggi EAS risponde
+      # https://expo.dev/artifacts/eas/<hash>.apk e da lì redirige allo storage,
+      # ma un percorso diverso non deve far cadere un rilascio. Se cambiasse il
+      # dominio, l'errore stampa l'URL scartato e il rimedio è questa riga.
       - name: Scarica APK
-        run: curl -L -o wardrobe.apk "${{ steps.eas.outputs.apk_url }}"
+        env:
+          APK_URL: ${{ steps.eas.outputs.apk_url }}
+        run: |
+          case "$APK_URL" in
+            https://expo.dev/*|https://*.expo.dev/*) ;;
+            *)
+              echo "::error::URL dell'APK inatteso, download non eseguito: $APK_URL"
+              exit 1 ;;
+          esac
+          curl -L --fail -o wardrobe.apk "$APK_URL"
 
       - name: Pubblica GitHub Release
         env:
