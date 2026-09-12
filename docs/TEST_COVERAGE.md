@@ -215,6 +215,24 @@ dentro `services/api/migrations/`: un `.sql` di prova lasciato lì verrebbe
 eseguito al prossimo avvio — cioè esattamente il guasto che quell'hook esiste
 per impedire.
 
+**Il quinto hook, `bash-non-aggira.py` (`T-12`, 2026-09-12):** gli altri quattro
+guardano `Write`/`Edit`; questo guarda `Bash`, perché una scrittura passata da
+`sed -i`, `tee` o un heredoc non incontrava niente. Non giudica il contenuto di
+una migrazione o di un numero di versione — dice solo che quel path si scrive
+con `Write`/`Edit`, così l'hook che sa leggerlo lo vede davvero. `banco_bash()`
+copre le tre famiglie di bersagli (segreti, path con un gate già suo, path
+chiusi da `permissions.deny`), i verbi distruttivi cercati in qualunque
+segmento — non solo a inizio riga, dove `deny` già li nega — e le forme che
+l'hook dichiara di non saper leggere (`ask`, mai `allow` per dubbio).
+
+Il caso più istruttivo l'ha prodotto il banco stesso, dal vivo: il primo giro
+cercava i verbi distruttivi anche dentro il corpo di un heredoc, e scrivere
+*questa stessa voce* — che nomina «`git clean`» come esempio in prosa — veniva
+negato per una frase, non per un comando. `rimuovi_corpo_heredoc()` esclude il
+corpo di un heredoc dalla ricerca dei verbi distruttivi (i bersagli restano
+cercati nel testo intero, perché un `python3 - <<EOF` scrive spesso il path
+proprio lì dentro). Il caso ha il suo posto nel banco.
+
 ## Rilevazione del 2026-09-09 — run `34321516325`
 
 `163 passed in 7.60s` · `TOTAL 1876 497 74%` — il totale esatto è **73,51%**,

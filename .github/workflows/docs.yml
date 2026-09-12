@@ -149,7 +149,7 @@ jobs:
     name: gli hook si comportano come dichiarato
     runs-on: ubuntu-latest
     steps:
-      # I quattro hook di .claude/hooks/ erano gli unici gate del progetto che
+      # Gli hook di .claude/hooks/ erano gli unici gate del progetto che
       # nessuno esercitava. «Provati su dieci casi» era vero e inutile insieme,
       # perché quei casi non esistevano come artefatto: niente si sarebbe
       # accorto se un hook avesse smesso di negare — e infatti tre falsi

@@ -96,3 +96,12 @@ travestita da registro.
   codice della PR — `quality`, `contracts`, `checks` e i due di `docs.yml` —
   fanno checkout con `persist-credentials: false`, così il token non resta nel
   `.git/config` del runner mentre quel codice gira.
+- Un quinto hook, `bash-non-aggira.py`, su `matcher: "Bash"` (`T-12`): gli
+  altri quattro guardavano solo `Write`/`Edit`, e la stessa scrittura passata
+  da `sed -i`, `tee` o un heredoc non incontrava niente. Non giudica il
+  contenuto di una migrazione o di un numero di versione — dice solo che quel
+  path si scrive con `Write`/`Edit`, così il gate che sa leggerlo lo vede
+  davvero; nega i verbi distruttivi anche quando non sono a inizio riga
+  (`cd x && git clean` adesso si ferma); chiede — non nega — quando il
+  comando tocca `.claude/**`, che è la richiesta esplicita di cui parla
+  `.claude/README.md`, resa un prompt invece che una convenzione.
