@@ -232,10 +232,15 @@ def banco_versioni(fallimenti: list[str]) -> None:
                              "content": "[project]\nname = 'x'\nversion = '9.9.9'\n"}}
     verifica("versioni · apici singoli in TOML", esegui(hook, evento), "deny", fallimenti)
 
+    # `9.9.9` come nelle prove sorelle, e non la versione successiva a quella
+    # vera: l'hook confronta `new_string` con il file **su disco**, quindi una
+    # coppia realistica (`0.6.1` -> `0.6.2`) smette di essere un rialzo nel
+    # momento in cui il rilascio arriva a quel numero — e il bump porta
+    # `[skip ci]`, quindi su main non gira niente che lo faccia vedere.
     evento = {"tool_name": "Edit",
               "tool_input": {"file_path": str(appjson),
                              "old_string": '"version": "0.6.1"',
-                             "new_string": '"version": "0.6.2"'}}
+                             "new_string": '"version": "9.9.9"'}}
     verifica("versioni · Edit che alza app.json", esegui(hook, evento), "deny", fallimenti)
 
     # Il terzo file che bump-versione.mjs scrive.

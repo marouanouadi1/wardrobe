@@ -379,6 +379,27 @@ punti vanno riscritti. È una decisione, non un rimedio: per questo la voce dice
 regola è più larga della macchina che la fa rispettare, che è la cosa contro cui
 `.claude/rules/ci-release.md` mette in guardia.
 
+### T-29 — Il banco degli hook può marcire su `main` senza che una run lo mostri
+**Trovato il:** 2026-09-11 · **Dove:** `scripts/prova-hook.py`, `.github/workflows/docs.yml` · **Gravità:** bassa · **Chi:** `ci-cd`
+
+La prova «versioni · Edit che alza app.json» asseriva `deny` sulla coppia
+`0.6.1` -> `0.6.2`. L'hook confronta `new_string` con **il file su disco**,
+quindi quando il rilascio ha portato `app.json` a `0.6.2` (commit `2437426`)
+quella non era più una scrittura che alza: l'hook ha risposto `allow`, giusto
+lui e sbagliata la prova. Il valore è stato portato a `9.9.9` come nelle prove
+sorelle — la coppia realistica era la causa, e toglierla toglie il problema.
+
+Quello che **resta** è il buco che l'ha reso invisibile: il commit di bump porta
+`[skip ci]` per l'invariante 2 di `.claude/rules/ci-release.md` — senza, si
+rimetterebbe in coda da solo — quindi su `main` non gira nessuna run che lo
+faccia vedere. Il banco è diventato rosso lì, ed è stata la prima PR successiva
+a scoprirlo, su un diff che non c'entrava niente.
+
+**Cosa serve:** decidere chi verifica `main` dopo un commit `[skip ci]`. Le due
+strade viste: far girare il banco degli hook dentro il workflow di rilascio
+**dopo** il bump, oppure una run programmata di `docs.yml` su `main`. La prima
+chiude il caso esatto, la seconda copre anche i prossimi.
+
 ---
 
 ## Fatte
