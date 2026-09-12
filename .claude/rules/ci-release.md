@@ -66,7 +66,7 @@ default, cioè il comportamento che si voleva lasciare indietro.
 I merge di questo repo **non sono squash**, quindi il titolo della PR finisce nel
 corpo del merge commit: è lì che lo script lo legge.
 
-## I sei invarianti del rilascio — non romperli
+## I sette invarianti del rilascio — non romperli
 
 1. **`fetch-depth: 0`** nei job di release. Senza, lo script non vede i tag e
    rilascia sempre patch.
@@ -87,6 +87,14 @@ corpo del merge commit: è lì che lo script lo legge.
 6. **Commit e tag per ultimi, a deploy verificato.** `GET /salute` riporta la
    versione dai metadati del pacchetto e viene confrontata con quella attesa: si
    marca la storia solo dopo che il server serve davvero quel numero.
+7. **`contents: write` si dichiara nel job che rilascia, mai alla radice**, e i
+   checkout dei job che non pushano portano `persist-credentials: false`. Alla
+   radice il permesso lo ereditano `quality`, `contracts` e `checks`, che
+   eseguono il **codice della PR** — e `actions/checkout` lascia il token nel
+   `.git/config` del runner mentre gira. Su una PR da fork GitHub declassa il
+   token da sé; questo repo lavora su branch interni, dove non lo fa. Le due
+   righe non sono la stessa difesa scritta due volte: la prima toglie al token
+   il potere di scrivere, la seconda toglie il token.
 
 ## Il titolo di una PR è testo arbitrario
 

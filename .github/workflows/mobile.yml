@@ -22,8 +22,11 @@ concurrency:
   group: mobile-${{ github.ref }}
   cancel-in-progress: true
 
+# Stessa ragione scritta per esteso in api.yml: alla radice sola lettura, e lo
+# scrivere nel solo job che rilascia. `checks` esegue il codice della PR —
+# `npm ci`, `jest`, l'export web — e non ha niente da scrivere.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   checks:
@@ -31,6 +34,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v6
         with:
@@ -68,6 +73,11 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs: [checks]
+    # L'unico job che scrive sul repo, e in due modi: il push del commit di
+    # bump con il tag mobile-v*, e la GitHub Release — che è `contents` anche
+    # lei, per quanto la pubblichi `gh` invece di `git`.
+    permissions:
+      contents: write
     steps:
       # fetch-depth: 0 non è un lusso: scripts/bump-versione.mjs sceglie il
       # livello leggendo i commit dall'ultimo tag mobile-v*, e col default

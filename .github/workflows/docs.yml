@@ -26,7 +26,12 @@ jobs:
     name: i numeri dichiarati sono quelli veri
     runs-on: ubuntu-latest
     steps:
+      # Il permesso è già di sola lettura (sopra), ma questo job esegue il
+      # codice della PR — `npm ci`, la raccolta di pytest, `npx jest` — e non fa
+      # git in scrittura: la credenziale non ha motivo di restare su disco.
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v6
         with:
@@ -152,10 +157,13 @@ jobs:
       #
       # `fetch-depth: 0` perché una delle prove chiede se un file esiste già su
       # `main` (regola 5 delle migrazioni). Senza, la prova si dichiara saltata
-      # invece di girare.
+      # invece di girare. La credenziale, al contrario, non serve a nessuna
+      # prova: quella lettura è un `git ls-tree origin/main` sul repo locale,
+      # già completo proprio grazie al depth 0.
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: astral-sh/setup-uv@v7
         with:

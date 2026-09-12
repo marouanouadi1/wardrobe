@@ -118,6 +118,17 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       `coverage report` nell'ordine del workflow: dominio, handler e totale
       tutti sopra la propria soglia, uscita 0. I numeri stanno in
       `docs/TEST_COVERAGE.md`, che è il posto dove è lecito scriverli*
+- [x] Il permesso di scrivere sul repo lo chiede **solo il job che rilascia**:
+      `contents: read` alla radice di `api.yml` e `mobile.yml`, `write` dentro
+      `deploy` e `release`; i checkout dei job che eseguono il codice della PR
+      non persistono credenziali. *Verificato parsando i quattro YAML e
+      stampando permessi e `with:` di ogni checkout job per job — `write` su due
+      job soli, `persist-credentials: false` sui cinque checkout non pushanti e
+      su nessuno dei due che pushano. Poi in CI sulla PR #16: i sei job passano, e
+      nel job `hook` — quello che poteva perderci qualcosa — il checkout porta
+      `main -> origin/main` anche senza credenziali, e la prova «file già su
+      main» risulta girata e non saltata. I due job che pushano girano solo su
+      `main`, quindi la loro prima esecuzione vera è il prossimo rilascio*
 - [ ] Nessun rilascio iOS
 
 ## Cosa manca dall'esterno
