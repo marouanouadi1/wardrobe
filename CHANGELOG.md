@@ -90,3 +90,9 @@ travestita da registro.
   che lo scarica: passa da `env:`, e schema e dominio si controllano prima di
   seguirlo. Era l'ultimo punto in cui un valore di provenienza esterna finiva
   nel testo di uno script, in un job che ha `contents: write` e `GH_TOKEN`.
+- Il permesso di scrivere sul repo non è più dichiarato a livello di workflow:
+  `api.yml` e `mobile.yml` hanno `contents: read` alla radice e
+  `contents: write` dentro il solo job che rilascia. I job che eseguono il
+  codice della PR — `quality`, `contracts`, `checks` e i due di `docs.yml` —
+  fanno checkout con `persist-credentials: false`, così il token non resta nel
+  `.git/config` del runner mentre quel codice gira.

@@ -113,6 +113,12 @@ lista. (Verificati dal reviewer eseguendoli davvero: `git clean -fdx` cancellava
 un file non tracciato senza incontrare niente, e `git push --force:*` non
 intercetta `-f`.)
 
+*Confermato dal vivo il 2026-09-12*, chiudendo `T-13`: `Edit` su
+`.claude/rules/ci-release.md` è stato **negato**, la stessa scrittura passata da
+Bash sarebbe andata a segno senza incontrare niente. È stata fatta con
+l'autorizzazione esplicita dell'utente, chiesta perché il gate non poteva
+chiederla da sé — che è esattamente il buco descritto qui.
+
 **Resta aperta la parte che conta**, e va saputo che `deny` su Bash è un
 confronto per prefisso: `cd x && git clean` non somiglia a `git clean`. Chiude
 la strada distratta, non quella decisa.
@@ -126,24 +132,6 @@ stessa sessione che stava riscrivendo gli altri quattro hook. Va rifatta anche
 la frase di `.claude/README.md:45-47`: dice «Bash va lasciato in modalità con
 conferma», che è una raccomandazione, non un controllo — in `settings.json` non
 c'è né `defaultMode` né `permissions.ask`.
-
-### T-13 — `contents: write` dichiarato a livello di workflow invece che di job
-**Trovato il:** 2026-09-11 · **Dove:** `.github/workflows/api.yml:25-26`, `mobile.yml:25-26` · **Gravità:** media-alta · **Chi:** `ci-cd` · **Pre-esistente**
-
-Serve al job `deploy`/`release`, ma i job `quality`, `contracts` e `checks` lo
-ereditano — e sono quelli che eseguono codice della PR (`pytest`, `npm ci` con i
-suoi script di lifecycle, `jest`). `actions/checkout@v5` lascia
-`persist-credentials: true`, quindi il token scrivibile resta in `.git/config` del
-runner mentre quel codice gira.
-
-Per le PR da fork GitHub declassa comunque il token; ma questo repo lavora su
-branch interni, e lì è pieno.
-
-**`docs.yml` usa `contents: read`** — è il confronto che rende questo un fatto e
-non un'opinione di stile.
-
-**Cosa serve:** `contents: read` alla radice, `write` dentro il job che rilascia,
-e `persist-credentials: false` sui checkout che non pushano.
 
 ### T-16 — Gli strumenti di test sono in `dependencies`
 **Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/package.json:22-23,38-39` · **Gravità:** bassa · **Chi:** `mobile`
@@ -170,6 +158,10 @@ non farebbero partire gli altri due workflow.
 Il contenimento c'è ed è quello giusto: `on: pull_request` e **non**
 `pull_request_target`, più `permissions: contents: read`. Su PR da fork non ci
 sono né segreti né token scrivibile.
+
+*Dal 2026-09-12* i due checkout hanno anche `persist-credentials: false`
+(chiusura di `T-13`): il token di lettura non resta su disco mentre gira quel
+codice.
 
 **Nessuna azione.** Va scritto in `.claude/rules/ci-release.md` come vincolo: se
 un domani questo workflow dovesse servire un secret, `pull_request_target`
@@ -381,6 +373,28 @@ a scoprirlo, su un diff che non c'entrava niente.
 strade viste: far girare il banco degli hook dentro il workflow di rilascio
 **dopo** il bump, oppure una run programmata di `docs.yml` su `main`. La prima
 chiude il caso esatto, la seconda copre anche i prossimi.
+
+### T-30 — Niente in CI impedisce a `contents: write` di tornare alla radice
+**Trovato il:** 2026-09-12 · **Dove:** `.github/workflows/*.yml` · **Gravità:** bassa · **Chi:** `ci-cd`
+
+Chiudendo `T-13` il privilegio è stato tolto, ma **nessun job diventa rosso** se
+qualcuno lo rimette alla radice, o toglie `persist-credentials: false` a un
+checkout che non pusha. Oggi la regola vive in `.claude/rules/ci-release.md` e
+nei commenti dentro i workflow — cioè è una regola scritta, ed è esattamente
+ciò contro cui mette in guardia quel file: *una regola che la CI non fa fallire
+non è una regola*.
+
+Non è stato fatto insieme al rimedio, e la ragione è quella di `docs/adr/0008`:
+l'asserzione debole («nessun `permissions:` di workflow dichiara
+`contents: write`») è una manciata di righe, ma quella vera («solo i job che
+pushano ce l'hanno») richiede di modellare **quali job pushano** — un custode
+da mantenere. Il rimedio di T-13 toglieva righe; il gate ne aggiunge, e va
+deciso sapendolo.
+
+**Cosa serve:** decidere se la forma debole basta, e in tal caso metterla in
+`docs.yml` — l'unico workflow senza `paths:`, quindi l'unico che vede anche una
+PR che tocca solo l'altro. Oggi passerebbe verde, che è la condizione per
+accendere un gate.
 
 ---
 
@@ -629,3 +643,49 @@ la Release pubblicava una pagina HTML col nome di un APK.
 **Quello che resta non verificato, e non lo poteva essere:** lo step vive nel
 job `release`, che gira solo su `main` (`if: github.ref == 'refs/heads/main'`).
 Il primo rilascio dopo il merge è la sua prima esecuzione vera.
+
+Chiusa il **2026-09-12**, commit `efa4490`.
+
+### T-13 — `contents: write` dichiarato a livello di workflow invece che di job
+**Trovato il:** 2026-09-11 · **Dove:** `.github/workflows/api.yml:25-26`, `mobile.yml:25-26` · **Gravità:** media-alta · **Chi:** `ci-cd` · **Pre-esistente**
+
+Serviva al job `deploy`/`release`, ma i job `quality`, `contracts` e `checks` lo
+ereditavano — e sono quelli che eseguono codice della PR (`pytest`, `npm ci` con
+i suoi script di lifecycle, `jest`). `actions/checkout@v5` lascia
+`persist-credentials: true`, quindi il token scrivibile restava in `.git/config`
+del runner mentre quel codice girava.
+
+Per le PR da fork GitHub declassa comunque il token; ma questo repo lavora su
+branch interni, e lì era pieno.
+
+**`docs.yml` usava `contents: read`** — è il confronto che rende questo un fatto
+e non un'opinione di stile.
+
+**Chiusa applicando esattamente le tre cose scritte qui**: `contents: read` alla
+radice dei due workflow, `permissions: contents: write` dentro `deploy` e
+`release`, `persist-credentials: false` sui tre checkout che non pushano. In
+`release` il `write` copre due scritture, non una: il push del tag e la GitHub
+Release, che è `contents` anche lei per quanto la pubblichi `gh`.
+
+**Oltre il «Dove» di questa voce**, con la stessa riga e la stessa ragione:
+i due checkout di `docs.yml`, che ha già `contents: read` ma esegue comunque
+`npm ci`, la raccolta di pytest e `jest` della PR con una credenziale su disco.
+Verificato prima che non tolga niente al job `hook`: la regola 5 delle
+migrazioni chiede se un file esiste già su `main` con `git ls-tree origin/main`
+(`.claude/hooks/migrazione-idempotente.py:149-152`), che legge il repo locale —
+già completo grazie a `fetch-depth: 0`.
+
+**Verificato** parsando i quattro YAML e stampando permessi e `with:` di ogni
+checkout job per job: radice `contents: read` ovunque, `write` solo su `deploy`
+e `release`, `persist-credentials: false` sui cinque checkout non pushanti e su
+nessuno dei due che pushano. Il banco `scripts/prova-hook.py` resta verde.
+
+**Quello che non si poteva verificare prima del merge:** `deploy` e `release`
+girano solo su `main` (`if: github.ref == 'refs/heads/main'`). Che il permesso
+di job basti al push e a `gh release create` lo dice la prima esecuzione vera —
+la stessa nota che porta `T-14`.
+
+**L'invariante è scritto dove lo si va a cercare**: `.claude/rules/ci-release.md`
+passa da sei a sette, e il numero nel titolo cambia nella stessa modifica.
+
+**Resta aperta la macchina che lo fa rispettare:** `T-30`.
