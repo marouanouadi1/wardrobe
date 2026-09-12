@@ -107,12 +107,21 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       vive nel job `release`: la prima esecuzione vera è il prossimo rilascio.*
 - [x] Bump di versione dai conventional commit (ADR 0005), `pr-title.yml` che lo
       protegge — *ADR 0005 lo documenta; i 22 tag del repo ne sono la traccia*
-- [x] I quattro hook di `.claude/hooks/` sono esercitati da un banco di prova,
+- [x] I cinque hook di `.claude/hooks/` sono esercitati da un banco di prova,
       nel job `hook` di `docs.yml` (che non ha filtri sui path). *Verificato con
       `python3 scripts/prova-hook.py`: verde, e rosso sui sei difetti che il
       banco è nato per fissare — tre migrazioni corrette che venivano negate e
       tre rotte che passavano. Comprende le sette migrazioni vere del repo, così
       un pattern nuovo troppo largo si vede subito*
+- [x] Bash ha un hook `PreToolUse` (`bash-non-aggira.py`, `T-12`): nega le
+      scritture su un path che ha già un gate su `Write`/`Edit` o sui segreti,
+      nega i verbi distruttivi anche quando non sono a inizio riga, chiede su
+      `.claude/**`. *Verificato col banco (28 casi in `banco_bash()`) e dal
+      vivo: un `sed -i` su `.claude/README.md` da Bash ha chiesto conferma
+      invece di passare in silenzio; una lettura di una migrazione vera è
+      passata senza fermarsi. Un falso positivo trovato nella stessa sessione
+      (i verbi distruttivi letti dentro il corpo di un heredoc) è stato
+      corretto e ha un caso suo nel banco prima di chiudere la voce*
 - [x] La soglia di coverage aggregata non nasconde più le due per sottoalbero:
       è l'ultimo step, non il primo. *Verificato in locale eseguendo i tre
       `coverage report` nell'ordine del workflow: dominio, handler e totale

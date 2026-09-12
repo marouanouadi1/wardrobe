@@ -90,48 +90,66 @@ Resta:
 literal fra apici invece di ignorarli. Entrambi con il loro caso nel banco.
 
 ### T-12 — Bash non è intercettato da niente, e i tre agenti «in sola lettura» ce l'hanno
-**Trovato il:** 2026-09-11 · **Dove:** `.claude/settings.json:20,37`, `.claude/agents/{security,reviewer,orchestrator}.md` · **Gravità:** alta · **Chi:** sessione principale
+**Trovato il:** 2026-09-11 · **Dove:** `.claude/settings.json:20,37`, `.claude/agents/{security,reviewer,orchestrator}.md` · **Gravità:** alta (ridotta) · **Chi:** sessione principale
 
-Il `matcher` dei quattro hook è `"Write|Edit"`. **Non esiste nessun hook su
+Il `matcher` dei quattro hook era `"Write|Edit"`. **Non esisteva nessun hook su
 `Bash`**, e `Bash` scrive file: `sed -i`, `tee`, `> file`, `git apply`. Quindi
 l'affermazione in `.claude/README.md` — «hanno `tools: Read, Bash, Glob, Grep` —
-non possono scrivere, ed è deliberato» — **non è vera come scritta**.
-
-Peggio: **nessuna regola `deny` copre `.claude/**`**, quindi un agente può
-riscrivere i propri gate col tool più ovvio.
-
-Il limite di Bash era **già dichiarato** in `.claude/README.md:45-47`. Il finding
-non è il limite: è che **la mitigazione dichiarata non è un controllo** — in
-`settings.json` non c'è `defaultMode`, non c'è `permissions.ask`, non c'è un hook
-su `Bash`. Una sessione in auto-approvazione non incontra nulla.
+non possono scrivere, ed è deliberato» — non era vera come scritta.
 
 **Fatto il 2026-09-11, la metà che si poteva fare senza un parser:**
-`Edit(./.claude/**)` è nella `deny`, e con lui `git clean`, `git push -f`,
+`Edit(./.claude/**)` nella `deny`, e con lui `git clean`, `git push -f`,
 `docker compose down -v|--volumes`, `docker volume rm|prune` — tutti nominati da
 CLAUDE.md fra le operazioni che si chiedono sempre prima, e tutti assenti dalla
-lista. (Verificati dal reviewer eseguendoli davvero: `git clean -fdx` cancellava
-un file non tracciato senza incontrare niente, e `git push --force:*` non
-intercetta `-f`.)
+lista.
 
-*Confermato dal vivo il 2026-09-12*, chiudendo `T-13`: `Edit` su
-`.claude/rules/ci-release.md` è stato **negato**, la stessa scrittura passata da
-Bash sarebbe andata a segno senza incontrare niente. È stata fatta con
-l'autorizzazione esplicita dell'utente, chiesta perché il gate non poteva
-chiederla da sé — che è esattamente il buco descritto qui.
+**Fatto il 2026-09-12: `.claude/hooks/bash-non-aggira.py`**, in `PreToolUse` su
+`matcher: "Bash"`, col suo banco (`banco_bash()` in `scripts/prova-hook.py`,
+28 casi). Non giudica il contenuto di una migrazione o di un numero di
+versione: dice solo che quel path si scrive con `Write`/`Edit`, così il gate
+che sa leggerlo lo vede davvero. Nega le stesse operazioni distruttive di
+`deny` anche quando non sono a inizio riga (`cd x && git clean` adesso si
+ferma), e **chiede** — non nega — quando il comando tocca `.claude/**`: è la
+richiesta esplicita di cui parla `.claude/README.md`, resa un prompt invece
+che una convenzione. Verificato **anche dal vivo**: un `sed -i` su
+`.claude/README.md` da Bash ha chiesto conferma invece di passare in silenzio
+come il 2026-09-12 precedente (`T-13`); una `cat` su una migrazione vera è
+passata senza fermarsi.
 
-**Resta aperta la parte che conta**, e va saputo che `deny` su Bash è un
-confronto per prefisso: `cd x && git clean` non somiglia a `git clean`. Chiude
-la strada distratta, non quella decisa.
+**Un falso positivo trovato e corretto nella stessa sessione, prima di
+chiudere la voce:** il primo giro dell'hook cercava i verbi distruttivi in
+*qualunque* segmento del comando, corpo di un heredoc incluso. Scrivere questa
+stessa voce di `DA_FARE.md` (che nomina «`git clean`» in prosa, come esempio)
+tramite un `python3 - <<EOF` veniva negato per una frase scritta in un file,
+non per un comando eseguito. Il rimedio: `rimuovi_corpo_heredoc()` esclude il
+corpo di un heredoc dalla ricerca dei verbi distruttivi (resta incluso per il
+riconoscimento dei bersagli, perché lì un `python3 - <<EOF ... open(".claude/x")
+... EOF` nomina il path proprio dentro il corpo). Il caso ha il suo posto nel
+banco: è la prova che un pattern troppo largo si vede prima di arrivare in
+produzione, non dopo.
 
-**Cosa serve:** un hook `PreToolUse` con `matcher: "Bash"` che legga
-`tool_input.command` e neghi le scritture sui path protetti e le letture di
-`*.env*`. Non è stato scritto qui di proposito: una guardia che decide su una
-riga di shell con dei regex è essa stessa un tampone col custode (`docs/adr/0008`),
-e va disegnata con calma e con il suo banco di prova — non di rimbalzo, nella
-stessa sessione che stava riscrivendo gli altri quattro hook. Va rifatta anche
-la frase di `.claude/README.md:45-47`: dice «Bash va lasciato in modalità con
-conferma», che è una raccomandazione, non un controllo — in `settings.json` non
-c'è né `defaultMode` né `permissions.ask`.
+**Resta aperto**, e non è coperto da questo hook — dichiarato nel suo
+docblock, non taciuto:
+
+- l'hook non sa **quale agente** ha chiamato Bash: «`reviewer`/`security`/
+  `orchestrator` non scrivono» resta un'istruzione, non un controllo, per
+  tutto ciò che è fuori dai bersagli sorvegliati;
+- un comando che scrive senza nominare il path (`npm install` che tocca
+  `package.json`) non si vede; lo stesso per `apps/mobile/package.json` dopo
+  un `cd apps/mobile` — quel bersaglio richiede il path per intero apposta
+  (il solo `package.json` colpirebbe anche la root e ogni altro workspace),
+  quindi *quello* smette di vedersi dopo il `cd`;
+- `docker exec … psql -c 'drop table …'` salta il gate delle migrazioni per
+  intero: gira dentro un altro processo, e l'hook non intercetta nulla lì
+  dentro;
+- è un **tampone dichiarato** (`docs/adr/0008`): la causa — una shell che può
+  fare qualunque cosa, giudicata con delle regex su un frammento di testo —
+  resta dov'era. Il file aggiunge righe, non ne toglie.
+
+**Cosa serve:** niente per chiudere la voce — è la parte che conta, ed è
+fatta. Resta da valutare, in un secondo momento, se dare agli hook un modo di
+sapere quale agente ha chiamato il tool: oggi non esiste nell'evento che un
+hook riceve.
 
 ### T-16 — Gli strumenti di test sono in `dependencies`
 **Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/package.json:22-23,38-39` · **Gravità:** bassa · **Chi:** `mobile`

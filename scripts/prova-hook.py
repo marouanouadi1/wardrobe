@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Banco di prova dei quattro hook di `.claude/hooks/`.
+"""Banco di prova dei cinque hook di `.claude/hooks/`.
 
 Gli hook sono gli unici gate del progetto che nessuno esercitava: né un test
 né un job CI li invocava. «Provati su dieci casi» era vero e inutile allo
@@ -42,6 +42,7 @@ MIGRAZIONE = "migrazione-idempotente.py"
 VERSIONI = "versioni-non-a-mano.py"
 CONTRATTI = "contratti-allineati.py"
 LINT = "lint-immediato.sh"
+BASH = "bash-non-aggira.py"
 
 
 class Esito:
@@ -294,6 +295,72 @@ def banco_lint(fallimenti: list[str]) -> None:
         sonda.unlink(missing_ok=True)
 
 
+# ── Bash (T-12) ──────────────────────────────────────────────────────────────
+# I casi `allow` contano quanto i `deny`: sono la difesa contro un pattern
+# troppo largo. `.claude/rules/ci-release.md` è esplicita — «non si accende
+# un gate rosso», un gate che sbaglia al primo giro viene disattivato.
+
+BASH_CASI = [
+    # Devono passare senza fermarsi: non nominano un bersaglio, o lo nominano
+    # solo in una forma di lettura riconosciuta.
+    ("npm run api:test", "allow"),
+    ("npm run contracts:generate", "allow"),
+    ("python3 scripts/prova-hook.py", "allow"),
+    ("cat services/api/migrations/0009_conversazioni_chat.sql", "allow"),
+    ("cd services/api && cat migrations/0009_conversazioni_chat.sql", "allow"),
+    ("ls services/api/migrations/", "allow"),
+    ('grep -rn "su" .claude/rules/', "allow"),
+    ("git diff .claude/", "allow"),
+    ("grep -rn x .claude/ > /tmp/o", "allow"),
+    ("docker compose down", "allow"),
+    ('docker compose exec -T api sh -c "env | grep -c FAL_KEY"', "allow"),
+    # `apps/mobile/package.json` va scritto per intero: dopo un `cd` il
+    # frammento bare `package.json` non basta, ed è un limite dichiarato, non
+    # un difetto — colpirebbe anche la root e ogni altro workspace.
+    ("cd apps/mobile && sed -i s/../.. package.json", "allow"),
+    # Devono chiedere: la porta legittima su `.claude/`, e le forme opache.
+    ("sed -i s/x/y/ .claude/README.md", "ask"),
+    ("echo x >> .claude/settings.json", "ask"),
+    ("bash -c 'sed -i s/x/y/ .claude/README.md'", "ask"),
+    # Trovato dal vivo mentre si scriveva questa stessa voce: il primo giro
+    # cercava i verbi distruttivi anche dentro il corpo di un heredoc, e un
+    # `python3 - <<EOF` che scrive un file di *documentazione* — uno che
+    # nomina «git clean» in una frase, come qui — veniva negato per la frase,
+    # non per un comando. Deve chiedere (per `.claude/**`), non negare.
+    ("python3 - <<'PYEOF'\n"
+     "p = '.claude/README.md'\n"
+     "s = open(p).read()\n"
+     "s = s.replace('vecchio', 'cd x && git clean -fdx non passa da qui')\n"
+     "open(p, 'w').write(s)\n"
+     "PYEOF", "ask"),
+    # Devono negare: i gate già esistenti aggirati da Bash, i segreti, i
+    # verbi distruttivi non a inizio riga.
+    ("cat > services/api/migrations/0010_x.sql <<EOF\ncreate table t (id int);\nEOF", "deny"),
+    ("sed -i s/0.4.2/9.9.9/ services/api/pyproject.toml", "deny"),
+    ("cd services/api && sed -i s/0.4.2/9.9.9/ pyproject.toml", "deny"),
+    ("echo '{}' > packages/contracts/src/generated/modelli.ts", "deny"),
+    ("cat .env", "deny"),
+    ("grep KEY services/api/.env", "deny"),
+    ("cat services/api/dati/foto/1/originale.jpg", "deny"),
+    ("cd x && git clean -fdx", "deny"),
+    ("git push -f origin main", "deny"),
+    ("git reset --hard HEAD~1", "deny"),
+    ("foo && docker compose down --volumes", "deny"),
+    ("docker volume prune -f", "deny"),
+    ("rsync -avz ./ marouan@89.167.15.22:~/wardrobe/", "deny"),
+]
+
+
+def banco_bash(fallimenti: list[str]) -> None:
+    hook = HOOKS / BASH
+    for comando, atteso in BASH_CASI:
+        evento = {"tool_name": "Bash", "tool_input": {"command": comando}}
+        verifica(f"bash · {comando[:60]!r}", esegui(hook, evento), atteso, fallimenti)
+
+    verifica("bash · evento malformato",
+             esegui(hook, None, grezzo="non-json"), "ask", fallimenti)
+
+
 # ── L'esecuzione ─────────────────────────────────────────────────────────────
 
 def verifica(nome: str, esito: Esito, atteso: str, fallimenti: list[str]) -> None:
@@ -315,6 +382,7 @@ def main() -> int:
         ("versioni-non-a-mano.py", banco_versioni),
         ("contratti-allineati.py", banco_stop),
         ("lint-immediato.sh", banco_lint),
+        ("bash-non-aggira.py", banco_bash),
     ):
         print(f"\n{titolo}")
         banco(fallimenti)
