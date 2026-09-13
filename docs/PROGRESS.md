@@ -5,7 +5,7 @@
 > modulo citato da un ADR può non esistere più. Prima di dare per esistente — o per
 > inesistente — qualunque cosa, si apre questo file.
 
-**Ultimo aggiornamento:** 2026-09-12
+**Ultimo aggiornamento:** 2026-09-13
 
 > ### Sulla provenienza di questa prima versione
 >
@@ -78,12 +78,16 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
 - [~] `(tabs)/avatar.tsx` — sagoma SVG tinta dai colori dominanti. È il **ripiego
       dichiarato dall'ADR 0004**, non il 3D che l'ADR descrive: il manichino che vestiva
       foto vere è stato rimosso col playground e non ne resta codice
-- [x] Test automatici dell'app — leggibilità del testo sul fondo dipinto e
-      convenzioni delle primitive, `style` e prop `sfondo`. *Verificato con
-      `npm run mobile:test`: verdi, e il gate colto davvero due volte — la
-      violazione di PR #4 reintrodotta in `avviso.tsx`, e una `<Scheda
-      sfondo={colori.inchiostro}>` senza `su` in `calendario.tsx`, che fa
-      passare la suite a «1 failed» indicando file e riga*
+- [x] Test automatici dell'app — leggibilità del testo sul fondo dipinto,
+      convenzioni delle primitive (`style` e prop `sfondo`), e nessun colore
+      composto a mano (`rgba()`/esadecimale) fuori da `tema/tokens.ts` e
+      `dati/dominio.ts`. *Verificato con `npm run mobile:test`: verdi, e i
+      gate colti davvero fallire più volte — la violazione di PR #4
+      reintrodotta in `avviso.tsx`, una `<Scheda sfondo={colori.inchiostro}>`
+      senza `su` in `calendario.tsx`, e (2026-09-13, T-19/T-20) un
+      `rgba(21,21,26,0.4)` reintrodotto in `calendario.tsx:99` — in tutti e
+      tre i casi la suite indica file e riga, e torna verde dopo il
+      ripristino*
 - [x] Una sola copia di React nel monorepo (`T-23`, chiusa): `react` e
       `react-dom` dichiarati anche in `dependencies` di root, alla versione
       esatta di `apps/mobile`. Il `jest.moduleNameMapper` che tamponava il

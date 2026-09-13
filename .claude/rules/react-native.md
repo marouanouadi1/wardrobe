@@ -72,11 +72,13 @@ ombre, durate. La regola scritta in cima al file vale come vincolo di prodotto:
 match, «letto dalla foto» — mai su un'azione dell'utente.
 
 La regola completa: **nessun colore composto a mano, primitive incluse.** Vale
-per gli esadecimali *e* per i letterali `rgba()`, che sono la violazione che resta
-oggi. Per una velatura c'è `velo(colore, alfa)` (`tokens.ts`). Esempio del perché:
-`app/calendario.tsx:99` scrive `rgba(21,21,26,0.4)`, che **è** esattamente
-`testoSu.chiaro.debole` — una costante duplicata che nessuno aggiornerà quando il
-token cambia.
+per gli esadecimali *e* per i letterali `rgba()`. Per una velatura c'è
+`velo(colore, alfa)` (`tokens.ts`). Esempio del perché: `app/calendario.tsx:99`
+scriveva `rgba(21,21,26,0.4)`, che **è** esattamente `testoSu.chiaro.debole` —
+una costante duplicata che nessuno avrebbe aggiornato quando il token fosse
+cambiato. Da `T-19`/`T-20` (`docs/DA_FARE.md`) questa classe non è più solo
+scritta: `test/convenzioni/colori.test.ts` la rifiuta, leggendo `app/` e `src/`
+con l'AST di TypeScript.
 
 Non sono violazioni, e non vanno «corrette»: `PALETTE_COLORI` in
 `src/dati/dominio.ts` (sono i colori **dei capi**, dati di dominio) e
