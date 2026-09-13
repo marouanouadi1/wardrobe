@@ -131,16 +131,14 @@ arrivano da `@wardrobe/contracts`. Dettaglio e catena in
 `.claude/rules/contratti.md`. Due copie della stessa enum divergono in silenzio —
 è già successo.
 
-## Un tampone in piedi, e va saputo
+## Una sola copia di React, dichiarata in due punti
 
-`apps/mobile/package.json` contiene un `jest.moduleNameMapper` che forza i test a
-risolvere una copia sola di React. **È un tampone, non un rimedio**
-(`docs/adr/0008`): le due copie continuano a esistere, e il conflitto resta
-attivo ovunque fuori dai test.
-
-La causa è che il `package.json` della root non dichiara `react`, mentre decine di
-pacchetti hoisted lì lo chiedono come peer con `*`. Il rimedio è dichiararlo in
-root — e **quando arriva, il mapper si cancella**.
+`react` e `react-dom` sono dichiarati **sia** in `package.json` di root **sia**
+in `apps/mobile/package.json`, alla stessa versione esatta (oggi `19.2.3`,
+pinnata da Expo SDK 57) — altrimenti tornano le due copie che `T-23` ha chiuso
+(`docs/adr/0008`). **Quando Expo alza il pin, si alza in entrambi i file nella
+stessa modifica**: `package.json` è JSON e non può portare un commento che lo
+spieghi da solo, e questa riga è il posto dove si va a cercarlo.
 
 Sta scritto qui perché `package.json` è JSON e non può portare un commento: il
 posto dove lo si incontra non può spiegarlo. Voce completa: `T-23` in
