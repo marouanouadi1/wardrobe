@@ -11,7 +11,7 @@ import { Redirect, Tabs } from 'expo-router'
 import { View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useSessione } from '../../src/dati/sessione'
-import { colori, ombre, raggi, testoSu } from '../../src/tema/tokens'
+import { colori, ombre, raggi, testoSu, velo } from '../../src/tema/tokens'
 import { Icona, type NomeIcona, Toccabile } from '../../src/ui/base'
 import { Etichetta } from '../../src/ui/testo'
 
@@ -55,7 +55,7 @@ export default function DisposizioneSchede() {
               gap: 2,
               padding: 8,
               borderRadius: raggi.pillola,
-              backgroundColor: 'rgba(21,21,26,0.96)',
+              backgroundColor: velo(colori.inchiostro, 0.96),
               ...ombre.alta,
             }}
           >
@@ -77,7 +77,7 @@ export default function DisposizioneSchede() {
                     backgroundColor: voce.centrale
                       ? colori.ambra
                       : attiva
-                        ? 'rgba(247,244,239,0.14)'
+                        ? velo(colori.crema, 0.14)
                         : 'transparent',
                   }}
                 >

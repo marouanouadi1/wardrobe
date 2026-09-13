@@ -90,7 +90,7 @@ export function Campo({
   const campo = (
     <Fondo su="chiaro">
       <TextInput
-        placeholderTextColor="rgba(21,21,26,0.4)"
+        placeholderTextColor={testoSu.chiaro.debole}
         {...props}
         style={[
           {
@@ -162,13 +162,13 @@ export function BarraChiedi({
           style,
         ]}
       >
-        <Icona nome={icona} misura={17} colore={onInvia ? colori.ambraMedio : 'rgba(21,21,26,0.45)'} spessore={2.2} />
+        <Icona nome={icona} misura={17} colore={onInvia ? colori.ambraMedio : velo(colori.inchiostro, 0.45)} spessore={2.2} />
         <TextInput
           value={valore}
           onChangeText={onCambia}
           onSubmitEditing={onInvia}
           placeholder={placeholder}
-          placeholderTextColor="rgba(21,21,26,0.4)"
+          placeholderTextColor={testoSu.chiaro.debole}
           // 14.5: stessa nota di `Campo` sopra — un `TextInput` non legge
           // `tipografia`, solo `caratteri.testo` per la famiglia.
           style={{ flex: 1, fontFamily: caratteri.testo, fontSize: 14.5, color: colori.inchiostro }}
@@ -817,7 +817,7 @@ export function BottoneIndietro({ onPress, su }: { onPress?: () => void; su?: Su
         borderRadius: raggi.pillola,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: scura ? 'rgba(247,244,239,0.1)' : linee.tenue,
+        backgroundColor: scura ? velo(colori.crema, 0.1) : linee.tenue,
       }}
     >
       <Icona nome="indietro" misura={17} colore={scura ? colori.crema : colori.inchiostro} spessore={2.2} />
