@@ -20,7 +20,7 @@ import { useEffect, useState } from 'react'
 import { BackHandler, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { segnaIntroVista } from '../src/dati/intro'
-import { colori, linee, raggi, spazi } from '../src/tema/tokens'
+import { colori, linee, raggi, spazi, velo } from '../src/tema/tokens'
 import { BottoneIndietro, BottonePrimario, LinkTesto, Toccabile } from '../src/ui/base'
 import { Corpo, Etichetta, Titolo } from '../src/ui/testo'
 
@@ -74,7 +74,7 @@ export default function Intro() {
       {/* La sfumatura non è decorazione: senza, il testo scuro su una foto
           qualunque diventa illeggibile. */}
       <LinearGradient
-        colors={['rgba(242,238,231,0.1)', 'rgba(242,238,231,0.55)', 'rgba(242,238,231,0.97)']}
+        colors={[velo(colori.sfondo, 0.1), velo(colori.sfondo, 0.55), velo(colori.sfondo, 0.97)]}
         locations={[0, 0.46, 1]}
         style={{ position: 'absolute', inset: 0 }}
       />

@@ -154,7 +154,7 @@ export default function DettaglioCapo() {
             misura={38}
             misuraIcona={18}
             sfondo={velaturaSuFoto}
-            colore={capo.preferito ? colori.corallo : 'rgba(21,21,26,0.6)'}
+            colore={capo.preferito ? colori.corallo : velo(colori.inchiostro, 0.6)}
             pieno={capo.preferito}
           />
         </View>

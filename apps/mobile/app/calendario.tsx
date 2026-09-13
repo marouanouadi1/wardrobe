@@ -13,7 +13,7 @@ import { View } from 'react-native'
 import { useArmadio } from '../src/dati/archivio'
 import { capiDormienti, fotoDaMostrare } from '../src/dati/dominio'
 import { formattaMeseAnno, parola } from '../src/dati/formato'
-import { colori, durate, griglie, linee, spazi } from '../src/tema/tokens'
+import { colori, durate, griglie, linee, spazi, testoSu, velo } from '../src/tema/tokens'
 import { BadgeIa, BottonePrimario, BottoneSecondario, Scheda } from '../src/ui/base'
 import { RigaStatistiche } from '../src/ui/righe'
 import { ScheletroCalendario } from '../src/ui/scheletri'
@@ -91,12 +91,12 @@ export default function Calendario() {
                   style={{
                     position: 'absolute',
                     inset: 0,
-                    backgroundColor: primo ? 'rgba(21,21,26,0.28)' : 'transparent',
+                    backgroundColor: primo ? velo(colori.inchiostro, 0.28) : 'transparent',
                   }}
                 />
                 <Etichetta
                   taglia={10}
-                  colore={primo ? colori.scheda : 'rgba(21,21,26,0.4)'}
+                  colore={primo ? colori.scheda : testoSu.chiaro.debole}
                   style={{ position: 'absolute', left: 5, top: 3, letterSpacing: 0 }}
                 >
                   {String(giorno)}

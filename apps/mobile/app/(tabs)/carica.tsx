@@ -20,7 +20,7 @@ import { View } from 'react-native'
 import { api, messaggioDiErrore } from '../../src/dati/api'
 import { useArmadio } from '../../src/dati/archivio'
 import { conta } from '../../src/dati/formato'
-import { raggi, spazi } from '../../src/tema/tokens'
+import { colori, raggi, spazi, velo } from '../../src/tema/tokens'
 import { BottonePrimario, BottoneSecondario, Scheda } from '../../src/ui/base'
 import { MiniaturaFoto, PiedeFoto, SchedaFoto } from '../../src/ui/capi'
 import { AttesaLunga } from '../../src/ui/stati'
@@ -286,7 +286,7 @@ export default function Carica() {
                 inset: 22,
                 borderWidth: 2,
                 borderStyle: 'dashed',
-                borderColor: 'rgba(255,253,249,0.45)',
+                borderColor: velo(colori.scheda, 0.45),
                 borderRadius: 22,
               }}
             />

@@ -18,6 +18,16 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- I colori composti a mano (`rgba()`, esadecimali) in 7 file fra schermate e
+  primitive sono stati sostituiti con i token di `tema/tokens.ts` o con
+  `velo(colore, alfa)`, che produce lo stesso formato senza spazi: nessun
+  pixel cambia, con un'eccezione dichiarata — il fondo dell'attributo
+  «incerto» in `Attributo` riusa `colori.coralloTenue` invece di un
+  esadecimale mai promosso a token, e passa da `#FFF1EC` a `#FFE3DA`
+  (leggermente più saturo). Un nuovo gate
+  (`test/convenzioni/colori.test.ts`) rifiuta ora un colore scritto a mano
+  ovunque in `app/` e `src/`, con le sole eccezioni di `tema/tokens.ts` (la
+  fonte) e `dati/dominio.ts` (`PALETTE_COLORI`, dati di dominio).
 - `BottonePrimario` ha la variante `pericolo` (sfondo corallo, testo crema): la
   conferma di `Avviso` non ridipinge più il fondo dal punto di chiamata.
 - Corretto `BottonePrimario`: `sfondo` e `su` venivano da due ternarie con una

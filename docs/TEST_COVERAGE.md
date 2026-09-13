@@ -17,7 +17,7 @@ Due tipi di numero, e si comportano diversamente:
 ## Numeri correnti
 
 - **Test backend:** 163
-- **Test app:** 21
+- **Test app:** 23
 - **Soglia coverage totale:** 73% — `services/api/pyproject.toml`
 - **Soglia coverage `src/domain/`:** 97% — `.github/workflows/api.yml`
 - **Soglia coverage `src/handlers/`:** 92% — idem, escluso `local_server.py`
@@ -98,6 +98,7 @@ onboarding light button»).
 | `test/ui/leggibilita.test.tsx` | 12 | il colore risolto di un testo dentro `Scheda`, `BottonePrimario` (nelle quattro varianti, inclusa la combinazione `pericolo + disabilitato`), `Pillola` (attiva e no, nei due ambienti), `Segmenti`, `BottoneSecondario` |
 | `test/ui/fondo.test.tsx` | 5 | il meccanismo: `useFondo()` senza provider, ereditarietà, annidamento a tre livelli |
 | `test/convenzioni/primitive.test.ts` | 4 | che nessuno ridipinga il fondo di una primitiva dal di fuori: né con `style={{ backgroundColor }}` — la forma esatta della regressione di PR #4 — né passando `sfondo` senza dire con `su` su che fondo ci si posa |
+| `test/convenzioni/colori.test.ts` | 2 | che nessun `rgba()`/esadecimale sia scritto a mano in `app/` o `src/` — i valori vengono da `tema/tokens.ts` o si compongono con `velo()`. `src/tema/tokens.ts` (la fonte) e `src/dati/dominio.ts` (`PALETTE_COLORI`, dati di dominio) sono le due esenzioni dichiarate |
 
 I test non verificano che una prop venga inoltrata: **verificano il colore
 risolto contro il fondo effettivamente dipinto**. È un invariante più forte, e

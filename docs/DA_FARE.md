@@ -107,35 +107,38 @@ richiede un container. Ma il punto è saperlo, non alzare la media con dei mock.
 l'accettazione esplicita che quel codice si prova solo a mano. Numeri in
 `docs/TEST_COVERAGE.md`.
 
-### T-19 — Letterali `rgba()` che ricalcolano token esistenti — schermate *e* primitive
-**Dove:** `app/calendario.tsx:94,99`, `app/(tabs)/_layout.tsx:58,80`, `app/intro.tsx:77`, `app/capo/[id].tsx:156`, `app/(tabs)/carica.tsx:289`, **`src/ui/base.tsx:93,165,171,820`** · **Gravità:** bassa · **Chi:** `mobile`
+### T-33 — `Attributo` dipinge un fondo opaco senza asserirlo
+**Trovato il:** 2026-09-13 · **Dove:** `apps/mobile/src/ui/capi.tsx:280` · **Gravità:** bassa · **Chi:** `mobile`
 
-Il caso più netto è `calendario.tsx:99` → `rgba(21,21,26,0.4)`, che **è**
-`testoSu.chiaro.debole`. Per una velatura esiste `velo(colore, alfa)`.
+Il ramo `incerto` dipinge un fondo opaco (`colori.coralloTenue`, prima della
+chiusura di T-20 era `#FFF1EC`), ma la primitiva non emette nessun `<Fondo>`, e
+`Etichetta`/`Forte` al suo interno leggono `useFondo()`. Su una schermata scura
+sarebbero testo chiaro su un fondo chiarissimo.
 
-**I quattro in `base.tsx` sono stati trovati il 2026-09-11** e non erano in
-questa voce: `placeholderTextColor="rgba(21,21,26,0.4)"` due volte,
-`'rgba(21,21,26,0.45)'` sull'icona di `BarraChiedi`, e
-`'rgba(247,244,239,0.1)'` — che è `velo(colori.crema, 0.1)`. Contano più degli
-altri, perché la regola dice «primitive incluse» e stanno proprio lì. Il quinto,
-in `PALETTE_BOTTONE_PRIMARIO`, è stato convertito nella PR che ha scritto la
-regola: il refactor l'aveva trasportato lì dentro invece di risolverlo.
+**Latente, non vivo — verificato:** c'è un solo punto di chiamata
+(`app/capo/[id].tsx:213`), dentro una `Schermata` che non passa `su`, quindi su
+fondo chiaro. Nessuno dei due gate di `primitive.test.ts` lo vedrebbe comunque:
+`Attributo` non dichiara né `style` né `sfondo`.
 
-Non sono gatati perché il gate fallirebbe oggi: **prima si sanano, poi si
-accende** — un gate rosso al primo giro viene disattivato.
+**In più**, il docblock di `fondo.tsx:1-22` cita `Attributo` come esempio di chi
+«dipinge in trasparenza» e quindi inoltra — vero per il ramo non-incerto, falso
+per questo: è una divergenza fra la fonte normativa e il codice, e per
+`CLAUDE.md` in quel caso vince il codice.
 
-**Cosa serve:** sostituirli con i token o con `velo()`, poi aggiungere la regola
-al gate delle convenzioni (T-01/T-02).
+**Cosa serve:** o `Attributo` asserisce `<Fondo su="chiaro">` sul ramo opaco, o
+il docblock di `fondo.tsx` smette di citarlo come esempio di chi inoltra.
 
-### T-20 — Un esadecimale vive dentro una primitiva
-**Dove:** `apps/mobile/src/ui/capi.tsx:280` · **Gravità:** bassa · **Chi:** `mobile`
+### T-34 — Tre primitive accettano `sfondo` e sfuggono al gate che lo controlla
+**Trovato il:** 2026-09-13 · **Dove:** `apps/mobile/src/ui/base.tsx:525` (`Badge`), `:722` (`Bolla`), `:763` (`BottoneTondo`) · **Gravità:** bassa · **Chi:** `mobile`
 
-`incerto ? '#FFF1EC' : 'rgba(21,21,26,0.04)'` — un rosa vicino a
-`colori.coralloTenue` ma non identico, mai promosso a token. È il posto che la
-vecchia regola («niente esadecimali nelle schermate») considerava al sicuro.
+Le tre dichiarano `sfondo` e lo dipingono in opaco senza asserire nessun
+`<Fondo>`, con `colore` **cablato** a `colori.inchiostro` come default:
+`<Badge sfondo={colori.inchiostro}>` darebbe inchiostro su inchiostro, e nessun
+gate se ne accorgerebbe. `derivaPrimitiveConSfondo` in `primitive.test.ts`
+richiede *anche* `<Fondo su=>`, quindi oggi trova solo `Scheda` e `SchedaFoto`.
 
-**Cosa serve:** promuoverlo a token, o usare quello che c'è già se il
-discostamento non è voluto.
+**Cosa serve:** una decisione sul criterio — vale lo stesso ragionamento di
+T-24 qui sotto, e i due vanno probabilmente risolti insieme.
 
 ### T-21 — `carica.tsx` scrive a mano una sequenza di quattro chiamate, duplicata
 **Dove:** `apps/mobile/app/(tabs)/carica.tsx:149-152` e `:224-227` · **Gravità:** media · **Chi:** `mobile`
@@ -145,7 +148,36 @@ percorsi, in un file di 378 righe con stato di caricamento fatto a mano. È il
 debito più grosso dell'app, ed è la terza strada che `.claude/rules/react-native.md`
 dice di non prendere.
 
-**Cosa serve:** un hook che incapsuli la sequenza, componendo `useAzione`.
+**Due correzioni, verificate il 2026-09-13.** (a) «Stato di caricamento fatto a
+mano» **non regge**: `carica.tsx` non ha nessuna coppia `useState`
+caricamento/errore — ha una macchina a fasi (`fase: 'scatta' | 'analisi'`) più
+un contatore di progresso per la coda, e ogni errore va al coriandolo `avvisa`
+dello store. Viola solo la seconda metà del divieto di
+`.claude/rules/react-native.md` («una sequenza di chiamate API scritta a
+mano»), non la prima. (b) I punti di chiamata sono **tre, non due**:
+`src/dati/archivio.tsx:362-369` (`impostaFotoAvatar`) ripete la prima metà
+della sequenza, `firmaUpload → caricaFoto`.
+
+**Il rimedio proposto va pesato, non dato per buono.** `useAzione` ha tre
+attriti reali coi due percorsi: `mappaErrore: (errore) => string` non sa
+esprimere «non mostrare niente», che serve al ramo annullato di
+`analizzaUnaFoto` (riga 164); il percorso coda **ingoia di proposito** ogni
+errore (`catch { fallite += 1 }`), quindi non ha bisogno di nessuno stato
+d'errore; e un solo booleano `caricamento` per istanza verrebbe acceso/spento
+N volte dentro il `for` della coda, mentre il segnale UI vero è
+`analizzandoCoda` + `progressoCoda`. Un'alternativa che pesa meno: una
+funzione pura in `src/dati/` (`analizzaFoto(uri, segnale?)`) che tolga le
+quattro righe duplicate senza aggiungere uno stato che la coda non userebbe —
+coerente con «il rimedio toglie righe».
+
+**Vincolo da conservare in qualunque soluzione:** `caricaFoto` **non accetta**
+`AbortSignal` (usa `expo-file-system`, non `fetch`) — solo
+`avviaAnalisi`/`statoAnalisi` sono abortibili. Un'estrazione che nascondesse
+questa asimmetria sarebbe un regresso.
+
+**Cosa serve:** decidere fra un hook (`useAzione`-based, coi tre attriti sopra
+da risolvere) e una funzione pura in `src/dati/`, poi applicarla ai tre
+call-site.
 
 ### T-22 — `chat.ts` re-implementa la coppia caricamento/errore
 **Dove:** `apps/mobile/src/dati/chat.ts:46-47` · **Gravità:** bassa · **Chi:** `mobile`
@@ -155,7 +187,36 @@ dice di non prendere.
 strutturale del frontend, perché non è in una schermata ma accanto all'astrazione
 che dovrebbe usare.
 
-**Cosa serve:** comporre `useRisorsa`, o dire per iscritto perché non si può.
+**Verificato il 2026-09-13: non è streaming né polling** — `api.chat.invia` è
+una singola POST. I blocchi veri per comporre `useRisorsa` sono concreti, non
+un'impressione: (1) `useState(scelta.tipo !== 'nuova')` contro l'hardcoded
+`useState(true)` di `useRisorsa` — il ramo `'nuova'` non deve fare nessuna
+fetch, ma l'effetto di `useRisorsa` ne farebbe partire una comunque; (2) una
+fetch riuscita scrive **tre** stati (`messaggi`, `conversazione`, un ref),
+mentre `useRisorsa` espone solo `dati` in sola lettura — l'eco ottimistico di
+`invia` e il suo rollback non ci vivrebbero sopra; (3) gli errori vanno al
+coriandolo `avvisa`, non trattenuti per un `<StatoRisorsa>`; (4) la guardia
+`attivo` non è ridondante, perché `useRisorsa.esegui` non cancella nessuna
+richiesta in volo — una risposta stantia atterrerebbe comunque dopo un cambio
+di `scelta`.
+
+Per lo stesso motivo `useAzione` non copre pulito l'invio (`inAttesa`):
+cattura l'errore e basta, ma qui serve anche il rollback dell'eco ottimistico
+e restituire il testo a `bozza` — compensazione che resterebbe comunque scritta
+a mano dentro l'azione passata.
+
+**Il filo comune con T-21, che nessuna delle due voci diceva finché non è
+stato verificato:** sia `carica.tsx` sia `chat.ts` instradano gli errori sul
+**coriandolo** `avvisa`, mentre `useRisorsa`/`useAzione` li *trattengono* per
+renderizzarli. `.claude/rules/react-native.md` elenca due meccanismi legittimi
+e non nomina questa terza via — che quindi è essa stessa da decidere, non solo
+da chiudere caso per caso.
+
+**Cosa serve:** una chiusura scritta che elenchi **entrambi** i tentativi
+(`useRisorsa` per il caricamento, `useAzione` per l'invio) col motivo
+specifico per cui ciascuno non regge — non un «non si può» generico — oppure
+la decisione, a monte, se il coriandolo è un terzo meccanismo legittimo da
+scrivere nella regola.
 
 ### T-24 — Il criterio della derivazione è più stretto di quello vero
 **Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/test/convenzioni/primitive.test.ts` · **Gravità:** bassa · **Chi:** `mobile`
@@ -173,8 +234,26 @@ criterio derivato è più stretto del vero. Il rimedio — allargare il criterio
 **cancella quella costante**. Se la chiusura di questa voce la lascia in piedi, il
 problema è stato spostato, non tolto.
 
-**Cosa serve:** provare il criterio largo in locale, e se è pulito togliere
-l'eccezione a mano.
+**Provato in locale il 2026-09-13** (senza applicarlo — questa voce resta
+aperta): il criterio va scritto come **unione**,
+`(<Fondo su=> OR backgroundColor) AND style`, **non** come sostituzione del
+primo con il secondo. `PiedeFoto` dipinge con `LinearGradient` (via `velo()`
+dopo T-19) e non ha **nessun** `backgroundColor`: un criterio «solo bg»
+la perderebbe, e il test cadrebbe sul suo stesso `arrayContaining` a riga 210.
+Con l'unione l'insieme derivato passa da 6+1 (l'eccezione a mano) a **8**:
+entrano `BottoneSecondario` e `Blocco` (`scheletri.tsx`), **e
+`RIDIPINGIBILI_SENZA_FONDO` si cancella senza toccare nessuna asserzione** —
+la chiusura pulita che questa voce esige. Simulato sui 37 file di `app/` +
+`src/`: **zero falsi positivi** — nessuno dei 17 usi di `<Blocco>` passa
+`style={{ backgroundColor }}`. **Attenzione:** il qualificatore «che non
+eredita» è una trappola — filtrare i fondi trasparenti/velati ri-escluderebbe
+proprio `BottoneSecondario` (`sfondo ?? 'transparent'`), cioè il componente
+per cui questa voce esiste. Il criterio giusto è solo «la chiave c'è», senza
+distinguere l'opacità.
+
+**Cosa serve:** applicare l'unione sopra a `derivaPrimitiveRidipingibili` in
+`primitive.test.ts`, verificare che i test restino tutti verdi, e togliere
+`RIDIPINGIBILI_SENZA_FONDO`.
 
 ### T-25 — `dichiaraProp` guarda solo la destrutturazione del primo parametro
 **Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/test/convenzioni/primitive.test.ts` · **Gravità:** bassa · **Chi:** `mobile`
@@ -184,8 +263,18 @@ sfuggirebbe a entrambe le derivazioni — la funzione si chiama `dichiaraProp` d
 quando serve anche a `sfondo`. Nessuno lo fa oggi, e il pavimento a sei nomi è la difesa contro una
 regressione silenziosa, ma il buco esiste.
 
+**Riverificato il 2026-09-13: il buco è oggi vuoto.** In `src/ui` non esiste
+nessun componente esportato come arrow function o function expression — sono
+tutte `FunctionDeclaration`, quindi il vincolo «solo `isFunctionDeclaration`»
+non perde niente da solo. Gli otto componenti con un rest param (`...props`)
+destrutturano comunque `style` esplicitamente accanto al rest, quindi
+`dichiaraProp` li vede. Le due sole funzioni con un primo parametro non
+destrutturato in `src/ui` sono `useColore(props: Props)` e
+`risolviTaglia(taglia: …)` in `testo.tsx`, entrambe non componenti.
+
 **Cosa serve:** guardare anche gli accessi `props.style`, o accettarlo e dirlo
-nel commento (oggi non è scritto).
+nel commento (oggi non è scritto) — la scelta non è urgente perché il buco non
+nasconde oggi nessun punto di chiamata reale.
 
 ### T-26 — Il gate sulle primitive non risolve un identificatore né uno spread
 **Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/test/convenzioni/primitive.test.ts` · **Gravità:** bassa · **Chi:** `mobile`
@@ -199,6 +288,11 @@ e `style={[…]}`, ma non `style={unaVariabile}`, non `style={styles.card}` e no
 Nessun punto di chiamata lo fa oggi (verificato), e il gate non è inutile per
 questo: prende la forma con cui il difetto è davvero arrivato in PR #4. Ma il
 buco è reale e la scorciatoia per aggirarlo è di una riga.
+
+**Riverificata il 2026-09-13** la stessa cosa, cercando attivamente
+`JsxSpreadAttribute` e `style={identificatore}`/`style={oggetto.proprietà}`
+sulle otto primitive, in tutti i 37 file di `app/` + `src/`: **zero
+occorrenze**. La scorciatoia esiste ma nessuno l'ha ancora presa.
 
 **Cosa serve:** risolvere gli identificatori dichiarati nello stesso file
 (`const styles = StyleSheet.create({…})` è il caso vero), e decidere sugli
@@ -588,3 +682,69 @@ conteggio in `docs/TEST_COVERAGE.md`) ed `expo export --platform web`
 (`npm run dev:app`) su un dispositivo o un emulatore — nessuno disponibile in
 questa sessione. È il sintomo originale (dispatcher nullo al primo hook), e
 resta da provare alla prima sessione con un ambiente che lo permetta.
+
+---
+
+Chiuse il **2026-09-13**, commit `c7810fc` (sanatoria) e `45877de` (gate).
+
+### T-19 — Letterali `rgba()` che ricalcolano token esistenti — schermate *e* primitive
+**Trovato il:** 2026-09-11 · **Dove:** `app/calendario.tsx:94,99`, `app/(tabs)/_layout.tsx:58,80`, `app/intro.tsx:77`, `app/capo/[id].tsx:156`, `app/(tabs)/carica.tsx:289`, **`src/ui/base.tsx:93,165,171,820`** · **Gravità:** bassa · **Chi:** `mobile`
+
+Il caso più netto è `calendario.tsx:99` → `rgba(21,21,26,0.4)`, che **è**
+`testoSu.chiaro.debole`. Per una velatura esiste `velo(colore, alfa)`.
+
+**I quattro in `base.tsx` sono stati trovati il 2026-09-11** e non erano in
+questa voce: `placeholderTextColor="rgba(21,21,26,0.4)"` due volte,
+`'rgba(21,21,26,0.45)'` sull'icona di `BarraChiedi`, e
+`'rgba(247,244,239,0.1)'` — che è `velo(colori.crema, 0.1)`. Contano più degli
+altri, perché la regola dice «primitive incluse» e stanno proprio lì. Il quinto,
+in `PALETTE_BOTTONE_PRIMARIO`, è stato convertito nella PR che ha scritto la
+regola: il refactor l'aveva trasportato lì dentro invece di risolverlo.
+
+Non sono gatati perché il gate fallirebbe oggi: **prima si sanano, poi si
+accende** — un gate rosso al primo giro viene disattivato.
+
+**Chiusa applicando esattamente questo, in due commit distinti.** Il primo
+sana i 18 letterali trovati — non 16: **due non erano in questa voce**,
+`src/ui/capi.tsx:106` (il gradiente di `PiedeFoto`, un `TemplateExpression`
+`` `rgba(21,21,26,${opacita})` ``) e `:279`, entrambi dentro una primitiva. E
+`app/capo/[id].tsx:156` era **157**. Ogni sostituzione è o un token identico
+già esistente (`testoSu.chiaro.debole`, 3 siti) o `velo(colore, alfa)` con
+l'alfa esatto — mai un token *vicino* ma diverso, per non spostare un pixel
+che questa voce non chiedeva di spostare.
+
+Il secondo commit accende il gate: `test/convenzioni/colori.test.ts`, che
+legge `app/` e `src/` con l'AST di TypeScript (lo stesso motivo per cui
+`primitive.test.ts` ha smesso di usare un regex, T-01) e rifiuta ogni
+`rgb()`/`rgba()`/esadecimale scritto a mano, con due esenzioni dichiarate:
+`src/tema/tokens.ts` (la fonte) e `src/dati/dominio.ts` (`PALETTE_COLORI`,
+dati di dominio). `RADICE`/`sorgenti()`/`analizza()` sono state estratte in
+`test/convenzioni/fonti.ts` e condivise con `primitive.test.ts`, invece di
+duplicate.
+
+**Il gate è stato visto diventare rosso davvero**: reintrodotto
+`rgba(21,21,26,0.4)` in `calendario.tsx:99`, `npm run mobile:test` ha fallito
+nominando file e riga; ripristinata la riga, di nuovo verde e `calendario.tsx`
+tornato byte-identico al commit precedente (`git diff` vuoto). Poi
+`npm run typecheck`/`lint --workspace @wardrobe/mobile` ed `expo export
+--platform web` (`build:web`) tutti verdi. Test dell'app: 21 → 23.
+
+**Quello che non si è potuto verificare:** nessuno dei siti toccati è coperto
+da `test/ui/leggibilita.test.tsx` (che esercita altre primitive), quindi
+l'identità del pixel per queste sostituzioni si appoggia sulla lettura del
+codice di `velo()` (produce `rgba(r,g,b,α)` senza spazi, byte-identico ai
+letterali rimossi) e non su un'asserzione automatica.
+
+### T-20 — Un esadecimale vive dentro una primitiva
+**Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/src/ui/capi.tsx:280` · **Gravità:** bassa · **Chi:** `mobile`
+
+`incerto ? '#FFF1EC' : 'rgba(21,21,26,0.04)'` — un rosa vicino a
+`colori.coralloTenue` ma non identico, mai promosso a token. È il posto che la
+vecchia regola («niente esadecimali nelle schermate») considerava al sicuro.
+
+**Chiusa riusando `colori.coralloTenue`** invece di promuovere `#FFF1EC` a
+token nuovo per un solo punto di chiamata. **È l'unico pixel che questa PR
+sposta di proposito**: il fondo dell'attributo «incerto» passa da `#FFF1EC` a
+`#FFE3DA`, leggermente più saturo — deciso con l'utente prima di applicarlo,
+non scoperto dopo. Il ramo non-incerto della stessa riga (`rgba(21,21,26,0.04)`)
+è diventato `velo(colori.inchiostro, 0.04)`, senza cambiare pixel.

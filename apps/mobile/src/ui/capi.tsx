@@ -16,7 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import type { ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
 import { fotoDaMostrare } from '../dati/dominio'
-import { ETICHETTE, colori, durate, griglie, ombre, raggi } from '../tema/tokens'
+import { ETICHETTE, colori, durate, griglie, ombre, raggi, velo } from '../tema/tokens'
 import { Badge, BottoneTondo, Toccabile } from './base'
 import { Fondo, type Su } from './fondo'
 import { Corpo, Etichetta, Forte, Titolo } from './testo'
@@ -103,7 +103,7 @@ export function PiedeFoto({
 }) {
   return (
     <LinearGradient
-      colors={['rgba(21,21,26,0)', `rgba(21,21,26,${opacita})`]}
+      colors={[velo(colori.inchiostro, 0), velo(colori.inchiostro, opacita)]}
       style={[{ position: 'absolute', left: 0, right: 0, bottom: 0 }, style]}
     >
       <Fondo su="scuro">{children}</Fondo>
@@ -276,8 +276,8 @@ export function Attributo({
         paddingVertical: 10,
         borderRadius: raggi.medio - 2,
         borderWidth: 1,
-        borderColor: incerto ? 'rgba(255,106,69,0.45)' : 'transparent',
-        backgroundColor: incerto ? '#FFF1EC' : 'rgba(21,21,26,0.04)',
+        borderColor: incerto ? velo(colori.corallo, 0.45) : 'transparent',
+        backgroundColor: incerto ? colori.coralloTenue : velo(colori.inchiostro, 0.04),
       }}
     >
       <Etichetta taglia={10} tono="debole" style={{ letterSpacing: 0.9 }}>
