@@ -43,6 +43,15 @@ travestita da registro.
   quindi nessun pixel cambia: cambia che adesso è scritto.
 - `PALETTE_BOTTONE_PRIMARIO` usa `velo(colori.inchiostro, 0.08)` e
   `testoSu.chiaro.debole` invece dei due `rgba()` identici scritti a mano.
+- Una sola copia di React nel monorepo: `react` e `react-dom` sono dichiarati
+  anche in `dependencies` di root, alla stessa versione esatta di
+  `apps/mobile` (19.2.3). Prima la root non dichiarava nessuno dei due, e
+  decine di pacchetti Expo hoisted lì li chiedevano come peer con `*`: npm
+  installava l'ultima pubblicata, e il conflitto fra le due copie (dispatcher
+  nullo al primo hook) era tamponato solo dentro jest da un
+  `moduleNameMapper` — che è stato tolto, non più necessario. Il ricalcolo
+  del lock ha aggiornato anche una serie di pacchetti Expo/Metro non pinnati
+  a versione esatta, alle ultime versioni compatibili con i loro range.
 
 ### api
 - (niente di visibile: solo l'ordine dei gate di coverage in CI. La soglia

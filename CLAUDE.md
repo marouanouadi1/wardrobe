@@ -42,9 +42,9 @@ hook.
 
 | | |
 |---|---|
-| **Tampone** | un `moduleNameMapper` in `apps/mobile/package.json` che forza i test a risolvere una copia sola. Funziona. Ma le due copie restano, il mapper va mantenuto, e il problema si ripresenta ovunque *fuori* dai test |
-| **Causa** | la root non dichiara `react`; decine di pacchetti hoisted lì lo chiedono come peer con `*`; npm, non avendo una risposta, installa l'ultima. `apps/mobile` ha il suo pin esatto, e le copie diventano due |
-| **Rimedio** | dichiarare `react` nelle `dependencies` della root. Le peer `*` si accontentano di quella, resta una copia sola — **e il mapper si può cancellare** |
+| **Tampone** (rimosso, `T-23`) | un `moduleNameMapper` in `apps/mobile/package.json` che forzava i test a risolvere una copia sola. Funzionava. Ma le due copie restavano, il mapper andava mantenuto, e il problema si ripresentava ovunque *fuori* dai test |
+| **Causa** | la root non dichiarava `react`; decine di pacchetti hoisted lì lo chiedono come peer con `*`; npm, non avendo una risposta, installava l'ultima. `apps/mobile` ha il suo pin esatto, e le copie diventavano due |
+| **Rimedio** | dichiarare `react` **e `react-dom`** nelle `dependencies` della root — anche `react-dom` era hoisted all'ultima versione per lo stesso motivo, e pinnare il solo `react` avrebbe lasciato `react-dom` a pretenderne uno inesistente. Le peer `*` si accontentano di quelle due, resta una copia sola — **e il mapper si è cancellato** |
 
 Il segnale che distingue i due casi è nell'ultima colonna: il rimedio **toglie
 righe**, il tampone ne aggiunge.

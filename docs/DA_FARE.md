@@ -157,45 +157,6 @@ che dovrebbe usare.
 
 **Cosa serve:** comporre `useRisorsa`, o dire per iscritto perché non si può.
 
-### T-23 — Due copie di React nel monorepo
-**Dove:** `package.json:36-39`, `apps/mobile/package.json` (jest.moduleNameMapper) · **Gravità:** media · **Chi:** `mobile`
-
-19.2.3 in `apps/mobile` e 19.2.8 in root. Due React danno un dispatcher nullo al
-primo hook. Oggi è **tamponato** da un `moduleNameMapper` e da un override su
-`react-test-renderer` — vedi T-03 per l'override inerte.
-
-**Perché esistono due copie** (verificato il 2026-09-11, e **precedono i test**:
-erano già nel lock a `b5ba358^`):
-
-1. `apps/mobile/package.json` dichiara `react: 19.2.3` — versione **esatta**,
-   pinnata da Expo SDK 57;
-2. il `package.json` della root **non dichiara `react`**;
-3. decine di pacchetti finiscono hoisted in `node_modules/` della root —
-   `@expo/devtools`, `@expo/ui`, `@expo/metro-runtime`, `@radix-ui/*` — e
-   dichiarano `react` come **peerDependency con `*`**;
-4. npm deve soddisfare quelle peer, non trova `react` dichiarato in root, e ne
-   installa una copia scegliendo l'**ultima pubblicata**: 19.2.8.
-
-Le due copie convivevano innocue finché nessuno faceva rendering React dalla
-root. `react-test-renderer` lo ha fatto, e ha reso il conflitto osservabile:
-**non l'ha creato**.
-
-Nota: `*` accetterebbe benissimo anche la 19.2.3. Non c'è un conflitto di range —
-c'è solo che niente, in root, dice a npm quale scegliere.
-
-**Causa individuata il 2026-09-11:** il nodo radice di `package-lock.json` **non
-ha il campo `overrides`** — npm ce lo scrive quando li applica, e non c'è. Al
-`npm install` si è appoggiato al lock esistente senza ricalcolare quel ramo. In
-più `node_modules/react` è installato come **peer** (`"peer": true`), richiesto da
-una dozzina di pacchetti Expo che dichiarano `react: "*"` e quindi accettano
-qualunque versione: niente spinge npm a sceglierne una in particolare.
-
-**Cosa serve:** rigenerare il lock (`npm install --package-lock-only`) perché gli
-`overrides` mordano, sapendo che ricalcola l'albero. Poi verificare che
-`node_modules/react` sia 19.2.3 e che i test restino verdi — se lo sono, il
-`moduleNameMapper` in `apps/mobile/package.json` diventa superfluo e va tolto:
-è il tampone, non il rimedio.
-
 ### T-24 — Il criterio della derivazione è più stretto di quello vero
 **Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/test/convenzioni/primitive.test.ts` · **Gravità:** bassa · **Chi:** `mobile`
 
@@ -300,6 +261,53 @@ deciso sapendolo.
 PR che tocca solo l'altro. Oggi passerebbe verde, che è la condizione per
 accendere un gate.
 
+### T-31 — `jest-expo` chiede una versione di `@react-native/jest-preset` più nuova di quella installata
+**Trovato il:** 2026-09-13 · **Dove:** `node_modules/@react-native/jest-preset` risolto a `0.86.2`, richiesto `^0.86.3` da `jest-expo@57.0.5` — i due pin da cambiare sono `jest-expo` e `react-native` in `apps/mobile/package.json` · **Gravità:** bassa · **Chi:** `mobile` · **Pre-esistente**
+
+`npm ls` segna `@react-native/jest-preset@0.86.2 invalid: "^0.86.3" from
+node_modules/jest-expo`: `jest-expo@57.0.5` dichiara
+`peerDependencies["@react-native/jest-preset"]: "^0.86.3"`, ma
+`react-native@0.86.2` — pin esatto in `apps/mobile/package.json` — porta la
+`0.86.2`. Trovato lavorando su `T-23`, non causato da quella modifica:
+**verificato confrontando il lock prima e dopo** (`git show 4473db3` vs
+`HEAD`), `jest-expo` era già risolto a `57.0.5` e `@react-native/jest-preset`
+già a `0.86.2` sul `main` originale, identico peer range compreso.
+
+Non rompe niente oggi: **verificato** con `npm run mobile:test` su
+un'installazione pulita, 21 verdi (conteggio in `docs/TEST_COVERAGE.md`) — npm
+segnala l'incoerenza ma jest la tollera.
+
+**Cosa serve:** allineare `react-native` alla versione che `jest-expo` si
+aspetta (o viceversa, se è `jest-expo` a essere avanti rispetto al resto della
+SDK), quando si aggiorna Expo SDK 57 — non prima, per non disallineare il pin
+di RN dal resto dell'app senza motivo.
+
+### T-32 — Niente impedisce che tornino due copie di React
+**Trovato il:** 2026-09-13 · **Dove:** `package.json`, `apps/mobile/package.json` · **Gravità:** bassa · **Chi:** `ci-cd` + `mobile`
+
+`T-23` ha tolto la causa (`react`/`react-dom` dichiarati anche in root), non
+un gate che la tenga tolta. Se domani qualcuno rimuove quella dichiarazione da
+`dependencies` di root — o aggiunge un pacchetto che richiede una versione di
+`react` incompatibile con `19.2.3` — **nessun job diventa rosso**: le due copie
+tornerebbero silenziosamente, e il prossimo sintomo sarebbe di nuovo un
+dispatcher nullo scoperto a mano, non un gate che lo dice.
+
+È lo stesso caso di `T-30`: l'asserzione debole («`node_modules/react` risolve
+a una versione sola nel lock») è poche righe; quella robusta («ogni pacchetto
+che dichiara `react` come peer è soddisfatto senza doppioni») richiede
+modellare l'intero albero delle peer, che è quello che npm già fa da solo a
+ogni `install`. Non deciso in questa PR: **il rimedio di T-23 toglieva righe,
+un gate le aggiunge**, e va deciso sapendolo — non acceso di rimbalzo dentro
+la stessa modifica che ha appena chiuso il tampone.
+
+**Cosa serve:** decidere se basta un controllo in CI che conti le occorrenze di
+`"version"` sotto le chiavi `node_modules/react` e
+`apps/mobile/node_modules/react` nel lock (dovrebbe essercene una sola, e la
+seconda non dovrebbe esistere), o se è sufficiente affidarsi a `npm ls react
+react-dom` con `--all` che esce diverso da zero se ci sono `invalid`/duplicati
+— e in tal caso in quale workflow (`mobile.yml` ha già `paths:` su
+`apps/mobile/**`, ma la causa può tornare anche toccando solo la root).
+
 ---
 
 ## Fatte
@@ -362,6 +370,13 @@ override aggiunti, uno solo fa qualcosa.
 
 **Cosa serve:** ripristinare i due pin accanto ai nuovi. Se la nota su
 `libworklets.so` è superata, va detto per iscritto — non tolto in silenzio.
+
+**Aggiornamento del 2026-09-13 (commit `501d6e8`, chiusura di `T-23`):** «react
+inerte» non è più vero. `react` è uscito dagli `overrides` ed è entrato in
+`dependencies` di root — la dichiarazione diretta lo rende effettivo, la root
+risolve 19.2.3. `react-test-renderer` è uscito da `overrides` insieme a lui:
+il ricalcolo del lock non ne ha avuto bisogno. I due pin rimasti in questa
+voce — `typescript` e `react-native-worklets` — non sono toccati.
 
 ### T-04 — `BottonePrimario`: la scala che calcola `su` non è quella che calcola `sfondo`
 **Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/src/ui/base.tsx:374-387` vs `:409` · **Gravità:** media · **Chi:** `mobile`
@@ -488,3 +503,88 @@ la stessa nota che porta `T-14`.
 passa da sei a sette, e il numero nel titolo cambia nella stessa modifica.
 
 **Resta aperta la macchina che lo fa rispettare:** `T-30`.
+
+---
+
+Chiusa il **2026-09-13**, commit `501d6e8`.
+
+### T-23 — Due copie di React nel monorepo
+**Trovato il:** 2026-09-11 · **Dove:** `package.json:36-39`, `apps/mobile/package.json` (jest.moduleNameMapper) · **Gravità:** media · **Chi:** `mobile`
+
+19.2.3 in `apps/mobile` e 19.2.8 in root. Due React danno un dispatcher nullo al
+primo hook. Oggi è **tamponato** da un `moduleNameMapper` e da un override su
+`react-test-renderer` — vedi T-03 per l'override inerte.
+
+**Perché esistono due copie** (verificato il 2026-09-11, e **precedono i test**:
+erano già nel lock a `b5ba358^`):
+
+1. `apps/mobile/package.json` dichiara `react: 19.2.3` — versione **esatta**,
+   pinnata da Expo SDK 57;
+2. il `package.json` della root **non dichiara `react`**;
+3. decine di pacchetti finiscono hoisted in `node_modules/` della root —
+   `@expo/devtools`, `@expo/ui`, `@expo/metro-runtime`, `@radix-ui/*` — e
+   dichiarano `react` come **peerDependency con `*`**;
+4. npm deve soddisfare quelle peer, non trova `react` dichiarato in root, e ne
+   installa una copia scegliendo l'**ultima pubblicata**: 19.2.8.
+
+Le due copie convivevano innocue finché nessuno faceva rendering React dalla
+root. `react-test-renderer` lo ha fatto, e ha reso il conflitto osservabile:
+**non l'ha creato**.
+
+Nota: `*` accetterebbe benissimo anche la 19.2.3. Non c'è un conflitto di range —
+c'è solo che niente, in root, dice a npm quale scegliere.
+
+**Causa individuata il 2026-09-11:** il nodo radice di `package-lock.json` **non
+ha il campo `overrides`** — npm ce lo scrive quando li applica, e non c'è. Al
+`npm install` si è appoggiato al lock esistente senza ricalcolare quel ramo. In
+più `node_modules/react` è installato come **peer** (`"peer": true`), richiesto da
+una dozzina di pacchetti Expo che dichiarano `react: "*"` e quindi accettano
+qualunque versione: niente spinge npm a sceglierne una in particolare.
+
+**Cosa serve:** rigenerare il lock (`npm install --package-lock-only`) perché gli
+`overrides` mordano, sapendo che ricalcola l'albero. Poi verificare che
+`node_modules/react` sia 19.2.3 e che i test restino verdi — se lo sono, il
+`moduleNameMapper` in `apps/mobile/package.json` diventa superfluo e va tolto:
+è il tampone, non il rimedio.
+
+**Una scoperta non prevista da questa voce, fatta prima di applicare il
+rimedio:** anche `node_modules/react-dom` era hoisted a 19.2.8 (`peer: true`,
+`peerDependencies.react: "^19.2.8"`), per la stessa identica catena (`expo`,
+`expo-router`, `@expo/metro-runtime`, `@expo/ui`, `react-native-web` lo
+chiedono con `*`). Pinnare il solo `react` avrebbe lasciato `react-dom` a
+pretendere un React che non esiste più. **Il rimedio è quindi `react` *e*
+`react-dom`**, dichiarati insieme in root.
+
+**Chiusa applicando esattamente questo**: `react` e `react-dom` aggiunti a
+`dependencies` di root (19.2.3, stesso pin esatto di `apps/mobile`); `react` e
+`react-test-renderer` tolti da `overrides` **nella stessa modifica** (npm
+applica gli override prima di risolvere l'albero: lasciarli avrebbe reso il
+lock ricalcolato illeggibile rispetto a cosa faceva davvero la dichiarazione).
+npm ha stampato `npm warn ERESOLVE overriding peer dependency` per
+`react-dom@19.2.8` che pretendeva `react ^19.2.8`: un warning, non un blocco —
+risolto forzando entrambi a 19.2.3, che è esattamente quello che la
+dichiarazione in `dependencies` chiede. Nessuno dei due override si è rivelato
+necessario, quindi **restano fuori** — la voce che li citava (`T-03`) va
+riletta di conseguenza. Il `moduleNameMapper` è stato rimosso nello stesso
+commit.
+
+**Effetto collaterale accettato, non scoperto dopo**: il ricalcolo del lock
+aggiorna anche ~90 pacchetti Expo/Metro/radix non pinnati a versione esatta
+(dichiarati con `^` o `*`) alle ultime versioni compatibili — verificato
+riproducendo lo stesso ricalcolo in un clone pulito, per escludere che fosse
+un artefatto di `node_modules` locale. Segnalato all'utente **prima** di
+procedere, con la soglia decisa in anticipo («se il diff esce dalla famiglia
+React, ci si ferma»); ha scelto di proseguire.
+
+**Verificato su un'installazione pulita** (`npm ci` in un clone a parte, non
+solo `--package-lock-only`, che non tocca `node_modules`): `npm ls react
+react-dom` mostra una copia sola in tutto l'albero, e
+`apps/mobile/node_modules/react`/`react-dom` non esistono più. Poi, senza il
+mapper: `npm run typecheck`, `npm run lint`, `npm run mobile:test` (verde,
+conteggio in `docs/TEST_COVERAGE.md`) ed `expo export --platform web`
+(`build:web`, il comando che gira in CI) tutti verdi.
+
+**Quello che non si è potuto verificare:** l'avvio reale dell'app
+(`npm run dev:app`) su un dispositivo o un emulatore — nessuno disponibile in
+questa sessione. È il sintomo originale (dispatcher nullo al primo hook), e
+resta da provare alla prima sessione con un ambiente che lo permetta.

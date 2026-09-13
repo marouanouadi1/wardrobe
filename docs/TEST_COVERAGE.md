@@ -158,18 +158,21 @@ Due dettagli di configurazione che non sono cosmetici:
 
 - **i test vivono in `apps/mobile/test/`, mai sotto `app/`**: lì dentro ogni file
   diventa una rotta di expo-router e finirebbe nel bundle di `expo export`;
-- **`moduleNameMapper` forza una sola copia di React**. Il monorepo ne ha due, e
-  **le aveva già prima di questi test**: 19.2.3 in `apps/mobile` (versione esatta,
-  pinnata da Expo) e 19.2.8 in root. La root non dichiara `react`, ma decine di
-  pacchetti hoisted lì — `@expo/*`, `@radix-ui/*` — lo chiedono come
-  peerDependency con `*`: npm ne installa una copia per soddisfarli, e con quel
-  range sceglie l'ultima pubblicata.
+- **Una sola copia di React, e non serve più forzarla in jest.** Il monorepo ne
+  aveva due, e **le aveva già prima di questi test**: 19.2.3 in `apps/mobile`
+  (versione esatta, pinnata da Expo) e 19.2.8 in root, dove decine di pacchetti
+  hoisted — `@expo/*`, `@radix-ui/*` — chiedevano `react` come peerDependency
+  con `*` senza che la root ne dichiarasse una, e npm sceglieva l'ultima
+  pubblicata.
   Le due copie convivevano in pace finché nessuno faceva rendering React dalla
   root. Introdurre `react-test-renderer` (che jest-expo e RTL richiedono) lo ha
-  fatto: quello vede il React di root, i sorgenti dell'app vedono il proprio, e
-  due React danno un dispatcher nullo — `useContext` su `null` al primo hook.
-  Gli `overrides` allineano `react-test-renderer`, il mapper chiude il caso.
-  Nessuno dei due risolve la causa: vedi `T-23` in `docs/DA_FARE.md`.
+  reso osservabile: quello vedeva il React di root, i sorgenti dell'app il
+  proprio, e due React davano un dispatcher nullo — `useContext` su `null` al
+  primo hook. Un `moduleNameMapper` in `jest` tamponava il sintomo solo dentro i
+  test. **Chiuso in `T-23` (`docs/DA_FARE.md`)**: `react` e `react-dom` sono
+  dichiarati anche in root, le peer `*` si accontentano di quelli, resta una
+  copia sola in tutto l'albero — verificato con `npm ls react react-dom` su
+  un'installazione pulita — e il mapper è stato tolto.
 
 In `@testing-library/react-native` 14 **`render` restituisce una Promise**: i
 test sono `async` e fanno `await render(...)`. Senza `await` le query non

@@ -84,6 +84,18 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       violazione di PR #4 reintrodotta in `avviso.tsx`, e una `<Scheda
       sfondo={colori.inchiostro}>` senza `su` in `calendario.tsx`, che fa
       passare la suite a «1 failed» indicando file e riga*
+- [x] Una sola copia di React nel monorepo (`T-23`, chiusa): `react` e
+      `react-dom` dichiarati anche in `dependencies` di root, alla versione
+      esatta di `apps/mobile`. Il `jest.moduleNameMapper` che tamponava il
+      conflitto solo dentro i test è stato tolto. *Verificato su
+      un'installazione pulita (`npm ci` in un clone a parte): `npm ls react
+      react-dom` mostra una copia sola in tutto l'albero e nessuna in
+      `apps/mobile/node_modules/`; `npm run typecheck`, `npm run lint`,
+      `npm run mobile:test` (verdi senza mapper, conteggio in
+      `docs/TEST_COVERAGE.md`) ed `expo export --platform web` (`build:web`)
+      tutti verdi. Non provato: l'avvio reale
+      dell'app (`npm run dev:app`) su un dispositivo — nessun ambiente con
+      Expo Go o emulatore disponibile in questa sessione*
 
 ## Contratti (`packages/contracts`)
 
