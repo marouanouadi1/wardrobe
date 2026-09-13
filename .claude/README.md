@@ -9,7 +9,6 @@ istruzioni non ha istruzioni.
 |---|---|
 | `agents/` | i nove agenti: sei che eseguono, tre che giudicano o dirigono |
 | `rules/` | gli standard per area, letti **su richiesta** dall'agente che serve |
-| `settings.json` | i soli divieti che valgono per tutto il progetto |
 
 La sintesi e l'instradamento stanno in `CLAUDE.md`, alla radice.
 
@@ -27,21 +26,13 @@ coppie tematiche.
 
 ## Cosa la macchina impone davvero, e cosa no
 
-Tre livelli, con potere decrescente. La differenza conta, perché un confine
-creduto imposto e invece solo scritto è peggio di un confine dichiarato.
+**Un confine solo è imposto dalla macchina: `tools:` nel frontmatter.** Decide
+*chi può scrivere*, non *dove*. Tutto il resto — la mappa path → proprietario in
+`CLAUDE.md`, gli standard di `rules/`, i confini scritti in fondo a ogni agente —
+**sono istruzioni**, e vanno lette sapendo che sono istruzioni: un confine creduto
+imposto e invece solo scritto è peggio di un confine dichiarato.
 
-1. **`tools:` nel frontmatter** — l'unico confine genuinamente per-agente. Impone
-   *chi può scrivere*, non *dove*.
-2. **`permissions` in `settings.json`** — vale per **tutto il progetto**, non per
-   singolo agente. Per questo ci sta solo ciò che **nessuno** deve fare.
-3. **Hook** — impongono invarianti verificabili da un comando, ma **non sanno
-   quale agente ha chiamato il tool**.
-
-**Conseguenza da accettare, non da mascherare:** la mappa path → proprietario in
-`CLAUDE.md` **non è imposta dalla macchina — sono istruzioni**. Regge perché ogni
-agente ha un contesto stretto, un criterio guida che rende ovvio quando sta
-uscendo dal perimetro, e perché `reviewer` legge il diff finale.
-
-**Limite di `deny`:** copre i tool di scrittura file, non la shell. `sed -i`,
-`> file` e `git apply` passano da Bash. Per questo Bash va lasciato in modalità
-con conferma, non auto-approvato.
+Regge perché ogni agente ha un contesto stretto, un criterio guida che rende ovvio
+quando sta uscendo dal perimetro, e perché **il controllo vero è a valle**: la CI
+su ogni PR, e la review umana prima del merge. È lì che si vede il diff finale, ed
+è lì che si nega — non nel momento in cui l'agente scrive il file.

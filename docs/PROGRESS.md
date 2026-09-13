@@ -107,12 +107,6 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       vive nel job `release`: la prima esecuzione vera è il prossimo rilascio.*
 - [x] Bump di versione dai conventional commit (ADR 0005), `pr-title.yml` che lo
       protegge — *ADR 0005 lo documenta; i 22 tag del repo ne sono la traccia*
-- [x] I quattro hook di `.claude/hooks/` sono esercitati da un banco di prova,
-      nel job `hook` di `docs.yml` (che non ha filtri sui path). *Verificato con
-      `python3 scripts/prova-hook.py`: verde, e rosso sui sei difetti che il
-      banco è nato per fissare — tre migrazioni corrette che venivano negate e
-      tre rotte che passavano. Comprende le sette migrazioni vere del repo, così
-      un pattern nuovo troppo largo si vede subito*
 - [x] La soglia di coverage aggregata non nasconde più le due per sottoalbero:
       è l'ultimo step, non il primo. *Verificato in locale eseguendo i tre
       `coverage report` nell'ordine del workflow: dominio, handler e totale
@@ -123,12 +117,10 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       `deploy` e `release`; i checkout dei job che eseguono il codice della PR
       non persistono credenziali. *Verificato parsando i quattro YAML e
       stampando permessi e `with:` di ogni checkout job per job — `write` su due
-      job soli, `persist-credentials: false` sui cinque checkout non pushanti e
-      su nessuno dei due che pushano. Poi in CI sulla PR #16: i sei job passano, e
-      nel job `hook` — quello che poteva perderci qualcosa — il checkout porta
-      `main -> origin/main` anche senza credenziali, e la prova «file già su
-      main» risulta girata e non saltata. I due job che pushano girano solo su
-      `main`, quindi la loro prima esecuzione vera è il prossimo rilascio*
+      job soli, `persist-credentials: false` sui checkout non pushanti e su
+      nessuno dei due che pushano. Poi in CI sulla PR #16: tutti i job passano.
+      I due job che pushano girano solo su `main`, quindi la loro prima
+      esecuzione vera è il prossimo rilascio*
 - [ ] Nessun rilascio iOS
 
 ## Cosa manca dall'esterno

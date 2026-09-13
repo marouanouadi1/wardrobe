@@ -96,8 +96,7 @@ nessuno se ne accorge perché entrambi i numeri sembrano giusti.
 ## Non scrivi mai a mano
 
 `packages/contracts/src/generated/**` e `packages/contracts/schema/**` sono
-output, e sono negati in `.claude/settings.json`. Si toccano solo rilanciando il
-generatore.
+output. Si toccano solo rilanciando il generatore.
 
 ## L'avvertenza sulle enum
 

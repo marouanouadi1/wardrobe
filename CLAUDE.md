@@ -132,8 +132,8 @@ cose sono elencate in `.claude/rules/react-native.md`.
 `apps/mobile/app.json` (`expo.version`), `apps/mobile/package.json` e
 `services/api/pyproject.toml` (`version`) sono scritti solo dalla pipeline di release
 (`scripts/bump-versione.mjs`) — vedi `docs/adr/0005-le-versioni-vengono-dai-commit.md`.
-Un hook nega la scrittura di quei campi. **Sono tre, non due**: lo script tiene
-`apps/mobile/package.json` sincronizzato con `app.json`.
+**Sono tre, non due**: lo script tiene `apps/mobile/package.json` sincronizzato
+con `app.json`.
 
 ## Commit: conventional commit obbligatorio
 

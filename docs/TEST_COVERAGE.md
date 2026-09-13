@@ -175,46 +175,6 @@ In `@testing-library/react-native` 14 **`render` restituisce una Promise**: i
 test sono `async` e fanno `await render(...)`. Senza `await` le query non
 esistono ancora e l'errore che si legge è `getByText is not a function`.
 
-## Gli hook di `.claude/hooks/`
-
-`scripts/prova-hook.py` — eseguito da `docs.yml` (job `hook`) e a mano con
-`python3 scripts/prova-hook.py`. Senza un numero in prosa: il conteggio dei casi
-cambia a ogni caso nuovo, e nessun gate lo verificherebbe.
-
-Non stanno né in pytest né in jest perché non sono codice del prodotto: sono i
-gate che decidono cosa un agente può scrivere. Prima non li esercitava nulla —
-erano gli **unici** gate del progetto senza copertura — e la conseguenza è
-arrivata puntuale: tre falsi positivi (una migrazione corretta negata perché
-aveva due spazi prima di `if not exists`; un `default` scritto prima di `not
-null`; qualunque riscrittura integrale di `pyproject.toml`, anche a versione
-identica) e tre falsi negativi (`numeric(10,2) not null` che passava perché il
-segnaposto del tipo non aveva la virgola; un `not null` composto su due `Edit`
-successive; `drop table if exists`, che le regole del repo vogliono si chieda
-all'utente).
-
-Il banco verifica due cose separate:
-
-- **la decisione** — `allow` / `deny` / `ask` / `block`: la tabella dei casi è
-  la specifica leggibile di cosa ciascun hook impedisce, e include le sette
-  migrazioni vere del repo col contenuto che hanno oggi, come difesa contro un
-  pattern nuovo troppo largo;
-- **il canale** — ogni `deny` e ogni `ask` devono portare
-  `permissionDecisionReason`, che è il campo che torna *al modello*. Senza, il
-  diniego arriva all'agente come «Hook PreToolUse:Write denied this tool» e
-  basta: chi non sa cosa ha sbagliato può solo riprovare alla cieca, e ogni
-  falso positivo diventa irrecuperabile.
-
-Il banco verifica che il campo **venga emesso**; che poi Claude Code lo **legga**
-è stato provato a parte, dal vivo (2026-09-11): scrivendo in `src/domain/` un
-file con un `import sys` inutilizzato, il rapporto di ruff è arrivato dentro il
-contesto del modello — `F401`, con riga e suggerimento — invece di finire nel
-transcript come prima.
-
-Le prove sulle migrazioni girano in un albero temporaneo che imita il repo, mai
-dentro `services/api/migrations/`: un `.sql` di prova lasciato lì verrebbe
-eseguito al prossimo avvio — cioè esattamente il guasto che quell'hook esiste
-per impedire.
-
 ## Rilevazione del 2026-09-09 — run `34321516325`
 
 `163 passed in 7.60s` · `TOTAL 1876 497 74%` — il totale esatto è **73,51%**,

@@ -39,9 +39,8 @@ solo di aggiunte, guardala ancora una volta prima di consegnarla.
 ## Non leggere mai i segreti
 
 `services/api/.env` e `apps/mobile/.env.local` esistono, sono gitignorati e
-contengono chiavi vere. **Non aprirli e non stamparli** — sono anche negati in
-`.claude/settings.json`. Per sapere quali variabili esistono si legge
-`.env.example`.
+contengono chiavi vere. **Non aprirli e non stamparli.** Per sapere quali
+variabili esistono si legge `.env.example`.
 
 Se una finding riguarda un valore, descrivi **quale variabile** e **cosa
 succede**, mai il valore.

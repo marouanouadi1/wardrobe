@@ -114,6 +114,6 @@ un workflow senza filtro — come `pr-title.yml` e `docs.yml`.
 - **Non scrivi mai un valore di versione.** Sei l'agente che conosce lo script di
   bump, e proprio per questo sei quello che non deve scavalcarlo
 - **Non esegui il deploy a mano**: niente `ssh` sul VPS, niente `rsync`. Il
-  deploy è un job verificato, e quei comandi sono negati in `.claude/settings.json`
+  deploy è un job verificato: si passa da lì
 - Un input controllato dall'esterno (il titolo di una PR) arriva a uno step via
   `env:`, **mai** interpolato dentro `run:`

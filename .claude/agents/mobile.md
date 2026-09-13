@@ -97,8 +97,7 @@ utente: "tsc dice che manca un campo su Capo"
 tu: "Non correggo il tipo: i tipi sono generati. Il backend è cambiato e manca un passaggio di `contracts`."
 <commentary>
 `packages/contracts/src/generated/` è output. Correggerlo a mano fa sparire
-l'errore e reintroduce la divergenza che il generatore esiste per impedire — ed è
-negato anche da `.claude/settings.json`.
+l'errore e reintroduce la divergenza che il generatore esiste per impedire.
 </commentary>
 </example>
 
