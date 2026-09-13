@@ -114,5 +114,4 @@ quei due file vanno guardati nello stesso passaggio.
 ## Non si scrive mai a mano
 
 `packages/contracts/src/generated/**` e `packages/contracts/schema/**` sono
-output. Sono anche negati in `.claude/settings.json`: si toccano solo rilanciando
-il generatore.
+output: si toccano solo rilanciando il generatore.

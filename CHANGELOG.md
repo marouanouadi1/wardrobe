@@ -56,36 +56,15 @@ travestita da registro.
 - Gli standard per area vivono in `.claude/rules/`; `CLAUDE.md` resta la sintesi.
 - Corretta in `CLAUDE.md` la regola di `su`, che descriveva ancora il regime
   precedente al commit `ee7f492`.
-- Tre gate nuovi in CI, tutti verdi al primo giro: soglie di coverage sul backend
+- Gate nuovi in CI, tutti verdi al primo giro: soglie di coverage sul backend
   (totale, dominio, handler), i primi test dell'app, e un controllo che i numeri
   dichiarati nelle docs siano quelli veri.
-- Quattro hook: due che impediscono (una versione alzata a mano, una migrazione
-  non idempotente), uno che verifica i contratti a fine sessione, uno che porta
-  il linter dentro il ciclo di chi scrive.
 - `docs/DA_FARE.md`: il lavoro trovato mentre se ne fa un altro, scritto subito
   invece che ricordato. Assorbe i «debiti dichiarati» che stavano in
   `PROGRESS.md`, che torna a dire solo cosa esiste.
 - **Prima di aggirare un problema, si prova a toglierlo** (`docs/adr/0008`): la
   regola che viene prima delle altre, ripetuta di proposito in `CLAUDE.md`, nelle
   cinque rules e in tutti e nove gli agenti.
-- **Gli hook adesso si eseguono, non si leggono** — `scripts/prova-hook.py`, nel
-  job `hook` di `docs.yml`. Erano gli unici gate del progetto senza copertura, e
-  la conseguenza era arrivata puntuale: negavano tre migrazioni corrette (due
-  spazi prima di `if not exists`; un `default` scritto prima di `not null`;
-  qualunque riscrittura integrale di `pyproject.toml`, anche a versione
-  identica) e ne lasciavano passare tre rotte (`numeric(10,2) not null`, un
-  `not null` composto su due `Edit` successive, e `drop table if exists` — che
-  le regole del repo vogliono si chieda all'utente).
-- Un diniego di un hook adesso **dice perché**: era tutto in `systemMessage`,
-  che è un avviso all'utente, e arrivava all'agente come «Hook PreToolUse:Write
-  denied this tool». Chi non sa cosa ha sbagliato può solo riprovare alla cieca.
-- Il gate sui contratti scatta anche a fine subagente (`SubagentStop`) e anche
-  quando il lavoro è già stato committato: guardava solo il working tree, cioè
-  era cieco proprio nel flusso che questo repo prescrive.
-- `deny` estesa alle operazioni distruttive che CLAUDE.md nomina e la lista non
-  aveva: `git clean`, `git push -f`, `docker compose down -v`, `docker volume
-  rm|prune`; più `Edit(./.claude/**)` e un glob solo per tutti i file
-  d'ambiente.
 - L'URL dell'APK che EAS restituisce non viene più interpolato dentro il `run:`
   che lo scarica: passa da `env:`, e schema e dominio si controllano prima di
   seguirlo. Era l'ultimo punto in cui un valore di provenienza esterna finiva

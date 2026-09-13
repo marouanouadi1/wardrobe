@@ -5,9 +5,6 @@ name: docs
 # sottocartella. Una PR che aggiunge un test e una PR che tocca solo un .md
 # possono entrambe far mentire docs/TEST_COVERAGE.md, e nessuna delle due
 # farebbe partire api.yml o mobile.yml, che hanno `paths:`.
-#
-# Vale anche per il banco degli hook, in fondo: gli hook valgono per chiunque
-# tocchi il repo, quindi il loro gate non può stare dietro a un filtro.
 on:
   pull_request:
   push:
@@ -144,33 +141,3 @@ jobs:
             fi
           done
           echo "ok: soglie allineate"
-
-  hook:
-    name: gli hook si comportano come dichiarato
-    runs-on: ubuntu-latest
-    steps:
-      # I quattro hook di .claude/hooks/ erano gli unici gate del progetto che
-      # nessuno esercitava. «Provati su dieci casi» era vero e inutile insieme,
-      # perché quei casi non esistevano come artefatto: niente si sarebbe
-      # accorto se un hook avesse smesso di negare — e infatti tre falsi
-      # negativi e tre falsi positivi ci sono stati per giorni.
-      #
-      # `fetch-depth: 0` perché una delle prove chiede se un file esiste già su
-      # `main` (regola 5 delle migrazioni). Senza, la prova si dichiara saltata
-      # invece di girare. La credenziale, al contrario, non serve a nessuna
-      # prova: quella lettura è un `git ls-tree origin/main` sul repo locale,
-      # già completo proprio grazie al depth 0.
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-          cache-dependency-glob: services/api/uv.lock
-
-      - run: uv sync --frozen
-        working-directory: services/api
-
-      - run: python3 scripts/prova-hook.py

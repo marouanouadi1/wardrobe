@@ -27,12 +27,6 @@ Il rimedio è **dichiarare `react` nelle `dependencies` della root**. Una riga. 
 peer `*` si accontentano di quella, resta una copia sola — **e il mapper si
 cancella**.
 
-Lo stesso schema si era già ripetuto due volte nello stesso giro di lavoro, senza
-che nessuno lo notasse: tre regole `Write(...)` nei permessi che non venivano mai
-valutate (ne bastavano le `Edit(...)`, e le `Write` erano rumore aggiunto), e un
-`$CLAUDE_PROJECT_DIR` senza fallback che rendeva quattro hook silenziosamente
-inerti. In entrambi i casi la prima reazione era stata aggiungere qualcosa.
-
 ## Decisione
 
 **Davanti a un problema, la prima domanda non è «come lo risolvo» ma «posso

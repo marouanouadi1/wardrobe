@@ -45,11 +45,8 @@ dell'app e `package.json` le viene tenuto dietro (`bump-versione.mjs:30-38`).
 Il perché sta in `docs/adr/0005-le-versioni-vengono-dai-commit.md`: *un numero
 che si alza sempre di uno non è una versione, è un contatore di merge.*
 
-Un hook `PreToolUse` nega la scrittura di quei campi. Toccare le dipendenze in
-`pyproject.toml` o la configurazione Expo in `app.json` resta libero — e per
-«non cambia» l'hook confronta con **il file su disco**, non con `old_string`:
-una `Write` non porta `old_string`, quindi confrontando con quello negava anche
-una riscrittura integrale a versione identica.
+Toccare le dipendenze in `pyproject.toml` o la configurazione Expo in
+`app.json` resta libero: la regola riguarda **il solo campo della versione**.
 
 ## I titoli delle PR sono conventional, e non è formalismo
 

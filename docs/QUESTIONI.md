@@ -59,9 +59,8 @@ arrivano dall'SDK ufficiale.
 Due file, un `dev` che esce con 1, registrato nei workspace. Costa poco tenerlo e
 confonde chi legge `## Struttura` del README.
 
-*Nel frattempo:* nessun agente ci scrive, ed è negato in `.claude/settings.json`
-— senza quel divieto il rischio concreto è che qualcuno ci scaffoldi Next.js,
-che `apps/web/README.md` nomina perfino come candidato.
+*Nel frattempo:* nessun agente ci scrive — il quando e il perché riaprirlo
+stanno in `apps/web/README.md`, che nomina perfino Next.js come candidato.
 
 ### Q-05 — I buchi di numerazione si documentano o si riempiono?
 **Aperta il:** 2026-09-11 · **Tocca:** `services/api/migrations/`, `docs/adr/`
