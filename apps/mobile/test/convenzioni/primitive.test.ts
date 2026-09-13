@@ -30,30 +30,9 @@
  * per nome, ovunque stia nella lista degli attributi e su quante righe vuole.
  */
 
-import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import * as ts from 'typescript'
-
-const RADICE = join(__dirname, '..', '..')
-
-function sorgenti(cartella: string): string[] {
-  const trovati: string[] = []
-  for (const voce of readdirSync(cartella)) {
-    if (voce === 'node_modules' || voce === '.expo') continue
-    const percorso = join(cartella, voce)
-    if (statSync(percorso).isDirectory()) trovati.push(...sorgenti(percorso))
-    else if (/\.tsx?$/.test(voce)) trovati.push(percorso)
-  }
-  return trovati
-}
-
-function analizza(percorso: string): ts.SourceFile {
-  const testo = readFileSync(percorso, 'utf8')
-  // TSX per tutti: nessun sorgente di `src/ui/**` usa il cast d'epoca
-  // `<Tipo>valore` (verificato a mano), quindi non c'è ambiguità con la
-  // sintassi JSX da disambiguare.
-  return ts.createSourceFile(percorso, testo, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
-}
+import { RADICE, analizza, sorgenti } from './fonti'
 
 /** Vero se, in un punto qualunque sotto `nodo`, compare un `<Fondo su=…>` —
  * aperto o auto-chiuso: è la dichiarazione che asserisce un fondo, non la
