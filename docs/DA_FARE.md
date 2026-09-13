@@ -56,82 +56,8 @@ una voce sparita non si distingue da una dimenticata.
 
 Le voci qui sotto vengono dall'audit di `security` e dalla review di `reviewer`
 sul commit `b5ba358`, eseguiti il 2026-09-11, e da una seconda review dello
-stesso giorno sull'intero branch — quella che ha **eseguito** gli hook invece di
+stesso giorno sull'intero branch — quella che ha **eseguito** i gate invece di
 leggerli, e da cui vengono `T-26`, `T-27` e `T-28`.
-
-Sette voci sono state chiuse nella stessa PR e stanno in `## Fatte`; `T-08` e
-`T-12` sono rimaste aperte ma più corte, con scritto cosa di preciso resta.
-
-### T-08 — Due costrutti restano fuori dal gate delle migrazioni, e i commenti si tolgono dentro i literal
-**Trovato il:** 2026-09-11 · **Ridotta il:** 2026-09-11 · **Dove:** `.claude/hooks/migrazione-idempotente.py` · **Gravità:** bassa · **Chi:** sessione principale
-
-La gran parte di questa voce è chiusa: regola 5 (file già su `main`) e regola 6
-(`drop`) adesso **chiedono**, `concurrently` non esenta più, `create type`,
-`add constraint` e `create trigger` sono coperti, il path si risolve invece di
-essere confrontato come stringa. Tutto verificato in `scripts/prova-hook.py`.
-
-Resta:
-
-- **`alter column … set not null`** non è coperto. È il terzo modo di mettere un
-  vincolo su una tabella che ha già righe, e fallisce esattamente come gli altri
-  due — ma la forma è diversa e il pattern non la vede;
-- **`re.sub(r"--[^\n]*", …)` mangia dentro i literal**: un `insert` che contiene
-  la stringa `'-- non è un commento'` perde tutto quello che segue sulla riga.
-  Oggi nessuna migrazione lo fa; il giorno che succede il gate legge SQL diverso
-  da quello che verrà eseguito, ed è il modo peggiore di sbagliare;
-- **`create type` e `add constraint` si esentano se il file contiene la parola
-  `exception`**, che è il segnale di un blocco `do $$ … exception … $$`. È
-  un'approssimazione dichiarata, non un'analisi: un file con un `do/exception`
-  altrove esenta anche un `create type` che non ne ha. Sta dalla parte
-  permissiva di proposito — un gate nuovo che nega a torto viene disattivato —
-  ma è bene sapere che è una parola cercata, non una struttura riconosciuta.
-
-**Cosa serve:** il pattern per `set not null`, e uno stripper che salti i
-literal fra apici invece di ignorarli. Entrambi con il loro caso nel banco.
-
-### T-12 — Bash non è intercettato da niente, e i tre agenti «in sola lettura» ce l'hanno
-**Trovato il:** 2026-09-11 · **Dove:** `.claude/settings.json:20,37`, `.claude/agents/{security,reviewer,orchestrator}.md` · **Gravità:** alta · **Chi:** sessione principale
-
-Il `matcher` dei quattro hook è `"Write|Edit"`. **Non esiste nessun hook su
-`Bash`**, e `Bash` scrive file: `sed -i`, `tee`, `> file`, `git apply`. Quindi
-l'affermazione in `.claude/README.md` — «hanno `tools: Read, Bash, Glob, Grep` —
-non possono scrivere, ed è deliberato» — **non è vera come scritta**.
-
-Peggio: **nessuna regola `deny` copre `.claude/**`**, quindi un agente può
-riscrivere i propri gate col tool più ovvio.
-
-Il limite di Bash era **già dichiarato** in `.claude/README.md:45-47`. Il finding
-non è il limite: è che **la mitigazione dichiarata non è un controllo** — in
-`settings.json` non c'è `defaultMode`, non c'è `permissions.ask`, non c'è un hook
-su `Bash`. Una sessione in auto-approvazione non incontra nulla.
-
-**Fatto il 2026-09-11, la metà che si poteva fare senza un parser:**
-`Edit(./.claude/**)` è nella `deny`, e con lui `git clean`, `git push -f`,
-`docker compose down -v|--volumes`, `docker volume rm|prune` — tutti nominati da
-CLAUDE.md fra le operazioni che si chiedono sempre prima, e tutti assenti dalla
-lista. (Verificati dal reviewer eseguendoli davvero: `git clean -fdx` cancellava
-un file non tracciato senza incontrare niente, e `git push --force:*` non
-intercetta `-f`.)
-
-*Confermato dal vivo il 2026-09-12*, chiudendo `T-13`: `Edit` su
-`.claude/rules/ci-release.md` è stato **negato**, la stessa scrittura passata da
-Bash sarebbe andata a segno senza incontrare niente. È stata fatta con
-l'autorizzazione esplicita dell'utente, chiesta perché il gate non poteva
-chiederla da sé — che è esattamente il buco descritto qui.
-
-**Resta aperta la parte che conta**, e va saputo che `deny` su Bash è un
-confronto per prefisso: `cd x && git clean` non somiglia a `git clean`. Chiude
-la strada distratta, non quella decisa.
-
-**Cosa serve:** un hook `PreToolUse` con `matcher: "Bash"` che legga
-`tool_input.command` e neghi le scritture sui path protetti e le letture di
-`*.env*`. Non è stato scritto qui di proposito: una guardia che decide su una
-riga di shell con dei regex è essa stessa un tampone col custode (`docs/adr/0008`),
-e va disegnata con calma e con il suo banco di prova — non di rimbalzo, nella
-stessa sessione che stava riscrivendo gli altri quattro hook. Va rifatta anche
-la frase di `.claude/README.md:45-47`: dice «Bash va lasciato in modalità con
-conferma», che è una raccomandazione, non un controllo — in `settings.json` non
-c'è né `defaultMode` né `permissions.ask`.
 
 ### T-16 — Gli strumenti di test sono in `dependencies`
 **Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/package.json:22-23,38-39` · **Gravità:** bassa · **Chi:** `mobile`
@@ -159,9 +85,8 @@ Il contenimento c'è ed è quello giusto: `on: pull_request` e **non**
 `pull_request_target`, più `permissions: contents: read`. Su PR da fork non ci
 sono né segreti né token scrivibile.
 
-*Dal 2026-09-12* i due checkout hanno anche `persist-credentials: false`
-(chiusura di `T-13`): il token di lettura non resta su disco mentre gira quel
-codice.
+*Dal 2026-09-12* il checkout ha anche `persist-credentials: false` (chiusura di
+`T-13`): il token di lettura non resta su disco mentre gira quel codice.
 
 **Nessuna azione.** Va scritto in `.claude/rules/ci-release.md` come vincolo: se
 un domani questo workflow dovesse servire un secret, `pull_request_target`
@@ -353,27 +278,6 @@ punti vanno riscritti. È una decisione, non un rimedio: per questo la voce dice
 regola è più larga della macchina che la fa rispettare, che è la cosa contro cui
 `.claude/rules/ci-release.md` mette in guardia.
 
-### T-29 — Il banco degli hook può marcire su `main` senza che una run lo mostri
-**Trovato il:** 2026-09-11 · **Dove:** `scripts/prova-hook.py`, `.github/workflows/docs.yml` · **Gravità:** bassa · **Chi:** `ci-cd`
-
-La prova «versioni · Edit che alza app.json» asseriva `deny` sulla coppia
-`0.6.1` -> `0.6.2`. L'hook confronta `new_string` con **il file su disco**,
-quindi quando il rilascio ha portato `app.json` a `0.6.2` (commit `2437426`)
-quella non era più una scrittura che alza: l'hook ha risposto `allow`, giusto
-lui e sbagliata la prova. Il valore è stato portato a `9.9.9` come nelle prove
-sorelle — la coppia realistica era la causa, e toglierla toglie il problema.
-
-Quello che **resta** è il buco che l'ha reso invisibile: il commit di bump porta
-`[skip ci]` per l'invariante 2 di `.claude/rules/ci-release.md` — senza, si
-rimetterebbe in coda da solo — quindi su `main` non gira nessuna run che lo
-faccia vedere. Il banco è diventato rosso lì, ed è stata la prima PR successiva
-a scoprirlo, su un diff che non c'entrava niente.
-
-**Cosa serve:** decidere chi verifica `main` dopo un commit `[skip ci]`. Le due
-strade viste: far girare il banco degli hook dentro il workflow di rilascio
-**dopo** il bump, oppure una run programmata di `docs.yml` su `main`. La prima
-chiude il caso esatto, la seconda copre anche i prossimi.
-
 ### T-30 — Niente in CI impedisce a `contents: write` di tornare alla radice
 **Trovato il:** 2026-09-12 · **Dove:** `.github/workflows/*.yml` · **Gravità:** bassa · **Chi:** `ci-cd`
 
@@ -477,10 +381,7 @@ variante sola.
 
 ---
 
-Chiuse il **2026-09-11**, nella stessa PR che le ha trovate: sono i difetti
-degli hook di `.claude/`, venuti fuori **eseguendoli** invece che leggendoli.
-Verifica comune: `python3 scripts/prova-hook.py` verde, più i comandi indicati
-voce per voce.
+Chiusa il **2026-09-11**, nella stessa PR che l'ha trovata.
 
 ### T-05 — I file di stato raccontano il gate più forte di quello che è
 **Trovato il:** 2026-09-11 · **Dove:** `docs/PROGRESS.md:128-134`, `docs/TEST_COVERAGE.md:104-108` · **Gravità:** media · **Chi:** `doc-writer`
@@ -500,104 +401,6 @@ controllare.
 davvero, e rifarlo quando T-01 e T-02 sono chiuse.
 
 **Chiusa il 2026-09-11.** Le due affermazioni citate non esistono più nei file di stato (verificato con `grep`: «due `overrides`» e «tutte e dieci» compaiono solo qui dentro, dentro la voce che le cita). T-01 e T-02, da cui questa voce dipendeva, sono chiuse. `PROGRESS.md` e `TEST_COVERAGE.md` sono stati riallineati a quello che i gate fanno adesso — incluso il quarto test su `sfondo`.
-
-### T-06 — `contratti-allineati.py` è inerte nel flusso di lavoro che lo ha prodotto
-**Trovato il:** 2026-09-11 · **Dove:** `.claude/hooks/contratti-allineati.py:28-33` · **Gravità:** media · **Chi:** sessione principale
-
-`git status --porcelain` vede solo il **non committato**. Se `models.py` è stato
-modificato **e committato** nella sessione, il working tree è pulito, l'hook esce
-prima di eseguire `contracts:check`, e il disallineamento arriva intatto al job
-`contracts` — cioè esattamente il guasto che l'hook cita nel proprio docstring.
-
-Non è teorico: i commit `b5ba358`, `437089c` e `1a35d83` portano lo stesso
-trailer `Claude-Session`. **Una sessione, tre commit.** Committare dentro la
-sessione è il flusso normale di questo repo, ed è quello in cui l'hook non scatta
-mai.
-
-Secondo difetto: l'hook non legge `stop_hook_active`. Se `contracts:check`
-continua a fallire, il `Stop` viene bloccato a ogni giro — la ricetta per un
-ciclo infinito.
-
-**Cosa serve:** `git diff --name-only origin/main...HEAD -- <models.py>` unito a
-`git status`, e la guardia di rientro.
-
-**Chiusa il 2026-09-11.** `modelli_mossi()` guarda il working tree **e** il branch rispetto a `origin/main`/`main`, quindi vede anche il lavoro già committato in sessione; `stop_hook_active` viene letto e chiude il rientro; il timeout del sottoprocesso (240s) sta sotto quello dell'hook (300s) e `TimeoutExpired` produce un `block` con la diagnosi invece di un traceback.
-
-### T-07 — I due hook che devono *impedire* falliscono aperti
-**Trovato il:** 2026-09-11 · **Dove:** `.claude/hooks/versioni-non-a-mano.py:36-38`, `migrazione-idempotente.py:57-59` · **Gravità:** media · **Chi:** sessione principale
-
-`except Exception: return`, col commento «un hook che non capisce l'evento non
-blocca il lavoro». Per una guardia che deve impedire, «non ho capito» e «non sono
-partito» devono valere *deny* o almeno *ask*, mai *allow*: un payload malformato,
-un `python3` assente, un bit di esecuzione perso, un timeout — tutte strade in
-cui la scrittura passa senza che nessuno lo veda.
-
-**Cosa serve:** emettere `permissionDecision: "ask"` con il motivo, invece di
-`return`.
-
-**Chiusa il 2026-09-11.** Entrambi gli hook rispondono `permissionDecision: "ask"` con il motivo quando non capiscono l'evento, invece di `return`. Provato con stdin non-JSON su tutti e due.
-
-### T-09 — `versioni-non-a-mano.py`: un falso positivo e un terzo file non sorvegliato
-**Trovato il:** 2026-09-11 · **Dove:** `.claude/hooks/versioni-non-a-mano.py:20,52-58` · **Gravità:** bassa · **Chi:** sessione principale
-
-**(a)** Un `Write` non porta `old_string`, quindi la guardia «la riga c'è ma non
-cambia» non scatta: qualunque riscrittura integrale di `pyproject.toml` o
-`app.json` che *contenga* la versione — anche identica — viene negata. Contraddice
-il docstring dello stesso file.
-
-**(b)** `scripts/bump-versione.mjs:32-38` scrive **tre** campi, non due: anche
-`apps/mobile/package.json`. Quel file si può alzare a mano senza incontrare
-nessuna guardia. Qui è la **regola** a essere indietro rispetto allo script:
-`CLAUDE.md` e `ci-release.md` nominano solo due file.
-
-**Cosa serve:** sul `Write` confrontare con la versione su disco; aggiungere
-`apps/mobile/package.json` ai sorvegliati **e** alla regola scritta.
-
-**Chiusa il 2026-09-11.** **(a)** il confronto «la versione non cambia» si fa con il **file su disco**, non con `old_string`: una `Write` integrale a versione identica adesso passa, ed è quello che il docblock dell'hook prometteva. **(b)** `apps/mobile/package.json` è fra i sorvegliati, e la regola scritta in `CLAUDE.md` e `.claude/rules/ci-release.md` dice tre file invece di due. In più la regex TOML accetta anche gli apici singoli: `version = '0.4.2'` è TOML valido e passava.
-
-### T-10 — I quattro hook sono gli unici gate del progetto senza copertura
-**Trovato il:** 2026-09-11 · **Dove:** `.claude/hooks/` · **Gravità:** media · **Chi:** `test` + `ci-cd`
-
-Nessun test li esercita, nessun job CI li invoca. Il commit dichiara «provati su
-dieci casi»: quei dieci casi non esistono come artefatto, quindi **niente si
-accorgerebbe se un hook smettesse di negare**.
-
-È il criterio scritto in `.claude/rules/ci-release.md` rivolto contro chi l'ha
-scritto: *«una regola che la CI non fa fallire non è una regola»*.
-
-**Cosa serve:** i dieci casi resi test veri (uno script in `scripts/` richiamato
-da `docs.yml`, che non ha filtri sui path), con la tabella completa: payload
-lecito → nessun deny; illecito → deny; troncato → **non** silenzio.
-
-**Chiusa il 2026-09-11.** `scripts/prova-hook.py` — la tabella dei casi è la specifica leggibile di cosa ciascun hook impedisce, e comprende le sette migrazioni vere del repo come difesa contro un pattern nuovo troppo largo. Gira nel job `hook` di `docs.yml`, che non ha filtri sui path. Verifica il canale oltre alla decisione: un `deny` senza motivo è un fallimento.
-
-### T-11 — Quattro hook, tre convenzioni di output, e il canale non è stato verificato
-**Trovato il:** 2026-09-11 · **Dove:** `.claude/hooks/` · **Gravità:** media · **Chi:** `ci-cd`
-
-I due `PreToolUse` mettono tutto il messaggio in `systemMessage`; il `Stop` usa
-`{"decision": "block", "reason": …}`; `lint-immediato.sh` stampa testo nudo ed
-esce 0. «Provati su dieci casi» riguarda la **logica di decisione**, non il
-**canale**: sono due cose diverse e solo la prima è stata verificata.
-
-Il dubbio concreto: con `permissionDecision: "deny"`, il campo che il modello
-legge potrebbe essere `permissionDecisionReason`, mentre `systemMessage` è un
-avviso all'utente. Se è così, il modello viene fermato **senza sapere perché** — e
-per l'hook delle migrazioni il messaggio *è* il valore dell'hook.
-
-**Cosa serve:** una prova per hook in una sessione vera, e poi una convenzione
-sola.
-
-**Chiusa il 2026-09-11.** Una convenzione sola per evento, e provata: i due `PreToolUse` emettono `permissionDecisionReason` (il campo che torna **al modello**) oltre a `systemMessage`; `lint-immediato.sh` non stampa più su stdout — che su PostToolUse il modello non legge — ma emette `{"decision": "block", "reason": …}` come lo `Stop`. Il dubbio che la voce sollevava era fondato: i dinieghi arrivavano all'agente come «Hook PreToolUse:Write denied this tool», senza motivo. **Provato dal vivo, non solo sull'emissione**: una `Write` di un file in `src/domain/` con un `import sys` inutilizzato ha fatto arrivare nel contesto del modello l'intero rapporto di ruff (`F401`, con riga e suggerimento) come messaggio bloccante. Prima la stessa scrittura tornava indietro come un «file updated successfully» qualunque.
-
-### T-15 — Estendere il divieto di lettura a tutti i file d'ambiente
-**Trovato il:** 2026-09-11 · **Dove:** `.claude/settings.json:3-6` · **Gravità:** bassa · **Chi:** sessione principale
-
-Oggi sono negati tre percorsi esatti. `apps/mobile/.env` non è coperto, e un
-futuro `services/api/.env.production` nascerebbe scoperto.
-
-**Cosa serve:** `Read(./**/.env*)`. (Non chiude il buco di Bash — vedi T-12.)
-
-**Chiusa il 2026-09-11.** `Read(./.env*)` e `Read(./**/.env*)` sostituiscono i tre percorsi esatti: due righe al posto di tre, e un `.env` nuovo nasce coperto.
 
 ---
 
@@ -668,22 +471,13 @@ radice dei due workflow, `permissions: contents: write` dentro `deploy` e
 Release, che è `contents` anche lei per quanto la pubblichi `gh`.
 
 **Oltre il «Dove» di questa voce**, con la stessa riga e la stessa ragione:
-i due checkout di `docs.yml`, che ha già `contents: read` ma esegue comunque
+il checkout di `docs.yml`, che ha già `contents: read` ma esegue comunque
 `npm ci`, la raccolta di pytest e `jest` della PR con una credenziale su disco.
-Verificato che non tolga niente al job `hook`: la regola 5 delle migrazioni
-chiede se un file esiste già su `main` con `git ls-tree origin/main`
-(`.claude/hooks/migrazione-idempotente.py:149-152`), che legge il repo locale.
-**E verificato in CI, non solo in locale**, dove `origin/main` c'è comunque: nel
-job della run `34702496928` il checkout senza credenziali persistite porta
-`main -> origin/main`, e la prova «file già su main» è **girata**, non saltata.
-La distinzione conta perché `prova-hook.py` una prova che non può girare la
-dichiara saltata e prosegue verde — un salto silenzioso in CI sarebbe passato
-per una conferma.
 
 **Verificato** parsando i quattro YAML e stampando permessi e `with:` di ogni
 checkout job per job: radice `contents: read` ovunque, `write` solo su `deploy`
-e `release`, `persist-credentials: false` sui cinque checkout non pushanti e su
-nessuno dei due che pushano. Il banco `scripts/prova-hook.py` resta verde.
+e `release`, `persist-credentials: false` sui checkout non pushanti e su nessuno
+dei due che pushano.
 
 **Quello che non si poteva verificare prima del merge:** `deploy` e `release`
 girano solo su `main` (`if: github.ref == 'refs/heads/main'`). Che il permesso
