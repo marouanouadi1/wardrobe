@@ -218,8 +218,14 @@ jobs:
       # `--wait` e non solo `-d`: senza, il comando torna appena i container
       # sono *creati*, e il `docker compose exec` dello step dopo può trovare
       # l'api ancora a metà avvio e fallire per un motivo che non è suo.
+      #
+      # `--wait-timeout` è obbligatorio quanto `--wait`: il default è «aspetta
+      # per sempre», e `api` ha `restart: unless-stopped`. Un container che
+      # riparte in loop terrebbe il job appeso fino al tetto di sei ore di
+      # Actions invece di fallire. Un rilascio che si pianta deve diventare
+      # rosso, non restare giallo.
       - name: Rebuild + riavvio container
-        run: ssh marouan@89.167.15.22 'cd ~/wardrobe && docker compose up -d --build --wait'
+        run: ssh marouan@89.167.15.22 'cd ~/wardrobe && docker compose up -d --build --wait --wait-timeout 120'
         working-directory: .
 
       # Le migrazioni non le applica nessun altro: docker-entrypoint-initdb.d

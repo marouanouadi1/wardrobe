@@ -404,6 +404,33 @@ react-dom` con `--all` che esce diverso da zero se ci sono `invalid`/duplicati
 — e in tal caso in quale workflow (`mobile.yml` ha già `paths:` su
 `apps/mobile/**`, ma la causa può tornare anche toccando solo la root).
 
+### T-51 — Un corpo di richiesta non UTF-8 uccide il thread invece di dare 400
+**Trovato il:** 2026-09-16 · **Dove:** `services/api/src/handlers/local_server.py:104` · **Gravità:** bassa · **Chi:** `api`
+
+```python
+corpo = self.rfile.read(lunghezza).decode("utf-8") if lunghezza else ""
+```
+
+La decodifica è fuori da qualunque guardia, e soprattutto **prima** che
+`@endpoint` entri in gioco: un `UnicodeDecodeError` non diventa mai un errore
+di dominio e non passa dall'unico punto che traduce in HTTP. Risale fino a
+`socketserver`, che chiude la connessione e scrive un traceback nel log. Il
+client non riceve nessuna risposta, nemmeno un 400.
+
+Trovato leggendo i log di produzione mentre se ne cercava un altro: una sola
+occorrenza in sette giorni, da uno scanner automatico (nelle righe vicine
+`GET /.git/HEAD`, `GET /.svn/entries`), `byte 0x84 in position 99`. Nessun
+utente vero l'ha incontrato — l'app manda solo JSON — ma il traceback nei log
+somiglia a un guasto del backend e ruba attenzione quando si cerca un guasto
+vero, che è esattamente com'è stato trovato.
+
+**Cosa serve:** decodificare con una guardia e alzare `RichiestaNonValida`
+(esiste già in `domain/errors.py`, 422) invece di lasciar passare
+l'eccezione — oppure `errors="replace"`, lasciando che sia la validazione
+Pydantic di `corpo()` a rifiutare. La prima è più onesta: il corpo *non* era
+leggibile, non era JSON sbagliato. Un test in
+`tests/handlers/` che manda un byte non UTF-8 chiude la voce.
+
 ### T-50 — `rsync` senza `--delete`: sul VPS restano migrazioni che il repo non ha più
 **Trovato il:** 2026-09-16 · **Dove:** `.github/workflows/api.yml` (step «Rsync codice sul VPS»), `docs/deploy.md` · **Gravità:** media · **Chi:** `ci-cd`
 

@@ -522,8 +522,11 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       nessuno rimasto a `null`, `capi` e `utenti` invariati a 4 e 3. Poi, con un JWT
       vero emesso per un utente esistente, le sette rotte principali — comprese
       `/chat/conversazioni` e `/segnalazioni`, che prima erano 500 — rispondono tutte
-      200.* **Non verificato**: lo step in `api.yml` che lo automatizza, la cui prima
-      esecuzione vera è il prossimo merge su `main` che tocca `services/api/**`
+      200.* **Non verificato**: lo step in `api.yml` che lo automatizza. La sua prima
+      esecuzione vera è il merge della PR che lo introduce — `.github/workflows/api.yml`
+      sta nel filtro `paths:` di sé stesso, quindi il workflow parte, e
+      `bump-versione.mjs api --prova` dice `0.5.0 -> 0.5.1` (patch: nessun commit
+      tocca `services/api`)
 - [x] Build EAS Android + GitHub Release automatiche da `mobile.yml` — *dichiarato
       in README al 2026-09-08*. L'URL dell'APK che EAS restituisce passa da `env:`
       e viene controllato (schema e dominio) prima di essere seguito: è un dato,
