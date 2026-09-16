@@ -508,7 +508,22 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
 - [x] VPS Hetzner, Caddy, Let's Encrypt emesso al primo avvio, dominio reale. Deploy
       automatico da `api.yml` con verifica della versione servita — *dichiarato in
       README al 2026-09-08; il deploy si riverifica da solo a ogni merge sul backend*.
-      Dettagli in `docs/deploy.md`
+      **Quella verifica riguarda la sola versione del pacchetto**: `GET /salute` non
+      interroga il database, e infatti non ha visto lo schema restare indietro (riga
+      qui sotto). Dettagli in `docs/deploy.md`
+- [x] Il deploy applica le migrazioni. Fino al 2026-09-16 non lo faceva nessuno: lo
+      schema di produzione era fermo a `0006`, `conversazioni_chat` e `segnalazioni`
+      non esistevano, e chat e segnalazioni rispondevano `500 errore_interno`
+      sull'app dei tester mentre tre rilasci di fila passavano verdi. *Riparato dal
+      vivo il 2026-09-16: dump del database prima, poi
+      `applica_migrazioni.py` due volte di fila (secondo giro pulito, come impone
+      `.claude/rules/migrazioni.md`); `\dt` mostra le 9 tabelle attese, i 22 messaggi
+      di chat tutti con `conversazione_id` valorizzato dal backfill di `0009` e
+      nessuno rimasto a `null`, `capi` e `utenti` invariati a 4 e 3. Poi, con un JWT
+      vero emesso per un utente esistente, le sette rotte principali — comprese
+      `/chat/conversazioni` e `/segnalazioni`, che prima erano 500 — rispondono tutte
+      200.* **Non verificato**: lo step in `api.yml` che lo automatizza, la cui prima
+      esecuzione vera è il prossimo merge su `main` che tocca `services/api/**`
 - [x] Build EAS Android + GitHub Release automatiche da `mobile.yml` — *dichiarato
       in README al 2026-09-08*. L'URL dell'APK che EAS restituisce passa da `env:`
       e viene controllato (schema e dominio) prima di essere seguito: è un dato,
