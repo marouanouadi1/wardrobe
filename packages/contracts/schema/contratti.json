@@ -31,8 +31,14 @@
     "ContestoSuggerimento": {
       "$ref": "#/$defs/ContestoSuggerimento"
     },
+    "ContoSvuotamento": {
+      "$ref": "#/$defs/ContoSvuotamento"
+    },
     "ConversazioneChat": {
       "$ref": "#/$defs/ConversazioneChat"
+    },
+    "Corporatura": {
+      "$ref": "#/$defs/Corporatura"
     },
     "CorrezioniCapo": {
       "$ref": "#/$defs/CorrezioniCapo"
@@ -55,6 +61,9 @@
     "EsitoAnalisi": {
       "$ref": "#/$defs/EsitoAnalisi"
     },
+    "EsportazionePronta": {
+      "$ref": "#/$defs/EsportazionePronta"
+    },
     "FiltroArmadio": {
       "$ref": "#/$defs/FiltroArmadio"
     },
@@ -72,6 +81,9 @@
     },
     "Meteo": {
       "$ref": "#/$defs/Meteo"
+    },
+    "Misure": {
+      "$ref": "#/$defs/Misure"
     },
     "ModelloDisponibile": {
       "$ref": "#/$defs/ModelloDisponibile"
@@ -106,6 +118,9 @@
     "RichiestaSuggerimenti": {
       "$ref": "#/$defs/RichiestaSuggerimenti"
     },
+    "RichiestaSvuotamento": {
+      "$ref": "#/$defs/RichiestaSvuotamento"
+    },
     "RichiestaUpload": {
       "$ref": "#/$defs/RichiestaUpload"
     },
@@ -123,6 +138,9 @@
     },
     "Segnalazione": {
       "$ref": "#/$defs/Segnalazione"
+    },
+    "SistemaTaglie": {
+      "$ref": "#/$defs/SistemaTaglie"
     },
     "SlotAvatar": {
       "$ref": "#/$defs/SlotAvatar"
@@ -142,11 +160,17 @@
     "Suggerimento": {
       "$ref": "#/$defs/Suggerimento"
     },
+    "Taglia": {
+      "$ref": "#/$defs/Taglia"
+    },
     "TipoCapo": {
       "$ref": "#/$defs/TipoCapo"
     },
     "TokenAccesso": {
       "$ref": "#/$defs/TokenAccesso"
+    },
+    "UnitaLunghezza": {
+      "$ref": "#/$defs/UnitaLunghezza"
     },
     "UploadFirmato": {
       "$ref": "#/$defs/UploadFirmato"
@@ -629,6 +653,36 @@
       "title": "ContestoSuggerimento",
       "type": "object"
     },
+    "ContoSvuotamento": {
+      "additionalProperties": false,
+      "description": "Quanto è stato cancellato davvero.\n\nNon è telemetria: è l'unico modo che ha la persona di sapere che\nl'operazione ha fatto ciò che prometteva. Un `204 No Content` dopo\nun'azione irreversibile lascia solo da fidarsi.",
+      "properties": {
+        "capi": {
+          "type": "integer"
+        },
+        "outfit": {
+          "type": "integer"
+        },
+        "conversazioni": {
+          "type": "integer"
+        },
+        "usi_registrati": {
+          "type": "integer"
+        },
+        "foto": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "capi",
+        "outfit",
+        "conversazioni",
+        "usi_registrati",
+        "foto"
+      ],
+      "title": "ContoSvuotamento",
+      "type": "object"
+    },
     "ConversazioneChat": {
       "additionalProperties": false,
       "description": "Un contenitore di turni: da quando la chat ha smesso di essere una\nsola sessione continua per utente (vedi docs/adr/0006).\n\nRispecchia esattamente le colonne di `conversazioni_chat` — niente qui\ndentro che l'adapter debba inventare per poterla salvare. `turni` e\n`anteprima`, che servono solo all'elenco, vivono in\n`VoceElencoConversazioni`, non qui.",
@@ -656,6 +710,16 @@
       ],
       "title": "ConversazioneChat",
       "type": "object"
+    },
+    "Corporatura": {
+      "description": "Tre corporature.\n\n**Il deck non dice quali sono**: mostra solo «Media» come valore corrente di\nun selettore di cui non elenca le voci. Queste tre le abbiamo scelte noi, ed\nè registrato in `docs/DOMANDE_APERTE.md` (`D-09`) perché è una lacuna di\nspecifica, non una decisione presa.",
+      "enum": [
+        "minuta",
+        "media",
+        "robusta"
+      ],
+      "title": "Corporatura",
+      "type": "string"
     },
     "CorrezioniCapo": {
       "additionalProperties": false,
@@ -869,6 +933,25 @@
         "stato"
       ],
       "title": "EsitoAnalisi",
+      "type": "object"
+    },
+    "EsportazionePronta": {
+      "additionalProperties": false,
+      "description": "L'indirizzo da cui l'archivio si scarica, e per quanto ancora vale.\n\n**È l'unica parte che attraversa il confine.** L'app non riceve i dati: ne\nriceve un URL firmato, che apre nel browser di sistema — un'app React\nNative non ha un «scarica», e il browser ce l'ha.\n\n`scade_il` non è decorativo: l'URL è di fatto una credenziale al portatore\nsu tutto l'armadio, quindi l'interfaccia deve poter dire che è a tempo\ninvece di lasciar credere che sia un link da conservare.",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "scade_il": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "scade_il"
+      ],
+      "title": "EsportazionePronta",
       "type": "object"
     },
     "FiltroArmadio": {
@@ -1178,6 +1261,80 @@
       "title": "Meteo",
       "type": "object"
     },
+    "Misure": {
+      "additionalProperties": false,
+      "description": "Come si veste un corpo, non com'è fatto.\n\n**Ogni campo è opzionale, e il modello intero può non esserci.** Non è\nlassismo: la schermata del deck offre «Le inserisco dopo» accanto a\n«Continua», e promette «puoi cancellarle quando vuoi». Un `Misure` assente\nè quella promessa mantenuta — non un profilo a metà da riempire.\n\nGli estremi non sono decorativi. Servono a rifiutare un dito che scivola\n(`1680` invece di `168`) prima che finisca in un `jsonb` e da lì\nnell'avatar, dove diventerebbe una persona alta sedici metri.",
+      "properties": {
+        "sistema_taglie": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SistemaTaglie"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "taglia": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Taglia"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "altezza_cm": {
+          "anyOf": [
+            {
+              "maximum": 230,
+              "minimum": 120,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "corporatura": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Corporatura"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "spalle_cm": {
+          "anyOf": [
+            {
+              "maximum": 70,
+              "minimum": 30,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lunghezza_gamba_cm": {
+          "anyOf": [
+            {
+              "maximum": 120,
+              "minimum": 50,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "title": "Misure",
+      "type": "object"
+    },
     "ModelloDisponibile": {
       "additionalProperties": false,
       "description": "Una riga del catalogo dei modelli di un provider — `ProviderLlm.modelli()`.",
@@ -1394,6 +1551,19 @@
         "preferenze": {
           "$ref": "#/$defs/PreferenzeStile"
         },
+        "misure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Misure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unita_lunghezza": {
+          "$ref": "#/$defs/UnitaLunghezza"
+        },
         "foto_url": {
           "anyOf": [
             {
@@ -1578,6 +1748,21 @@
       "title": "RichiestaSuggerimenti",
       "type": "object"
     },
+    "RichiestaSvuotamento": {
+      "additionalProperties": false,
+      "description": "Il corpo di `POST /armadio/svuota`.\n\n**La parola esiste per rendere impossibile l'incidente.** Il tocco sullo\nschermo è già dietro un campo in cui scrivere «SVUOTA», ma quella è una\ndifesa dell'interfaccia: sparisce con un refresh, un deep-link, un `curl`\nricopiato, o una richiesta rimandata due volte dalla libreria di rete. Un\n`Literal` la porta nel contratto, quindi un `POST` senza intenzione\nesplicita prende un 422 e non cancella niente — e il tipo TypeScript\ngenerato contiene la parola, così non la si ridigita di là.",
+      "properties": {
+        "conferma": {
+          "const": "SVUOTA",
+          "type": "string"
+        }
+      },
+      "required": [
+        "conferma"
+      ],
+      "title": "RichiestaSvuotamento",
+      "type": "object"
+    },
     "RichiestaUpload": {
       "additionalProperties": false,
       "properties": {
@@ -1744,6 +1929,16 @@
       "title": "Segnalazione",
       "type": "object"
     },
+    "SistemaTaglie": {
+      "description": "Su che taglie ragioniamo — **lo dice la persona, non lo deduciamo.**\n\nIl deck lo scrive nell'occhiello della schermata: «Scegli tu il sistema di\ntaglie: non lo deduco da nome o foto». Non è una preferenza di comodo: è il\npunto in cui l'app promette di non indovinare il genere di qualcuno.",
+      "enum": [
+        "donna",
+        "uomo",
+        "unisex"
+      ],
+      "title": "SistemaTaglie",
+      "type": "string"
+    },
     "SlotAvatar": {
       "description": "Le cinque posizioni che l'avatar sa vestire.\n\nI valori coincidono con le chiavi di `mannequin.setOutfit()`.",
       "enum": [
@@ -1827,6 +2022,18 @@
       "title": "Suggerimento",
       "type": "object"
     },
+    "Taglia": {
+      "description": "La taglia abituale, nel sistema a lettere.\n\n**Non copre i sistemi numerici** (38/40/42 italiani, 6/8/10 inglesi), e la\nscelta è consapevole: le lettere sono le sole cinque che valgono per tutti e\ntre i `SistemaTaglie`, e sono le sole che l'app oggi sappia offrire. Una\nenum accetta esattamente ciò che l'interfaccia può produrre; un `str` libero\nlascerebbe entrare «medium», «42» e «M» — tre modi di dire la stessa cosa\nche nessuno normalizzerebbe mai più.\n\nAllargarla ai numeri è `T-44`: costa un cambio di contratto, **non** una\nmigrazione dei dati — una enum che diventa `str` lascia valide le righe già\nscritte, ed è il verso buono in cui sbagliare.",
+      "enum": [
+        "xs",
+        "s",
+        "m",
+        "l",
+        "xl"
+      ],
+      "title": "Taglia",
+      "type": "string"
+    },
     "TipoCapo": {
       "enum": [
         "top",
@@ -1851,6 +2058,15 @@
       ],
       "title": "TokenAccesso",
       "type": "object"
+    },
+    "UnitaLunghezza": {
+      "description": "In che unità si **mostrano** le lunghezze. Non in che unità si salvano.\n\n`Misure` le tiene in centimetri e basta — il nome dei campi lo dice\n(`altezza_cm`). Questa è una preferenza di lettura: cambiarla non riscrive\nnessun dato, e due dispositivi dello stesso utente vedono lo stesso numero\nperché la conversione avviene all'ultimo momento, non al salvataggio.\n\nIl deck ne governa tre — lunghezze, peso, temperatura. Le altre due non\nesistono qui: **non c'è nessun campo peso** in tutto il dominio (e il deck\nstesso scrive «non te lo chiedo»), e la temperatura richiede il meteo, che\nil backend riceve ma non è mai andato a prendere. Offrirle vorrebbe dire\ndue selettori che non comandano niente.",
+      "enum": [
+        "cm",
+        "pollici"
+      ],
+      "title": "UnitaLunghezza",
+      "type": "string"
     },
     "UploadFirmato": {
       "additionalProperties": false,

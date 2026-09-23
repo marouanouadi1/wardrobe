@@ -11,6 +11,7 @@
 export const SOGLIA_INCERTEZZA = 86 as const
 export const SOGLIA_SCARTO = 60 as const
 export const MESI_PER_DORMIENTE = 6 as const
+export const LIMITI_MISURE_CM = {"altezza":{"min":120,"max":230},"spalle":{"min":30,"max":70},"lunghezza_gamba":{"min":50,"max":120}} as const
 
 // I valori delle enum, in ordine, per costruire filtri e selettori.
 export const VALORI_TIPO_CAPO = ['top', 'pantaloni', 'scarpe', 'capospalla', 'abito', 'accessorio'] as const
@@ -22,3 +23,7 @@ export const VALORI_ORIGINE_OUTFIT = ['manuale', 'ia', 'suggerito_modificato'] a
 export const VALORI_STATO_ANALISI = ['in_corso', 'completata', 'fallita'] as const
 export const VALORI_RUOLO_CHAT = ['utente', 'wardrobe'] as const
 export const VALORI_STATO_SEGNALAZIONE = ['ricevuta', 'in_lavorazione', 'risolta'] as const
+export const VALORI_SISTEMA_TAGLIE = ['donna', 'uomo', 'unisex'] as const
+export const VALORI_TAGLIA = ['xs', 's', 'm', 'l', 'xl'] as const
+export const VALORI_CORPORATURA = ['minuta', 'media', 'robusta'] as const
+export const VALORI_UNITA_LUNGHEZZA = ['cm', 'pollici'] as const

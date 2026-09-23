@@ -18,6 +18,97 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **Quando il server non risponde, «Oggi» lo dice chiaramente** invece di
+  sembrare un armadio vuoto, e offre di riprovare.
+- **Con pochi capi si vede cosa manca**, non solo che manca qualcosa: una
+  casella per il sopra e una per il sotto, piena o tratteggiata.
+- **Prima di chiedere l'accesso alle foto l'app spiega perché**, e solo la
+  prima volta.
+- **Caricando più foto si vede una riga per ciascuna**: quale sta arrivando,
+  quale è già in armadio, e quale non è andata — col suo motivo accanto. Prima
+  c'era un solo «sto guardando il capo 3 di 7» e alla fine un numero di falliti
+  senza dire quali.
+- **Quando una foto non viene letta ora c'è una schermata, non un messaggio che
+  sparisce**, e «Riprova» non la ricarica: la foto è già sul server.
+- **Due schermate nuove**: «Come viene bene» spiega come fotografare un capo, e
+  «Da rivedere» raccoglie i capi su cui il modello aveva un dubbio, invece di
+  farli scoprire uno per volta.
+- **La barra in basso c'è sempre**, e resta accesa sulla scheda da cui sei
+  arrivato: sul dettaglio di un capo resta illuminata «Armadio», in chat
+  «Oggi», sul calendario «Profilo». Prima su quelle schermate spariva del
+  tutto. Il «+» porta a «Aggiungi» da ovunque.
+- **Il dettaglio di un capo ha un menu «···»**, e la foto non viene più
+  tagliata: il capo si vede per intero, qualunque forma abbia. Le azioni che
+  non possiamo ancora fare — rifare la foto, non suggerirlo più, eliminarlo —
+  sono lì, spente, con scritto cosa manca.
+- **«In lavatrice» si può finalmente scegliere.** I tre stati di un capo sono
+  tre pillole; prima un interruttore solo ne raggiungeva due, e il terzo si
+  poteva vedere ma non impostare.
+- **Il suggeritore è una chat sola.** Erano tre modi di chiedere la stessa cosa
+  allo stesso stilista: restano gli spunti rapidi e la chat. Le proposte pronte
+  si guardano in «Oggi», dove già erano.
+- **L'app si chiama Aura.** Il nome sotto l'icona e i testi che lo dicevano
+  («Chiedi tu a Wardrobe», «proposto da Wardrobe») ora dicono Aura. I nomi
+  interni — pacchetti, cartelle, tabelle — non sono cambiati: quello è un
+  lavoro a sé, e uno dei pezzi (l'identificatore dell'app sullo store) non si
+  può cambiare senza pubblicare un'app diversa.
+- **Gli outfit salvati sono una vista dell'armadio.** In cima all'Armadio c'è
+  un segmento «Capi | Outfit», come nel deck. La schermata `/outfit` resta
+  dov'è — il Profilo ci rimanda e un link diretto continua a funzionare — e
+  mostra la stessa lista. La scheda di un outfit ha cambiato forma: tessere
+  quadrate col capo dentro per intero invece di una copertina che lo tagliava.
+- **Le impostazioni sono una schermata sola.** Nove voci in tre gruppi, invece
+  che sparse fra Profilo e il sistema. Quelle che ancora non funzionano si
+  vedono spente, con scritto cosa manca — nella lingua di chi legge, non in
+  quella di chi sviluppa.
+- **Si possono dare taglia, altezza e corporatura.** Servono a vestire
+  l'avatar, sono tutte facoltative, e si cancellano quando vuoi: `Impostazioni
+  → Misure e taglia`. Il sistema di taglie lo scegli tu — l'app non lo deduce
+  dal nome né dalle foto.
+- **Centimetri o pollici, lo scegli tu** (`Impostazioni → Unità`), e la scelta
+  ti segue su ogni dispositivo perché sta sul profilo. Cambia solo come le
+  leggi: le misure che hai dato restano quelle. Peso e temperatura non ci sono
+  — non esiste un peso da nessuna parte, e il meteo non arriva ancora.
+- **Puoi scaricare i tuoi dati** (`Impostazioni → Scarica i tuoi dati`): uno
+  zip con i capi, gli outfit, il profilo con le misure, le conversazioni con lo
+  stilista e le segnalazioni — **con dentro le foto vere**, non dei link che
+  scadono. Si apre il browser per salvarlo, e il link vale un quarto d'ora.
+- **Si può svuotare l'armadio** (`Impostazioni → Svuota l'armadio`): via capi
+  e foto, outfit, conversazioni e il diario di cosa hai messo. **Restano**
+  l'account, le tue misure, le preferenze di stile e la foto per l'avatar — e
+  la schermata te lo dice prima, in due elenchi separati, coi numeri veri.
+  Bisogna scrivere «SVUOTA» per confermare, e non si torna indietro.
+- **La palette viene dal deck «Aura».** I token di colore sono nominati per
+  ruolo: `primario` (l'accento, `#5566D6`), `inchiostro`, `scheda` (il bianco
+  da cui si compone ogni velatura), `pericolo`. Spariscono `ambra`, `crema` e
+  `corallo`, e con l'ambra sparisce l'invariante che la riservava
+  all'intelligenza artificiale — la regola nuova è che **l'azione è
+  inchiostro, non l'accento**, ed è quella del deck. Il passaggio ha corretto
+  una classe di difetti che nasceva da sé: dove l'ambra (chiara) portava testo
+  inchiostro, il primario (scuro) lo avrebbe portato ancora, a 3.6:1 — pillola
+  attiva, badge, bolle, bottone tondo e il «+» della barra ora scrivono chiaro
+  sul proprio fondo.
+- **Le schermate hanno un fondo.** `SfondoAura` dipinge il gradiente a tre
+  fermate e i due aloni radiali del deck, in una delle quattro tavolozze
+  (`caldo`, `freddo`, `neutro`, `oro`). Per ora lo portano «Oggi» e le due
+  schermate di accesso; le altre restano sulla tinta piatta finché non si
+  convertono.
+- **L'armadio è quello del deck**: griglia a **tre** colonne di tessere
+  quadrate di vetro — il capo ci sta dentro per intero, un cappotto lungo non
+  si taglia più — col cuore sui preferiti, il badge «da lavare», il nome sotto
+  la tessera e la casella tratteggiata «Aggiungi» **dentro** la griglia. Due
+  righe di filtri: la categoria, e le qualità («♥ Preferiti», «Pronti da
+  mettere», «Da lavare», «Usati di rado») con la regola di un filtro per
+  dimensione, così non si può comporre a mano una selezione vuota per
+  costruzione. Lo stato vuoto distingue «l'armadio è vuoto» da «i filtri non
+  trovano niente».
+- **Il calendario mostrava sei giorni per riga su ogni telefono.** La griglia
+  del mese chiedeva più larghezza di quanta ne esista, e in React Native una
+  cella che non entra non si stringe: va a capo. Le lettere dei giorni erano
+  disallineate rispetto alle date. Corretta, e ora un test impedisce che
+  succeda a qualunque griglia.
+- **`Scheda` ha la variante `vetro`**: bianco traslucido con un filo di luce
+  sul bordo, la superficie su cui il deck poggia quasi tutto.
 - I colori composti a mano (`rgba()`, esadecimali) in 7 file fra schermate e
   primitive sono stati sostituiti con i token di `tema/tokens.ts` o con
   `velo(colore, alfa)`, che produce lo stesso formato senza spazi: nessun
@@ -64,6 +155,26 @@ travestita da registro.
   a versione esatta, alle ultime versioni compatibili con i loro range.
 
 ### api
+- **Il profilo porta le misure del corpo** (`Profilo.misure`): sistema di
+  taglie, taglia, altezza, corporatura, spalle e lunghezza gamba — tutte
+  facoltative, e l'intero blocco può non esserci. Gli estremi accettati
+  (`LIMITI_MISURE_CM`) attraversano il confine verso l'app, così la validazione
+  è un numero solo invece di due copie che divergono. **Nessuna migrazione**:
+  `profili.dati` è `jsonb`.
+- **`Profilo.unita_lunghezza`** (`cm` | `pollici`): in che unità si *mostrano*
+  le lunghezze, non in che unità si salvano — `Misure` resta in centimetri. Il
+  default è `cm`, così ogni profilo già salvato lo riceve leggendolo: **nessuna
+  migrazione**.
+- **`POST /esportazione`**: firma un indirizzo a scadenza breve da cui
+  scaricare tutti i dati di chi lo chiede. L'archivio si compone alla
+  richiesta e **non viene salvato da nessuna parte** — una copia in giacenza
+  avrebbe bisogno di una scadenza e di qualcosa che la ripulisca, e
+  renderebbe bugiarda la cancellazione dell'armadio.
+- **`POST /armadio/svuota`**: cancella capi, outfit, conversazioni e usi di
+  chi chiama, in **una transazione**, e le foto **per prefisso** invece che per
+  elenco di chiavi. Profilo, account e segnalazioni restano. Il corpo deve
+  portare `conferma: "SVUOTA"`, un `Literal` nel contratto: una richiesta senza
+  intenzione esplicita prende 422 e non cancella niente.
 - (niente di visibile: solo l'ordine dei gate di coverage in CI. La soglia
   aggregata si applicava *dentro* lo step Pytest, e quando scattava saltava le
   due soglie per sottoalbero — il gate più debole nascondeva i due che contano.

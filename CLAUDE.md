@@ -118,8 +118,11 @@ Dettaglio in `.claude/rules/react-native.md`.
 
 Due regole non negoziabili:
 
-- **`colori.ambra` (`#F5B324`) compare solo dove parla il modello** — badge di match, «letto
-  dalla foto» — mai su un'azione dell'utente.
+- **L'azione è `colori.inchiostro`, non l'accento.** Ogni azione primaria e ogni pillola
+  selezionata si dipingono di inchiostro; `colori.primario` (`#5566D6`) fa il cromo, i link e
+  i luoghi dove parla il modello. L'unica azione tinta di primario è il «+» della barra
+  delle schede. *Fino al 2026-09-22 la regola era un'altra — «l'ambra è dell'IA, e in
+  nessun altro posto» — e l'ambra non esiste più: la palette viene dal deck «Aura».*
 - **Una schermata compone le primitive di `apps/mobile/src/ui/`**: non ridefinisce una card, un
   bottone o un badge a mano, e non compone un colore da sé. Se manca una forma si aggiunge lì;
   se manca un colore si aggiunge a `src/tema/tokens.ts`, o si compone con `velo()`.

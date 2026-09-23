@@ -10,6 +10,7 @@
 import {
   type AttributoCapo,
   type Capo,
+  LIMITI_MISURE_CM,
   MESI_PER_DORMIENTE,
   type Profilo,
   SOGLIA_INCERTEZZA,
@@ -17,6 +18,7 @@ import {
   type Stagione,
   type TipoCapo,
   VALORI_ATTRIBUTO_CAPO,
+  type UnitaLunghezza,
   type Vestizione,
   type VestizioneColori,
 } from '@wardrobe/contracts'
@@ -49,7 +51,7 @@ export function slotDiTipo(tipo: TipoCapo): SlotAvatar {
 
 export const SLOT_ORDINATI: readonly SlotAvatar[] = ['outer', 'top', 'bottom', 'shoes'] as const
 
-/** Gli attributi da mostrare in corallo, quelli che il modello non sa bene. */
+/** Gli attributi da mostrare in pericolo, quelli che il modello non sa bene. */
 export function attributiIncerti(capo: Capo): AttributoCapo[] {
   const analisi = capo.analisi
   if (!analisi?.confidenze) return []
@@ -188,4 +190,55 @@ export function quandoUsato(iso: string | null | undefined): string {
   if (giorni < 30) return `${giorni} giorni`
   const mesi = Math.round(giorni / 30)
   return mesi === 1 ? 'un mese' : `${mesi} mesi`
+}
+
+/**
+ * ────────────── Le lunghezze: si salvano in centimetri, si mostrano come vuoi
+ *
+ * `Misure` tiene solo centimetri — lo dice il nome dei campi (`altezza_cm`), e
+ * `unita_lunghezza` sul profilo è una preferenza di **lettura**. La conversione
+ * sta qui, all'ultimo momento, e mai al salvataggio: così cambiare unità non
+ * riscrive nessun dato e non può perdere precisione a ogni giro.
+ */
+
+const CM_PER_POLLICE = 2.54
+
+/** Da centimetri all'unità scelta, arrotondato all'intero che si digita. */
+export function daCentimetri(cm: number, unita: UnitaLunghezza): number {
+  return unita === 'cm' ? cm : Math.round(cm / CM_PER_POLLICE)
+}
+
+/** Il verso opposto: quello che si è digitato, in centimetri da salvare. */
+export function aCentimetri(valore: number, unita: UnitaLunghezza): number {
+  return unita === 'cm' ? valore : Math.round(valore * CM_PER_POLLICE)
+}
+
+/** Come si scrive l'unità accanto a un numero. */
+export function simboloUnita(unita: UnitaLunghezza): string {
+  return unita === 'cm' ? 'cm' : '″'
+}
+
+/** Un numero di centimetri, scritto come va letto: «168 cm», «66″». */
+export function formattaLunghezza(cm: number, unita: UnitaLunghezza): string {
+  return `${daCentimetri(cm, unita)} ${simboloUnita(unita)}`
+}
+
+/**
+ * Gli estremi accettati, nell'unità che si sta digitando.
+ *
+ * **Non è una divisione e basta.** Il server valida in centimetri, e la
+ * conversione arrotonda: un minimo di 120 cm diviso 2,54 fa 47,24, ma digitare
+ * `47` darebbe 119 cm — che il server rifiuta. Il minimo si arrotonda **per
+ * eccesso** e il massimo **per difetto**, così ogni valore che questa funzione
+ * accetta è ancora dentro i limiti veri dopo la conversione. Il verso opposto
+ * (floor sul minimo) farebbe passare il campo e cadere il salvataggio, con un
+ * errore che l'utente non può correggere perché il campo gli dà ragione.
+ */
+export function limitiIn(
+  chiave: keyof typeof LIMITI_MISURE_CM,
+  unita: UnitaLunghezza,
+): { min: number; max: number } {
+  const { min, max } = LIMITI_MISURE_CM[chiave]
+  if (unita === 'cm') return { min, max }
+  return { min: Math.ceil(min / CM_PER_POLLICE), max: Math.floor(max / CM_PER_POLLICE) }
 }

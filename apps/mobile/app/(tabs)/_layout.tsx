@@ -1,30 +1,21 @@
 /**
- * La barra in basso: pillola scura galleggiante, con il «+» in ambra al centro.
+ * Il gruppo delle schede, e il cancello che lo protegge.
  *
- * È scritta a mano invece di usare quella di sistema perché la forma — una
- * pillola staccata dal fondo, cinque voci di cui una circolare al centro — è
- * parte dell'identità del design, e perché così il tocco ha lo stesso feedback
- * del resto dell'app.
+ * **La barra non si disegna più qui.** Stava nella prop `tabBar` di `<Tabs>`,
+ * e per questo esisteva solo dentro questo gruppo: sul dettaglio di un capo,
+ * in chat, sul calendario semplicemente non c'era. Ora è `BarraSchede`
+ * (`src/ui/guscio.tsx`), montata una volta sola in `app/_layout.tsx` sopra
+ * tutto, e la scheda accesa si deduce dal percorso (`Q-11`, 2026-09-23).
+ *
+ * `tabBar={() => null}` e non l'assenza della prop: senza, il navigatore
+ * disegnerebbe la sua barra di sistema sotto la nostra.
  */
 
 import { Redirect, Tabs } from 'expo-router'
-import { View } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useSessione } from '../../src/dati/sessione'
-import { colori, ombre, raggi, testoSu, velo } from '../../src/tema/tokens'
-import { Icona, type NomeIcona, Toccabile } from '../../src/ui/base'
-import { Etichetta } from '../../src/ui/testo'
-
-const VOCI: { nome: string; etichetta: string; icona: NomeIcona; centrale?: boolean }[] = [
-  { nome: 'oggi', etichetta: 'Oggi', icona: 'scintilla' },
-  { nome: 'armadio', etichetta: 'Armadio', icona: 'griglia' },
-  { nome: 'carica', etichetta: '', icona: 'piu', centrale: true },
-  { nome: 'avatar', etichetta: 'Avatar', icona: 'maglietta' },
-  { nome: 'profilo', etichetta: 'Profilo', icona: 'utente' },
-]
+import { colori } from '../../src/tema/tokens'
 
 export default function DisposizioneSchede() {
-  const bordi = useSafeAreaInsets()
   const { token, pronto } = useSessione()
 
   // `index.tsx` manda già al login chi non ha un token, ma questo layout
@@ -36,71 +27,7 @@ export default function DisposizioneSchede() {
   return (
     <Tabs
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colori.sfondo } }}
-      tabBar={({ state, navigation }) => (
-        <View
-          // `Schermata` (`src/ui/guscio.tsx`) rispecchia questo conto per il
-          // `paddingBottom` delle schermate sotto la barra: non ridurlo qui
-          // senza toccare anche lì.
-          style={{
-            position: 'absolute',
-            left: 16,
-            right: 16,
-            bottom: Math.max(bordi.bottom, 10) + 6,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 2,
-              padding: 8,
-              borderRadius: raggi.pillola,
-              backgroundColor: velo(colori.inchiostro, 0.96),
-              ...ombre.alta,
-            }}
-          >
-            {VOCI.map((voce, indice) => {
-              const attiva = state.index === indice
-              return (
-                <Toccabile
-                  key={voce.nome}
-                  scala={0.92}
-                  onPress={() => navigation.navigate(voce.nome)}
-                  style={{
-                    flex: voce.centrale ? 0 : 1,
-                    width: voce.centrale ? 60 : undefined,
-                    height: 48,
-                    borderRadius: raggi.pillola,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 3,
-                    backgroundColor: voce.centrale
-                      ? colori.ambra
-                      : attiva
-                        ? velo(colori.crema, 0.14)
-                        : 'transparent',
-                  }}
-                >
-                  <Icona
-                    nome={voce.icona}
-                    misura={voce.centrale ? 22 : 19}
-                    colore={voce.centrale ? colori.inchiostro : attiva ? colori.crema : testoSu.scuro.tenue}
-                  />
-                  {voce.etichetta ? (
-                    <Etichetta
-                      taglia="nano"
-                      colore={attiva ? colori.crema : testoSu.scuro.tenue}
-                      style={{ letterSpacing: 0.4 }}
-                    >
-                      {voce.etichetta}
-                    </Etichetta>
-                  ) : null}
-                </Toccabile>
-              )
-            })}
-          </View>
-        </View>
-      )}
+      tabBar={() => null}
     >
       <Tabs.Screen name="oggi" />
       <Tabs.Screen name="armadio" />

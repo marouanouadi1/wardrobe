@@ -3,7 +3,7 @@
 ## Come si legge questo file
 
 **È l'unico posto del repo in cui è lecito scrivere un numero di test o una
-percentuale di coverage.** Altrove si scrive «i test», non «163 test»: un numero
+percentuale di coverage.** Altrove si scrive «i test», non «213 test»: un numero
 in prosa invecchia in silenzio, e questo repo ne ha già avuti tre diversi per lo
 stesso fatto nello stesso file.
 
@@ -16,8 +16,8 @@ Due tipi di numero, e si comportano diversamente:
 
 ## Numeri correnti
 
-- **Test backend:** 163
-- **Test app:** 23
+- **Test backend:** 213
+- **Test app:** 69
 - **Soglia coverage totale:** 73% — `services/api/pyproject.toml`
 - **Soglia coverage `src/domain/`:** 97% — `.github/workflows/api.yml`
 - **Soglia coverage `src/handlers/`:** 92% — idem, escluso `local_server.py`
@@ -34,14 +34,16 @@ vera, non si abbassano mai. Abbassarne una non è un commit: è una voce in
 | `tests/domain/test_vision.py` | 25 | 196 |
 | `tests/domain/test_stylist.py` | 23 | 184 |
 | `tests/domain/test_chat.py` | 15 | 164 |
+| `tests/domain/test_esportazione.py` | 23 | 171 |
 | `tests/domain/test_firma_foto.py` | 5 | 39 |
 | `tests/domain/test_segnalazioni.py` | 2 | 40 |
-| `tests/handlers/test_handlers.py` | 38 | 432 |
+| `tests/handlers/test_handlers.py` | 59 | 810 |
 | `tests/handlers/test_chat_handler.py` | 13 | 246 |
 | `tests/handlers/test_analisi.py` | 4 | 125 |
 | `tests/handlers/test_suggerimenti.py` | 2 | 88 |
+| `tests/adapters/test_archivio_filesystem.py` | 7 | 87 |
 | `tests/adapters/test_google_provider.py` | 6 | 63 |
-| **Totale** | **163** | **1.773** |
+| **Totale** | **213** | **2.369** |
 
 Più `conftest.py` (139) e `fakes.py` (65), che non contengono test.
 
@@ -64,7 +66,7 @@ Il 74% totale (73,51% esatto) è una media che nasconde la forma vera:
 
 | File | Istruzioni | Cos'è |
 |---|---:|---|
-| `src/adapters/postgres.py` | 123 | **il percorso dati che gira in produzione.** Tutti i 163 test girano su `ArchivioInMemoria` (97%) |
+| `src/adapters/postgres.py` | 123 | **il percorso dati che gira in produzione.** Tutti i 213 test girano su `ArchivioInMemoria` (97%) |
 | `src/handlers/local_server.py` | 120 | la tabella `ROTTE` e il dispatch: il codice che serve ogni richiesta sul VPS |
 | `src/adapters/filesystem.py` | 57 | le foto su disco |
 | `src/adapters/scontorno/fal_provider.py` | 25 | lo scontorno via fal.ai |
@@ -95,9 +97,12 @@ onboarding light button»).
 
 | File | Test | Cosa verifica |
 |---|---:|---|
-| `test/ui/leggibilita.test.tsx` | 12 | il colore risolto di un testo dentro `Scheda`, `BottonePrimario` (nelle quattro varianti, inclusa la combinazione `pericolo + disabilitato`), `Pillola` (attiva e no, nei due ambienti), `Segmenti`, `BottoneSecondario` |
+| `test/ui/leggibilita.test.tsx` | 18 | il colore risolto di un testo dentro `Scheda` (compresa la variante **`vetro`**), `BottonePrimario` (nelle cinque varianti, inclusa la combinazione `pericolo + disabilitato` e la nuova `accento`), `Pillola` (attiva e no, nei due ambienti), `Segmenti`, `BottoneSecondario`, e **`Foglio`**: che la sua scheda asserisca il proprio fondo chiaro sotto il velo scuro, e che il «perché» di una voce spenta stia a `tenue` e non al tono dell'interfaccia inattiva. E **`RigaImpostazione`**, che non dipinge nulla ma compone tre colori a mano: che li prenda dal fondo ereditato invece che da `chiaro` fisso |
 | `test/ui/fondo.test.tsx` | 5 | il meccanismo: `useFondo()` senza provider, ereditarietà, annidamento a tre livelli |
 | `test/convenzioni/primitive.test.ts` | 4 | che nessuno ridipinga il fondo di una primitiva dal di fuori: né con `style={{ backgroundColor }}` — la forma esatta della regressione di PR #4 — né passando `sfondo` senza dire con `su` su che fondo ci si posa |
+| `test/convenzioni/griglie.test.ts` | 15 | che una riga di griglia **ci stia**: tre tessere d'armadio e sette celle di mese, dalla larghezza di 320pt a quella di 480, dentro la larghezza utile di `Schermata`. In React Native `flexShrink` vale 0, quindi una cella che non entra non si stringe: va a capo, senza errori né avvisi. `griglie.mese` chiedeva `7 × 13.1% + 6 × 6px`, che entra solo in uno schermo da 478pt — il calendario mostrava sei giorni per riga su ogni telefono |
+| `test/dati/misure.test.ts` | 10 | l'aritmetica fra centimetri e pollici. Due difetti che `tsc` non vede: un giro che non torna (digiti `66″`, riapri e leggi `65″`), e un campo che accetta ciò che il server rifiuta — il minimo di 120 cm è 47,24″, e arrotondarlo per difetto farebbe passare `47` che diventa 119 cm. `limitiIn` arrotonda il minimo per eccesso e il massimo per difetto, e il test lo verifica in entrambi i versi: nessun valore ammesso esce dai limiti veri, e subito fuori si esce davvero |
+| `test/convenzioni/navigazione.test.ts` | 15 | dove la barra delle schede si vede e quale scheda accende. Da quando vive fuori dal navigatore (`ui/guscio.tsx`) è disegnata sopra qualunque schermata, quindi l'errore peggiore non è cosmetico: la pillola comparirebbe **sulla schermata di accesso**, cinque scorciatoie verso rotte protette da un `Redirect`. Il test tiene fermo che `schedaDi()` resti un elenco di ciò che c'è e non di ciò che si esclude, che il banco 3D non la mostri, e che nessuna rotta nuova resti senza una decisione |
 | `test/convenzioni/colori.test.ts` | 2 | che nessun `rgba()`/esadecimale sia scritto a mano in `app/` o `src/` — i valori vengono da `tema/tokens.ts` o si compongono con `velo()`. `src/tema/tokens.ts` (la fonte) e `src/dati/dominio.ts` (`PALETTE_COLORI`, dati di dominio) sono le due esenzioni dichiarate |
 
 I test non verificano che una prop venga inoltrata: **verificano il colore

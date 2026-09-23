@@ -4,20 +4,21 @@
  * Un outfit salvato vale più di un suggerimento nuovo — è già stato approvato
  * da chi lo indossa. Per questo la scheda mostra quante volte è stato messo:
  * è l'informazione che dice se fidarsi.
+ *
+ * **La lista non è qui**: sta in `ElencoOutfit` (`ui/capi.tsx`), perché nel
+ * deck gli outfit sono un segmento dentro l'Armadio e questa rotta resta viva
+ * accanto a quello — per il rimando dal Profilo e per i link diretti (scelta
+ * dell'utente del 2026-09-22, `docs/QUESTIONI.md`). Due copie della stessa
+ * lista divergono in silenzio: è la regola che questo repo racconta per le
+ * enum, e vale uguale per una schermata.
  */
 
-import { Image } from 'expo-image'
-import { View } from 'react-native'
+import { router } from 'expo-router'
 import { useArmadio, useVestiEVai } from '../src/dati/archivio'
-import { capiDiVestizione, fotoDaMostrare, quandoUsato } from '../src/dati/dominio'
 import { conta } from '../src/dati/formato'
-import { colori, durate, spazi, velo } from '../src/tema/tokens'
-import { Badge, BottoneTondo } from '../src/ui/base'
-import { SchedaFoto } from '../src/ui/capi'
+import { ElencoOutfit } from '../src/ui/capi'
 import { Schermata } from '../src/ui/guscio'
 import { ScheletroSchedaOutfit } from '../src/ui/scheletri'
-import { Vuoto } from '../src/ui/stati'
-import { Corpo, Titolo } from '../src/ui/testo'
 
 export default function Outfit() {
   const { outfit, indice, pronto } = useArmadio()
@@ -26,80 +27,26 @@ export default function Outfit() {
   return (
     <Schermata
       occhiello={pronto ? conta(outfit.length, 'salvato', 'salvati') : ''}
-      titolo="I tuoi outfit"
+      titolo={pronto && outfit.length === 0 ? 'Ancora niente' : 'I tuoi outfit'}
+      tavolozza="freddo"
       indietro
     >
-      {!pronto ? (
+      <ElencoOutfit
+        outfit={outfit}
+        indice={indice}
+        pronto={pronto}
         // Prima, a caricamento in corso, «Ancora nessun outfit» compariva
         // anche a chi ne aveva già salvati — lo stesso `outfit: []`
         // temporaneo che l'archivio parte sempre con.
-        <>
-          <ScheletroSchedaOutfit />
-          <ScheletroSchedaOutfit />
-        </>
-      ) : outfit.length === 0 ? (
-        <Vuoto
-          titolo="Ancora nessun outfit"
-          spiegazione="Componine uno sull'avatar e salvalo: lo ritrovi qui, pronto per la prossima volta."
-        />
-      ) : null}
-
-      {pronto &&
-        outfit.map((salvato) => {
-          const capi = capiDiVestizione(salvato.vestizione, indice)
-          const copertina = capi[0]
-          return (
-            <SchedaFoto key={salvato.id}>
-              <View style={{ flexDirection: 'row', height: 250 }}>
-                {capi.slice(0, 4).map((capo) => (
-                  <Image
-                    key={capo.id}
-                    source={{ uri: fotoDaMostrare(capo) }}
-                    style={{ flex: 1, backgroundColor: colori.fondoFoto }}
-                    contentFit="cover"
-                    contentPosition={{ top: '25%', left: '50%' }}
-                    transition={durate.breve}
-                  />
-                ))}
-                {!copertina ? <View style={{ flex: 1, backgroundColor: colori.sfondo }} /> : null}
-
-                {salvato.occasione ? (
-                  <View style={{ position: 'absolute', top: 12, left: 12 }}>
-                    <Badge testo={salvato.occasione} sfondo={velo(colori.scheda, 0.9)} colore={colori.inchiostro} />
-                  </View>
-                ) : null}
-              </View>
-
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: spazi.m,
-                  paddingHorizontal: 16,
-                  paddingVertical: 15,
-                }}
-              >
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Titolo taglia="sezione">{salvato.nome}</Titolo>
-                  <Corpo taglia="micro" tono="tenue">
-                    {salvato.volte_indossato
-                      ? `Indossato ${salvato.volte_indossato} volte · ultima ${quandoUsato(salvato.ultimo_uso)}`
-                      : 'Mai indossato'}
-                    {salvato.origine === 'ia' ? ' · proposto da Wardrobe' : ''}
-                  </Corpo>
-                </View>
-                <BottoneTondo
-                  nome="freccia"
-                  colore={colori.crema}
-                  sfondo={colori.inchiostro}
-                  misura={46}
-                  misuraIcona={18}
-                  onPress={() => vestiEVai(salvato.vestizione)}
-                />
-              </View>
-            </SchedaFoto>
-          )
-        })}
+        scheletro={
+          <>
+            <ScheletroSchedaOutfit />
+            <ScheletroSchedaOutfit />
+          </>
+        }
+        onVesti={vestiEVai}
+        onVediOggi={() => router.push('/(tabs)/oggi')}
+      />
     </Schermata>
   )
 }

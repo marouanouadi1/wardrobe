@@ -10,8 +10,8 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Animated, View } from 'react-native'
-import { colori, curve, durate, linee, raggi, spazi } from '../tema/tokens'
-import { Scheda } from './base'
+import { colori, curve, durate, linee, raggi, spazi, velature } from '../tema/tokens'
+import { Bolla, BottonePrimario, Scheda } from './base'
 import { Fondo, useFondo, type Su } from './fondo'
 import { Corpo, Forte } from './testo'
 
@@ -19,7 +19,7 @@ export function Caricamento({ su }: { su?: Su }) {
   const ereditato = useFondo()
   return (
     <ActivityIndicator
-      color={(su ?? ereditato) === 'scuro' ? colori.ambra : colori.inchiostro}
+      color={(su ?? ereditato) === 'scuro' ? colori.scheda : colori.inchiostro}
       style={{ marginTop: spazi.xl }}
     />
   )
@@ -47,19 +47,20 @@ export const MESSAGGI_SUGGERIMENTI = [
  * Una barra che scorre senza mai fermarsi, e un messaggio che avanza a
  * soglie di tempo crescenti invece di una percentuale finta.
  */
-export function AttesaLunga({
-  messaggi,
-  su,
-}: {
-  /** In ordine di soglia crescente: il primo è quello iniziale (`dopoMs: 0`),
-   * l'ultimo resta finché l'attesa non finisce. */
-  messaggi: readonly { dopoMs: number; testo: string }[]
-  su?: Su
-}) {
+/**
+ * Una pista con un segmento che va avanti e indietro: **un'attesa che non sa
+ * quanto durerà**, detta senza inventare una percentuale.
+ *
+ * Sta per conto suo e non dentro `AttesaLunga` perché la usano in due: l'attesa
+ * grande, con i suoi messaggi a soglie di tempo, e la riga di una foto in coda
+ * (`RigaFotoInCoda`, `ui/capi.tsx`), che di messaggi non ne ha — ha già il
+ * nome del capo accanto. Riscriverla la seconda volta avrebbe voluto dire due
+ * animazioni da tenere allineate.
+ */
+export function PistaIndeterminata({ su, altezza = 6 }: { su?: Su; altezza?: number }) {
   const ereditato = useFondo()
   const fondo = su ?? ereditato
   const [larghezza, setLarghezza] = useState(0)
-  const [messaggio, setMessaggio] = useState(messaggi[0]?.testo ?? '')
   // `useState` con inizializzatore, non `useRef(...).current`: stessa scelta
   // di `PuntiniAttesa` in `ui/base.tsx`, per la stessa regola (`react-hooks/refs`).
   const [scorrimento] = useState(() => new Animated.Value(0))
@@ -87,6 +88,58 @@ export function AttesaLunga({
     return () => animazione.stop()
   }, [larghezza, scorrimento])
 
+  return (
+    // L'`Animated.View` monta subito, non dietro `larghezza > 0`: se nascesse
+    // solo dopo la prima misura, comparirebbe nello stesso commit in cui
+    // l'effetto avvia il loop col driver nativo — e un'animazione avviata su
+    // una vista non ancora montata non arriva mai allo schermo. Finché
+    // `larghezza` non è misurata il segmento ha semplicemente larghezza zero.
+    <View
+      onLayout={(evento) => setLarghezza(evento.nativeEvent.layout.width)}
+      style={{
+        height: altezza,
+        borderRadius: raggi.pillola,
+        // Una velatura d'inchiostro (`linee.media`) è invisibile su un fondo
+        // d'inchiostro: la pista ha bisogno della sua controparte scura, non
+        // della stessa velatura su ogni fondo.
+        backgroundColor: fondo === 'scuro' ? linee.scura : linee.media,
+        overflow: 'hidden',
+      }}
+    >
+      <Animated.View
+        style={{
+          width: larghezza > 0 ? larghezza * 0.35 : 0,
+          height: altezza,
+          borderRadius: raggi.pillola,
+          backgroundColor: colori.primario,
+          transform: [{ translateX: scorrimento }],
+        }}
+      />
+    </View>
+  )
+}
+
+/**
+ * Un'attesa lunga e indeterminata — l'analisi di una foto, 20-40 secondi.
+ * Onesta sul fatto che non ci sono fasi osservabili da mostrare: una singola
+ * chiamata al modello di visione (`services/api/src/handlers/analisi.py`
+ * la esegue in linea, senza checkpoint intermedi), non cinque passi separati.
+ * Una barra che scorre senza mai fermarsi, e un messaggio che avanza a
+ * soglie di tempo crescenti invece di una percentuale finta.
+ */
+export function AttesaLunga({
+  messaggi,
+  su,
+}: {
+  /** In ordine di soglia crescente: il primo è quello iniziale (`dopoMs: 0`),
+   * l'ultimo resta finché l'attesa non finisce. */
+  messaggi: readonly { dopoMs: number; testo: string }[]
+  su?: Su
+}) {
+  const ereditato = useFondo()
+  const fondo = su ?? ereditato
+  const [messaggio, setMessaggio] = useState(messaggi[0]?.testo ?? '')
+
   // Il primo messaggio lo dà già l'inizializzatore di `useState` sopra: qui
   // solo i timer per quelli successivi, mai una `setState` sincrona nel corpo
   // dell'effetto (`react-hooks/set-state-in-effect`).
@@ -97,39 +150,42 @@ export function AttesaLunga({
 
   return (
     <View style={{ gap: spazi.m }}>
-      {/* L'`Animated.View` monta subito, non dietro `larghezza > 0`: se
-          nascesse solo dopo la prima misura, comparirebbe nello stesso
-          commit in cui l'effetto avvia il loop col driver nativo — e
-          un'animazione avviata su una vista non ancora montata non arriva
-          mai allo schermo. Finché `larghezza` non è misurata il segmento ha
-          semplicemente larghezza zero, invece di dipendere da una
-          percentuale che dovrebbe comunque risolversi contro il fondo. */}
-      <View
-        onLayout={(evento) => setLarghezza(evento.nativeEvent.layout.width)}
-        style={{
-          height: 6,
-          borderRadius: raggi.pillola,
-          // Una velatura d'inchiostro (`linee.media`) è invisibile su un
-          // fondo d'inchiostro: la pista ha bisogno della sua controparte
-          // scura, non della stessa velatura su ogni fondo.
-          backgroundColor: fondo === 'scuro' ? linee.scura : linee.media,
-          overflow: 'hidden',
-        }}
-      >
-        <Animated.View
-          style={{
-            width: larghezza > 0 ? larghezza * 0.35 : 0,
-            height: 6,
-            borderRadius: raggi.pillola,
-            backgroundColor: colori.ambra,
-            transform: [{ translateX: scorrimento }],
-          }}
-        />
-      </View>
+      <PistaIndeterminata su={fondo} />
       <Corpo taglia="minuto" tono="tenue" su={fondo} style={{ textAlign: 'center' }}>
         {messaggio}
       </Corpo>
     </View>
+  )
+}
+
+/**
+ * «Non ti raggiungo»: il server non risponde.
+ *
+ * È la schermata `offline` del deck, e **non è una rotta**: a uno stato di
+ * rete non si naviga. Nasce da `erroreCaricamento` di `useArmadio()`, cioè da
+ * una richiesta che è davvero fallita — non da un rilevatore di rete. La
+ * differenza non è pigrizia: `@react-native-community/netinfo` non è nel lock
+ * (e questo repo si è già fatto male tre volte lì: `T-03`, `T-23`, `T-31`), ma
+ * soprattutto una spia di rete direbbe «il wifi è acceso» mentre il server è
+ * giù. Quello che sappiamo davvero è di non essere riusciti a parlargli.
+ *
+ * Il messaggio tecnico dell'errore non si mostra: un errore di rete non è un
+ * contenuto per l'utente — la stessa regola del default di `StatoRisorsa`.
+ */
+export function SenzaRete({ onRiprova, su }: { onRiprova: () => void; su?: Su }) {
+  return (
+    <Scheda su={su} imbottitura={spazi.xl} style={{ alignItems: 'center', gap: spazi.m }}>
+      <Bolla nome="chiudi" sfondo={velature.pericolo} colore={colori.pericolo} misura={54} />
+      <Forte taglia="guida" su={su}>
+        Non ti raggiungo
+      </Forte>
+      <Corpo taglia="minuto" tono="tenue" su={su} style={{ textAlign: 'center' }}>
+        {
+          "L'armadio vive sul server, non sul telefono: senza collegamento non posso mostrarti i capi né proporti niente."
+        }
+      </Corpo>
+      <BottonePrimario testo="Riprova" onPress={onRiprova} />
+    </Scheda>
   )
 }
 

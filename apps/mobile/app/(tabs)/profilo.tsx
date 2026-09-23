@@ -11,7 +11,7 @@ import { useArmadio } from '../../src/dati/archivio'
 import { capiDormienti, nomeDiBattesimo } from '../../src/dati/dominio'
 import { apriSegnalazione, segnalazioniAttive } from '../../src/dati/segnalazioni'
 import { useSessione } from '../../src/dati/sessione'
-import { colori, linee, raggi, spazi } from '../../src/tema/tokens'
+import { colori, linee, raggi, spazi, velature } from '../../src/tema/tokens'
 import { Bolla, BottoneSecondario, Icona, Scheda, Toccabile } from '../../src/ui/base'
 import { Conferma } from '../../src/ui/avviso'
 import { Corpo, Etichetta, Titolo } from '../../src/ui/testo'
@@ -55,7 +55,7 @@ export default function Profilo() {
   ]
 
   return (
-    <Schermata occhiello="Il tuo profilo" titolo={nomeDiBattesimo(profilo) ?? 'Tu'} tab contentStyle={{ gap: spazi.m }}>
+    <Schermata occhiello="Il tuo profilo" titolo={nomeDiBattesimo(profilo) ?? 'Tu'} contentStyle={{ gap: spazi.m }}>
       <Scheda imbottitura={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
         {profilo?.foto_url ? (
           <Image
@@ -80,7 +80,7 @@ export default function Profilo() {
           <RigaStatistiche
             voci={[
               { numero: String(capi.length), etichetta: 'capi' },
-              // Non ambra: un conteggio di dati dell'utente, non il modello
+              // Non il primario: un conteggio di dati dell'utente, non il modello
               // che parla — la regola in cima a `tokens.ts`. E senza `su`,
               // così prende la stessa card bianca di «capi» invece di una
               // tinta piena inventata per l'occasione.
@@ -141,6 +141,14 @@ export default function Profilo() {
         />
       </View>
 
+      <RigaNavigabile
+        icona="cartellino"
+        titolo="Impostazioni"
+        sottotitolo="Account, app, foto e dati"
+        onPress={() => router.push('/impostazioni')}
+        bordo
+      />
+
       {/* Sta qui e non dietro le voci di «Sviluppo» perché non è uno
           strumento interno: è la porta di chi sta provando l'app e trova
           qualcosa che non torna. Sparisce solo se manca il DSN, cioè se non
@@ -171,8 +179,8 @@ export default function Profilo() {
       <BottoneSecondario
         testo="Esci"
         onPress={() => setConfermaUscita(true)}
-        colore={colori.corallo}
-        style={{ borderColor: colori.coralloTenue }}
+        colore={colori.pericolo}
+        style={{ borderColor: velature.pericolo }}
       />
 
       <Conferma

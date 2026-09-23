@@ -103,10 +103,10 @@ export function Forte({ taglia = 'corpo', style, ...props }: Props) {
 /**
  * Un messaggio d'errore in linea — di validazione, o quello di
  * `GuscioAutenticazione` (`ui/guscio.tsx`). Due schermate scrivevano a mano
- * lo stesso `style={{ color: colori.corallo }}` su un `Corpo`.
+ * lo stesso `style={{ color: colori.pericolo }}` su un `Corpo`.
  */
 export function TestoErrore({ taglia = 'minuto', style, ...props }: Props) {
-  return <Corpo taglia={taglia} colore={colori.corallo} style={style} {...props} />
+  return <Corpo taglia={taglia} colore={colori.pericolo} style={style} {...props} />
 }
 
 /** Maiuscoletto spaziato: le etichette di sezione del design. */

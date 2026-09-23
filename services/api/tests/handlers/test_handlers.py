@@ -7,18 +7,40 @@ nessun handler stia nascondendo logica.
 
 from __future__ import annotations
 
+import io
 import json
 import tomllib
+import zipfile
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 import pytest
 
 from conftest import ADESSO, costruisci_capo, intestazioni_utente
-from domain.errors import NonAutenticato
-from domain.models import PreferenzeStile, Profilo, StatoCapo, TipoCapo
-from handlers import auth, capi, foto, health, outfit, profilo, segnalazioni
-from handlers._container import repository, repository_utenti
+from domain.errors import ErroreDominio, NonAutenticato
+from domain.models import (
+    ConversazioneChat,
+    MessaggioChat,
+    PreferenzeStile,
+    Profilo,
+    RuoloChat,
+    StatoCapo,
+    TipoCapo,
+)
+from handlers import (
+    auth,
+    capi,
+    esportazione,
+    foto,
+    health,
+    outfit,
+    profilo,
+    segnalazioni,
+    svuotamento,
+)
+from handlers._container import archivio_foto, repository, repository_utenti
 from handlers._http import utente_id
 
 
@@ -343,6 +365,362 @@ class TestProfilo:
         dati = corpo_di(profilo.leggi(evento(), None))
         assert dati["citta"] == "Milano"
         assert "neutri" in dati["preferenze"]["palette"]
+
+    def _con_misure(self, misure: dict[str, Any] | None) -> dict[str, Any]:
+        """Il PUT è a oggetto intero: si rilegge, si cambia un campo, si rimanda.
+
+        È la stessa cosa che fa `app/misure.tsx` con `{ ...profilo, misure }` —
+        se questo test costruisse un `Profilo` da zero non proverebbe il giro
+        vero, proverebbe un giro più facile.
+        """
+        attuale = corpo_di(profilo.leggi(evento(), None))
+        return {**attuale, "misure": misure}
+
+    def test_le_misure_fanno_il_giro_e_tornano(self):
+        risposta = profilo.aggiorna(
+            evento(
+                corpo=self._con_misure(
+                    {
+                        "sistema_taglie": "unisex",
+                        "taglia": "m",
+                        "altezza_cm": 168,
+                        "corporatura": "media",
+                    }
+                )
+            ),
+            None,
+        )
+        assert risposta["statusCode"] == 200
+        # Non basta la risposta: `profili.dati` è jsonb, e un campo nuovo che
+        # non sopravvive alla serializzazione tornerebbe comunque dalla
+        # risposta — che è l'oggetto appena ricevuto, non quello riletto.
+        riletto = corpo_di(profilo.leggi(evento(), None))
+        assert riletto["misure"]["altezza_cm"] == 168
+        assert riletto["misure"]["taglia"] == "m"
+        # E non ha mangiato il resto del profilo nel passaggio.
+        assert riletto["citta"] == "Milano"
+        assert "neutri" in riletto["preferenze"]["palette"]
+
+    def test_si_possono_cancellare(self):
+        """«Puoi cancellarle quando vuoi» è una promessa della schermata, non
+        un modo di dire: dopo il `null` non deve tornare l'ultimo valore salvato.
+
+        Si verifica l'**assenza** del campo e non `is None`, perché `ok()`
+        serializza con `exclude_none=True` (`handlers/_http.py:88`): un campo
+        nullo non arriva affatto al client, non arriva come `null`. Vale per
+        tutto il repo, ed è il motivo per cui `misure` è generato `misure?:` in
+        TypeScript. Scriverlo qui perché il prossimo che aggiunge un campo
+        opzionale non lo scopra dal test rosso.
+        """
+        profilo.aggiorna(evento(corpo=self._con_misure({"altezza_cm": 168})), None)
+        assert corpo_di(profilo.leggi(evento(), None))["misure"]["altezza_cm"] == 168
+        profilo.aggiorna(evento(corpo=self._con_misure(None)), None)
+        assert "misure" not in corpo_di(profilo.leggi(evento(), None))
+
+    def test_lunita_di_lettura_ha_un_default_e_non_e_mai_assente(self):
+        """Il profilo di prova è stato salvato **prima** che il campo esistesse:
+        è il caso vero di ogni riga già in `profili.dati`, e prova che il campo
+        nuovo non ha avuto bisogno di una migrazione. Senza il default sarebbe
+        `None`, e ogni punto che mostra una lunghezza avrebbe un ramo in più."""
+        assert corpo_di(profilo.leggi(evento(), None))["unita_lunghezza"] == "cm"
+
+    def test_lunita_si_cambia_e_non_tocca_le_misure(self):
+        """Cambiare unità è una preferenza di **lettura**: i centimetri salvati
+        restano quelli. Se un giorno qualcuno convertisse al salvataggio invece
+        che alla lettura, questo test lo direbbe — e sarebbe una perdita di
+        precisione a ogni cambio, non un difetto visibile subito."""
+        profilo.aggiorna(evento(corpo=self._con_misure({"altezza_cm": 168})), None)
+        attuale = corpo_di(profilo.leggi(evento(), None))
+        profilo.aggiorna(evento(corpo={**attuale, "unita_lunghezza": "pollici"}), None)
+        riletto = corpo_di(profilo.leggi(evento(), None))
+        assert riletto["unita_lunghezza"] == "pollici"
+        assert riletto["misure"]["altezza_cm"] == 168
+
+    def test_unaltezza_impossibile_e_rifiutata(self):
+        """Il dito che scivola: `1680` invece di `168`. L'app lo ferma già sulla
+        tastiera leggendo `LIMITI_MISURE_CM`, ma il limite deve valere anche per
+        chi non passa dall'app — è il server a doverlo sapere."""
+        risposta = profilo.aggiorna(evento(corpo=self._con_misure({"altezza_cm": 1680})), None)
+        assert risposta["statusCode"] == 422
+        assert corpo_di(risposta)["errore"] == "richiesta_non_valida"
+
+
+class TestEsportazione:
+    """«Scarica i tuoi dati», dal tocco allo zip.
+
+    Il ramo che serve i byte vive in `local_server.py`, che è escluso dal conto
+    della coverage: per questo fa **due cose sole** — verifica la firma e
+    scrive. Tutto il resto è qui sotto, e gira sui finti.
+    """
+
+    def test_crea_restituisce_un_indirizzo_firmato_e_a_scadenza(self):
+        risposta = esportazione.crea(evento(), None)
+        assert risposta["statusCode"] == 200
+        dati = corpo_di(risposta)
+        assert "/esportazione?" in dati["url"]
+        assert "firma=" in dati["url"] and "scade=" in dati["url"]
+        # La scadenza è nel futuro e **non** è quella delle foto (sette
+        # giorni): questo indirizzo vale l'armadio intero, e finisce nella
+        # cronologia del browser di sistema.
+        #
+        # Contro l'ora **vera** e non contro `ADESSO`: `_container.orologio()`
+        # restituisce `OrologioDiSistema` anche nei test — `ADESSO` è una
+        # costante per costruire i dati di prova, non un orologio congelato.
+        scade = datetime.fromisoformat(dati["scade_il"])
+        assert timedelta(0) < scade - datetime.now(UTC) <= timedelta(minutes=30)
+
+    def _con_foto_vere(self) -> dict[str, bytes]:
+        """Mette davvero dei byte nell'archivio, per ogni capo di prova.
+
+        **Senza questo, i test qui sotto passavano per il motivo sbagliato.**
+        La fixture salva dei `Capo` ma non ha mai scritto una foto: ogni
+        `leggi()` sollevava, ogni foto veniva saltata, e l'archivio usciva con
+        `dati.json` e basta. L'asserzione «contiene dati.json e LEGGIMI.txt»
+        era vera anche così — e sarebbe rimasta vera con la chiave sbagliata,
+        con l'archivio scollegato, o senza una riga che copia le foto.
+        """
+        attesi: dict[str, bytes] = {}
+        for indice, capo in enumerate(repository().elenca_capi("demo")):
+            contenuto_foto = f"finta-{indice}".encode()
+            archivio_foto().salva(capo.foto.chiave, contenuto_foto, "image/jpeg")
+            attesi[f"foto/{capo.id}.jpg"] = contenuto_foto
+        assert attesi, "senza capi di prova questi test non direbbero niente"
+        return attesi
+
+    def test_larchivio_contiene_larmadio_di_chi_lo_chiede(self):
+        attesi = self._con_foto_vere()
+        archivio = zipfile.ZipFile(io.BytesIO(esportazione.archivio_per("demo")))
+        dati = json.loads(archivio.read("dati.json"))
+        assert dati["profilo"]["citta"] == "Milano"
+        assert len(dati["capi"]) == len(repository().elenca_capi("demo"))
+        for nome, contenuto_atteso in attesi.items():
+            assert archivio.read(nome) == contenuto_atteso
+
+    def test_il_nome_dentro_lo_zip_e_lid_che_sta_in_dati_json(self):
+        """Il LEGGIMI promette «il capo `abc123` è `foto/abc123.jpg`». Se il
+        nome venisse dalla chiave d'archivio quella frase sarebbe falsa, e chi
+        apre lo zip non avrebbe modo di riappaiare una foto al suo capo."""
+        self._con_foto_vere()
+        archivio = zipfile.ZipFile(io.BytesIO(esportazione.archivio_per("demo")))
+        dati = json.loads(archivio.read("dati.json"))
+        nella_cartella = {
+            v.removeprefix("foto/").rsplit(".", 1)[0]
+            for v in archivio.namelist()
+            if v.startswith("foto/")
+        }
+        assert nella_cartella == {capo["id"] for capo in dati["capi"]}
+
+    def test_porta_anche_la_scontornata_e_la_foto_dellavatar(self):
+        """Le due che un'esportazione non può dimenticare: la scontornata è un
+        **secondo file vero** sull'archivio, e `avatar_foto_chiave` è la foto a
+        figura intera della persona — il file più personale che ci sia."""
+        capo = repository().elenca_capi("demo")[0]
+        senza_sfondo = capo.foto.chiave.replace(".jpg", "-ritagliata.png")
+        repository().salva_capo(
+            "demo",
+            capo.model_copy(
+                update={"foto": capo.foto.model_copy(update={"chiave_scontornata": senza_sfondo})}
+            ),
+        )
+        archivio_foto().salva(capo.foto.chiave, b"originale", "image/jpeg")
+        archivio_foto().salva(senza_sfondo, b"ritagliata", "image/png")
+
+        attuale = corpo_di(profilo.leggi(evento(), None))
+        archivio_foto().salva("avatar/demo.jpg", b"io-in-piedi", "image/jpeg")
+        profilo.aggiorna(evento(corpo={**attuale, "avatar_foto_chiave": "avatar/demo.jpg"}), None)
+
+        archivio = zipfile.ZipFile(io.BytesIO(esportazione.archivio_per("demo")))
+        assert archivio.read(f"foto/{capo.id}.jpg") == b"originale"
+        assert archivio.read(f"foto/{capo.id}-senza-sfondo.png") == b"ritagliata"
+        assert archivio.read("foto/avatar.jpg") == b"io-in-piedi"
+
+    def test_dati_json_non_contiene_nessun_indirizzo_firmato(self):
+        """Il gate che conta, e che non elenca campi.
+
+        Un URL firmato di questo backend **non è solo lettura**: `_foto_put` e
+        `_foto_get` verificano la stessa firma (`T-46`), quindi un indirizzo di
+        lettura vale come scrittura per tutti e sette i suoi giorni. Metterne
+        anche uno solo in un file che il LEGGIMI dice che puoi girare a chi
+        vuoi sarebbe consegnare le chiavi dell'archivio foto.
+
+        Si cerca `firma=` e non un elenco di campi di proposito: un campo `url`
+        aggiunto domani dentro un modello annidato lo prenderebbe comunque.
+        """
+        self._con_foto_vere()
+        # Gli indirizzi firmati **si scrivono davvero**, altrimenti questo test
+        # non prova niente: nei finti il repository restituisce `url=None` — è
+        # `handlers/capi.py` a decorare le risposte, non il deposito. Ma
+        # `Profilo.foto_url` lo persiste il `PUT /profilo`, e un `Capo` salvato
+        # con la sua `url` dentro resta tale: il campo esiste sul modello, e il
+        # giorno che qualcuno lo scrive l'esportazione lo porterebbe fuori.
+        capo = repository().elenca_capi("demo")[0]
+        repository().salva_capo(
+            "demo",
+            capo.model_copy(
+                update={
+                    "foto": capo.foto.model_copy(
+                        update={"url": "http://api/foto/k?scade=999&firma=deadbeef"}
+                    )
+                }
+            ),
+        )
+        attuale = corpo_di(profilo.leggi(evento(), None))
+        profilo.aggiorna(
+            evento(corpo={**attuale, "foto_url": "http://api/foto/avatar?scade=999&firma=cafe"}),
+            None,
+        )
+
+        archivio = zipfile.ZipFile(io.BytesIO(esportazione.archivio_per("demo")))
+        grezzo = archivio.read("dati.json").decode()
+        assert "firma=" not in grezzo
+        assert "deadbeef" not in grezzo and "cafe" not in grezzo
+        # E le foto vere ci sono lo stesso: non si è svuotato l'archivio per
+        # far passare l'asserzione qui sopra.
+        assert [v for v in archivio.namelist() if v.startswith("foto/")]
+
+    def test_non_contiene_larmadio_di_qualcun_altro(self):
+        """L'isolamento fra utenti è la cosa che questo endpoint può sbagliare
+        in modo peggiore: l'id viene dal JWT quando l'URL si firma, e dalla
+        firma quando si scarica — mai da un parametro non coperto."""
+        vuoto = zipfile.ZipFile(io.BytesIO(esportazione.archivio_per("nessuno")))
+        dati = json.loads(vuoto.read("dati.json"))
+        assert dati["capi"] == []
+        assert dati["profilo"] is None
+
+    def test_una_foto_illeggibile_non_fa_cadere_tutto(self):
+        """Un archivio in meno di una foto è ancora l'armadio di qualcuno; un
+        500 perché un file è sparito dal disco non è niente."""
+        self._con_foto_vere()
+
+        class ArchivioRotto:
+            def leggi(self, chiave: str) -> tuple[bytes, str]:
+                raise OSError("disco via")
+
+        with mock.patch.object(esportazione, "archivio_foto", lambda: ArchivioRotto()):
+            byte = esportazione.archivio_per("demo")
+        archivio = zipfile.ZipFile(io.BytesIO(byte))
+        assert [v for v in archivio.namelist() if v.startswith("foto/")] == []
+        assert json.loads(archivio.read("dati.json"))["capi"] != []
+
+
+class TestSvuotamento:
+    """L'unica operazione del backend che distrugge davvero.
+
+    Quello che questi test **non** possono dire è scritto nel docstring di
+    `RepositoryInMemoria.svuota_armadio`: qui lo stato è già partizionato per
+    utente, quindi un errore di ambito è strutturalmente impossibile, mentre in
+    SQL è una `where` dimenticata e cancella la tabella. Quella riga è stata
+    provata contro un Postgres vero — `docs/PROGRESS.md` dice come.
+    """
+
+    def _armadio_di(self, utente: str) -> None:
+        for indice in range(2):
+            capo = costruisci_capo(f"{utente}-capo-{indice}", TipoCapo.TOP)
+            repository().salva_capo(utente, capo)
+            archivio_foto().salva(f"capi/{utente}/g/{indice}", b"foto", "image/jpeg")
+
+    def test_svuota_e_dice_quanto(self):
+        risposta = svuotamento.svuota(evento(corpo={"conferma": "SVUOTA"}), None)
+        assert risposta["statusCode"] == 200
+        conto = corpo_di(risposta)
+        assert conto["capi"] > 0
+        assert repository().elenca_capi("demo") == []
+        assert repository().elenca_outfit("demo") == []
+
+    def test_senza_la_parola_non_cancella_niente(self):
+        """La difesa che sopravvive a un `curl` ricopiato, a un deep-link e a
+        una richiesta rimandata due volte dalla libreria di rete — cioè a tutto
+        ciò a cui il campo di conferma nella schermata **non** sopravvive."""
+        prima = len(repository().elenca_capi("demo"))
+        assert prima > 0
+        for storto in [{}, {"conferma": "svuota"}, {"conferma": "ELIMINA"}, {"conferma": ""}]:
+            risposta = svuotamento.svuota(evento(corpo=storto), None)
+            assert risposta["statusCode"] == 422, storto
+        assert len(repository().elenca_capi("demo")) == prima
+
+    def test_larmadio_di_un_altro_resta_intatto(self):
+        """Il difetto peggiore che questa operazione possa avere, e l'unico che
+        non si scopre guardando l'armadio di chi l'ha chiesta."""
+        self._armadio_di("vicina")
+        svuotamento.svuota(evento(corpo={"conferma": "SVUOTA"}), None)
+        assert len(repository().elenca_capi("vicina")) == 2
+        assert archivio_foto().leggi("capi/vicina/g/0")[0] == b"foto"
+
+    def test_porta_via_le_foto_ma_non_quella_dellavatar(self):
+        """La foto a figura intera sta sotto lo **stesso prefisso** delle altre
+        — passa dallo stesso upload — ma non è dell'armadio: è del profilo, che
+        resta (scelta dell'utente, 2026-09-23). Si esclude per chiave, e
+        escludere è la direzione sicura: al massimo protegge un file di troppo.
+        """
+        archivio_foto().salva("capi/demo/g/1", b"un-capo", "image/jpeg")
+        archivio_foto().salva("capi/demo/g/avatar", b"io-in-piedi", "image/jpeg")
+        attuale = corpo_di(profilo.leggi(evento(), None))
+        profilo.aggiorna(
+            evento(corpo={**attuale, "avatar_foto_chiave": "capi/demo/g/avatar"}), None
+        )
+
+        svuotamento.svuota(evento(corpo={"conferma": "SVUOTA"}), None)
+
+        assert archivio_foto().leggi("capi/demo/g/avatar")[0] == b"io-in-piedi"
+        with pytest.raises(ErroreDominio):
+            archivio_foto().leggi("capi/demo/g/1")
+
+    def test_non_tocca_lutente_il_cui_id_comincia_uguale(self):
+        """`prefisso_foto` finisce con uno slash, e questo test è l'unica cosa
+        che lo tiene fermo.
+
+        Senza, il prefisso `capi/demo` prenderebbe anche `capi/demo-bis/…` —
+        cioè le foto di un altro, dentro l'unica operazione irreversibile che
+        abbiamo. Gli id sono `uuid4().hex` e oggi non hanno prefissi comuni:
+        difendersi da un formato di id è una garanzia che nessuno impone, e che
+        cambia il giorno che qualcuno rende gli id leggibili.
+        """
+        archivio_foto().salva("capi/demo/g/mia", b"mia", "image/jpeg")
+        archivio_foto().salva("capi/demo-bis/g/sua", b"sua", "image/jpeg")
+        svuotamento.svuota(evento(corpo={"conferma": "SVUOTA"}), None)
+        assert archivio_foto().leggi("capi/demo-bis/g/sua")[0] == b"sua"
+
+    def test_il_profilo_sopravvive_con_le_sue_misure(self):
+        attuale = corpo_di(profilo.leggi(evento(), None))
+        profilo.aggiorna(evento(corpo={**attuale, "misure": {"altezza_cm": 168}}), None)
+        svuotamento.svuota(evento(corpo={"conferma": "SVUOTA"}), None)
+        dopo = corpo_di(profilo.leggi(evento(), None))
+        assert dopo["misure"]["altezza_cm"] == 168
+        assert dopo["citta"] == "Milano"
+        assert "neutri" in dopo["preferenze"]["palette"]
+
+    def test_le_conversazioni_spariscono_coi_loro_turni(self):
+        repository().salva_conversazione_chat(
+            "demo",
+            ConversazioneChat(
+                id="c1", titolo="Cosa metto", creata_il=ADESSO, ultimo_turno_il=ADESSO
+            ),
+        )
+        repository().salva_messaggio_chat(
+            "demo",
+            "c1",
+            MessaggioChat(id="m1", ruolo=RuoloChat.UTENTE, testo="ciao", creato_il=ADESSO),
+        )
+        svuotamento.svuota(evento(corpo={"conferma": "SVUOTA"}), None)
+        assert repository().elenca_conversazioni_chat("demo") == []
+        assert repository().elenca_messaggi_chat("demo", "c1") == []
+
+    def test_se_le_foto_non_si_cancellano_lo_dice_invece_di_tacere(self):
+        """Una foto sopravvissuta a uno svuotamento completato vuol dire che la
+        cancellazione ha mentito. Nell'esportazione una foto illeggibile si
+        saltava, e lì era giusto: qui è il contrario."""
+
+        class ArchivioRotto:
+            def elimina_sotto(self, prefisso, tranne=frozenset()):
+                raise OSError("disco via")
+
+        with mock.patch.object(svuotamento, "archivio_foto", lambda: ArchivioRotto()):
+            risposta = svuotamento.svuota(evento(corpo={"conferma": "SVUOTA"}), None)
+        assert risposta["statusCode"] == 500
+        assert corpo_di(risposta)["errore"] == "svuotamento_parziale"
+        # E non è un rollback: le righe **sono** sparite, ed è esattamente ciò
+        # che il messaggio deve far capire.
+        assert repository().elenca_capi("demo") == []
 
 
 class TestSegnalazioni:

@@ -92,7 +92,7 @@ export default function Intro() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Titolo taglia="sezione">wardrobe</Titolo>
             <View
-              style={{ width: 6, height: 6, borderRadius: raggi.pillola, backgroundColor: colori.ambra }}
+              style={{ width: 6, height: 6, borderRadius: raggi.pillola, backgroundColor: colori.primario }}
             />
           </View>
         </View>
@@ -110,7 +110,7 @@ export default function Intro() {
                   height: 3,
                   borderRadius: raggi.pillola,
                   width: indice === passo ? 26 : 10,
-                  backgroundColor: indice === passo ? colori.ambra : linee.chiara,
+                  backgroundColor: indice === passo ? colori.primario : linee.chiara,
                 }}
               >
                 <View />
@@ -131,7 +131,7 @@ export default function Intro() {
               backgroundColor: linee.tenue,
             }}
           >
-            <View style={{ width: 6, height: 6, borderRadius: raggi.pillola, backgroundColor: colori.ambra }} />
+            <View style={{ width: 6, height: 6, borderRadius: raggi.pillola, backgroundColor: colori.primario }} />
             <Etichetta taglia="micro">{corrente.occhiello}</Etichetta>
           </View>
 

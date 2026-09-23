@@ -37,12 +37,14 @@ from handlers import (  # noqa: E402
     auth,
     capi,
     chat,
+    esportazione,
     foto,
     health,
     outfit,
     profilo,
     segnalazioni,
     suggerimenti,
+    svuotamento,
 )
 from handlers._container import archivio_foto  # noqa: E402
 
@@ -58,6 +60,7 @@ ROTTE: list[tuple[str, re.Pattern[str], Handler]] = [
     ("PATCH", re.compile(r"^/capi/(?P<capoId>[^/]+)$"), capi.aggiorna),
     ("POST", re.compile(r"^/capi/(?P<capoId>[^/]+)/indossato$"), capi.indossa),
     ("GET", re.compile(r"^/armadio/riepilogo$"), capi.sommario),
+    ("POST", re.compile(r"^/armadio/svuota$"), svuotamento.svuota),
     ("POST", re.compile(r"^/suggerimenti$"), suggerimenti.proponi),
     ("GET", re.compile(r"^/chat$"), chat.elenca),
     ("POST", re.compile(r"^/chat$"), chat.invia),
@@ -77,6 +80,7 @@ ROTTE: list[tuple[str, re.Pattern[str], Handler]] = [
     ("GET", re.compile(r"^/outfit$"), outfit.elenca),
     ("POST", re.compile(r"^/outfit$"), outfit.salva),
     ("GET", re.compile(r"^/outfit/(?P<outfitId>[^/]+)/colori$"), outfit.colori),
+    ("POST", re.compile(r"^/esportazione$"), esportazione.crea),
     ("GET", re.compile(r"^/profilo$"), profilo.leggi),
     ("PUT", re.compile(r"^/profilo$"), profilo.aggiorna),
     ("POST", re.compile(r"^/segnalazioni$"), segnalazioni.crea),
@@ -189,11 +193,46 @@ class Ponte(BaseHTTPRequestHandler):
         with contextlib.suppress(BrokenPipeError, ConnectionResetError):
             self.wfile.write(contenuto)
 
+    def _esportazione_get(self, query: str) -> None:
+        """GET /esportazione?utente=…&scade=…&firma=… — l'apre il **browser**,
+        non l'app: React Native non ha un «scarica», e il browser sì.
+
+        Sta qui e non nella tabella `ROTTE` per la stessa ragione di
+        `_foto_get`: `ok()` serializza JSON, e questo manda byte. Il ramo fa
+        due cose sole — verifica la firma e scrive — perché `local_server.py` è
+        il file escluso dal conto della coverage degli handler: tutto ciò che
+        mettessi qui sarebbe non provato per costruzione. Comporre l'archivio è
+        di `handlers/esportazione.py`, e il calcolo puro del dominio.
+        """
+        from domain.esportazione import utente_da_query
+
+        adesso_epoch = int(datetime.now(UTC).timestamp())
+        utente = utente_da_query(query, os.environ["JWT_SECRET"], adesso_epoch)
+        if utente is None:
+            self._rispondi({"statusCode": 403, "body": json.dumps({"errore": "firma_non_valida"})})
+            return
+        contenuto = esportazione.archivio_per(utente)
+        self.send_response(200)
+        self.send_header("content-type", "application/zip")
+        # Senza questa intestazione il browser mostrerebbe lo zip invece di
+        # salvarlo, e il nome del file sarebbe «esportazione».
+        self.send_header(
+            "content-disposition", f'attachment; filename="{esportazione.nome_file()}"'
+        )
+        self.send_header("cache-control", "no-store")
+        self.send_header("content-length", str(len(contenuto)))
+        self.end_headers()
+        with contextlib.suppress(BrokenPipeError, ConnectionResetError):
+            self.wfile.write(contenuto)
+
     def do_GET(self) -> None:
         indirizzo = urlparse(self.path)
         trovato = _PATTERN_FOTO.match(indirizzo.path)
         if trovato:
             self._foto_get(trovato.group("chiave"), indirizzo.query)
+            return
+        if indirizzo.path == "/esportazione":
+            self._esportazione_get(indirizzo.query)
             return
         self._instrada("GET")
 
@@ -218,7 +257,14 @@ class Ponte(BaseHTTPRequestHandler):
         self._rispondi({"statusCode": 204, "body": ""})
 
     def log_message(self, formato: str, *argomenti: Any) -> None:
-        print(f"  {self.command} {self.path}")
+        # Il **percorso senza la query**: `self.path` porta con sé
+        # `?scade=…&firma=…`, cioè una credenziale viva — sette giorni per una
+        # foto, e per `T-46` anche in scrittura; un quarto d'ora ma su tutto
+        # l'armadio per un'esportazione. Stamparla qui la scrive in `docker
+        # logs`, e da lì in qualunque cosa li raccolga o li incolli in una
+        # chat di supporto. È anche ciò che rendeva falsa una riga del
+        # `LEGGIMI.txt` dell'esportazione: «nessuno sa che lo hai scaricato».
+        print(f"  {self.command} {urlparse(self.path).path}")
 
 
 def _controlla_configurazione() -> None:

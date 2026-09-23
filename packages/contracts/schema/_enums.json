@@ -54,5 +54,26 @@
     "ricevuta",
     "in_lavorazione",
     "risolta"
+  ],
+  "SistemaTaglie": [
+    "donna",
+    "uomo",
+    "unisex"
+  ],
+  "Taglia": [
+    "xs",
+    "s",
+    "m",
+    "l",
+    "xl"
+  ],
+  "Corporatura": [
+    "minuta",
+    "media",
+    "robusta"
+  ],
+  "UnitaLunghezza": [
+    "cm",
+    "pollici"
   ]
 }

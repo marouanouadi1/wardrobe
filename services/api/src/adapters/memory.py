@@ -15,6 +15,7 @@ from domain.errors import EmailGiaRegistrata, ErroreDominio
 from domain.firma_foto import firma_foto
 from domain.models import (
     Capo,
+    ContoSvuotamento,
     ConversazioneChat,
     EsitoAnalisi,
     MessaggioChat,
@@ -79,6 +80,16 @@ class ArchivioInMemoria:
             raise ErroreDominio(f"la foto «{chiave}» non è in questo archivio: caricane una")
         return caricata, "image/png"
 
+    def elimina_sotto(self, prefisso: str, tranne: frozenset[str] = frozenset()) -> int:
+        da_togliere = [
+            chiave
+            for chiave in self._oggetti
+            if chiave.startswith(prefisso) and chiave not in tranne
+        ]
+        for chiave in da_togliere:
+            del self._oggetti[chiave]
+        return len(da_togliere)
+
 
 class RepositoryInMemoria:
     """Sta in piedi solo dentro un processo: perfetto per lo sviluppo e i test."""
@@ -109,6 +120,27 @@ class RepositoryInMemoria:
 
     def elimina_capo(self, utente_id: str, capo_id: str) -> None:
         self._capi.get(utente_id, {}).pop(capo_id, None)
+
+    def svuota_armadio(self, utente_id: str) -> ContoSvuotamento:
+        """La controparte in memoria della `delete … where utente_id`.
+
+        **Attenzione a cosa questo non prova.** Qui lo stato è già partizionato
+        per utente — `dict[utente][id]` — quindi un errore di ambito è
+        strutturalmente impossibile, mentre in SQL è una `where` dimenticata
+        e cancella la tabella. I test che girano di qui non dicono niente su
+        quella riga: va provata contro un Postgres vero, ed è scritto in
+        `docs/PROGRESS.md` come è stato fatto.
+        """
+        capi = len(self._capi.pop(utente_id, {}))
+        outfit = len(self._outfit.pop(utente_id, {}))
+        conversazioni = len(self._conversazioni.pop(utente_id, {}))
+        for chiave in [c for c in self._chat if c[0] == utente_id]:
+            del self._chat[chiave]
+        usi = len([u for u in self._usi if u[0] == utente_id])
+        self._usi = {u for u in self._usi if u[0] != utente_id}
+        return ContoSvuotamento(
+            capi=capi, outfit=outfit, conversazioni=conversazioni, usi_registrati=usi, foto=0
+        )
 
     # ── outfit ─────────────────────────────────────────────────────────────
     def elenca_outfit(self, utente_id: str) -> list[Outfit]:

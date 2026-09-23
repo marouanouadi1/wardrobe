@@ -30,7 +30,6 @@ export default function SchermataAvatar() {
       occhiello="Prova virtuale"
       titolo="Come mi sta"
       fotoProfilo={profilo?.foto_url}
-      tab
       contentStyle={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: spazi.l }}
     >
       {vuoto ? (

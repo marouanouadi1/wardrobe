@@ -16,12 +16,14 @@ import type {
   AggiornamentoSegnalazione,
   AnalisiAvviata,
   Capo,
+  ContoSvuotamento,
   Credenziali,
   ElencoCapi,
   ElencoConversazioniChat,
   ElencoMessaggiChat,
   ElencoSegnalazioni,
   EsitoAnalisi,
+  EsportazionePronta,
   NuovaSegnalazione,
   NuovoOutfit,
   Outfit,
@@ -29,6 +31,7 @@ import type {
   Registrazione,
   RichiestaMessaggioChat,
   RichiestaSuggerimenti,
+  RichiestaSvuotamento,
   RiepilogoArmadio,
   RispostaChat,
   RispostaSuggerimenti,
@@ -271,6 +274,32 @@ export const api = {
   // ── profilo ─────────────────────────────────────────────────────────────
   profilo: () => chiama<Profilo>('/profilo'),
   salvaProfilo: (profilo: Profilo) => chiama<Profilo>('/profilo', { metodo: 'PUT', corpo: profilo }),
+
+  // ── i tuoi dati ─────────────────────────────────────────────────────────
+  /**
+   * Chiede un indirizzo firmato da cui scaricare l'archivio, **non i dati**.
+   *
+   * Un'app React Native non ha un «scarica»: il file lo prende il browser di
+   * sistema, che non ha il nostro token — da qui la firma, che vale pochi
+   * minuti. Chi lo riceve lo apre con `Linking.openURL`, e da lì è il sistema
+   * operativo a occuparsene.
+   */
+  esportazione: () => chiama<EsportazionePronta>('/esportazione', { metodo: 'POST' }),
+
+  /**
+   * **Cancella il contenuto dell'armadio, e non torna indietro.**
+   *
+   * La parola di conferma non è una ridondanza della schermata: quella difende
+   * dal tocco distratto e sparisce con un deep-link, un `curl` ricopiato o una
+   * richiesta rimandata due volte dalla libreria di rete. Questa vive nel
+   * contratto (`RichiestaSvuotamento`), e il tipo è il letterale `'SVUOTA'` —
+   * generato dal backend, non ridigitato qui.
+   */
+  svuotaArmadio: () =>
+    chiama<ContoSvuotamento>('/armadio/svuota', {
+      metodo: 'POST',
+      corpo: { conferma: 'SVUOTA' } satisfies RichiestaSvuotamento,
+    }),
 
   // ── segnalazioni ────────────────────────────────────────────────────────
   segnalazioni: {

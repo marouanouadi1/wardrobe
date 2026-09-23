@@ -28,6 +28,7 @@ import {
 } from 'react'
 import { ErroreApi, api } from './api'
 import { perId, slotDiTipo } from './dominio'
+import { caricaUnaFoto } from './foto'
 import { useSessione } from './sessione'
 
 interface Stato {
@@ -359,13 +360,13 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
     async (uri) => {
       invia({ tipo: 'fotoAvatar', uri })
       try {
-        // Stessa strada delle foto dei capi: URL firmato e PUT diretta
-        // all'archivio foto, la foto non passa dal nostro backend.
-        const firma = await api.firmaUpload('image/jpeg')
-        await api.caricaFoto(firma, uri)
-        invia({ tipo: 'fotoAvatar', uri, chiave: firma.chiave })
+        // Stessa strada delle foto dei capi — letteralmente la stessa
+        // funzione: URL firmato e PUT diretta all'archivio foto, la foto non
+        // passa dal nostro backend.
+        const chiave = await caricaUnaFoto(uri)
+        invia({ tipo: 'fotoAvatar', uri, chiave })
         if (stato.profilo) {
-          await api.salvaProfilo({ ...stato.profilo, avatar_foto_chiave: firma.chiave })
+          await api.salvaProfilo({ ...stato.profilo, avatar_foto_chiave: chiave })
         }
       } catch (errore) {
         invia({

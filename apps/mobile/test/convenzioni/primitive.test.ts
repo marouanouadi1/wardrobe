@@ -9,7 +9,7 @@
  * È esattamente ciò che è successo in PR #4: il diff di `be3392e` mostra una
  * schermata che scriveva `<BottonePrimario style={{ backgroundColor:
  * colori.scheda }} />`. Se serve un fondo diverso, si aggiunge una variante
- * alla primitiva — come `ambra`, `chiaro` e `pericolo` su `BottonePrimario` —
+ * alla primitiva — come `accento`, `chiaro` e `pericolo` su `BottonePrimario` —
  * così il colore del testo si calcola insieme al fondo.
  *
  * **L'elenco delle primitive non è scritto a mano: si deriva dall'AST.** Una

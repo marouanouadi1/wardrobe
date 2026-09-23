@@ -16,7 +16,7 @@ import { View } from 'react-native'
 import { api } from '../src/dati/api'
 import { formattaData } from '../src/dati/formato'
 import { useRisorsa } from '../src/dati/risorsa'
-import { colori, linee, raggi, spazi } from '../src/tema/tokens'
+import { colori, linee, raggi, spazi, velature } from '../src/tema/tokens'
 import { Badge, Pillola } from '../src/ui/base'
 import { Schermata } from '../src/ui/guscio'
 import { StatoRisorsa } from '../src/ui/stati'
@@ -24,8 +24,8 @@ import { Corpo } from '../src/ui/testo'
 
 const STILE_STATO: Record<StatoSegnalazione, { sfondo: string; testo: string; etichetta: string }> = {
   ricevuta: { sfondo: linee.tenue, testo: colori.inchiostro, etichetta: 'Ricevuta' },
-  in_lavorazione: { sfondo: colori.coralloTenue, testo: colori.corallo, etichetta: 'In lavorazione' },
-  risolta: { sfondo: colori.inchiostro, testo: colori.crema, etichetta: 'Risolta' },
+  in_lavorazione: { sfondo: velature.pericolo, testo: colori.pericolo, etichetta: 'In lavorazione' },
+  risolta: { sfondo: colori.inchiostro, testo: colori.scheda, etichetta: 'Risolta' },
 }
 
 const STATI: StatoSegnalazione[] = ['ricevuta', 'in_lavorazione', 'risolta']

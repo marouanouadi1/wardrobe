@@ -9,6 +9,7 @@ finiscono i byte.
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import os
 import socket
@@ -29,7 +30,7 @@ def _url_firmata(chiave: str, scade_in_s: int) -> str:
     ruotare a parte non renderebbe questa firma più sicura."""
     scade_epoch = int(datetime.now(UTC).timestamp()) + scade_in_s
     firma = firma_foto(chiave, scade_epoch, os.environ["JWT_SECRET"])
-    return f"{_base_url()}/foto/{chiave}?scade={scade_epoch}&firma={firma}"
+    return f"{base_url()}/foto/{chiave}?scade={scade_epoch}&firma={firma}"
 
 
 def _porta_locale() -> str:
@@ -62,7 +63,7 @@ def _host_locale() -> str:
     return os.environ.get("HOST_LOCALE") or _rileva_ip_lan()
 
 
-def _base_url() -> str:
+def base_url() -> str:
     """`BASE_URL_PUBBLICA` (es. `https://api.tuodominio.it`) quando è
     impostata — un VPS dietro un reverse proxy HTTPS, dove l'IP LAN indovinato
     e la porta interna non sono raggiungibili dall'app. Senza, resta il
@@ -99,6 +100,43 @@ class ArchivioFileSystem:
         Il rischio che questo apre è indovinare una chiave firmata, non
         scriverla: la PUT anonima resta chiusa da `scade_in_s` corto."""
         return _url_firmata(chiave, scade_in_s)
+
+    def elimina_sotto(self, prefisso: str, tranne: frozenset[str] = frozenset()) -> int:
+        """Cancella l'albero sotto `prefisso`, tranne le chiavi escluse.
+
+        Passa da `_percorso`, che risolve e verifica `is_relative_to(radice)`:
+        un prefisso con `..` dentro non esce dalla cartella foto, solleva.
+        Senza quel passaggio questa sarebbe la funzione più pericolosa del
+        backend — `rm -rf` con un argomento che viene da un id utente.
+
+        Toglie anche i file `.contenttype` che `salva` scrive accanto a ogni
+        foto: sono nostri, non della persona, ma restare orfani non servirebbe
+        a nessuno e continuerebbero a occupare il disco.
+        """
+        radice = self._percorso(prefisso)
+        if not radice.exists():
+            return 0
+        esclusi = {self._percorso(chiave) for chiave in tranne}
+        quanti = 0
+        for percorso in sorted(radice.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+            if percorso.is_dir():
+                # Una cartella si toglie solo se l'abbiamo svuotata: se dentro
+                # è rimasto un file escluso, resta anche lei.
+                with contextlib.suppress(OSError):
+                    percorso.rmdir()
+                continue
+            if percorso in esclusi or percorso.with_suffix("") in esclusi:
+                continue
+            if percorso.name.endswith(_SUFFISSO_TIPO):
+                accompagnato = Path(str(percorso)[: -len(_SUFFISSO_TIPO)])
+                if accompagnato in esclusi:
+                    continue
+            percorso.unlink()
+            if not percorso.name.endswith(_SUFFISSO_TIPO):
+                quanti += 1
+        with contextlib.suppress(OSError):
+            radice.rmdir()
+        return quanti
 
     def salva(self, chiave: str, contenuto: bytes, media_type: str) -> None:
         percorso = self._percorso(chiave)
