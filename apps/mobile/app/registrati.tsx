@@ -16,7 +16,7 @@ import { useSessione } from '../src/dati/sessione'
 import { spazi } from '../src/tema/tokens'
 import { BottonePrimario, Campo } from '../src/ui/base'
 import { Forte, TestoErrore } from '../src/ui/testo'
-import { GuscioAutenticazione } from '../src/ui/guscio'
+import { GuscioAutenticazione, PiedeAccesso } from '../src/ui/guscio'
 
 /** Solo una verifica di forma, come sul backend (`domain/autenticazione.py`):
  * basta a scartare un errore di battitura prima di scomodare la rete. */
@@ -57,9 +57,11 @@ export default function Registrati() {
 
   return (
     <GuscioAutenticazione
-      titolo="Crea il tuo account."
+      occhiello="PASSO 1 DI 3"
+      titolo="Crea il tuo account"
       sottotitolo="Serve un invito: la tua email deve essere nella lista."
       errore={errore}
+      piede={<PiedeAccesso />}
       onLinkFantasma={() => router.back()}
       testoLinkFantasma={
         <>
@@ -68,7 +70,7 @@ export default function Registrati() {
       }
       azione={
         <BottonePrimario
-          testo="Crea account"
+          testo="Continua"
           caricando={caricamento}
           onPress={() => void registrati()}
           disabilitato={!pronto}
@@ -90,7 +92,7 @@ export default function Registrati() {
         etichetta="Password"
         value={password}
         onChangeText={setPassword}
-        secureTextEntry
+        rivelabile
         textContentType="newPassword"
         placeholder="almeno 8 caratteri"
       />

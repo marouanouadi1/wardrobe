@@ -30,10 +30,10 @@ qualcosa che fa il 90%.
 
 | File | Cosa contiene |
 |---|---|
-| `src/ui/base.tsx` | il grosso: `Toccabile`, `Campo`, `Scheda`, `Pillola`, `Segmenti`, `BottonePrimario`, `BottoneSecondario`, `Badge`, `BollaChat`, `Icona`, `BottoneTondo`, `LinkTesto`, `Comparsa`… |
+| `src/ui/base.tsx` | il grosso: `Toccabile`, `Campo` (con `rivelabile` per il «Mostra» sulla password), `Scheda`, `Pillola`, `Segmenti`, `BottonePrimario`, `BottoneSecondario`, `Badge`, `BollaChat`, `Icona`, `BottoneTondo`, `LinkTesto`, `Comparsa`… |
 | `src/ui/testo.tsx` | `Titolo`, `Numero`, `Corpo`, `Forte`, `TestoErrore`, `Etichetta`, e il tipo `Taglia` |
 | `src/ui/stati.tsx` | `Caricamento`, **`PistaIndeterminata`**, `AttesaLunga`, `Vuoto`, `Errore`, **`SenzaRete`**, `StatoRisorsa` |
-| `src/ui/guscio.tsx` | `Testata` (con lo slot **`azioni`** a destra del titolo, alternativo a `fotoProfilo`), `Schermata`, `GuscioAutenticazione`, **`BarraSchede`** + `schedaDi()`, **`SfondoAura`** (il gradiente + i due aloni radiali del deck; i colori stanno in `fondi`, la geometria qui) |
+| `src/ui/guscio.tsx` | `Testata` (con lo slot **`azioni`** a destra del titolo, alternativo a `fotoProfilo`), `Schermata`, `GuscioAutenticazione` (con `occhiello` sopra il titolo e `piede` sotto l'azione), **`PiedeAccesso`** (l'SSO e il recupero password del deck, **spenti col motivo**: non esistono), **`BarraSchede`** + `schedaDi()`, **`SfondoAura`** (il gradiente + i due aloni radiali del deck; i colori stanno in `fondi`, la geometria qui) |
 | `src/ui/righe.tsx` | `RigaNavigabile`, `RigaStatistiche`, **`RigaImpostazione`** |
 | `src/ui/capi.tsx` | `SchedaFoto`, `PiedeFoto`, `CapoInGriglia`, **`CasellaAggiungi`**, **`SchedaOutfit`**, **`ElencoOutfit`**, **`RigaFotoInCoda`**, **`SlotMancanti`** (la lista che `(tabs)/armadio.tsx` e `app/outfit.tsx` mostrano **entrambe**), `Miniatura`, `MiniaturaFoto`, `MotiviProposta`, `Attributo` |
 | `src/ui/avviso.tsx` | `Avviso` (coriandolo globale), `Conferma`, **`Foglio`** (il menu che sale dal basso: una voce **senza `onPress` è spenta e mostra il suo `perche`**, non viene omessa) |

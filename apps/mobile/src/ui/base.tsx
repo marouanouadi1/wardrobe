@@ -81,8 +81,19 @@ export function Toccabile({ children, style, scala = 0.97, haptic = true, ...pro
 export function Campo({
   etichetta,
   style,
+  rivelabile,
   ...props
-}: TextInputProps & { etichetta?: string; style?: StyleProp<ViewStyle> }) {
+}: TextInputProps & {
+  etichetta?: string
+  style?: StyleProp<ViewStyle>
+  /**
+   * Il «Mostra» del deck sulla password. Non è una comodità: una password
+   * che non si può rileggere si sbaglia, e chi la sbaglia due volte pensa di
+   * aver dimenticato le credenziali — e qui non c'è ancora un recupero.
+   */
+  rivelabile?: boolean
+}) {
+  const [scoperta, setScoperta] = useState(false)
   // Il fondo che questo campo dipinge è sempre chiaro — un `TextInput` non
   // legge il contesto (il suo `color` è cablato), ma un `Corpo` infilato qui
   // dentro in futuro lo farebbe: asserisce, non lascia indovinare. Non
@@ -93,6 +104,7 @@ export function Campo({
       <TextInput
         placeholderTextColor={testoSu.chiaro.debole}
         {...props}
+        secureTextEntry={rivelabile ? !scoperta : props.secureTextEntry}
         style={[
           {
             paddingHorizontal: 16,
@@ -112,10 +124,19 @@ export function Campo({
       />
     </Fondo>
   )
-  if (!etichetta) return campo
+  if (!etichetta && !rivelabile) return campo
   return (
     <View style={{ gap: spazi.s }}>
-      <Etichetta>{etichetta}</Etichetta>
+      {etichetta || rivelabile ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Etichetta style={{ flex: 1 }}>{etichetta}</Etichetta>
+          {rivelabile ? (
+            <Toccabile scala={0} hitSlop={10} onPress={() => setScoperta((prima) => !prima)}>
+              <Etichetta colore={colori.primario}>{scoperta ? 'Nascondi' : 'Mostra'}</Etichetta>
+            </Toccabile>
+          ) : null}
+        </View>
+      ) : null}
       {campo}
     </View>
   )

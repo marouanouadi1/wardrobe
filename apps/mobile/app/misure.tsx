@@ -1,11 +1,14 @@
 /**
  * Le misure del corpo: la schermata `misure` del deck, spostata.
  *
- * Nel deck è il **passo 2 di 3** dell'iscrizione. Qui è una destinazione di
- * Impostazioni, e non per comodità: l'onboarding dell'app ha due passi, e
- * aggiungerne un terzo è una decisione sua — `intro` è ancora una domanda
- * aperta. Intanto le misure servono a chi le vuole dare, non a chi sta ancora
- * decidendo se restare. Niente qui è obbligatorio, e si può svuotare tutto.
+ * Serve due strade, e sono la stessa schermata. Nel deck è il **passo 2 di 3**
+ * dell'iscrizione — e da quando `intro` ha i suoi tre passi lo è anche qui,
+ * con `?onboarding=1`: occhiello «PASSO 2 DI 3», nessun «indietro» (non c'è un
+ * posto sensato dove tornare) e «Le inserisco dopo» al posto di «Cancella».
+ * L'altra strada è Impostazioni, dove «indietro» torna lì.
+ *
+ * Niente qui è obbligatorio, in nessuna delle due: un questionario che non si
+ * può saltare al primo accesso perde chi sta ancora decidendo se restare.
  *
  * **Le quattro misure del deck sono quattro righe con un chevron**, cioè
  * quattro schermate di scelta. Qui stanno in linea: gli stessi quattro valori,
@@ -21,7 +24,7 @@ import type {
   Taglia,
   UnitaLunghezza,
 } from '@wardrobe/contracts'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { View } from 'react-native'
 import { api } from '../src/dati/api'
@@ -69,6 +72,12 @@ function leggiMisura(
 }
 
 export default function MisureSchermata() {
+  // `onboarding` distingue le due strade che portano qui: il secondo dei tre
+  // passi del primo accesso (dove «indietro» non ha un posto sensato e si va
+  // avanti verso lo stile) e una visita da Impostazioni, dove «indietro»
+  // deve tornare lì. Stessa forma di `rivisita` in `preferenze.tsx`.
+  const { onboarding } = useLocalSearchParams<{ onboarding?: string }>()
+  const primoAccesso = Boolean(onboarding)
   const { profilo, pronto, ricarica, avvisa } = useArmadio()
   const { caricamento: salvando, esegui } = useAzione<typeof profilo>()
   const unita: UnitaLunghezza = profilo?.unita_lunghezza ?? 'cm'
@@ -131,7 +140,8 @@ export default function MisureSchermata() {
       return
     }
     await ricarica()
-    router.back()
+    if (primoAccesso) router.replace('/preferenze')
+    else router.back()
   }
 
   const daSalvare: Misure = {
@@ -149,10 +159,10 @@ export default function MisureSchermata() {
 
   return (
     <Schermata
-      occhiello="il tuo corpo"
+      occhiello={primoAccesso ? 'PASSO 2 DI 3' : 'il tuo corpo'}
       titolo="Le tue misure"
       tavolozza="neutro"
-      indietro
+      indietro={!primoAccesso}
       contentStyle={{ gap: spazi.l }}
     >
       <Corpo taglia="guida" tono="medio">
@@ -235,7 +245,12 @@ export default function MisureSchermata() {
           disabilitato={salvando || !pronto || qualcosaNonVa || vuoto}
           onPress={() => void salva(daSalvare)}
         />
-        {ceQualcosaDaCancellare ? (
+        {primoAccesso ? (
+          // «Le inserisco dopo» del deck: nessuna misura è obbligatoria, e un
+          // questionario che non si può saltare al primo accesso perde chi
+          // sta ancora decidendo se restare.
+          <LinkTesto onPress={() => router.replace('/preferenze')}>Le inserisco dopo</LinkTesto>
+        ) : ceQualcosaDaCancellare ? (
           <LinkTesto onPress={() => void salva(null)}>Cancella le mie misure</LinkTesto>
         ) : null}
       </View>
