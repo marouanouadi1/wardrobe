@@ -28,6 +28,7 @@ import { avviaSegnalazioni } from '../src/dati/segnalazioni'
 import { SessioneProvider } from '../src/dati/sessione'
 import { colori } from '../src/tema/tokens'
 import { Avviso } from '../src/ui/avviso'
+import { BarraSchede } from '../src/ui/guscio'
 
 // Fuori dal componente apposta: `Sentry.init` vuole girare una volta sola,
 // prima del primo render, non a ogni montaggio della radice.
@@ -70,7 +71,17 @@ function RadiceApp() {
                 <Stack.Screen name="outfit" />
                 <Stack.Screen name="calendario" />
                 <Stack.Screen name="segnalazioni" />
+                <Stack.Screen name="guidafoto" />
+                <Stack.Screen name="darivedere" />
+                <Stack.Screen name="impostazioni" />
+                <Stack.Screen name="misure" />
+                <Stack.Screen name="unita" />
+                <Stack.Screen name="svuota" />
               </Stack>
+              {/* Sopra lo Stack, non dentro il navigatore delle schede: è
+                  l'unico modo perché una rotta spinta sopra le schede — il
+                  dettaglio di un capo, la chat, il calendario — la veda. */}
+              <BarraSchede />
               <Avviso />
             </View>
           </ArchivioProvider>

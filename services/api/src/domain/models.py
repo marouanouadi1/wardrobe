@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -319,11 +319,139 @@ class ContestoSuggerimento(ModelloWardrobe):
     numero_proposte: Annotated[int, Field(ge=1, le=5)] = 3
 
 
+#: Gli estremi accettati per le misure del corpo, in centimetri.
+#:
+#: Stanno qui e non nei `Field` perché **attraversano il confine**: l'app deve
+#: poter fermare un dito che scivola sulla tastiera, non scoprirlo da un 422 —
+#: e un 422 di Pydantic non ha un codice su cui discriminare, solo un testo.
+#: I `Field` qui sotto li leggono da questo dizionario, quindi la soglia è
+#: scritta **una volta sola** e non può divergere dalla sua stessa validazione.
+LIMITI_MISURE_CM: Final[dict[str, dict[str, int]]] = {
+    "altezza": {"min": 120, "max": 230},
+    "spalle": {"min": 30, "max": 70},
+    "lunghezza_gamba": {"min": 50, "max": 120},
+}
+
+
+class SistemaTaglie(StrEnum):
+    """Su che taglie ragioniamo — **lo dice la persona, non lo deduciamo.**
+
+    Il deck lo scrive nell'occhiello della schermata: «Scegli tu il sistema di
+    taglie: non lo deduco da nome o foto». Non è una preferenza di comodo: è il
+    punto in cui l'app promette di non indovinare il genere di qualcuno.
+    """
+
+    DONNA = "donna"
+    UOMO = "uomo"
+    UNISEX = "unisex"
+
+
+class Taglia(StrEnum):
+    """La taglia abituale, nel sistema a lettere.
+
+    **Non copre i sistemi numerici** (38/40/42 italiani, 6/8/10 inglesi), e la
+    scelta è consapevole: le lettere sono le sole cinque che valgono per tutti e
+    tre i `SistemaTaglie`, e sono le sole che l'app oggi sappia offrire. Una
+    enum accetta esattamente ciò che l'interfaccia può produrre; un `str` libero
+    lascerebbe entrare «medium», «42» e «M» — tre modi di dire la stessa cosa
+    che nessuno normalizzerebbe mai più.
+
+    Allargarla ai numeri è `T-44`: costa un cambio di contratto, **non** una
+    migrazione dei dati — una enum che diventa `str` lascia valide le righe già
+    scritte, ed è il verso buono in cui sbagliare.
+    """
+
+    XS = "xs"
+    S = "s"
+    M = "m"
+    L = "l"
+    XL = "xl"
+
+
+class Corporatura(StrEnum):
+    """Tre corporature.
+
+    **Il deck non dice quali sono**: mostra solo «Media» come valore corrente di
+    un selettore di cui non elenca le voci. Queste tre le abbiamo scelte noi, ed
+    è registrato in `docs/DOMANDE_APERTE.md` (`D-09`) perché è una lacuna di
+    specifica, non una decisione presa.
+    """
+
+    MINUTA = "minuta"
+    MEDIA = "media"
+    ROBUSTA = "robusta"
+
+
+class UnitaLunghezza(StrEnum):
+    """In che unità si **mostrano** le lunghezze. Non in che unità si salvano.
+
+    `Misure` le tiene in centimetri e basta — il nome dei campi lo dice
+    (`altezza_cm`). Questa è una preferenza di lettura: cambiarla non riscrive
+    nessun dato, e due dispositivi dello stesso utente vedono lo stesso numero
+    perché la conversione avviene all'ultimo momento, non al salvataggio.
+
+    Il deck ne governa tre — lunghezze, peso, temperatura. Le altre due non
+    esistono qui: **non c'è nessun campo peso** in tutto il dominio (e il deck
+    stesso scrive «non te lo chiedo»), e la temperatura richiede il meteo, che
+    il backend riceve ma non è mai andato a prendere. Offrirle vorrebbe dire
+    due selettori che non comandano niente.
+    """
+
+    CM = "cm"
+    POLLICI = "pollici"
+
+
+class Misure(ModelloWardrobe):
+    """Come si veste un corpo, non com'è fatto.
+
+    **Ogni campo è opzionale, e il modello intero può non esserci.** Non è
+    lassismo: la schermata del deck offre «Le inserisco dopo» accanto a
+    «Continua», e promette «puoi cancellarle quando vuoi». Un `Misure` assente
+    è quella promessa mantenuta — non un profilo a metà da riempire.
+
+    Gli estremi non sono decorativi. Servono a rifiutare un dito che scivola
+    (`1680` invece di `168`) prima che finisca in un `jsonb` e da lì
+    nell'avatar, dove diventerebbe una persona alta sedici metri.
+    """
+
+    sistema_taglie: SistemaTaglie | None = None
+    taglia: Taglia | None = None
+    altezza_cm: (
+        Annotated[
+            int,
+            Field(ge=LIMITI_MISURE_CM["altezza"]["min"], le=LIMITI_MISURE_CM["altezza"]["max"]),
+        ]
+        | None
+    ) = None
+    corporatura: Corporatura | None = None
+    spalle_cm: (
+        Annotated[
+            int, Field(ge=LIMITI_MISURE_CM["spalle"]["min"], le=LIMITI_MISURE_CM["spalle"]["max"])
+        ]
+        | None
+    ) = None
+    lunghezza_gamba_cm: (
+        Annotated[
+            int,
+            Field(
+                ge=LIMITI_MISURE_CM["lunghezza_gamba"]["min"],
+                le=LIMITI_MISURE_CM["lunghezza_gamba"]["max"],
+            ),
+        ]
+        | None
+    ) = None
+
+
 class Profilo(ModelloWardrobe):
     id: str
     nome: str
     citta: str | None = None
     preferenze: PreferenzeStile = PreferenzeStile()
+    misure: Misure | None = None
+    #: Default `cm` e non `None`: un profilo salvato prima che questo campo
+    #: esistesse lo riceve leggendolo, senza migrazione e senza un ramo
+    #: «non scelto» da gestire in ogni punto che mostra una lunghezza.
+    unita_lunghezza: UnitaLunghezza = UnitaLunghezza.CM
     foto_url: str | None = None
     avatar_foto_chiave: str | None = Field(
         default=None,
@@ -607,3 +735,88 @@ class ModelloDisponibile(ModelloWardrobe):
 class UsoToken(ModelloWardrobe):
     token_input: int = 0
     token_output: int = 0
+
+
+class ConversazioneEsportata(ModelloWardrobe):
+    """Una conversazione **con dentro i suoi turni**.
+
+    `ConversazioneChat` non li porta — li tiene `messaggi_chat`, e l'elenco ne
+    mostra solo un'anteprima. In un archivio che deve bastare da solo, una
+    conversazione senza i messaggi sarebbe un titolo e una data.
+    """
+
+    conversazione: ConversazioneChat
+    messaggi: list[MessaggioChat]
+
+
+class ContenutoEsportazione(ModelloWardrobe):
+    """Tutto ciò che è di una persona, in un oggetto solo.
+
+    **Modello interno: non attraversa il confine** e non sta in
+    `export_schema.py`. L'app non lo legge mai — lo legge la persona, dentro
+    uno zip, con un editor di testo. Generarne il tipo TypeScript darebbe un
+    contratto che nessuno rispetta, che è esattamente ciò che
+    `.claude/rules/contratti.md` dice di non fare.
+
+    Se un giorno qui manca qualcosa che il prodotto ha imparato a salvare,
+    l'esportazione **mente**: è il solo modello del dominio che vada riguardato
+    ogni volta che una tabella nuova comincia a contenere dati di qualcuno.
+    """
+
+    esportato_il: datetime
+    profilo: Profilo | None = None
+    capi: list[Capo] = Field(default_factory=list)
+    outfit: list[Outfit] = Field(default_factory=list)
+    conversazioni: list[ConversazioneEsportata] = Field(default_factory=list)
+    segnalazioni: list[Segnalazione] = Field(default_factory=list)
+
+
+class RichiestaSvuotamento(ModelloWardrobe):
+    """Il corpo di `POST /armadio/svuota`.
+
+    **La parola esiste per rendere impossibile l'incidente.** Il tocco sullo
+    schermo è già dietro un campo in cui scrivere «SVUOTA», ma quella è una
+    difesa dell'interfaccia: sparisce con un refresh, un deep-link, un `curl`
+    ricopiato, o una richiesta rimandata due volte dalla libreria di rete. Un
+    `Literal` la porta nel contratto, quindi un `POST` senza intenzione
+    esplicita prende un 422 e non cancella niente — e il tipo TypeScript
+    generato contiene la parola, così non la si ridigita di là.
+    """
+
+    conferma: Literal["SVUOTA"]
+
+
+class ContoSvuotamento(ModelloWardrobe):
+    """Quanto è stato cancellato davvero.
+
+    Non è telemetria: è l'unico modo che ha la persona di sapere che
+    l'operazione ha fatto ciò che prometteva. Un `204 No Content` dopo
+    un'azione irreversibile lascia solo da fidarsi.
+    """
+
+    capi: int
+    outfit: int
+    conversazioni: int
+    #: Righe della tabella `usi`, cioè coppie **capo × giorno** — non giorni.
+    #: Si chiamava `giorni_di_uso` finché una prova su un Postgres vero non ha
+    #: mostrato sei righe dove i giorni erano uno: un nome che conta una cosa
+    #: per un'altra è una bugia che nessun test prende, perché il numero è
+    #: giusto — è l'etichetta a essere sbagliata.
+    usi_registrati: int
+    foto: int
+
+
+class EsportazionePronta(ModelloWardrobe):
+    """L'indirizzo da cui l'archivio si scarica, e per quanto ancora vale.
+
+    **È l'unica parte che attraversa il confine.** L'app non riceve i dati: ne
+    riceve un URL firmato, che apre nel browser di sistema — un'app React
+    Native non ha un «scarica», e il browser ce l'ha.
+
+    `scade_il` non è decorativo: l'URL è di fatto una credenziale al portatore
+    su tutto l'armadio, quindi l'interfaccia deve poter dire che è a tempo
+    invece di lasciar credere che sia un link da conservare.
+    """
+
+    url: str
+    scade_il: datetime

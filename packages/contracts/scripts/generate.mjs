@@ -74,7 +74,11 @@ function generaRuntime() {
   ]
 
   for (const [nome, valore] of Object.entries(costanti)) {
-    righe.push(`export const ${nome} = ${valore} as const`)
+    // `JSON.stringify` e non l'interpolazione: una costante può essere un
+    // oggetto (`LIMITI_MISURE_CM`), e `${oggetto}` scriverebbe
+    // «[object Object]» senza che niente fallisca — il file generato
+    // compilerebbe, con dentro una stringa al posto dei numeri.
+    righe.push(`export const ${nome} = ${JSON.stringify(valore)} as const`)
   }
 
   righe.push('', '// I valori delle enum, in ordine, per costruire filtri e selettori.')

@@ -149,3 +149,18 @@ class ProviderNonConfigurato(ErroreDominio):
 class ErroreProvider(ErroreDominio):
     codice = "errore_provider"
     stato_http = 502
+
+
+class SvuotamentoParziale(ErroreDominio):
+    """Le righe sono sparite, alcune foto no.
+
+    Ha un codice suo e non è un `errore_interno` generico **perché quello che
+    va detto è opposto a «non è successo niente»**: l'armadio è vuoto davvero e
+    non torna, ma sul disco restano dei file. Un 500 muto qui farebbe credere
+    che l'operazione sia fallita, e la persona la rifarebbe su un armadio già
+    vuoto chiedendosi perché non funziona. L'app discrimina sul campo `errore`,
+    e questo è il caso in cui deve dire due cose insieme.
+    """
+
+    codice = "svuotamento_parziale"
+    stato_http = 500

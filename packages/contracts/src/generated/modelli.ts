@@ -23,8 +23,55 @@ export type AttributoCapo = 'tipo' | 'colore' | 'materiale' | 'fantasia' | 'stag
  * I valori coincidono con le chiavi di `mannequin.setOutfit()`.
  */
 export type SlotAvatar = 'top' | 'bottom' | 'outer' | 'shoes' | 'dress'
+/**
+ * Tre corporature.
+ *
+ * **Il deck non dice quali sono**: mostra solo «Media» come valore corrente di
+ * un selettore di cui non elenca le voci. Queste tre le abbiamo scelte noi, ed
+ * è registrato in `docs/DOMANDE_APERTE.md` (`D-09`) perché è una lacuna di
+ * specifica, non una decisione presa.
+ */
+export type Corporatura = 'minuta' | 'media' | 'robusta'
 export type RuoloChat = 'utente' | 'wardrobe'
+/**
+ * Su che taglie ragioniamo — **lo dice la persona, non lo deduciamo.**
+ *
+ * Il deck lo scrive nell'occhiello della schermata: «Scegli tu il sistema di
+ * taglie: non lo deduco da nome o foto». Non è una preferenza di comodo: è il
+ * punto in cui l'app promette di non indovinare il genere di qualcuno.
+ */
+export type SistemaTaglie = 'donna' | 'uomo' | 'unisex'
+/**
+ * La taglia abituale, nel sistema a lettere.
+ *
+ * **Non copre i sistemi numerici** (38/40/42 italiani, 6/8/10 inglesi), e la
+ * scelta è consapevole: le lettere sono le sole cinque che valgono per tutti e
+ * tre i `SistemaTaglie`, e sono le sole che l'app oggi sappia offrire. Una
+ * enum accetta esattamente ciò che l'interfaccia può produrre; un `str` libero
+ * lascerebbe entrare «medium», «42» e «M» — tre modi di dire la stessa cosa
+ * che nessuno normalizzerebbe mai più.
+ *
+ * Allargarla ai numeri è `T-44`: costa un cambio di contratto, **non** una
+ * migrazione dei dati — una enum che diventa `str` lascia valide le righe già
+ * scritte, ed è il verso buono in cui sbagliare.
+ */
+export type Taglia = 'xs' | 's' | 'm' | 'l' | 'xl'
 export type OrigineOutfit = 'manuale' | 'ia' | 'suggerito_modificato'
+/**
+ * In che unità si **mostrano** le lunghezze. Non in che unità si salvano.
+ *
+ * `Misure` le tiene in centimetri e basta — il nome dei campi lo dice
+ * (`altezza_cm`). Questa è una preferenza di lettura: cambiarla non riscrive
+ * nessun dato, e due dispositivi dello stesso utente vedono lo stesso numero
+ * perché la conversione avviene all'ultimo momento, non al salvataggio.
+ *
+ * Il deck ne governa tre — lunghezze, peso, temperatura. Le altre due non
+ * esistono qui: **non c'è nessun campo peso** in tutto il dominio (e il deck
+ * stesso scrive «non te lo chiedo»), e la temperatura richiede il meteo, che
+ * il backend riceve ma non è mai andato a prendere. Offrirle vorrebbe dire
+ * due selettori che non comandano niente.
+ */
+export type UnitaLunghezza = 'cm' | 'pollici'
 
 /**
  * Generato da services/api/src/domain/models.py — non modificare a mano.
@@ -39,7 +86,9 @@ export interface Contratti {
   CapoSintetico?: CapoSintetico
   Colore?: Colore
   ContestoSuggerimento?: ContestoSuggerimento
+  ContoSvuotamento?: ContoSvuotamento
   ConversazioneChat?: ConversazioneChat
+  Corporatura?: Corporatura
   CorrezioniCapo?: CorrezioniCapo
   Credenziali?: Credenziali
   ElencoCapi?: ElencoCapi
@@ -47,12 +96,14 @@ export interface Contratti {
   ElencoMessaggiChat?: ElencoMessaggiChat
   ElencoSegnalazioni?: ElencoSegnalazioni
   EsitoAnalisi?: EsitoAnalisi
+  EsportazionePronta?: EsportazionePronta
   FiltroArmadio?: FiltroArmadio
   FotoCapo?: FotoCapo
   ImpegnoAgenda?: ImpegnoAgenda
   LetturaCapo?: LetturaCapo
   MessaggioChat?: MessaggioChat
   Meteo?: Meteo
+  Misure?: Misure
   ModelloDisponibile?: ModelloDisponibile
   NuovaSegnalazione?: NuovaSegnalazione
   NuovoOutfit?: NuovoOutfit
@@ -64,20 +115,24 @@ export interface Contratti {
   RichiestaAnalisi?: RichiestaAnalisi
   RichiestaMessaggioChat?: RichiestaMessaggioChat
   RichiestaSuggerimenti?: RichiestaSuggerimenti
+  RichiestaSvuotamento?: RichiestaSvuotamento
   RichiestaUpload?: RichiestaUpload
   RiepilogoArmadio?: RiepilogoArmadio
   RispostaChat?: RispostaChat
   RispostaSuggerimenti?: RispostaSuggerimenti
   RuoloChat?: RuoloChat
   Segnalazione?: Segnalazione
+  SistemaTaglie?: SistemaTaglie
   SlotAvatar?: SlotAvatar
   Stagione?: Stagione
   StatoAnalisi?: StatoAnalisi
   StatoCapo?: StatoCapo
   StatoSegnalazione?: StatoSegnalazione
   Suggerimento?: Suggerimento
+  Taglia?: Taglia
   TipoCapo?: TipoCapo
   TokenAccesso?: TokenAccesso
+  UnitaLunghezza?: UnitaLunghezza
   UploadFirmato?: UploadFirmato
   UsoToken?: UsoToken
   Vestizione?: Vestizione
@@ -246,6 +301,20 @@ export interface PreferenzeStile {
   evita?: string[]
 }
 /**
+ * Quanto è stato cancellato davvero.
+ *
+ * Non è telemetria: è l'unico modo che ha la persona di sapere che
+ * l'operazione ha fatto ciò che prometteva. Un `204 No Content` dopo
+ * un'azione irreversibile lascia solo da fidarsi.
+ */
+export interface ContoSvuotamento {
+  capi: number
+  outfit: number
+  conversazioni: number
+  usi_registrati: number
+  foto: number
+}
+/**
  * Un contenitore di turni: da quando la chat ha smesso di essere una
  * sola sessione continua per utente (vedi docs/adr/0006).
  *
@@ -357,6 +426,21 @@ export interface EsitoAnalisi {
   capo?: Capo | null
   errore?: string | null
 }
+/**
+ * L'indirizzo da cui l'archivio si scarica, e per quanto ancora vale.
+ *
+ * **È l'unica parte che attraversa il confine.** L'app non riceve i dati: ne
+ * riceve un URL firmato, che apre nel browser di sistema — un'app React
+ * Native non ha un «scarica», e il browser ce l'ha.
+ *
+ * `scade_il` non è decorativo: l'URL è di fatto una credenziale al portatore
+ * su tutto l'armadio, quindi l'interfaccia deve poter dire che è a tempo
+ * invece di lasciar credere che sia un link da conservare.
+ */
+export interface EsportazionePronta {
+  url: string
+  scade_il: string
+}
 export interface FiltroArmadio {
   tipo?: TipoCapo | null
   stato?: StatoCapo | null
@@ -383,6 +467,26 @@ export interface LetturaCapo {
   confidenze?: {
     [k: string]: number
   }
+}
+/**
+ * Come si veste un corpo, non com'è fatto.
+ *
+ * **Ogni campo è opzionale, e il modello intero può non esserci.** Non è
+ * lassismo: la schermata del deck offre «Le inserisco dopo» accanto a
+ * «Continua», e promette «puoi cancellarle quando vuoi». Un `Misure` assente
+ * è quella promessa mantenuta — non un profilo a metà da riempire.
+ *
+ * Gli estremi non sono decorativi. Servono a rifiutare un dito che scivola
+ * (`1680` invece di `168`) prima che finisca in un `jsonb` e da lì
+ * nell'avatar, dove diventerebbe una persona alta sedici metri.
+ */
+export interface Misure {
+  sistema_taglie?: SistemaTaglie | null
+  taglia?: Taglia | null
+  altezza_cm?: number | null
+  corporatura?: Corporatura | null
+  spalle_cm?: number | null
+  lunghezza_gamba_cm?: number | null
 }
 /**
  * Una riga del catalogo dei modelli di un provider — `ProviderLlm.modelli()`.
@@ -425,6 +529,8 @@ export interface Profilo {
   nome: string
   citta?: string | null
   preferenze?: PreferenzeStile
+  misure?: Misure | null
+  unita_lunghezza?: UnitaLunghezza
   foto_url?: string | null
   /**
    * Foto a figura intera della persona. Oggi la usa l'avatar 2D, quando il manichino 3D non basta; nella direzione dell'ADR 0004 è l'ingresso del corpo 3D fedele alla persona, non un ripiego
@@ -462,6 +568,20 @@ export interface RichiestaSuggerimenti {
   numero_proposte?: number
   provider?: string | null
   modello?: string | null
+}
+/**
+ * Il corpo di `POST /armadio/svuota`.
+ *
+ * **La parola esiste per rendere impossibile l'incidente.** Il tocco sullo
+ * schermo è già dietro un campo in cui scrivere «SVUOTA», ma quella è una
+ * difesa dell'interfaccia: sparisce con un refresh, un deep-link, un `curl`
+ * ricopiato, o una richiesta rimandata due volte dalla libreria di rete. Un
+ * `Literal` la porta nel contratto, quindi un `POST` senza intenzione
+ * esplicita prende un 422 e non cancella niente — e il tipo TypeScript
+ * generato contiene la parola, così non la si ridigita di là.
+ */
+export interface RichiestaSvuotamento {
+  conferma: 'SVUOTA'
 }
 export interface RichiestaUpload {
   content_type: string

@@ -1,8 +1,12 @@
 /**
  * Il dettaglio di un capo: la foto, cosa ha capito il modello, cosa ci sta bene.
  *
+ * La disposizione è quella del deck: il cuore e il «···» **nella testata**, non
+ * sopra la foto; il capo per intero (`contain`) invece che tagliato; i tre
+ * stati come pillole, dove prima c'erano due interruttori che ne coprivano due.
+ *
  * La parte importante è il riquadro «letto dalla foto». Mostra ogni attributo
- * con la sua confidenza, dipinge in corallo quelli incerti, e li rende
+ * con la sua confidenza, dipinge in pericolo quelli incerti, e li rende
  * toccabili per correggerli. È il patto con l'utente: il modello prova a
  * indovinare, ma non fa finta di sapere.
  *
@@ -10,7 +14,7 @@
  * generata dal dominio Python.
  */
 
-import type { AttributoCapo, Capo } from '@wardrobe/contracts'
+import { VALORI_STATO_CAPO, type AttributoCapo, type Capo } from '@wardrobe/contracts'
 import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
@@ -24,9 +28,10 @@ import {
   fotoDaMostrare,
   quandoUsato,
 } from '../../src/dati/dominio'
-import { ETICHETTE, colori, durate, linee, raggi, spazi, velo } from '../../src/tema/tokens'
-import { BadgeIa, BottonePrimario, BottoneSecondario, BottoneTondo, Campo, Pillola, Scheda, Toccabile } from '../../src/ui/base'
+import { ETICHETTE, colori, durate, linee, raggi, spazi, superfici, velo } from '../../src/tema/tokens'
+import { BadgeIa, BottonePrimario, BottoneTondo, Campo, Pillola, Scheda, Toccabile } from '../../src/ui/base'
 import { Attributo, Miniatura, SchedaFoto } from '../../src/ui/capi'
+import { Foglio } from '../../src/ui/avviso'
 import { Schermata, Testata } from '../../src/ui/guscio'
 import { Caricamento, Vuoto } from '../../src/ui/stati'
 import { Corpo, Forte, Titolo } from '../../src/ui/testo'
@@ -67,6 +72,7 @@ export default function DettaglioCapo() {
   const [attributoInModifica, setAttributoInModifica] = useState<AttributoCapo | null>(null)
   const [testoModifica, setTestoModifica] = useState('')
   const [nuovaEtichetta, setNuovaEtichetta] = useState('')
+  const [menuAperto, setMenuAperto] = useState(false)
   const capo = id ? indice.get(id) : undefined
 
   // Prima di `pronto`, `indice` è ancora vuoto: senza questa guardia, aprendo
@@ -117,10 +123,39 @@ export default function DettaglioCapo() {
   // «Segnato per oggi» si legge dal dato vero, non da uno stato locale: se
   // rientri nella schermata il segno è ancora lì.
   const messoOggi = capo.ultimo_uso?.slice(0, 10) === new Date().toISOString().slice(0, 10)
-  const velaturaSuFoto = velo(colori.scheda, 0.9)
 
   return (
-    <Schermata occhiello={ETICHETTE.tipo[capo.tipo]} titolo={capo.nome} indietro contentStyle={{ paddingHorizontal: 0 }}>
+    <Schermata
+      occhiello={ETICHETTE.tipo[capo.tipo]}
+      titolo={capo.nome}
+      indietro
+      tavolozza="freddo"
+      // Il cuore e il «···» stanno **nella testata**, come nel deck: sopra la
+      // foto erano due bersagli appoggiati su un'immagine di cui non
+      // conosciamo il contenuto — un capo bianco e il cuore spariva.
+      azioni={
+        <>
+          <BottoneTondo
+            nome="cuore"
+            onPress={() => void cambiaPreferito(capo.id)}
+            misura={38}
+            misuraIcona={18}
+            sfondo={superfici.vetroAlto}
+            colore={capo.preferito ? colori.pericolo : velo(colori.inchiostro, 0.6)}
+            pieno={capo.preferito}
+          />
+          <BottoneTondo
+            nome="altro"
+            onPress={() => setMenuAperto(true)}
+            misura={38}
+            misuraIcona={18}
+            sfondo={superfici.vetroAlto}
+            colore={colori.inchiostro}
+          />
+        </>
+      }
+      contentStyle={{ paddingHorizontal: 0 }}
+    >
       <SchedaFoto
         raggio={raggi.grande - 2}
         ombra="alta"
@@ -128,36 +163,15 @@ export default function DettaglioCapo() {
         sfondo={colori.fondoFoto}
         style={{ marginHorizontal: spazi.xl }}
       >
+        {/* `contain`, non `cover`: è la stessa correzione della griglia
+            dell'armadio — un cappotto lungo tagliato a metà non si riconosce,
+            e questa è la schermata dove il capo si guarda davvero. */}
         <Image
           source={{ uri: fotoDaMostrare(capo) }}
           style={{ width: '100%', height: 330 }}
-          contentFit="cover"
+          contentFit="contain"
           transition={durate.breve}
         />
-        <View
-          style={{
-            position: 'absolute',
-            top: 12,
-            left: 12,
-            paddingHorizontal: 12,
-            paddingVertical: 7,
-            borderRadius: raggi.pillola,
-            backgroundColor: velaturaSuFoto,
-          }}
-        >
-          <Forte taglia="micro">{ETICHETTE.tipo[capo.tipo]}</Forte>
-        </View>
-        <View style={{ position: 'absolute', top: 12, right: 12 }}>
-          <BottoneTondo
-            nome="cuore"
-            onPress={() => void cambiaPreferito(capo.id)}
-            misura={38}
-            misuraIcona={18}
-            sfondo={velaturaSuFoto}
-            colore={capo.preferito ? colori.corallo : velo(colori.inchiostro, 0.6)}
-            pieno={capo.preferito}
-          />
-        </View>
       </SchedaFoto>
 
       <View style={{ paddingHorizontal: spazi.xl, gap: spazi.m }}>
@@ -170,7 +184,7 @@ export default function DettaglioCapo() {
         </View>
 
         <BottonePrimario
-          testo="Provalo sull'avatar"
+          testo="Provalo addosso"
           freccia
           onPress={() => {
             vestiSlot(capo.id)
@@ -178,23 +192,23 @@ export default function DettaglioCapo() {
           }}
         />
 
-        {/* Due interruttori: l'etichetta dice l'azione quando sono spenti e
-            conferma lo stato quando sono accesi. Il corallo è per il bucato,
-            mai l'ambra: quella parla solo per l'IA. */}
-        <View style={{ flexDirection: 'row', gap: spazi.s }}>
-          <BottoneSecondario
-            testo={messoOggi ? 'Segnato per oggi' : "L'ho messo oggi"}
-            sfondo={messoOggi ? colori.inchiostro : undefined}
-            colore={messoOggi ? colori.crema : undefined}
-            style={{ flex: 1 }}
-            onPress={messoOggi ? undefined : () => void indossaOggi(capo.id)}
-          />
-          <BottoneSecondario
-            testo={capo.stato === 'pulito' ? 'Da lavare' : 'In lavatrice'}
-            sfondo={capo.stato === 'pulito' ? undefined : colori.coralloTenue}
-            style={{ flex: 1 }}
-            onPress={() => void cambiaStato(capo.id, capo.stato === 'pulito' ? 'da_lavare' : 'pulito')}
-          />
+        {/* I **tre** stati come pillole, non due interruttori. Prima
+            «In lavatrice» non era raggiungibile: un solo bersaglio faceva
+            rimbalzare fra `pulito` e `da_lavare`. `in_lavaggio` è nell'enum
+            del backend, l'armadio lo mostra fra i «da lavare» e `ETICHETTE`
+            ha la sua resa italiana — ma **nessun punto dell'app lo impostava**:
+            questa era l'unica schermata che chiama `cambiaStato` su un capo
+            (`T-41`).
+            L'elenco viene da `VALORI_STATO_CAPO`: non si ridigita. */}
+        <View style={{ flexDirection: 'row', gap: 7 }}>
+          {VALORI_STATO_CAPO.map((valore) => (
+            <Pillola
+              key={valore}
+              testo={ETICHETTE.stato[valore]}
+              attiva={capo.stato === valore}
+              onPress={() => void cambiaStato(capo.id, valore)}
+            />
+          ))}
         </View>
 
         <Scheda imbottitura={18} style={{ gap: spazi.m }}>
@@ -229,7 +243,7 @@ export default function DettaglioCapo() {
           <Corpo taglia="micro" tono="debole">
             {incerti.length === 0
               ? 'Il modello è sicuro di tutto. Tocca un valore se vuoi cambiarlo.'
-              : 'Tocca un valore per correggerlo. Quelli in corallo sono incerti: il modello preferisce chiedere.'}
+              : 'Tocca un valore per correggerlo. Quelli in rosso sono incerti: il modello preferisce chiedere.'}
           </Corpo>
 
           {attributoInModifica ? (
@@ -280,7 +294,7 @@ export default function DettaglioCapo() {
                         borderRadius: raggi.pillola,
                         backgroundColor: voce.hex,
                         borderWidth: voce.hex === capo.colore.hex ? 3 : 1,
-                        // Non l'ambra: questo segna la scelta dell'utente,
+                        // Non il primario: questo segna la scelta dell'utente,
                         // non un valore letto dal modello — la stessa regola
                         // di `Pillola` (`ui/base.tsx`), che per lo stesso
                         // stato usa `colori.inchiostro`.
@@ -386,6 +400,49 @@ export default function DettaglioCapo() {
           </>
         ) : null}
       </View>
+
+      {/* Il menu «···» del deck. Tre delle sue voci non hanno un backend, e
+          sono disegnate **spente con il loro perché** invece che omesse: un
+          menu che nasconde ciò che non sa fare insegna che quella cosa non
+          esiste, uno che la mostra spenta insegna che non esiste *ancora*.
+          «Mettilo in un outfit» non c'è: nell'app farebbe esattamente ciò che
+          fa «Provalo addosso» qui sopra — `vestiSlot` e via all'avatar — e un
+          secondo bersaglio per la stessa chiamata è rumore, non una scelta. */}
+      <Foglio
+        visibile={menuAperto}
+        titolo={capo.nome}
+        sottotitolo={`${ETICHETTE.tipo[capo.tipo]} · ultimo uso ${quandoUsato(capo.ultimo_uso)}`}
+        onChiudi={() => setMenuAperto(false)}
+        voci={[
+          {
+            etichetta: messoOggi ? 'Già segnato per oggi' : 'Segna come indossato oggi',
+            icona: 'spunta',
+            onPress: messoOggi
+              ? undefined
+              : () => {
+                  void indossaOggi(capo.id)
+                  setMenuAperto(false)
+                },
+            perche: messoOggi ? "L'hai già segnato oggi." : undefined,
+          },
+          {
+            etichetta: 'Rifai la foto',
+            icona: 'fotocamera',
+            perche: 'La foto di un capo non si può ancora cambiare.',
+          },
+          {
+            etichetta: 'Non suggerirlo più',
+            icona: 'occhioSpento',
+            perche: 'Non si può ancora tenere un capo fuori dai suggerimenti.',
+          },
+          {
+            etichetta: 'Elimina il capo',
+            icona: 'cestino',
+            pericolo: true,
+            perche: 'Un capo non si può ancora eliminare.',
+          },
+        ]}
+      />
     </Schermata>
   )
 }

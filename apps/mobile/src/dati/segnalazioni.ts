@@ -131,7 +131,7 @@ export function avviaSegnalazioni() {
           foreground: colori.inchiostro,
           border: linee.chiara,
           accentBackground: colori.inchiostro,
-          accentForeground: colori.crema,
+          accentForeground: colori.scheda,
         },
       }),
     ],

@@ -128,6 +128,16 @@ per questo: è una divergenza fra la fonte normativa e il codice, e per
 **Cosa serve:** o `Attributo` asserisce `<Fondo su="chiaro">` sul ramo opaco, o
 il docblock di `fondo.tsx` smette di citarlo come esempio di chi inoltra.
 
+**Aggiornamento del 2026-09-22 (palette «Aura»):** la divergenza si è chiusa da
+sé, dal verso giusto. Il ramo `incerto` non dipinge più un fondo **opaco**
+(`colori.coralloTenue`, `#FFE3DA`) ma una **velatura** — `velature.pericolo`,
+cioè `velo(colori.pericoloVelato, 0.1)`. Chi vela inoltra, quindi il docblock di
+`fondo.tsx` che cita `Attributo` fra chi inoltra adesso **dice il vero**, e non
+c'è più niente da scegliere fra le due strade di questa voce. Resta da
+verificare l'unico punto di chiamata (`app/capo/[id].tsx:213`) su una schermata
+scura — oggi non ne esiste una, quindi la voce si chiude solo quando una c'è.
+**Non chiusa d'ufficio**: nessuno ha ancora guardato quel chip su fondo scuro.
+
 ### T-34 — Tre primitive accettano `sfondo` e sfuggono al gate che lo controlla
 **Trovato il:** 2026-09-13 · **Dove:** `apps/mobile/src/ui/base.tsx:525` (`Badge`), `:722` (`Bolla`), `:763` (`BottoneTondo`) · **Gravità:** bassa · **Chi:** `mobile`
 
@@ -140,44 +150,36 @@ richiede *anche* `<Fondo su=>`, quindi oggi trova solo `Scheda` e `SchedaFoto`.
 **Cosa serve:** una decisione sul criterio — vale lo stesso ragionamento di
 T-24 qui sotto, e i due vanno probabilmente risolti insieme.
 
-### T-21 — `carica.tsx` scrive a mano una sequenza di quattro chiamate, duplicata
-**Dove:** `apps/mobile/app/(tabs)/carica.tsx:149-152` e `:224-227` · **Gravità:** media · **Chi:** `mobile`
+### T-21 — La sequenza di caricamento e analisi, duplicata in tre punti (**chiusa**)
+**Chiusa il 2026-09-23.** La strada scelta è quella che questa stessa voce
+indicava dopo aver pesato le due alternative: **funzioni in `src/dati/`**, non
+un hook. `src/dati/foto.ts` espone `caricaUnaFoto(uri)` e
+`analizzaFoto(uri, segnale?)`, e i tre punti di chiamata le usano:
 
-`firmaUpload → caricaFoto → avviaAnalisi → statoAnalisi`, scritta due volte in due
-percorsi, in un file di 378 righe con stato di caricamento fatto a mano. È il
-debito più grosso dell'app, ed è la terza strada che `.claude/rules/react-native.md`
-dice di non prendere.
+| Dove | Prima | Ora |
+|---|---|---|
+| `carica.tsx`, foto singola | le quattro chiamate a mano | `analizzaFoto` |
+| `carica.tsx`, coda | le stesse quattro, copiate | `analizzaFoto` |
+| `archivio.tsx`, `impostaFotoAvatar` | le prime due a mano | `caricaUnaFoto` |
 
-**Due correzioni, verificate il 2026-09-13.** (a) «Stato di caricamento fatto a
-mano» **non regge**: `carica.tsx` non ha nessuna coppia `useState`
-caricamento/errore — ha una macchina a fasi (`fase: 'scatta' | 'analisi'`) più
-un contatore di progresso per la coda, e ogni errore va al coriandolo `avvisa`
-dello store. Viola solo la seconda metà del divieto di
-`.claude/rules/react-native.md` («una sequenza di chiamate API scritta a
-mano»), non la prima. (b) I punti di chiamata sono **tre, non due**:
-`src/dati/archivio.tsx:362-369` (`impostaFotoAvatar`) ripete la prima metà
-della sequenza, `firmaUpload → caricaFoto`.
+**Il vincolo è conservato e dichiarato, non nascosto:** il docblock di
+`analizzaFoto` dice che il segnale copre **solo la seconda metà** —
+`api.caricaFoto` passa da `expo-file-system`, non da `fetch`, e non accetta un
+`AbortSignal`. Chi annulla mentre la foto sale vede la schermata cambiare, ma
+l'upload prosegue finché non finisce da solo. Era la cosa che questa voce
+chiedeva esplicitamente di non far sparire.
 
-**Il rimedio proposto va pesato, non dato per buono.** `useAzione` ha tre
-attriti reali coi due percorsi: `mappaErrore: (errore) => string` non sa
-esprimere «non mostrare niente», che serve al ramo annullato di
-`analizzaUnaFoto` (riga 164); il percorso coda **ingoia di proposito** ogni
-errore (`catch { fallite += 1 }`), quindi non ha bisogno di nessuno stato
-d'errore; e un solo booleano `caricamento` per istanza verrebbe acceso/spento
-N volte dentro il `for` della coda, mentre il segnale UI vero è
-`analizzandoCoda` + `progressoCoda`. Un'alternativa che pesa meno: una
-funzione pura in `src/dati/` (`analizzaFoto(uri, segnale?)`) che tolga le
-quattro righe duplicate senza aggiungere uno stato che la coda non userebbe —
-coerente con «il rimedio toglie righe».
+**`useAzione` è stato scartato con i tre motivi già scritti qui:** `mappaErrore`
+non sa dire «non mostrare niente»; la coda ingoia di proposito ogni errore; un
+booleano `caricamento` si accenderebbe e spegnerebbe N volte dentro il ciclo,
+mentre il segnale vero dell'interfaccia è adesso lo stato di **ogni singola
+foto**.
 
-**Vincolo da conservare in qualunque soluzione:** `caricaFoto` **non accetta**
-`AbortSignal` (usa `expo-file-system`, non `fetch`) — solo
-`avviaAnalisi`/`statoAnalisi` sono abortibili. Un'estrazione che nascondesse
-questa asimmetria sarebbe un regresso.
-
-**Cosa serve:** decidere fra un hook (`useAzione`-based, coi tre attriti sopra
-da risolvere) e una funzione pura in `src/dati/`, poi applicarla ai tre
-call-site.
+**Onestà sui conteggi:** l'estrazione toglie 8 righe da `carica.tsx` e 3 da
+`archivio.tsx`, e ne aggiunge 51 in `foto.ts` — di cui 35 di docblock. Il file
+`carica.tsx` nel frattempo è **cresciuto** da 378 a 420 righe, ma per un'altra
+ragione: la schermata `upload` del deck, che dà a ogni foto la sua riga. Le due
+cose sono nello stesso passaggio e vanno lette separate.
 
 ### T-22 — `chat.ts` re-implementa la coppia caricamento/errore
 **Dove:** `apps/mobile/src/dati/chat.ts:46-47` · **Gravità:** bassa · **Chi:** `mobile`
@@ -401,6 +403,450 @@ seconda non dovrebbe esistere), o se è sufficiente affidarsi a `npm ls react
 react-dom` con `--all` che esce diverso da zero se ci sono `invalid`/duplicati
 — e in tal caso in quale workflow (`mobile.yml` ha già `paths:` su
 `apps/mobile/**`, ma la causa può tornare anche toccando solo la root).
+
+### T-47 — `POST /capi/analisi` non controlla di chi sia la `chiave_foto`
+
+**Gravità alta.** Trovata da `security` il 2026-09-23, sull'audit
+dell'esportazione. **Non nasce con l'esportazione**: nasce con
+`handlers/analisi.py`. La catena, verificata riga per riga:
+
+1. `avvia` (`handlers/analisi.py:44-49`) prende `chiave_foto` **dal corpo** e la
+   infila nella pipeline. Nessun controllo di proprietà.
+2. `analizza` (`:97`) la legge dall'archivio; `_percorso`
+   (`adapters/filesystem.py:81-85`) confina dentro `CARTELLA_FOTO`, **non**
+   dentro il sottoalbero di chi chiama.
+3. `salva` (`:138-142`) la persiste come `capo.foto.chiave` **del chiamante**:
+   A ottiene un capo nel proprio armadio che punta al file di B.
+4. `GET /capi` di A firma quella chiave con `url_lettura` → sette giorni di
+   lettura sulla foto di B, rinnovabili a ogni chiamata.
+5. E con `T-46` — la stessa firma vale per `PUT` — A **sovrascrive** la foto di
+   B. Con `FAL_KEY` configurata scrive anche `<chiave di B>-scontornata`
+   dentro l'albero di B.
+
+**Il prerequisito è conoscere una chiave**, e finché le chiavi stavano solo
+nelle risposte di `GET /capi` e nei log era difficile. Da qui il legame con
+l'esportazione: uno zip pensato per essere conservato e girato ad altri le
+avrebbe messe in chiaro. **Non succede**: `senza_campi_interni` toglie
+`chiave`, `chiave_scontornata` e `avatar_foto_chiave` dal `dati.json`, e un
+test pretende che non ci siano. Ma il difetto resta, e resta alto.
+
+**Il rimedio toglie**, e sono due righe di causa, non un filtro in più:
+- `avvia` **non deve accettare** una chiave dal client: o la ricalcola da chi
+  chiama, o rifiuta ciò che non comincia per il prefisso di quell'utente;
+- la firma delle foto deve portare **il verbo** nel messaggio (`T-46`), così
+  una capability di lettura smette di essere una di scrittura.
+
+**Quando diventa urgente, e il segnale è preciso.** L'attaccante di questa
+catena è **un account registrato**: senza, non c'è nessun passo 1. Al
+2026-09-23 `EMAIL_AMMESSE` contiene le persone che lavorano al progetto, e
+l'APK si distribuisce a mano da un link di GitHub — quindi la gravità resta
+alta ma la probabilità è quella di farsi male da soli. **Il giorno che
+`EMAIL_AMMESSE` smette di essere una lista di persone che si conoscono, questa
+voce è bloccante**: non «al lancio», non «quando saremo tanti» — quella
+variabile. È lo stesso interruttore di `T-46` e della scelta registrata in
+`Q-12`.
+
+**La catena di `CLAUDE.md`**: `security` ha trovato → tocca ad `api` correggere
+→ `test` per la regressione. I test che servono, già scritti nell'audit: A
+chiede l'analisi di una chiave di B → 4xx **e nessun capo creato** (si guarda il
+repository, non solo lo status); una firma emessa da `url_lettura` **non** è
+accettata da `_foto_put`.
+
+### T-46 — Un URL firmato di lettura di una foto vale anche come **scrittura**
+
+**Trovata** il 2026-09-23 costruendo l'esportazione, guardando se fosse sicuro
+metterne uno dentro un file che l'utente può girare a chiunque. Non lo è.
+
+`local_server._firma_valida(chiave, query)` è **la stessa funzione** per
+`_foto_get` (riga 174) e `_foto_put` (riga 160): entrambe chiamano
+`firma_foto.firma_valida` sullo stesso messaggio `f"{chiave}:{scade}"`. Non c'è
+niente, nel firmato, che dica se quell'indirizzo era per leggere o per
+scrivere.
+
+**Conseguenza.** `url_lettura` firma a **sette giorni** (`adapters/filesystem.py`),
+e quell'indirizzo sta dentro ogni `Capo` che l'app riceve. Chi lo intercetta —
+o chi legge la cronologia del browser, o un log di proxy — può fare `PUT` su
+quella chiave per una settimana, cioè **sostituire la foto di un capo**. Il
+docblock di `url_lettura` afferma il contrario: *«Il rischio che questo apre è
+indovinare una chiave firmata, non scriverla: la PUT anonima resta chiusa da
+`scade_in_s` corto»*. Vale per l'URL di upload, che è corto; **non** per quello
+di lettura, che è lungo e passa dalla stessa verifica.
+
+**Rimedio**, ed è lo stesso schema già applicato una volta in questo repo il
+giorno in cui la voce è stata scritta: una **separazione di contesto** nel
+messaggio firmato — `firma_foto(chiave, scade, segreto, verbo)`, con `verbo` in
+`{"GET", "PUT"}` dentro l'HMAC. Una firma di lettura smette di valere per la
+PUT senza cambiare niente di come si costruiscono gli URL.
+`domain/esportazione.py` lo fa già con `_CONTESTO`, e i suoi test mostrano cosa
+prova una separazione che funziona.
+
+**Precede questa voce**: non è nata con l'esportazione, è di quando le foto
+hanno avuto una firma. L'esportazione **non la allarga** — `senza_url_firmati`
+toglie gli indirizzi dal `dati.json`, e c'è un gate che pretende che in
+quell'archivio non compaia mai `firma=`.
+
+**Quando diventa urgente:** insieme a `T-47`, e per lo stesso motivo — chi
+sfrutta questa firma deve prima ottenerla, e oggi gli URL delle foto circolano
+solo fra gli account di `EMAIL_AMMESSE`, che sono le persone che lavorano al
+progetto. **Il segnale è quella variabile**, non una data (`Q-12`).
+
+**Va data a `security`** prima che a `api`: la catena di `CLAUDE.md` è
+finding → `security` (trova) → `api` (corregge) → `test` (regressione).
+
+### T-45 — L'esportazione è sincrona, e ha un tetto che nessuno dichiara
+
+**Trovata** il 2026-09-23 costruendo «Scarica i tuoi dati».
+
+`GET /esportazione` compone lo zip **dentro la richiesta**: legge ogni foto
+dall'archivio, la comprime e la scrive. Su un armadio piccolo è istantaneo. Su
+uno grande ci sono due tetti, e nessuno dei due parla:
+
+1. **`write_timeout 150s`** nel `Caddyfile` — è lì per l'analisi di una foto, e
+   vale per tutte le risposte dell'host. Oltre quello il download si tronca: il
+   browser mostra uno zip corrotto, e l'utente non sa perché.
+2. **La memoria.** `componi_esportazione` costruisce l'archivio in un
+   `BytesIO`: tutte le foto di un utente stanno in RAM contemporaneamente, due
+   volte (i byte letti e lo zip). Su un VPS piccolo è il vincolo che morde
+   prima del tempo.
+
+**Perché va bene adesso e non per sempre.** `ThreadingHTTPServer` dà a ogni
+richiesta il suo thread, quindi un'esportazione lenta non blocca le altre —
+verificato, è la classe che `local_server.main()` istanzia. E un armadio
+realistico oggi è decine di foto, non migliaia.
+
+**Il rimedio, quando servirà**, in ordine di costo: scrivere lo zip in streaming
+sul socket invece che in un `BytesIO` (toglie il tetto di memoria, non quello
+di tempo); poi, se serve ancora, renderla asincrona — ma quella strada
+**rimette in piedi il problema che il disegno attuale evita**, cioè una copia
+dei dati in giacenza da far scadere e da cancellare insieme all'armadio. Non
+si prende senza rileggere `docs/PROGRESS.md` su questa fetta.
+
+**Cosa non fare intanto:** alzare `write_timeout` nel `Caddyfile`. È un
+tampone, e quel file porta modifiche non committate dell'utente.
+
+### T-44 — `Taglia` conosce solo le lettere, e il sistema di taglie non le cambia
+
+**Aperta il:** 2026-09-23, scrivendo `Misure`. **Decisione prima del lavoro:**
+`D-09` in `docs/DOMANDE_APERTE.md` — questa voce è il come, non il se.
+
+`Misure` chiede due cose che non si parlano: `sistema_taglie`
+(donna/uomo/unisex) e `taglia` (XS…XL). Ma le lettere sono le stesse in tutti e
+tre i sistemi, quindi oggi la prima domanda **non cambia la seconda**: l'app
+chiede una cosa e poi non la usa. È il deck che semplifica — nelle sue schede i
+cinque bottoni sono identici sotto tutti e tre i sistemi.
+
+**Il rimedio ha due forme, e `D-09` sceglie quale.** O i valori ammessi
+dipendono dal sistema — e allora `Taglia` non è più una enum piatta, ma una
+mappa `SistemaTaglie → valori`, con la validazione che ci va dietro. O la
+domanda sul sistema serve ad altro (come si parla dei capi, non come si
+misurano) e allora va detto nell'occhiello invece che lasciato implicito.
+
+**Perché la enum e non un `str` libero**, visto che la enum è quella che poi
+costa: un `str` avrebbe fatto entrare «medium», «42» e «M» come tre valori
+diversi della stessa taglia, e nessuno li avrebbe normalizzati mai più. E il
+verso in cui si sbaglia conta: allargare una enum a `str` **lascia valide le
+righe già scritte** in `profili.dati`, mentre stringere un `str` a enum le
+invalida. Il costo di questa voce è un cambio di contratto — tre file generati
+e un typecheck — non una migrazione.
+
+### T-43 — `linee.chevron` **è** `testoSu.chiaro.debole`, scritto due volte
+
+**Trovata** il 2026-09-23 mentre `RigaImpostazione` veniva sganciata dal fondo
+fisso. Entrambi valgono `velo(colori.inchiostro, 0.45)` — non due numeri simili:
+la stessa espressione, copiata.
+
+È esattamente la classe che `test/convenzioni/colori.test.ts` esiste per
+rifiutare (`T-19`/`T-20`), e il gate **non la vede**: legge `app/` e `src/` con
+l'AST cercando letterali di colore, e `src/tema/tokens.ts` è l'unico file che
+esenta — necessariamente, perché è lì che i colori si scrivono. Quindi il
+duplicato vive nell'unico posto dove nessuno lo controlla.
+
+**Rimedio** (toglie righe, non ne aggiunge): cancellare `linee.chevron` e
+lasciare che i tre punti che lo usano — `src/ui/righe.tsx:68`,
+`app/(tabs)/profilo.tsx:120`, e la sua stessa definizione — leggano
+`testoSu[fondo].debole`. Fatto per `RigaImpostazione` in questa passata: gli
+altri due restano, e finché restano il token resta.
+
+**Perché non l'ho tolto subito.** `profilo.tsx:120` è dentro una riga che
+disegna il chevron a mano invece di usare `RigaNavigabile`: toglierlo bene vuol
+dire capire perché quella riga esiste, e non è il lavoro di adesso. Toglierlo
+male vuol dire sostituire un token con un altro token e lasciare il chevron
+disegnato a mano — cioè spostare il problema.
+
+### T-42 — «La riprovo io appena il servizio torna» non esiste, e non va scritta finché non esiste
+**Chiesto dall'utente il 2026-09-23**, a voce, mentre si decideva la schermata
+d'errore della fase 3: *«se non va lo stesso a buon fine diciamo all'utente che
+la foto la abbiamo e faremo noi un tentativo appena sarà di nuovo
+disponibile»*.
+
+**Cosa è stato fatto, perché è vero.** La schermata dice «La foto ce l'ho già:
+riprovare non la ricarica», e il bottone «Riprova» chiama `analizzaCaricata`,
+che riparte da `avviaAnalisi` sulla chiave esistente. La foto **è** sul server:
+sale per URL firmato prima che il modello la guardi.
+
+**Cosa non è stato fatto, e perché non è stato scritto lo stesso.** Il tentativo
+*automatico* «appena il servizio torna» non ha niente dietro: non esiste una
+tabella dei tentativi in sospeso, non esiste un processo che li ripesca, e la
+chiave della foto vive solo nello stato di una schermata React — chiusa l'app,
+è persa. Scriverlo in interfaccia sarebbe una promessa che nessuno mantiene,
+e l'utente scoprirebbe domani che la foto non è mai diventata un capo.
+
+**La frase è scelta: «ci penso io, anche se chiudi»** (utente, 2026-09-23).
+Cioè il tentativo lo rifà il **server**, non l'app al prossimo avvio. Questo è
+lavoro di fase 5, con la catena obbligata `domain/models.py` →
+`npm run contracts:generate` → app, e **non si comincia senza un accordo**.
+
+**Cosa serve, verificato nel codice il 2026-09-23:**
+
+1. **La chiave della foto nell'esito.** `handlers/analisi.py:63,71` salva un
+   `EsitoAnalisi` fallito con `esecuzione_id`, `stato` ed `errore` — e basta:
+   `richiesta.chiave_foto` esiste nello scope ma viene scartata. Senza,
+   riprovare è impossibile: non si sa quale foto guardare.
+
+2. **Sapere di chi è.** `analisi_esiti` è `(esecuzione_id, dati jsonb,
+   creato_il)`, e il commento di `0005_analisi_esiti.sql` dichiara la scelta:
+   *«Riga per esecuzione, non per utente: l'`esecuzione_id` è già univoco e non
+   c'è bisogno di sapere di chi è per rispondere al polling»*. Quel «non c'è
+   bisogno» **smette di essere vero** appena si vogliono elencare i falliti di
+   qualcuno.
+   `utente_id` **non va dentro `dati`**: sarebbe un filtro su jsonb senza
+   indice, contro la regola dello schema ibrido (colonne vere solo per ciò su
+   cui si filtra o si ordina). Serve una **migrazione** — `0010_`, la prossima
+   libera — con `utente_id text` e `stato text` come colonne vere più il loro
+   indice, nullable e idempotente come impone `.claude/rules/migrazioni.md`.
+   E `utente_id` **non va nel modello `EsitoAnalisi`**: quel modello sta in
+   `RISPOSTE`, quindi finirebbe in TypeScript e nella risposta al client. Va
+   passato a parte: `salva_esito_analisi(utente_id, esito)`.
+
+3. **Una rotta che li elenchi** — `GET /capi/analisi/fallite` — più la sua riga
+   in `ROTTE` (`handlers/local_server.py`), o l'endpoint esiste e non risponde.
+
+4. **Chi riprova.** Un processo periodico lato server. **È il pezzo che non
+   esiste per niente**: oggi il backend non ha nessuno scheduler, nessun worker,
+   nessun cron. `docker-compose.yml` ha un servizio solo. Questa è la parte più
+   grossa delle quattro, ed è quella che la stima non deve sottovalutare.
+
+**Fino ad allora la schermata non promette niente che non faccia:** dice che la
+foto è già sul server — vero — e offre «Riprova» subito.
+
+### T-41 — `in_lavaggio` non era impostabile da nessuna parte (trovata **e chiusa**)
+`StatoCapo` ha tre valori — `pulito`, `da_lavare`, `in_lavaggio` — e tutti e tre
+erano già veri ovunque: nell'enum del backend, in `ETICHETTE.stato` con la resa
+italiana «In lavatrice», e nel filtro dell'armadio, che mostra fra i «da lavare»
+tutto ciò che non è pulito.
+
+**Ma nessun punto dell'app impostava `in_lavaggio`.** `app/capo/[id].tsx` era
+l'unica schermata che chiama `cambiaStato` su un capo — verificato con un grep
+su `app/` e `src/` — e lo faceva con un interruttore solo:
+
+```
+onPress={() => cambiaStato(capo.id, capo.stato === 'pulito' ? 'da_lavare' : 'pulito')}
+```
+
+Due valori raggiungibili su tre. L'etichetta diceva «In lavatrice» quando il
+capo *non* era pulito, quindi il terzo stato si poteva **leggere** ma non
+**scrivere**: un valore di dominio che esiste dappertutto tranne che nel punto
+in cui lo si sceglierebbe.
+
+**Chiusa il 2026-09-23**: i tre stati sono tre pillole, e l'elenco viene da
+`VALORI_STATO_CAPO` (`@wardrobe/contracts`), non ridigitato — così un valore
+nuovo nell'enum del backend compare da sé invece di restare irraggiungibile
+un'altra volta.
+
+**Nessun gate lo impedisce**, e va detto: «ogni valore di un'enum è
+raggiungibile dall'interfaccia» non è un invariante che si sappia verificare
+staticamente. Quello che c'è adesso è l'elenco preso dalla fonte, che è la metà
+del problema — la metà che conta.
+
+### T-40 — La barra delle schede fuori dal navigatore (**fatta**)
+**Chiusa il 2026-09-23.** `BarraSchede` sta in `src/ui/guscio.tsx` ed è montata
+una volta in `app/_layout.tsx`, sopra lo `Stack`; `(tabs)/_layout.tsx` passa
+`tabBar={() => null}` — non l'assenza della prop, o il navigatore disegnerebbe
+la sua barra di sistema sotto la nostra.
+
+`schedaDi(percorso)` decide **due** cose: quale scheda si accende, e se
+`Schermata` riserva lo spazio in fondo. La prop `tab` è stata **tolta** da tutti
+e cinque i suoi chiamanti: era un promemoria che ogni schermata doveva
+ricordarsi, e da oggi non basterebbe più comunque — anche una rotta spinta sopra
+le schede ha la barra sotto.
+
+Il «+» porta a «Carica» **da ovunque**, anche da una schermata che non è una
+scheda: scelta dell'utente del 2026-09-23.
+
+Il gate è `test/convenzioni/navigazione.test.ts`, **visto rosso per davvero**
+capovolgendo la mappa in «tutto tranne»: cinque casi rossi, fra cui `/accedi`,
+`/registrati` e il banco 3D.
+
+### T-39 — `MotiviProposta` non ha più lettori
+Era usata **solo** dalla lista di proposte di `app/suggeritore.tsx`, rimossa il
+2026-09-22 (`Q-10`). Oggi la primitiva esiste e nessuno la monta: `oggi.tsx`
+mostra il primo «perché» come testo semplice, non l'elenco.
+
+**Aggiornata il 2026-09-23: il lettore non è arrivato.** La disposizione
+`dettaglio` del deck non ha un elenco di motivi — ha «STA BENE CON», che è una
+striscia di miniature, e nell'app resta «Altri capi del tuo armadio».
+
+Il lettore vero è **`app/(tabs)/oggi.tsx`**: il deck ci disegna «IL CONSIGLIO»
+con i motivi a pallino, che è esattamente questa forma. Oggi quella schermata
+mostra **solo il primo** `perche` come testo semplice.
+
+Quindi la scadenza si sposta, e resta una scadenza vera: **se la fetta che porta
+«Oggi» sulla disposizione del deck non monta `MotiviProposta`, la primitiva si
+toglie.** Una forma senza consumatori è codice morto che il prossimo agente
+legge come se fosse in uso.
+
+### T-38 — Il rename a «Aura» degli identificatori (deciso, non ancora fatto)
+**Deciso dall'utente il 2026-09-22** (`Q-06` in `docs/QUESTIONI.md`): il rename
+arriva anche a pacchetti, cartelle e tabelle. I **testi visibili** e
+`app.json → name` sono già cambiati; tutto il resto no, ed è lavoro a sé.
+
+Cosa resta, in ordine di rischio crescente:
+
+| Cosa | Nota |
+|---|---|
+| gli scope npm `@wardrobe/contracts`, `@wardrobe/mobile` | tocca ogni `import` e il lockfile; niente si vede da fuori |
+| le cartelle e il nome del repo | tocca i remote, i filtri `paths:` dei due workflow e i percorsi in `docs/deploy.md` |
+| i nomi dei container e dei volumi | ricreare un volume **perde i dati**: va fatto con una procedura, non con un `sed` |
+| le tabelle SQL | una migrazione di rename dev'essere idempotente come tutte le altre (`.claude/rules/migrazioni.md`) |
+| `app.json` → `slug`, `scheme` | lo `slug` tocca il progetto EAS; lo `scheme` rompe i deep link già in giro |
+| `bundleIdentifier` iOS e `android.package` (`com.wardrobe.armadio`) | **non è un rename**: è l'identità dell'app per lo store. Cambiarlo pubblica un'app nuova e chi ha la vecchia non riceve più aggiornamenti. Probabilmente **non va toccato**, e la decisione è dell'utente |
+
+**Non farlo dentro il redesign**: va in una PR sua, e l'ultima riga va
+contrattata prima, non dopo. Va aperta una issue — `gh` non era raggiungibile
+nella sessione in cui questa voce è stata scritta (il server MCP di GitHub
+rispondeva 400), quindi la voce resta qui finché la issue non esiste.
+
+### T-37 — Il calendario mostrava sei giorni per riga (trovata **e chiusa**)
+**Trovata il:** 2026-09-22 · **Dove:** `apps/mobile/src/tema/tokens.ts`, `griglie.mese` · **Gravità:** media · **Chi:** `mobile` · **Pre-esistente**
+
+`griglie.mese` chiedeva `7 × 13.1% + 6 × 6px` di distanza. La larghezza utile di
+`Schermata` è lo schermo meno due `spazi.xl`, quindi la riga entrava solo con
+434px utili — **uno schermo da 478pt, che non esiste**. In React Native
+`flexShrink` vale **0** di default (al contrario del web): la settima cella non
+si stringeva per entrare, andava a capo. Risultato su ogni telefono: sei giorni
+per riga, con le lettere `L M M G V S D` disallineate rispetto ai numeri sotto.
+
+Nessuno strumento lo vedeva: non è un errore, non è un avviso, non è un tipo
+sbagliato. Trovata mentre si scriveva il conto per la griglia dell'armadio a tre
+colonne, dove lo stesso errore stava per essere introdotto da capo (`31.4%`
+lasciava **0.0px** a 320pt).
+
+**Chiusa nella stessa modifica** perché la regola di `.claude/rules/ci-release.md`
+è che un gate non si accende rosso: `griglie.mese.colonna` passa a `12.2%` e
+`griglie.armadio.colonna` a `30.8%`, poi si accende
+`test/convenzioni/griglie.test.ts`. **Il gate è stato visto fallire davvero**:
+rimesso `13.1%`, i sette casi del mese diventano rossi su tutte le larghezze
+provate; ripristinato, verdi.
+
+**Cosa resta:** il calendario ora disegna sette colonne un filo più strette, e
+**nessuno l'ha ancora guardato su un telefono** — il conto dice che entra, non
+come si vede.
+
+### T-35 — Due istanze di `three` da una sola copia installata (tampone in piedi)
+**Trovato il:** 2026-09-15 · **Dove il tampone:** `apps/mobile/metro.config.js` (il `resolver.resolveRequest`) · **Gravità:** media · **Chi:** `mobile`
+
+Sintomo: «`THREE.WARNING: Multiple instances of Three.js being imported`»
+all'avvio del banco `app/dev/prova-3d.tsx`.
+
+**Non è il caso di `T-23`**: la copia installata è **una sola**. `find` ne trova
+una (`node_modules/three`) e `npm ls three --all` la dà `deduped`. A duplicarsi è
+la *risoluzione*, non l'installazione.
+
+Prima cosa fatta, e da non rifare al contrario: `three` era stato dichiarato
+**anche in `dependencies` di root**, per analogia con il rimedio di `T-23`. Lì
+serviva perché decine di pacchetti hoisted chiedono `react` come peer con `*` e
+npm, senza una risposta in root, installava l'ultima. Qui il peer è **uno solo**
+— `@react-three/fiber`, con `>=0.156`, soddisfatto dal pin esatto di
+`apps/mobile` — quindi quella riga non impediva niente: tolta, `npm install`
+lascia sempre una copia sola, hoistata in `node_modules/three`. Non va
+reintrodotta pensando di curare questo warning: non lo tocca.
+
+La catena vera è un'altra:
+
+1. `three` pubblica due build della stessa libreria e le distingue con le sole
+   condizioni `import`/`require` del campo `exports` — **nessuna `default`,
+   nessuna `react-native`**;
+2. Metro asserisce quella condizione **per modulo importatore**, non una volta
+   per pacchetto: `context.isESMImport === true ? 'import' : 'require'`, in
+   `metro-resolver/src/utils/matchSubpathFromExportsLike.js`;
+3. Expo lascia `unstable_conditionNames` a `[]` (verificato stampando la config
+   risolta), quindi niente sovrascrive quella scelta;
+4. `@react-three/fiber` non ha un campo `exports`, e per android/ios
+   `resolverMainFields` vale `['react-native','browser','main']` — senza
+   `module`. Il suo entry `/native` è quindi il **CJS**, e chiede `require`.
+
+Risultato: fiber prende `build/three.cjs`; l'app e i file dentro
+`three/examples/jsm/` (ESM, perché `three` è `"type": "module"`) prendono
+`build/three.module.js` + `build/three.core.js`. Due istanze in un bundle.
+
+**Solo sul nativo.** Sul web i main field arrivano all'entry ESM di fiber
+(`react-three-fiber-native.esm.js`), tutto converge già su `three.module.js` e
+l'istanza era una sola anche prima — verificato confrontando le source map dei
+due bundle web. Il punto 4 è quindi l'anello che rompe, e vale per l'APK: la
+piattaforma su cui il banco gira davvero.
+
+Il danno non è il warning: è che le mesh che `GLTFLoader` costruisce vengono da
+una `three` e il renderer che le monta sotto `<primitive>` dalla **`instanceof`
+di un'altra**. Più ~2 MB di sorgente duplicato (528 KB di bytecode Hermes sul
+bundle Android — misurato **con `--no-minify`**, come il comando di ricontrollo
+qui sotto; l'APK passa da EAS che minifica, quindi il risparmio reale è un
+altro numero. La minificazione non cambia la risoluzione: a discriminare è
+l'elenco dei moduli, non i byte).
+
+**Il tampone**: un `resolveRequest` che, per il solo `moduleName === 'three'`,
+forza `isESMImport: false` — così ogni richiesta finisce sul ramo `require`.
+Narrow di proposito: `unstable_conditionNames = ['require']` o l'aggiunta di
+`'module'` a `resolverMainFields` avrebbero riscritto la risoluzione di **ogni**
+pacchetto del grafo per un problema che ne riguarda uno.
+
+Non è ristretto al nativo pur essendo un difetto del nativo: «`three` è sempre la
+build CJS» si spiega in una riga, «`three` è CJS sul telefono ed ESM sul web» no
+— e su web il pin è comunque innocuo (una istanza prima, una dopo) e toglie
+83 KB dal bundle. Se un domani quel verso desse problemi sul web, la
+restrizione è `platform !== 'web'`, non un secondo tampone.
+
+**Perché è un tampone e non un rimedio:** togliendolo, il problema torna. La
+causa è a monte e da qui non si raggiunge.
+
+**Cosa serve (e cosa cancellare quando arriva):** basta **una** delle tre, e in
+tutti i casi le righe del `resolveRequest` in `metro.config.js` vanno **tolte**,
+non lasciate accanto al rimedio:
+
+- `three` aggiunge una chiave `default` (o `react-native`) al suo `exports`, che
+  farebbe convergere i due rami — è l'anomalia vera, un `exports` con solo
+  `import`/`require` non è risolvibile da un bundler che non asserisce da sé;
+- `@react-three/fiber` pubblica un campo `exports`, o Expo aggiunge `module` a
+  `resolverMainFields`, così l'entry `/native` smette di essere CJS;
+- Expo popola `unstable_conditionNames` per le piattaforme native.
+
+**Da ricontrollare a ogni bump di `three` o di `@react-three/fiber`**, con il
+comando che ha prodotto la misura qui sopra:
+
+```bash
+npx expo export --platform android --output-dir /tmp/x --no-minify --source-maps
+jq -r '.sources[] | select(startswith("/node_modules/three"))' /tmp/x/_expo/static/js/android/*.map
+```
+
+Deve comparire `build/three.cjs` e **non** `build/three.module.js`.
+
+### T-36 — Il banco `app/dev/prova-3d.tsx` è una rotta, e viaggia nell'APK rilasciato
+**Trovato il:** 2026-09-15 · **Dove:** `apps/mobile/app/dev/prova-3d.tsx` · **Gravità:** bassa · **Chi:** `mobile`
+
+`main` è `expo-router/entry`: ogni file sotto `app/` è una **rotta**, anche senza
+un link che ci porti. `app/dev/prova-3d.tsx` compare infatti nella source map del
+bundle Android — quello che `mobile.yml` impacchetta nell'APK della Release — e
+si tira dietro `three` e `@react-three/fiber` (~2 MB di sorgente anche dopo
+`T-35`). Lo stesso vale per il `build:web` di CI, che però è solo un check: non
+c'è un sito pubblicato.
+
+Non è una violazione: `.claude/rules/react-native.md` vieta i **test** sotto
+`app/`, non una schermata di sviluppo, e il docblock del file dichiara già che è
+temporanea. È un costo che conviene sapere, non un difetto.
+
+**Cosa serve:** decidere se il banco va tolto a Cancello 1 chiuso (è la via
+naturale: il file nasce dichiarato temporaneo), oppure — se serve tenerlo — se
+vale la pena escluderlo dai build di rilascio. Non c'è una scelta ovvia finché
+il Cancello 1 non ha risposto, quindi la voce sta qui e non in una issue.
 
 ---
 

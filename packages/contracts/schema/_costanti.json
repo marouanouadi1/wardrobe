@@ -1,5 +1,19 @@
 {
   "SOGLIA_INCERTEZZA": 86,
   "SOGLIA_SCARTO": 60,
-  "MESI_PER_DORMIENTE": 6
+  "MESI_PER_DORMIENTE": 6,
+  "LIMITI_MISURE_CM": {
+    "altezza": {
+      "min": 120,
+      "max": 230
+    },
+    "spalle": {
+      "min": 30,
+      "max": 70
+    },
+    "lunghezza_gamba": {
+      "min": 50,
+      "max": 120
+    }
+  }
 }

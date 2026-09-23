@@ -12,13 +12,13 @@
  * è lo stesso velo d'inchiostro che cambia densità.
  *
  * C'è una seconda ragione, di grammatica. Lo sweep in quest'app è già preso: è
- * la barra di `AttesaLunga` (`ui/stati.tsx`), in ambra, e vuol dire una cosa
+ * la barra di `AttesaLunga` (`ui/stati.tsx`), in primario, e vuol dire una cosa
  * sola — il modello di visione o lo stilista stanno lavorando. La pulsazione
  * grigia vuol dire l'altra — stanno arrivando dei dati. Se le due attese si
- * somigliassero, il segnale ambra smetterebbe di significare qualcosa.
+ * somigliassero, quel segnale smetterebbe di significare qualcosa.
  *
  * Da lì discende l'invariante di questo file, verificabile con un grep:
- * **`colori.ambra` non compare mai qui**, nemmeno negli scheletri delle
+ * **`colori.primario` non compare mai qui**, nemmeno negli scheletri delle
  * schermate che poi mostreranno una proposta dell'IA. Quando l'attesa è
  * davvero il modello, la schermata mostra `AttesaLunga` — non tinge lo
  * scheletro. `app/(tabs)/oggi.tsx` ha le due attese distinte e in sequenza:
@@ -31,6 +31,7 @@
 import { useEffect, useState } from 'react'
 import { Animated, View, type DimensionValue, type StyleProp, type ViewStyle } from 'react-native'
 import { colori, curve, durate, griglie, ombre, raggi, spazi, superfici } from '../tema/tokens'
+import { Scheda } from './base'
 import { SchedaFoto } from './capi'
 import { useFondo, type Su } from './fondo'
 
@@ -124,7 +125,7 @@ export function ScheletroProposta({
   return (
     // Prima questa `SchedaFoto` non riceveva `su` (né `sfondo`) — restava
     // sempre bianca — mentre i `Blocco` dentro sì: con `su="scuro"`
-    // disegnavano un velo di crema sopra una scheda bianca, e sparivano.
+    // disegnavano un velo di bianco sopra una scheda bianca, e sparivano.
     // `ScheletroSchedaOutfit` qui sotto è la stessa forma e lo fa giusto:
     // stesso velo (`superfici.suScuro.riga`) di una `Scheda` scura — questo
     // scheletro sta già su una `Schermata` scura, non è un rettangolo scuro
@@ -181,7 +182,7 @@ export function ScheletroRigaProposta({ su }: { su?: Su }) {
 }
 
 /**
- * L'armadio in griglia, a due colonne. Le misure vengono da `griglie.armadio`
+ * L'armadio in griglia, a tre colonne. Le misure vengono da `griglie.armadio`
  * e non sono ridigitate qui: è l'unico modo perché il passaggio
  * scheletro→capi non sposti nulla.
  */
@@ -196,8 +197,17 @@ export function ScheletroGrigliaCapi({
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: griglie.armadio.distanza }}>
       {Array.from({ length: quanti }, (_, indice) => (
-        <View key={indice} style={{ width: griglie.armadio.colonna }}>
-          <Blocco altezza={griglie.armadio.altezzaFoto} raggio={griglie.armadio.raggio} su={su} />
+        <View key={indice} style={{ width: griglie.armadio.colonna, gap: griglie.armadio.distanzaNome }}>
+          <Blocco
+            raggio={griglie.armadio.raggio}
+            su={su}
+            style={{ aspectRatio: griglie.armadio.proporzione }}
+          />
+          {/* La riga del nome, che nella tessera vera sta sotto il quadrato:
+              senza, al momento dello scambio la griglia si accorcia. L'altezza
+              non è a occhio: è l'interlinea vera di quel `<Forte>`, e viene
+              da `griglie` come tutto il resto della tessera. */}
+          <Blocco larghezza="75%" altezza={griglie.armadio.altezzaNome} raggio={4} su={su} />
         </View>
       ))}
     </View>
@@ -205,42 +215,44 @@ export function ScheletroGrigliaCapi({
 }
 
 /**
- * Un outfit salvato: la striscia di foto e la fascia con nome e freccia.
+ * Un outfit salvato: la riga di tessere quadrate, poi il nome e la riga di
+ * riepilogo. Le misure vengono da `griglie.outfit` — le stesse che legge
+ * `SchedaOutfit` — e le due altezze di testo sono le interlinee vere di quei
+ * due componenti, non numeri scelti a occhio: al momento dello scambio la
+ * lista non deve accorciarsi.
  *
- * Dentro la stessa `SchedaFoto` della card vera (`app/outfit.tsx`) — non una
+ * La cornice è una `Scheda vetro`, la stessa della scheda vera: non una
  * cornice ricostruita a mano una seconda volta.
  */
 export function ScheletroSchedaOutfit({ su }: { su?: Su }) {
-  const ereditato = useFondo()
-  const fondo = su ?? ereditato
-  const scura = fondo === 'scuro'
+  const g = griglie.outfit
   return (
-    <SchedaFoto
-      su={fondo}
-      sfondo={scura ? superfici.suScuro.riga : undefined}
-      ombra={scura ? 'nessuna' : 'scheda'}
-    >
-      {/* Un blocco solo, non quattro accostati: nella scheda vera le foto sono
-          a filo, senza spazio in mezzo — quattro rettangoli senza separazione
-          sono un rettangolo. `raggio={0}` perché a smussare ci pensa
-          l'`overflow: 'hidden'` di `SchedaFoto`. */}
-      <Blocco altezza={250} raggio={0} su={fondo} />
+    <Scheda vetro imbottitura={spazi.m}>
+      <View style={{ flexDirection: 'row', gap: g.distanza }}>
+        {Array.from({ length: g.quante }, (_, indice) => (
+          <Blocco
+            key={indice}
+            raggio={g.raggioTessera}
+            su={su}
+            style={{ flex: 1, aspectRatio: g.proporzione }}
+          />
+        ))}
+      </View>
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           gap: spazi.m,
-          paddingHorizontal: 16,
-          paddingVertical: 15,
+          marginTop: spazi.m,
         }}
       >
-        <View style={{ flex: 1, minWidth: 0, gap: 7 }}>
-          <Blocco altezza={17} larghezza="62%" raggio={raggi.piccolo} su={fondo} />
-          <Blocco altezza={11} larghezza="86%" raggio={raggi.pillola} su={fondo} />
+        <View style={{ flex: 1, minWidth: 0, gap: spazi.xs }}>
+          <Blocco altezza={g.altezzaNome} larghezza="62%" raggio={raggi.piccolo} su={su} />
+          <Blocco altezza={g.altezzaMeta} larghezza="86%" raggio={raggi.pillola} su={su} />
         </View>
-        <Blocco larghezza={46} altezza={46} raggio={raggi.pillola} su={fondo} />
+        <Blocco larghezza={44} altezza={44} raggio={raggi.pillola} su={su} />
       </View>
-    </SchedaFoto>
+    </Scheda>
   )
 }
 

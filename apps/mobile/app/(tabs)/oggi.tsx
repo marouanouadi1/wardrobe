@@ -33,11 +33,11 @@ import {
   Scheda,
   Toccabile,
 } from '../../src/ui/base'
-import { SchedaFoto } from '../../src/ui/capi'
+import { SchedaFoto, SlotMancanti } from '../../src/ui/capi'
 import { ScheletroProposta, ScheletroRigaProposta } from '../../src/ui/scheletri'
 import { Corpo, Etichetta, Forte, Titolo } from '../../src/ui/testo'
 import { Schermata } from '../../src/ui/guscio'
-import { AttesaLunga, Errore, MESSAGGI_SUGGERIMENTI, Vuoto } from '../../src/ui/stati'
+import { AttesaLunga, MESSAGGI_SUGGERIMENTI, SenzaRete, Vuoto } from '../../src/ui/stati'
 
 const SCORCIATOIE = ['Ho una cena', 'Fa freddo', 'Solo capi puliti', 'Sorprendimi']
 
@@ -107,7 +107,7 @@ export default function Oggi() {
       occhiello={`Buongiorno${nome ? `, ${nome}` : ''}`}
       titolo="Cosa metto oggi"
       fotoProfilo={profilo?.foto_url}
-      tab
+      tavolozza="caldo"
     >
       {erroreCaricamento ? (
         // Lo stato che prima non esisteva: un server irraggiungibile non è
@@ -116,13 +116,7 @@ export default function Oggi() {
         // (com'era già nel banner `Avviso` di prima), ma qui non lo mostriamo:
         // un errore di rete non è un contenuto per l'utente — stessa regola
         // del default di `StatoRisorsa` in `ui/stati.tsx`.
-        <>
-          <Errore
-            titolo="Non riesco a leggere il tuo armadio"
-            spiegazione="Controlla che il backend sia raggiungibile e riprova."
-          />
-          <BottonePrimario testo="Riprova" onPress={() => void ricarica()} />
-        </>
+        <SenzaRete onRiprova={() => void ricarica()} />
       ) : armadioVuoto ? (
         // Niente da proporre e niente da chiedere: la barra e le scorciatoie
         // presuppongono un armadio, e chiedere «cosa metto» senza capi non
@@ -155,17 +149,27 @@ export default function Oggi() {
           ) : null}
 
           {pronto && disponibili.length > 0 && mancanti.length > 0 ? (
-            <>
-              <Vuoto
-                titolo={
-                  mancanti.length === 1
-                    ? `Ti manca un ${ETICHETTE.slot[mancanti[0]!].toLowerCase()}`
-                    : 'Ti serve un sopra e un sotto'
-                }
-                spiegazione="Per comporre un outfit mi serve almeno un sopra e un sotto, oppure un abito."
+            // «Mi manca un pezzo» del deck. Prima era un `Vuoto` con una frase:
+            // diceva *che* mancava qualcosa, non **cosa c'è già** — e chi ha
+            // caricato due capi non sa se è a un passo o a metà strada.
+            <Scheda vetro imbottitura={spazi.l} style={{ gap: spazi.m }}>
+              <Titolo taglia="sezione">
+                {mancanti.length === 1
+                  ? `Ti manca un ${ETICHETTE.slot[mancanti[0]!].toLowerCase()}`
+                  : 'Ti serve un sopra e un sotto'}
+              </Titolo>
+              <Corpo taglia="minuto" tono="medio">
+                Per comporre un outfit mi serve almeno un sopra e un sotto, oppure un abito.
+              </Corpo>
+              <SlotMancanti mancanti={mancanti} />
+              <BottonePrimario
+                testo={`Aggiungi un ${ETICHETTE.slot[mancanti[0]!].toLowerCase()}`}
+                onPress={() => router.push('/(tabs)/carica')}
               />
-              <BottonePrimario testo="Aggiungi un capo" onPress={() => router.push('/(tabs)/carica')} />
-            </>
+              <Corpo taglia="micro" tono="tenue" style={{ textAlign: 'center' }}>
+                Da cinque capi in su comincio a variare davvero.
+              </Corpo>
+            </Scheda>
           ) : null}
         </>
       )}
@@ -213,8 +217,8 @@ export default function Oggi() {
                 nome="ricarica"
                 misura={52}
                 misuraIcona={19}
-                // Non ambra: questo pulsante scorre fra proposte già arrivate,
-                // non fa parlare il modello di nuovo — la regola di `tokens.ts`.
+                // Non il primario: questo pulsante scorre fra proposte già
+                // arrivate, non fa parlare il modello di nuovo.
                 sfondo={linee.tenue}
                 colore={colori.inchiostro}
                 onPress={() =>
@@ -231,7 +235,7 @@ export default function Oggi() {
         // ora è lo stilista (`POST /suggerimenti`, una chiamata LLM) a
         // comporre la proposta. `AttesaLunga` è onesta sul fatto che non ci
         // sono fasi osservabili — la stessa scelta di `carica.tsx` per
-        // l'analisi di una foto — e qui l'ambra è legittima: è il modello che
+        // l'analisi di una foto — e qui il primario è legittimo: è il modello che
         // sta parlando, non un dato che arriva.
         <Scheda imbottitura={24} style={{ alignItems: 'center', gap: spazi.m }}>
           <Titolo taglia="guida">Sto pensando a cosa metterti</Titolo>
@@ -254,7 +258,7 @@ export default function Oggi() {
               centrato={false}
               forte
               taglia="minuto"
-              colore={colori.ambraMedio}
+              colore={colori.primarioScuro}
               onPress={() => router.push('/suggeritore')}
             >
               Chiedi tu →

@@ -14,6 +14,7 @@ from pydantic import Field
 
 from domain.models import (
     Capo,
+    ContoSvuotamento,
     ConversazioneChat,
     EsitoAnalisi,
     MessaggioChat,
@@ -104,6 +105,28 @@ class ArchivioFoto(Protocol):
         """Scrive un contenuto derivato (es. la foto scontornata), non caricato dall'app."""
         ...
 
+    def elimina_sotto(self, prefisso: str, tranne: frozenset[str] = frozenset()) -> int:
+        """Cancella tutto ciò che sta sotto `prefisso`. Torna quanti file.
+
+        **Per prefisso e non per elenco di chiavi**, ed è una scelta di
+        sicurezza, non di comodità. Le chiavi memorizzate nei capi possono
+        puntare fuori dal sottoalbero di chi chiede — `POST /capi/analisi`
+        accetta una `chiave_foto` arbitraria (`T-47`) — e cancellare per
+        elenco trasformerebbe quel difetto in «cancello i file di un altro»,
+        dentro l'unica operazione che è irreversibile per disegno. Un prefisso
+        non può uscire da sé stesso, qualunque cosa dicano le righe.
+
+        Prende anche le foto caricate che non sono mai diventate un capo
+        (analisi fallita): sono di quella persona lo stesso, e un elenco di
+        chiavi le lascerebbe lì per sempre.
+
+        `tranne` serve a un caso solo, e va nella direzione sicura: la foto
+        dell'avatar vive sotto lo stesso prefisso ma **non** si cancella con
+        l'armadio. Escludere una chiave non può distruggere niente — nel
+        peggiore dei casi protegge un file che andava tolto.
+        """
+        ...
+
 
 @runtime_checkable
 class ServizioScontorno(Protocol):
@@ -128,6 +151,23 @@ class RepositoryArmadio(Protocol):
     def salva_capo(self, utente_id: str, capo: Capo) -> Capo: ...
 
     def elimina_capo(self, utente_id: str, capo_id: str) -> None: ...
+
+    def svuota_armadio(self, utente_id: str) -> ContoSvuotamento:
+        """Cancella **tutto il contenuto** di un utente, in una transazione.
+
+        Capi, outfit, conversazioni coi loro messaggi, e il registro degli usi.
+        **Non** il profilo — misure, preferenze e foto dell'avatar restano: chi
+        svuota per ricominciare non deve reinserire la propria altezza (scelta
+        dell'utente, 2026-09-23). **Non** l'account, che è un'altra operazione.
+        **Non** le segnalazioni, che hanno un lato amministratore e non sono
+        contenuto dell'armadio.
+
+        In una transazione sola, e non per la velocità: a metà strada
+        resterebbero outfit che indossano capi inesistenti, e nessuno saprebbe
+        a che punto si è fermata — un'operazione irreversibile non può avere
+        uno stato intermedio osservabile.
+        """
+        ...
 
     def elenca_outfit(self, utente_id: str) -> list[Outfit]: ...
 

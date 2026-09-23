@@ -21,6 +21,7 @@ import {
   Platform,
   Pressable,
   type PressableProps,
+  StyleSheet,
   TextInput,
   type TextInputProps,
   View,
@@ -28,7 +29,7 @@ import {
   type ViewStyle,
 } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
-import { caratteri, colori, curve, durate, linee, ombre, raggi, spazi, superfici, testoSu, velo } from '../tema/tokens'
+import { caratteri, colori, curve, durate, linee, ombre, raggi, spazi, superfici, testoSu, velature, velo } from '../tema/tokens'
 import { Fondo, useFondo, type Su } from './fondo'
 import { Corpo, Etichetta, Forte, type Taglia } from './testo'
 
@@ -162,7 +163,7 @@ export function BarraChiedi({
           style,
         ]}
       >
-        <Icona nome={icona} misura={17} colore={onInvia ? colori.ambraMedio : velo(colori.inchiostro, 0.45)} spessore={2.2} />
+        <Icona nome={icona} misura={17} colore={onInvia ? colori.primarioScuro : velo(colori.inchiostro, 0.45)} spessore={2.2} />
         <TextInput
           value={valore}
           onChangeText={onCambia}
@@ -174,7 +175,7 @@ export function BarraChiedi({
           style={{ flex: 1, fontFamily: caratteri.testo, fontSize: 14.5, color: colori.inchiostro }}
         />
         {onInvia ? (
-          <BottoneTondo nome="freccia" onPress={onInvia} misura={42} misuraIcona={19} sfondo={colori.ambra} />
+          <BottoneTondo nome="freccia" onPress={onInvia} misura={42} misuraIcona={19} sfondo={colori.primario} />
         ) : null}
       </View>
     </Fondo>
@@ -189,33 +190,48 @@ export function Scheda({
   children,
   style,
   su,
+  vetro,
   sfondo,
   imbottitura = spazi.l,
 }: {
   children: ReactNode
   style?: StyleProp<ViewStyle>
   su?: Su
-  /** Un fondo esplicito, invece della coppia chiara/scura di sempre — l'ambra
-   * tenue del promemoria di `calendario.tsx`, il corallo tenue di `Avviso`.
+  /**
+   * La scheda del deck: bianco traslucido sul gradiente di `SfondoAura`, con
+   * un filo di luce sul bordo. Non è un `sfondo` passato da fuori perché il
+   * colore del testo va calcolato *insieme* al fondo — è la regola di
+   * `.claude/rules/react-native.md`, e la forma esatta della regressione di
+   * PR #4. Il vetro si posa sempre su chiaro: `su="scuro"` con `vetro` non ha
+   * un significato, e `vetro` vince.
+   */
+  vetro?: boolean
+  /** Un fondo esplicito, invece della coppia chiara/scura di sempre — il primario
+   * tenue del promemoria di `calendario.tsx`, il pericolo velato di `Avviso`.
    * Con `sfondo`, `su` resta comunque quello che si dichiara a chi sta dentro
    * (di norma `'chiaro'`, per un fondo tenue). */
   sfondo?: string
   imbottitura?: number
 }) {
-  const fondo: Su = su ?? 'chiaro'
+  const fondo: Su = vetro ? 'chiaro' : (su ?? 'chiaro')
   const scura = fondo === 'scuro'
   return (
     <Fondo su={fondo}>
       <View
         style={[
           {
-            // Una velatura di crema, non l'inchiostro pieno: `Schermata su="scuro"`
+            // Una velatura di bianco, non l'inchiostro pieno: `Schermata su="scuro"`
             // usa già l'inchiostro come fondo pagina — una scheda dello stesso
             // colore ci sparirebbe sopra.
-            backgroundColor: sfondo ?? (scura ? superfici.suScuro.riga : colori.scheda),
+            backgroundColor: vetro
+              ? superfici.vetro
+              : (sfondo ?? (scura ? superfici.suScuro.riga : colori.scheda)),
             borderRadius: raggi.scheda,
             padding: imbottitura,
           },
+          vetro
+            ? { borderWidth: StyleSheet.hairlineWidth, borderColor: superfici.bordo }
+            : null,
           scura ? null : ombre.scheda,
           style,
         ]}
@@ -235,34 +251,41 @@ export function Pillola({
   attiva,
   onPress,
   su,
+  compatta,
 }: {
   testo: string
   attiva?: boolean
   onPress?: () => void
   su?: Su
+  /** La misura minuta della **seconda** riga di filtri dell'armadio. Due file
+   * di pillole identiche si leggono come una lista sola: nel deck la riga
+   * delle categorie e quella delle qualità hanno corpo diverso apposta. */
+  compatta?: boolean
 }) {
   const ereditato = useFondo()
   const fondo = su ?? ereditato
   const scura = fondo === 'scuro'
-  const sfondoAttivo = scura ? colori.ambra : colori.inchiostro
+  const sfondoAttivo = scura ? colori.primario : colori.inchiostro
   return (
     <Toccabile
       onPress={onPress}
       scala={0.95}
       style={{
-        paddingHorizontal: 15,
-        paddingVertical: 9,
+        paddingHorizontal: compatta ? 13 : 15,
+        paddingVertical: compatta ? 7 : 9,
         borderRadius: raggi.pillola,
         borderWidth: 1,
         borderColor: attiva ? sfondoAttivo : scura ? linee.scura : linee.chiara,
         backgroundColor: attiva ? sfondoAttivo : 'transparent',
       }}
     >
-      {/* Opaca quando `attiva` — asserisce il fondo che dipinge, invertito
-          rispetto a quello ambientale (l'ambra e l'inchiostro vogliono il
-          testo dell'altro verso). Trasparente altrimenti — inoltra. */}
-      <Fondo su={attiva ? (scura ? 'chiaro' : 'scuro') : fondo}>
-        <Forte taglia="minuto" tono={attiva ? 'forte' : 'medio'}>
+      {/* Opaca quando `attiva` — asserisce il fondo che dipinge, che è scuro
+          in entrambi i rami: `primario` e `inchiostro` sono due tinte scure e
+          vogliono lo stesso verso di testo. Prima l'asserzione era invertita
+          rispetto all'ambiente, perché il ramo chiaro dipingeva ambra.
+          Trasparente altrimenti — inoltra. */}
+      <Fondo su={attiva ? 'scuro' : fondo}>
+        <Forte taglia={compatta ? 'micro' : 'minuto'} tono={attiva ? 'forte' : 'medio'}>
           {testo}
         </Forte>
       </Fondo>
@@ -329,23 +352,23 @@ export function Segmenti<T extends string>({
 /**
  * Le cinque varianti di sfondo di `BottonePrimario`. Prima `sfondo` e `su`
  * erano due ternarie separate con una precedenza diversa (`disabilitato` e
- * `ambra` vincevano su `pericolo` nella prima, `pericolo` vinceva su tutto
+ * `accento` vincevano su `pericolo` nella prima, `pericolo` vinceva su tutto
  * nella seconda): `pericolo + disabilitato` dipingeva un fondo chiaro e
  * dichiarava `su="scuro"` a chi ci stava dentro. Con una voce sola per
  * variante, `sfondo`, `inchiostro` e `su` leggono la stessa chiave e non
  * possono più divergere.
  */
-type VarianteBottonePrimario = 'spento' | 'ambra' | 'pericolo' | 'chiaro' | 'inchiostro'
+type VarianteBottonePrimario = 'spento' | 'accento' | 'pericolo' | 'chiaro' | 'inchiostro'
 
 const PALETTE_BOTTONE_PRIMARIO: Record<VarianteBottonePrimario, { sfondo: string; inchiostro: string; su: Su }> = {
   // `disabilitato` vince su tutto il resto, come già nella ternaria di
-  // `sfondo` di prima: un bottone `ambra`/`pericolo` spento non deve tornare
+  // `sfondo` di prima: un bottone `accento`/`pericolo` spento non deve tornare
   // al proprio colore acceso.
   spento: { sfondo: velo(colori.inchiostro, 0.08), inchiostro: testoSu.chiaro.debole, su: 'chiaro' },
-  ambra: { sfondo: colori.ambra, inchiostro: colori.inchiostro, su: 'chiaro' },
-  pericolo: { sfondo: colori.corallo, inchiostro: colori.crema, su: 'scuro' },
+  accento: { sfondo: colori.primario, inchiostro: colori.scheda, su: 'scuro' },
+  pericolo: { sfondo: colori.pericolo, inchiostro: colori.scheda, su: 'scuro' },
   chiaro: { sfondo: colori.scheda, inchiostro: colori.inchiostro, su: 'chiaro' },
-  inchiostro: { sfondo: colori.inchiostro, inchiostro: colori.crema, su: 'scuro' },
+  inchiostro: { sfondo: colori.inchiostro, inchiostro: colori.scheda, su: 'scuro' },
 }
 
 export function BottonePrimario({
@@ -354,7 +377,7 @@ export function BottonePrimario({
   freccia,
   icona,
   caricando,
-  ambra,
+  accento,
   chiaro,
   pericolo,
   disabilitato,
@@ -368,11 +391,13 @@ export function BottonePrimario({
   icona?: NomeIcona
   /** Spegne il tocco e mostra uno spinner al posto dell'icona. */
   caricando?: boolean
-  /** Solo per le azioni che eseguono l'IA: vedi la regola in tokens.ts. */
-  ambra?: boolean
-  /** Sfondo chiaro (per pulsanti su foto scure): testo scuro invece che crema. */
+  /** Il fondo `primario`, con testo chiaro: l'unica azione che si stacca dal
+   * nero. Va usata con parsimonia — la regola in `tema/tokens.ts` è che
+   * l'azione è inchiostro. */
+  accento?: boolean
+  /** Sfondo chiaro (per pulsanti su foto scure): testo scuro invece che bianco. */
   chiaro?: boolean
-  /** Per un'azione che disfa qualcosa: sfondo corallo, testo crema — lo stesso
+  /** Per un'azione che disfa qualcosa: sfondo pericolo, testo bianco — lo stesso
    * accostamento del badge «da lavare» in `capi.tsx`. Esiste come variante e non
    * come `style={{ backgroundColor }}` dal punto di chiamata perché il colore del
    * testo va calcolato *insieme* al fondo: ridipingere da fuori lascia dentro un
@@ -388,15 +413,15 @@ export function BottonePrimario({
   style?: StyleProp<ViewStyle>
 }) {
   const spento = disabilitato || caricando
-  // La palette «spento» è solo per il chiaro: un bottone `ambra`/`inchiostro`
+  // La palette «spento» è solo per il chiaro: un bottone `accento`/`inchiostro`
   // su una schermata scura che passa `caricando` non deve schiarirsi verso
   // quel grigio, o sparisce sul fondo inchiostro. `caricando` da solo blocca
   // il tocco (sopra) e mostra lo spinner (sotto); il fondo resta quello di
   // `disabilitato`.
   const variante: VarianteBottonePrimario = disabilitato
     ? 'spento'
-    : ambra
-      ? 'ambra'
+    : accento
+      ? 'accento'
       : pericolo
         ? 'pericolo'
         : chiaro
@@ -462,16 +487,16 @@ export function BottoneSecondario({
   testo: string
   onPress?: () => void
   /**
-   * Il fondo quando il pulsante è un interruttore già acceso. Non è mai ambra:
-   * questo pulsante non parla per l'IA — vedi la regola in tokens.ts.
+   * Il fondo quando il pulsante è un interruttore già acceso: di norma una
+   * velatura d'inchiostro, non il `primario` — questo resta un contorno.
    */
   sfondo?: string
   colore?: string
   /** Un'icona a sinistra del testo, sostituita da uno spinner mentre `caricando`. */
   icona?: NomeIcona
   caricando?: boolean
-  /** Il colore del contorno, di norma `linee.chiara` — es. `colori.ambra`
-   * per un'azione che resta un contorno ma segnala l'IA. */
+  /** Il colore del contorno, di norma `linee.chiara` — es. `colori.primario`
+   * per un'azione che resta un contorno ma vuole l'accento. */
   bordo?: string
   style?: StyleProp<ViewStyle>
 }) {
@@ -518,14 +543,14 @@ export function BottoneSecondario({
 /**
  * Il badge a pillola generico: un'icona opzionale, un'etichetta, un fondo.
  *
- * `BadgeIa` è la sua specializzazione — ambra, icona `scintilla` — per il
+ * `BadgeIa` è la sua specializzazione — primario, icona `scintilla` — per il
  * solo caso in cui parla il modello. Un badge di stato (chi cuce, non IA)
  * passa `sfondo`/`colore` propri invece di reinventare la stessa pillola.
  */
 export function Badge({
   testo,
-  sfondo = colori.ambra,
-  colore = colori.inchiostro,
+  sfondo = colori.primario,
+  colore = colori.scheda,
   icona,
 }: {
   testo: string
@@ -554,14 +579,14 @@ export function Badge({
   )
 }
 
-/** Il badge del match, l'unico posto oltre ai pulsanti IA dove sta l'ambra. */
+/** Il badge del match: dove il modello dà un numero di sé. */
 export function BadgeIa({ testo, tenue }: { testo: string; tenue?: boolean }) {
   return (
     <Badge
       testo={testo}
       icona="scintilla"
-      sfondo={tenue ? colori.ambraTenue : colori.ambra}
-      colore={tenue ? colori.ambraScuro : colori.inchiostro}
+      sfondo={tenue ? velature.primario : colori.primario}
+      colore={tenue ? colori.primarioScuro : colori.scheda}
     />
   )
 }
@@ -598,9 +623,8 @@ export function BollaChat({ daUtente, children }: { daUtente: boolean; children:
 }
 
 /**
- * I puntini che dicono «lo stilista sta scrivendo»: tre bolle in ambra, che
- * pulsano una dopo l'altra. L'ambra è corretta qui — è la regola di
- * `tema/tokens.ts`: questo è il modello che parla, non un'azione dell'utente.
+ * I puntini che dicono «lo stilista sta scrivendo»: tre bolle in primario,
+ * che pulsano una dopo l'altra.
  *
  * `Animated`, non Reanimated: tre puntini non hanno bisogno di un worklet, e
  * restano fuori dall'override legato alla versione della SDK di Expo.
@@ -646,7 +670,7 @@ export function PuntiniAttesa() {
             width: 7,
             height: 7,
             borderRadius: raggi.pillola,
-            backgroundColor: colori.ambra,
+            backgroundColor: colori.primario,
             opacity: valore,
           }}
         />
@@ -662,9 +686,13 @@ export function PuntiniAttesa() {
 /**
  * Le icone del design, come tracciati SVG.
  *
- * Nessuna libreria: sono nove percorsi, presi dal file di design, e una
- * dipendenza in meno da aggiornare. L'oggetto resta privato: solo il tipo
- * `NomeIcona` che ne deriva esce dal modulo.
+ * Nessuna libreria: sono percorsi presi dal file di design, e una dipendenza in
+ * meno da aggiornare. L'oggetto resta privato: solo il tipo `NomeIcona` che ne
+ * deriva esce dal modulo.
+ *
+ * Le tre in fondo — `altro`, `occhioSpento`, `cestino` — vengono dal deck
+ * «Aura» insieme al menu «···» del dettaglio di un capo, e sono gli stessi
+ * tracciati che il deck disegna.
  */
 const TRACCIATI = {
   scintilla: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z',
@@ -687,6 +715,25 @@ const TRACCIATI = {
   fotocamera:
     'M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2',
   spunta: 'M20 6L9 17l-5-5',
+  /**
+   * I tre punti del menu. **Tre cerchi, non tre segmenti di lunghezza nulla**:
+   * quelli si vedono solo grazie a `strokeLinecap="round"`, e allora il loro
+   * diametro *è* lo spessore del tratto — che `Bolla` fissa a 2.2 e non
+   * inoltra. Dentro un `BottoneTondo` a 18 di icona sarebbero venuti puntini
+   * da 1,65 px. Un cerchio di raggio 1 tratteggiato a 2.2 resta un disco pieno
+   * di ~4 unità qualunque spessore si usi.
+   */
+  altro: 'M6 12a1 1 0 1 1-2 0 1 1 0 1 1 2 0M13 12a1 1 0 1 1-2 0 1 1 0 1 1 2 0M20 12a1 1 0 1 1-2 0 1 1 0 1 1 2 0',
+  occhioSpento:
+    'M3 3l18 18M10.6 10.6a3 3 0 0 0 4.2 4.2M9.9 5.2A9.5 9.5 0 0 1 12 5c5 0 9 5 9 7a11 11 0 0 1-2.3 3.2M6.5 6.6C4 8.2 3 10.8 3 12c0 2 4 7 9 7 1.3 0 2.5-.3 3.5-.8',
+  cestino: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
+  /** Lo scudo delle righe che promettono qualcosa sui dati — dal deck,
+   *  dove accompagna «le misure non finiscono in nessun profilo pubblico». */
+  scudo: 'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z',
+  /** Il cerchio con la «i» delle note che spiegano una conseguenza. Il
+   *  punto è un segmento di lunghezza zero: lo disegna `strokeLinecap`
+   *  «round» qui sopra, e senza quello sparirebbe. */
+  info: 'M12 7.5v5.5M12 16.6v.01M21 12a9 9 0 1 1-18 0 9 9 0 1 1 18 0',
 } as const
 
 export type NomeIcona = keyof typeof TRACCIATI
@@ -721,8 +768,8 @@ export function Icona({
 /** Un cerchio con un'icona dentro: la scorciatoia visiva più usata nel design. */
 export function Bolla({
   nome,
-  sfondo = colori.ambra,
-  colore = colori.inchiostro,
+  sfondo = colori.primario,
+  colore = colori.scheda,
   misura = 34,
   misuraIcona,
   bordo,
@@ -763,8 +810,8 @@ export function Bolla({
 export function BottoneTondo({
   nome,
   onPress,
-  sfondo = colori.ambra,
-  colore = colori.inchiostro,
+  sfondo = colori.primario,
+  colore = colori.scheda,
   misura = 42,
   misuraIcona,
   bordo,
@@ -801,8 +848,8 @@ export function BottoneTondo({
  * schermata precedente — e la regola del progetto è che una forma nuova si
  * aggiunge alle primitive, non si riscrive inline in una schermata.
  *
- * L'ambra qui sarebbe sbagliata: è un'azione dell'utente, non il modello che
- * parla (la regola di `tema/tokens.ts`) — resta `linee.tenue`, come sempre.
+ * Il primario qui sarebbe sbagliato: è un'azione, e l'azione è inchiostro
+ * (la regola di `tema/tokens.ts`) — resta `linee.tenue`, come sempre.
  */
 export function BottoneIndietro({ onPress, su }: { onPress?: () => void; su?: Su }) {
   const ereditato = useFondo()
@@ -817,10 +864,10 @@ export function BottoneIndietro({ onPress, su }: { onPress?: () => void; su?: Su
         borderRadius: raggi.pillola,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: scura ? velo(colori.crema, 0.1) : linee.tenue,
+        backgroundColor: scura ? velo(colori.scheda, 0.1) : linee.tenue,
       }}
     >
-      <Icona nome="indietro" misura={17} colore={scura ? colori.crema : colori.inchiostro} spessore={2.2} />
+      <Icona nome="indietro" misura={17} colore={scura ? colori.scheda : colori.inchiostro} spessore={2.2} />
     </Toccabile>
   )
 }

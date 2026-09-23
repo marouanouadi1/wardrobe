@@ -20,6 +20,7 @@ from psycopg.rows import dict_row
 from domain.errors import EmailGiaRegistrata
 from domain.models import (
     Capo,
+    ContoSvuotamento,
     ConversazioneChat,
     EsitoAnalisi,
     MessaggioChat,
@@ -92,6 +93,41 @@ class RepositoryPostgres:
     def elimina_capo(self, utente_id: str, capo_id: str) -> None:
         with self._conn().cursor() as cur:
             cur.execute("delete from capi where utente_id = %s and id = %s", (utente_id, capo_id))
+
+    def svuota_armadio(self, utente_id: str) -> ContoSvuotamento:
+        """Tutte le `delete` in **una** transazione, e ognuna con il suo
+        `where utente_id = %s`.
+
+        Quella clausola è l'unica cosa che separa «svuoto il mio armadio» da
+        «svuoto la tabella». Non è un'iperbole difensiva: `autocommit` è `True`
+        su questa connessione, quindi senza `transaction()` ogni `delete` si
+        confermerebbe da sola e un errore a metà lascerebbe outfit che
+        indossano capi che non esistono più.
+
+        `messaggi_chat` prima di `conversazioni_chat`: i messaggi appartengono
+        a una conversazione, e cancellare il contenitore prima del contenuto è
+        il modo di scoprire un vincolo di chiave esterna in produzione invece
+        che qui.
+        """
+        with self._conn().transaction(), self._conn().cursor() as cur:
+            cur.execute("delete from messaggi_chat where utente_id = %s", (utente_id,))
+            messaggi = cur.rowcount
+            cur.execute("delete from conversazioni_chat where utente_id = %s", (utente_id,))
+            conversazioni = cur.rowcount
+            cur.execute("delete from usi where utente_id = %s", (utente_id,))
+            usi = cur.rowcount
+            cur.execute("delete from outfit where utente_id = %s", (utente_id,))
+            outfit = cur.rowcount
+            cur.execute("delete from capi where utente_id = %s", (utente_id,))
+            capi = cur.rowcount
+        # `messaggi` non entra nel conto mostrato: una persona conta le
+        # conversazioni, non i turni. Si legge lo stesso, perché una
+        # conversazione cancellata che lascia dietro i suoi messaggi è
+        # esattamente il difetto che l'ordine qui sopra evita.
+        assert messaggi >= 0
+        return ContoSvuotamento(
+            capi=capi, outfit=outfit, conversazioni=conversazioni, usi_registrati=usi, foto=0
+        )
 
     # ── outfit ─────────────────────────────────────────────────────────────
     def elenca_outfit(self, utente_id: str) -> list[Outfit]:

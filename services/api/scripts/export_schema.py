@@ -50,6 +50,8 @@ RISPOSTE = (
     models.Suggerimento,
     models.ContestoSuggerimento,
     models.Profilo,
+    models.EsportazionePronta,
+    models.ContoSvuotamento,
     models.ElencoCapi,
     models.RiepilogoArmadio,
     models.UploadFirmato,
@@ -75,6 +77,8 @@ RICHIESTE = (
     models.Meteo,
     models.ImpegnoAgenda,
     models.PreferenzeStile,
+    models.Misure,
+    models.RichiestaSvuotamento,
     models.FiltroArmadio,
     models.RichiestaUpload,
     models.RichiestaAnalisi,
@@ -96,12 +100,17 @@ ENUM = (
     ("StatoAnalisi", models.StatoAnalisi),
     ("RuoloChat", models.RuoloChat),
     ("StatoSegnalazione", models.StatoSegnalazione),
+    ("SistemaTaglie", models.SistemaTaglie),
+    ("Taglia", models.Taglia),
+    ("Corporatura", models.Corporatura),
+    ("UnitaLunghezza", models.UnitaLunghezza),
 )
 
 COSTANTI = {
     "SOGLIA_INCERTEZZA": models.SOGLIA_INCERTEZZA,
     "SOGLIA_SCARTO": models.SOGLIA_SCARTO,
     "MESI_PER_DORMIENTE": 6,
+    "LIMITI_MISURE_CM": models.LIMITI_MISURE_CM,
 }
 
 

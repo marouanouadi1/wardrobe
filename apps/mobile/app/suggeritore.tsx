@@ -1,23 +1,31 @@
 /**
- * Il suggeritore, in tre modi di chiedere la stessa cosa.
+ * Il suggeritore: **una chat sola**.
  *
- * Tre e non uno perché le persone chiedono in modo diverso: chi vuole solo
- * guardare (proposte), chi sa spiegare a parole (chat), chi preferisce
- * rispondere a tre domande (guidato). Il modello dietro è lo stesso; cambia solo
- * come si raccoglie il contesto.
+ * Erano tre modi di chiedere la stessa cosa — «Proposte» (guardare e basta),
+ * «Chat» (spiegare a parole), «Guidato» (rispondere a tre domande) — e il
+ * modello dietro era sempre lo stesso: cambiava solo come si raccoglieva il
+ * contesto. Il deck «Aura» ne tiene uno, e l'utente ha scelto di seguirlo
+ * (2026-09-22, `Q-10` in `docs/QUESTIONI.md`).
+ *
+ * Cosa ne è stato dei due tolti, perché non si vada a cercarli:
+ * - **Proposte** non è sparita, si è **spostata**: le proposte pronte stanno in
+ *   «Oggi», col contatore «n di 5» che le fa scorrere. Era la stessa lista,
+ *   dallo stesso `chiediSuggerimenti()`, in due schermate.
+ * - **Guidato** è stato **tolto**: tre pillole (dove vai, che tempo trovi, come
+ *   ti senti) che componevano una frase e la mandavano a *questa* chat. Non
+ *   faceva niente che la chat non faccia — era un modo di non digitare. Chi non
+ *   vuole scrivere ha ancora gli spunti qui sotto, che sono la stessa idea in
+ *   una riga sola.
  */
 
 import type { Suggerimento } from '@wardrobe/contracts'
-import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ScrollView, View } from 'react-native'
 import { useArmadio, useVestiEVai } from '../src/dati/archivio'
 import { type SceltaConversazione, useChat } from '../src/dati/chat'
-import { capiDiVestizione, capiDisponibili, fotoDaMostrare, slotMancanti } from '../src/dati/dominio'
-import { colori, durate, ETICHETTE, linee, raggi, spazi } from '../src/tema/tokens'
+import { linee, spazi } from '../src/tema/tokens'
 import {
-  BadgeIa,
   BarraChiedi,
   BollaChat,
   BottonePrimario,
@@ -25,32 +33,14 @@ import {
   LinkTesto,
   Pillola,
   PuntiniAttesa,
-  Scheda,
-  Segmenti,
 } from '../src/ui/base'
-import { MotiviProposta, SchedaFoto } from '../src/ui/capi'
 import { Schermata } from '../src/ui/guscio'
-import { AttesaLunga, Caricamento, MESSAGGI_SUGGERIMENTI, Vuoto } from '../src/ui/stati'
-import { Corpo, Etichetta, Forte, Titolo } from '../src/ui/testo'
-
-type Modo = 'proposte' | 'chat' | 'guidato'
-
-const MODI = [
-  { valore: 'proposte' as const, etichetta: 'Proposte' },
-  { valore: 'chat' as const, etichetta: 'Chat' },
-  { valore: 'guidato' as const, etichetta: 'Guidato' },
-] as const
-
-const DOMANDE = [
-  { chiave: 'occasione', testo: 'Dove vai?', opzioni: ['Ufficio', 'Cena', 'Casa', 'Palestra', 'Cerimonia'] },
-  { chiave: 'meteo', testo: 'Che tempo trovi?', opzioni: ['Freddo', 'Mite', 'Caldo', 'Pioggia'] },
-  { chiave: 'umore', testo: 'Come ti senti?', opzioni: ['Sicuro', 'Comodo', 'Invisibile', 'Voglio osare'] },
-] as const
+import { Caricamento } from '../src/ui/stati'
+import { Corpo, Etichetta, Forte } from '../src/ui/testo'
 
 const SPUNTI = ['Cosa metto stasera?', 'Fa più freddo, cambia', 'Solo capi puliti', 'Qualcosa che non uso mai']
 
-/** «Provalo» + «Salva»: la coppia di azioni che chiude ogni proposta, sia
- * nella scheda piena (proposte) sia in linea dentro la bolla (chat). */
+/** «Provalo» + «Salva»: la coppia di azioni che chiude ogni proposta. */
 function AzioniProposta({
   salvata,
   onProva,
@@ -74,19 +64,8 @@ function AzioniProposta({
 
 export default function Suggeritore() {
   const parametri = useLocalSearchParams<{ chiedi?: string; conversazione?: string }>()
-  const { suggerimenti, indice, capi, pronto, suggerimentiInCorso, salvaOutfit, chiediSuggerimenti, avvisa } =
-    useArmadio()
-  // Stessa guardia di `app/(tabs)/oggi.tsx`: senza una combinazione
-  // indossabile (`vestizione_indossabile`, `services/api/src/domain/wardrobe.py`)
-  // il modo «guidato» chiamerebbe `/suggerimenti` solo per ricevere un 502.
-  // `pronto` prima di guardare `capi`: a caricamento in corso `capi` è ancora
-  // `[]`, e senza questa guardia il bottone diceva per un istante «aggiungi
-  // prima un capo che manca» a chi l'armadio ce l'ha già completo.
-  const mancanti = useMemo(() => (pronto ? slotMancanti(capiDisponibili(capi)) : []), [pronto, capi])
+  const { salvaOutfit, avvisa } = useArmadio()
   const vestiEVai = useVestiEVai()
-  const [modo, setModo] = useState<Modo>(parametri.chiedi ? 'chat' : 'proposte')
-  const [risposte, setRisposte] = useState<Record<string, string>>({})
-  const [generato, setGenerato] = useState(false)
   const [salvati, setSalvati] = useState<string[]>([])
 
   // Quale conversazione aprire: quella passata dall'elenco (`chat.tsx`, il
@@ -121,8 +100,6 @@ export default function Suggeritore() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parametri.chiedi, storiaInCaricamento])
 
-  const complete = DOMANDE.every((domanda) => risposte[domanda.chiave])
-
   function provaEsalva(proposta: Suggerimento) {
     return {
       salvata: salvati.includes(proposta.titolo),
@@ -135,254 +112,95 @@ export default function Suggeritore() {
   }
 
   return (
-    <Schermata occhiello="Il tuo stilista" titolo="Chiedi a Wardrobe" indietro ancoraInFondo={modo === 'chat'}>
-      <Segmenti voci={MODI} scelta={modo} onScegli={setModo} />
+    <Schermata occhiello="Il tuo stilista" titolo="Chiedi ad Aura" tavolozza="caldo" indietro ancoraInFondo>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
+        <Etichetta taglia={11} tono="tenue" style={{ flex: 1 }} numberOfLines={1}>
+          {conversazioneAttuale?.titolo ?? 'Nuova conversazione'}
+        </Etichetta>
+        <LinkTesto centrato={false} sottolineato taglia={12.5} tono="medio" onPress={() => router.push('/chat')}>
+          Storico
+        </LinkTesto>
+        <LinkTesto
+          centrato={false}
+          sottolineato
+          taglia={12.5}
+          tono="medio"
+          onPress={() => setSceltaChat({ tipo: 'nuova' })}
+        >
+          Nuova
+        </LinkTesto>
+      </View>
 
-      {modo === 'proposte' && !pronto ? (
-        // L'armadio sta ancora caricando: senza questo, la schermata restava
-        // bianca fino a quando `capi`/`suggerimenti` non erano pronti.
+      {storiaInCaricamento ? (
+        // Prima non c'era nulla qui: uno schermo vuoto indistinguibile da
+        // una chat senza messaggi, finché la cronologia non arrivava.
         <Caricamento />
+      ) : conversazione.length === 0 && !inAttesa ? (
+        <Corpo taglia={13} tono="debole" style={{ textAlign: 'center' }}>
+          {"Scrivi per iniziare: questa chat resta qui anche se chiudi l'app."}
+        </Corpo>
       ) : null}
 
-      {modo === 'proposte' && pronto && suggerimenti.length === 0 ? (
-        suggerimentiInCorso ? (
-          // Lo stilista sta componendo — la stessa attesa di `app/(tabs)/oggi.tsx`,
-          // sullo stesso endpoint.
-          <Scheda imbottitura={24} style={{ alignItems: 'center', gap: spazi.m }}>
-            <Titolo taglia={17}>Sto pensando a un outfit</Titolo>
-            <AttesaLunga messaggi={MESSAGGI_SUGGERIMENTI} />
-          </Scheda>
-        ) : mancanti.length > 0 ? (
-          <Vuoto
-            titolo={
-              mancanti.length === 1
-                ? `Ti manca un ${ETICHETTE.slot[mancanti[0]!].toLowerCase()}`
-                : 'Ti serve un sopra e un sotto'
-            }
-            spiegazione="Per comporre un outfit mi serve almeno un sopra e un sotto, oppure un abito."
-          />
-        ) : (
-          // Prima non c'era nessuna via d'uscita da qui: arrivando da «Chiedi
-          // tu a Wardrobe» (armadio.tsx) con `suggerimenti` ancora vuoto, la
-          // scheda restava bianca — a differenza di Oggi, questa schermata non
-          // chiede mai da sola allo stilista.
-          <>
-            <Vuoto
-              titolo="Ancora nessuna proposta"
-              spiegazione="Chiedimi un outfit e ti mostro qui le combinazioni che funzionano di più."
-            />
-            <BottonePrimario
-              testo="Proponimi qualcosa"
-              ambra
-              onPress={() => void chiediSuggerimenti()}
-            />
-          </>
-        )
-      ) : null}
-
-      {modo === 'proposte' && pronto
-        ? suggerimenti.map((proposta) => {
-            const capi = capiDiVestizione(proposta.vestizione, indice)
-            const badge = <BadgeIa testo={`${proposta.match}%`} />
-            return (
-              <SchedaFoto key={proposta.titolo}>
-                {capi[0] && fotoDaMostrare(capi[0]) ? (
-                  <View>
-                    <Image
-                      source={{ uri: fotoDaMostrare(capi[0]) }}
-                      style={{ width: '100%', height: 230, backgroundColor: colori.fondoFoto }}
-                      contentFit="cover"
-                      contentPosition={{ top: '20%', left: '50%' }}
-                      transition={durate.breve}
-                    />
-                    <View style={{ position: 'absolute', top: 12, right: 12 }}>{badge}</View>
-                  </View>
+      <View style={{ gap: 11 }}>
+        {conversazione.map((messaggio) => {
+          const daUtente = messaggio.ruolo === 'utente'
+          // Il turno appena inviato, ancora in volo verso il server: un
+          // filo più trasparente, è la sola differenza — l'eco è già lì,
+          // non manca più nulla da aspettare per vederlo.
+          const inVolo = messaggio.id.startsWith('bozza-')
+          return (
+            <BollaChat key={messaggio.id} daUtente={daUtente}>
+              <View style={{ opacity: inVolo ? 0.6 : 1, gap: spazi.s }}>
+                {daUtente ? (
+                  // `su="scuro"` non serve più scriverlo qui: `BollaChat`
+                  // lo dichiara da sé (`ui/base.tsx`), da `daUtente`.
+                  <Corpo taglia={14}>{messaggio.testo}</Corpo>
                 ) : (
-                  // Il match è l'informazione più importante della proposta:
-                  // non deve dipendere dal primo capo avere una foto.
-                  <View style={{ padding: 16, paddingBottom: 0 }}>{badge}</View>
-                )}
-
-                <View style={{ padding: 16, gap: spazi.m }}>
-                  <Titolo taglia={21}>{proposta.titolo}</Titolo>
-
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    {capi.map((capo) => (
-                      <Image
-                        key={capo.id}
-                        source={{ uri: fotoDaMostrare(capo) }}
-                        style={{
-                          width: 52,
-                          height: 64,
-                          borderRadius: raggi.piccolo,
-                          backgroundColor: colori.fondoFoto,
-                        }}
-                        contentFit="cover"
-                        transition={durate.breve}
-                      />
-                    ))}
-                  </View>
-
-                  <MotiviProposta motivi={proposta.perche} />
-
-                  {/* «Salva» tiene la proposta senza doverla prima provare:
-                      due tocchi in meno per chi ha già deciso. */}
-                  <AzioniProposta {...provaEsalva(proposta)} />
-                </View>
-              </SchedaFoto>
-            )
-          })
-        : null}
-
-      {modo === 'chat' ? (
-        <>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
-            <Etichetta taglia={11} tono="tenue" style={{ flex: 1 }} numberOfLines={1}>
-              {conversazioneAttuale?.titolo ?? 'Nuova conversazione'}
-            </Etichetta>
-            <LinkTesto centrato={false} sottolineato taglia={12.5} tono="medio" onPress={() => router.push('/chat')}>
-              Storico
-            </LinkTesto>
-            <LinkTesto
-              centrato={false}
-              sottolineato
-              taglia={12.5}
-              tono="medio"
-              onPress={() => setSceltaChat({ tipo: 'nuova' })}
-            >
-              Nuova
-            </LinkTesto>
-          </View>
-
-          {storiaInCaricamento ? (
-            // Prima non c'era nulla qui: uno schermo vuoto indistinguibile da
-            // una chat senza messaggi, finché la cronologia non arrivava.
-            <Caricamento />
-          ) : conversazione.length === 0 && !inAttesa ? (
-            <Corpo taglia={13} tono="debole" style={{ textAlign: 'center' }}>
-              {"Scrivi per iniziare: questa chat resta qui anche se chiudi l'app."}
-            </Corpo>
-          ) : null}
-
-          <View style={{ gap: 11 }}>
-            {conversazione.map((messaggio) => {
-              const daUtente = messaggio.ruolo === 'utente'
-              // Il turno appena inviato, ancora in volo verso il server: un
-              // filo più trasparente, è la sola differenza — l'eco è già lì,
-              // non manca più nulla da aspettare per vederlo.
-              const inVolo = messaggio.id.startsWith('bozza-')
-              return (
-                <BollaChat key={messaggio.id} daUtente={daUtente}>
-                  <View style={{ opacity: inVolo ? 0.6 : 1, gap: spazi.s }}>
-                    {daUtente ? (
-                      // `su="scuro"` non serve più scriverlo qui: `BollaChat`
-                      // lo dichiara da sé (`ui/base.tsx`), da `daUtente`.
-                      <Corpo taglia={14}>{messaggio.testo}</Corpo>
-                    ) : (
-                      // La risposta vera dello stilista: prima la prosa —
-                      // c'è sempre — poi le proposte, solo quando ci sono.
-                      <>
-                        <Corpo taglia={14}>{messaggio.testo}</Corpo>
-                        {messaggio.suggerimenti?.map((proposta) => (
-                          <View key={proposta.titolo} style={{ gap: spazi.s }}>
-                            <Forte taglia={14}>{`${proposta.titolo} · ${proposta.match}%`}</Forte>
-                            {proposta.perche.map((motivo) => (
-                              <Corpo key={motivo} taglia={13} tono="medio">
-                                {`— ${motivo}`}
-                              </Corpo>
-                            ))}
-                            <View style={{ marginTop: spazi.xs }}>
-                              <AzioniProposta {...provaEsalva(proposta)} />
-                            </View>
-                          </View>
+                  // La risposta vera dello stilista: prima la prosa —
+                  // c'è sempre — poi le proposte, solo quando ci sono.
+                  <>
+                    <Corpo taglia={14}>{messaggio.testo}</Corpo>
+                    {messaggio.suggerimenti?.map((proposta) => (
+                      <View key={proposta.titolo} style={{ gap: spazi.s }}>
+                        <Forte taglia={14}>{`${proposta.titolo} · ${proposta.match}%`}</Forte>
+                        {proposta.perche.map((motivo) => (
+                          <Corpo key={motivo} taglia={13} tono="medio">
+                            {`— ${motivo}`}
+                          </Corpo>
                         ))}
-                      </>
-                    )}
-                  </View>
-                </BollaChat>
-              )
-            })}
-
-            {inAttesa ? (
-              <BollaChat daUtente={false}>
-                <PuntiniAttesa />
-              </BollaChat>
-            ) : null}
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-            {SPUNTI.map((spunto) => (
-              <Pillola key={spunto} testo={spunto} onPress={() => void invia(spunto)} />
-            ))}
-          </ScrollView>
-
-          <BarraChiedi
-            valore={bozza}
-            onCambia={setBozza}
-            onInvia={() => void invia()}
-            placeholder="Cena fuori, e fa freddo…"
-          />
-        </>
-      ) : null}
-
-      {modo === 'guidato' ? (
-        <>
-          {DOMANDE.map((domanda) => (
-            <View key={domanda.chiave} style={{ gap: spazi.s }}>
-              <Titolo taglia={18}>{domanda.testo}</Titolo>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spazi.s }}>
-                {domanda.opzioni.map((opzione) => (
-                  <Pillola
-                    key={opzione}
-                    testo={opzione}
-                    attiva={risposte[domanda.chiave] === opzione}
-                    onPress={() => {
-                      setRisposte((precedenti) => ({ ...precedenti, [domanda.chiave]: opzione }))
-                      setGenerato(false)
-                    }}
-                  />
-                ))}
+                        <View style={{ marginTop: spazi.xs }}>
+                          <AzioniProposta {...provaEsalva(proposta)} />
+                        </View>
+                      </View>
+                    ))}
+                  </>
+                )}
               </View>
-            </View>
-          ))}
+            </BollaChat>
+          )
+        })}
 
-          <BottonePrimario
-            testo={
-              !complete
-                ? 'Rispondi alle tre domande'
-                : mancanti.length > 0
-                  ? 'Aggiungi prima un capo che manca'
-                  : 'Trova il mio outfit'
-            }
-            ambra={complete && mancanti.length === 0}
-            caricando={suggerimentiInCorso}
-            disabilitato={!complete || mancanti.length > 0 || suggerimentiInCorso}
-            onPress={() => {
-              setGenerato(true)
-              void chiediSuggerimenti(
-                `${risposte.occasione}, ${risposte.meteo?.toLowerCase()}, mi sento ${risposte.umore?.toLowerCase()}`,
-              )
-            }}
-          />
+        {inAttesa ? (
+          <BollaChat daUtente={false}>
+            <PuntiniAttesa />
+          </BollaChat>
+        ) : null}
+      </View>
 
-          {suggerimentiInCorso ? (
-            // Prima, fra il tocco e la risposta, non c'era nessun segnale:
-            // il bottone restava toccabile e ripartiva se lo si premeva di
-            // nuovo. Stessa attesa di Oggi, sullo stesso endpoint.
-            <Scheda imbottitura={16} style={{ alignItems: 'center', gap: spazi.m }}>
-              <AttesaLunga messaggi={MESSAGGI_SUGGERIMENTI} />
-            </Scheda>
-          ) : generato && suggerimenti[0] ? (
-            <Scheda imbottitura={16} style={{ gap: spazi.m }}>
-              <Titolo taglia={20}>{suggerimenti[0].titolo}</Titolo>
-              <Corpo taglia={13} tono="medio">
-                {`${risposte.occasione}, ${risposte.meteo?.toLowerCase()}, e ti senti ${risposte.umore?.toLowerCase()}: ${suggerimenti[0].perche[0]}`}
-              </Corpo>
-              <BottonePrimario testo="Vedilo sull'avatar" onPress={() => vestiEVai(suggerimenti[0]!.vestizione)} />
-            </Scheda>
-          ) : null}
-        </>
-      ) : null}
+      {/* Gli spunti: la scorciatoia per chi non ha voglia di scrivere. Erano
+          già qui, e adesso portano da soli il peso che era del modo «Guidato». */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
+        {SPUNTI.map((spunto) => (
+          <Pillola key={spunto} testo={spunto} onPress={() => void invia(spunto)} />
+        ))}
+      </ScrollView>
+
+      <BarraChiedi
+        valore={bozza}
+        onCambia={setBozza}
+        onInvia={() => void invia()}
+        placeholder="Cena fuori, e fa freddo…"
+      />
 
       <Corpo
         taglia={11.5}
