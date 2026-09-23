@@ -408,19 +408,81 @@ export function Schermata({
  * copre il campo attivo, intestazione, e il link fantasma di chiusura in
  * fondo. `accedi.tsx` e `registrati.tsx` erano ~19 righe byte-identiche.
  */
+/**
+ * Quello che il deck mette sotto il bottone d'accesso, e che il backend non
+ * sa ancora fare: «oppure / Continua con Apple · Google», e il recupero della
+ * password.
+ *
+ * **Si mostrano spente col motivo, non si tolgono.** È la stessa scelta di
+ * `Foglio` e di `RigaImpostazione`, e la stessa ragione: una voce nascosta
+ * insegna che quella cosa non esiste, una spenta che dice cosa manca insegna
+ * che non esiste *ancora*. Qui pesa più che altrove — chi non riesce a
+ * entrare e non vede «password dimenticata» pensa di aver sbagliato lui.
+ */
+export function PiedeAccesso({ conRecupero }: { conRecupero?: boolean }) {
+  return (
+    <View style={{ gap: spazi.m, alignItems: 'center' }}>
+      {conRecupero ? (
+        <Corpo taglia="micro" tono="debole">
+          Password dimenticata? Non c’è ancora un modo di recuperarla da soli.
+        </Corpo>
+      ) : null}
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.m, width: '100%' }}>
+        <View style={{ flex: 1, height: 1, backgroundColor: linee.tenue }} />
+        <Corpo taglia="micro" tono="debole">
+          oppure
+        </Corpo>
+        <View style={{ flex: 1, height: 1, backgroundColor: linee.tenue }} />
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: spazi.s, width: '100%' }}>
+        {['Apple', 'Google'].map((chi) => (
+          <View
+            key={chi}
+            style={{
+              flex: 1,
+              paddingVertical: 13,
+              borderRadius: raggi.pillola,
+              borderWidth: 1,
+              borderColor: linee.tenue,
+              alignItems: 'center',
+            }}
+          >
+            <Corpo taglia={13.5} tono="debole">{`Continua con ${chi}`}</Corpo>
+          </View>
+        ))}
+      </View>
+      <Corpo taglia="micro" tono="debole" style={{ textAlign: 'center' }}>
+        Per ora si entra solo con email e password.
+      </Corpo>
+    </View>
+  )
+}
+
 export function GuscioAutenticazione({
+  occhiello,
   titolo,
   sottotitolo,
   errore,
   azione,
+  piede,
   onLinkFantasma,
   testoLinkFantasma,
   children,
 }: {
+  /** La riga in maiuscolo sopra il titolo — «IL TUO ARMADIO TI ASPETTA»,
+   *  «PASSO 1 DI 3». Nel deck c'è su entrambe le schermate d'accesso. */
+  occhiello?: string
   titolo: string
   sottotitolo: string
   errore?: string | null
   azione: ReactNode
+  /** Quello che nel deck sta **sotto** l'azione: l'accesso con Apple o
+   *  Google, il recupero della password. Sono cose che il backend non sa
+   *  ancora fare, e si mostrano spente col motivo invece di sparire — la
+   *  stessa scelta di `Foglio` e di `RigaImpostazione`. */
+  piede?: ReactNode
   onLinkFantasma: () => void
   testoLinkFantasma: ReactNode
   children: ReactNode
@@ -445,6 +507,7 @@ export function GuscioAutenticazione({
           }}
         >
           <View style={{ gap: spazi.xs, marginBottom: spazi.l }}>
+            {occhiello ? <Etichetta taglia={11}>{occhiello}</Etichetta> : null}
             <Titolo>{titolo}</Titolo>
             <Corpo tono="tenue">{sottotitolo}</Corpo>
           </View>
@@ -454,6 +517,8 @@ export function GuscioAutenticazione({
           {errore ? <TestoErrore>{errore}</TestoErrore> : null}
 
           {azione}
+
+          {piede}
 
           <LinkTesto onPress={onLinkFantasma}>{testoLinkFantasma}</LinkTesto>
         </View>

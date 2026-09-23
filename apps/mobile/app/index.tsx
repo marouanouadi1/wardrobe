@@ -48,5 +48,10 @@ export default function Ingresso() {
     return <Redirect href={introVista ? '/accedi' : '/intro'} />
   }
   if (preferenzeViste === null) return <View style={{ flex: 1, backgroundColor: colori.sfondo }} />
-  return <Redirect href={preferenzeViste ? '/(tabs)/oggi' : '/preferenze'} />
+  // Il primo accesso fa i tre passi del deck: account → misure → stile.
+  // Il segnale resta uno solo (`preferenzeViste`), perché è l'ultimo passo a
+  // chiuderli tutti: chi salta le misure arriva comunque a `preferenze`, e
+  // dare a ciascun passo il suo flag vorrebbe dire poterli lasciare a metà in
+  // combinazioni che nessuno ha pensato.
+  return <Redirect href={preferenzeViste ? '/(tabs)/oggi' : '/misure?onboarding=1'} />
 }

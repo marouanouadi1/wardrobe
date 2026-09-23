@@ -13,7 +13,7 @@ import { useAzione } from '../src/dati/risorsa'
 import { useSessione } from '../src/dati/sessione'
 import { BottonePrimario, Campo } from '../src/ui/base'
 import { Forte } from '../src/ui/testo'
-import { GuscioAutenticazione } from '../src/ui/guscio'
+import { GuscioAutenticazione, PiedeAccesso } from '../src/ui/guscio'
 
 export default function Accedi() {
   const [email, setEmail] = useState('')
@@ -36,9 +36,11 @@ export default function Accedi() {
 
   return (
     <GuscioAutenticazione
-      titolo="Bentornato."
-      sottotitolo="Accedi con le credenziali che ti sono state date."
+      occhiello="IL TUO ARMADIO TI ASPETTA"
+      titolo="Accedi"
+      sottotitolo="Con le credenziali che ti sono state date."
       errore={errore}
+      piede={<PiedeAccesso conRecupero />}
       onLinkFantasma={() => router.push('/registrati')}
       testoLinkFantasma={
         <>
@@ -47,7 +49,7 @@ export default function Accedi() {
       }
       azione={
         <BottonePrimario
-          testo="Accedi"
+          testo="Entra"
           caricando={caricamento}
           onPress={() => void accedi()}
           disabilitato={!pronto}
@@ -69,7 +71,7 @@ export default function Accedi() {
         etichetta="Password"
         value={password}
         onChangeText={setPassword}
-        secureTextEntry
+        rivelabile
         textContentType="password"
         placeholder="••••••••"
         onSubmitEditing={() => {

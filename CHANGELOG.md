@@ -78,6 +78,12 @@ travestita da registro.
   l'account, le tue misure, le preferenze di stile e la foto per l'avatar — e
   la schermata te lo dice prima, in due elenchi separati, coi numeri veri.
   Bisogna scrivere «SVUOTA» per confermare, e non si torna indietro.
+- **Le schermate d'apertura sono quelle nuove.** Erano rimaste indietro: la
+  prima diceva ancora «wardrobe». Ora sono i tre passi del deck — l'armadio che
+  scorre appeso alla stanga, l'avatar con la tua taglia, lo stilista a cui
+  chiedere — e l'accesso ha il «Mostra» sulla password. Entrando per la prima
+  volta si fanno tre passi: account, misure, stile. Le misure si possono
+  saltare.
 - **La palette viene dal deck «Aura».** I token di colore sono nominati per
   ruolo: `primario` (l'accento, `#5566D6`), `inchiostro`, `scheda` (il bianco
   da cui si compone ogni velatura), `pericolo`. Spariscono `ambra`, `crema` e

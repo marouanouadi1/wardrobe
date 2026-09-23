@@ -430,6 +430,44 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       privacy». E **nessuna prova su un telefono**: un campo che va scritto in
       maiuscolo e un bottone distruttivo sono esattamente ciò che una tastiera
       vera può rendere scomodo.
+- [~] **L'apertura: `intro` a tre passi, `accedi`, `registrati`** (fase 4, la
+      metà che mancava) — **e mancava davvero**. La fase 4 del piano diceva
+      «onboarding, profilo, impostazioni»: delle prime tre fette è stata fatta
+      solo la seconda parte, e nessun rapporto l'ha detto. In `intro.tsx` il
+      redesign aveva cambiato **tre righe**, tutte lo stesso colore di un
+      pallino; la prima schermata dell'app scriveva ancora «wardrobe». Se ne è
+      accorto l'utente aprendo l'APK, non un gate.
+      `app/intro.tsx` riscritta sui tre passi del deck: `welcome` con la
+      **stanga di capi appesi che scorre** (serie doppia, 26s, `translateX` col
+      driver nativo), `provalo` con l'omino e le due targhette, `chiedi` con le
+      due battute di chat e la proposta a tre tessere, una tratteggiata.
+      Le immagini **vengono dal deck**, copiate in `assets/intro/`: non sono
+      sagome ridisegnate, sono gli stessi file.
+      `accedi` e `registrati` prendono l'occhiello del deck («IL TUO ARMADIO TI
+      ASPETTA», «PASSO 1 DI 3»), il «Mostra» sulla password (`Campo` ha
+      imparato `rivelabile`) e il piede con l'SSO e il recupero password —
+      **spenti col motivo**, non tolti: chi non riesce a entrare e non vede
+      «password dimenticata» pensa di aver sbagliato lui.
+      «PASSO 1 DI 3» non è un'etichetta vuota: il primo accesso ora fa i tre
+      passi veri, account → misure → stile. `misure.tsx` serve entrambe le
+      strade con `?onboarding=1` (occhiello diverso, nessun «indietro», «Le
+      inserisco dopo» al posto di «Cancella»); il segnale resta uno solo
+      (`preferenzeViste`), perché è l'ultimo passo a chiuderli tutti.
+      *Verificato:* `typecheck` exit 0, `lint` 0 errori, `mobile:test` 69,
+      `build:web`. **E soprattutto guardandole**: `dist/` servita in locale e
+      cinque screenshot a 390×844 con Chrome headless, confrontati col
+      template del deck. È la classe di difetti che i quattro comandi non
+      vedono — erano tutti verdi mentre la prima schermata diceva «wardrobe».
+      Tre difetti visti solo così e corretti: le bolle di chat uscivano dai
+      bordi, la targhetta «AVATAR 3D» usciva a destra, e le tessere dei capi
+      erano **invisibili** (un velo bianco su una bolla già bianca).
+      **Cosa diverge dal deck, di proposito:** la casella «Accetto i termini di
+      servizio e l'informativa privacy» **non c'è**. È l'unico elemento il cui
+      contenuto è un'affermazione che non possiamo sostenere — quei documenti
+      non esistono (`D-08`), e una spunta obbligatoria che rimanda al nulla è
+      peggio di una spunta assente. SSO e recupero password invece ci sono,
+      spenti.
+      **Cosa manca:** ancora nessuna prova su un telefono.
 - [x] Una sola copia di React nel monorepo (`T-23`, chiusa): `react` e
       `react-dom` dichiarati anche in `dependencies` di root, alla versione
       esatta di `apps/mobile`. Il `jest.moduleNameMapper` che tamponava il
