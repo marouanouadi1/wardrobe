@@ -1396,8 +1396,9 @@ formattazione di npm (`JSON.stringify(…, 2)` rilegge il file byte per byte).
 Poi `npm install --package-lock-only` sul risultato esce 0 e **non tocca più il
 lock**: è esattamente il sintomo della voce, e non c'è più. Tolta la voce
 `apps/mobile` dal lock, lo script esce 1 col suo messaggio e non scrive
-`app.json` né `package.json`. **Non verificato**: il job `release` vero, che
-gira al primo merge su `main` che tocca `apps/mobile/**`.
+`app.json` né `package.json`. **Non verificato**: il job `release` vero. Gira
+al merge stesso di questa modifica, perché `mobile.yml` sta nel filtro `paths:`
+di sé stesso.
 
 ### T-52 — Il bump dell'app non aggiorna `package-lock.json` (chiusa)
 **Trovato il:** 2026-09-24 · **Dove:** `scripts/bump-versione.mjs` (target `mobile`), `.github/workflows/mobile.yml` (step del commit di bump) · **Gravità:** bassa · **Chi:** `ci-cd`
