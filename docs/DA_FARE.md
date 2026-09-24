@@ -1432,9 +1432,10 @@ in radice, di `react`, `react-dom`, `react-native`, `expo`, `expo-router`,
 `disableHierarchicalLookup`, voluto: la riga di `docs/deploy.md` che dice «una
 cosa sola» torna vera. `typecheck`, `lint`, `mobile:test` (68 verdi),
 `build:web` e `contracts:check` escono tutti a 0, e `build:web` e i test sono
-stati rilanciati anche dopo aver tolto le foto. **Non verificato**: un APK
-costruito con queste versioni, né una prova sul telefono. Il merge fa partire
-il rilascio `0.9.4`, e l'APK si costruisce in locale dal suo tag.
+stati rilanciati anche dopo aver tolto le foto. Poi l'APK della `0.9.4`,
+costruito in locale dal suo tag: `expo doctor` dentro `eas build` è 20/21 anche
+lì. Sul telefono: installata dall'utente il 2026-09-24 — *«sembra
+funzionare»*. Una prova a mano, non un giro di tutte le schermate.
 
 ### T-55 — Quattro pacchetti Expo di nuovo indietro di una patch (chiusa)
 **Trovato il:** 2026-09-24 · **Dove:** `apps/mobile/package.json`, `package-lock.json` · **Gravità:** bassa · **Chi:** `mobile`
