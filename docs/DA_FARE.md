@@ -837,111 +837,32 @@ provate; ripristinato, verdi.
 **nessuno l'ha ancora guardato su un telefono** — il conto dice che entra, non
 come si vede.
 
-### T-35 — Due istanze di `three` da una sola copia installata (tampone in piedi)
-**Trovato il:** 2026-09-15 · **Dove il tampone:** `apps/mobile/metro.config.js` (il `resolver.resolveRequest`) · **Gravità:** media · **Chi:** `mobile`
+### T-52 — Il bump dell'app non aggiorna `package-lock.json`
+**Trovato il:** 2026-09-24 · **Dove:** `scripts/bump-versione.mjs` (target `mobile`), `.github/workflows/mobile.yml` (step del commit di bump) · **Gravità:** bassa · **Chi:** `ci-cd`
 
-Sintomo: «`THREE.WARNING: Multiple instances of Three.js being imported`»
-all'avvio del banco `app/dev/prova-3d.tsx`.
+`package-lock.json` registra la versione di ogni workspace, sotto
+`packages["apps/mobile"].version`. Il target `mobile` di `bump-versione.mjs`
+scrive `app.json` e `apps/mobile/package.json`, e il job di rilascio committa
+**solo quei due**. Al 2026-09-24 l'app è alla `0.9.0` e il lock dice ancora
+`0.6.4`: fermo dall'ultimo ricalcolo a mano (`501d6e8`, `T-23`).
 
-**Non è il caso di `T-23`**: la copia installata è **una sola**. `find` ne trova
-una (`node_modules/three`) e `npm ls three --all` la dà `deduped`. A duplicarsi è
-la *risoluzione*, non l'installazione.
+Il sintomo è che **ogni `npm install` in locale sporca il lockfile** con una
+riga che nessuno ha toccato, e chi la trova nel diff non sa se committarla.
+`npm ci` in CI non se ne accorge, perché la versione di un workspace non entra
+nella risoluzione delle dipendenze: per questo nessun job è rosso.
 
-Prima cosa fatta, e da non rifare al contrario: `three` era stato dichiarato
-**anche in `dependencies` di root**, per analogia con il rimedio di `T-23`. Lì
-serviva perché decine di pacchetti hoisted chiedono `react` come peer con `*` e
-npm, senza una risposta in root, installava l'ultima. Qui il peer è **uno solo**
-— `@react-three/fiber`, con `>=0.156`, soddisfatto dal pin esatto di
-`apps/mobile` — quindi quella riga non impediva niente: tolta, `npm install`
-lascia sempre una copia sola, hoistata in `node_modules/three`. Non va
-reintrodotta pensando di curare questo warning: non lo tocca.
+È lo stesso difetto che sul backend è già stato chiuso con `uv lock` dopo il
+bump (`.claude/rules/ci-release.md`, invariante 5): un lockfile che registra la
+versione e resta indietro rimette in circolo la bugia che il versioning doveva
+togliere. Sull'app manca la metà npm.
 
-La catena vera è un'altra:
-
-1. `three` pubblica due build della stessa libreria e le distingue con le sole
-   condizioni `import`/`require` del campo `exports` — **nessuna `default`,
-   nessuna `react-native`**;
-2. Metro asserisce quella condizione **per modulo importatore**, non una volta
-   per pacchetto: `context.isESMImport === true ? 'import' : 'require'`, in
-   `metro-resolver/src/utils/matchSubpathFromExportsLike.js`;
-3. Expo lascia `unstable_conditionNames` a `[]` (verificato stampando la config
-   risolta), quindi niente sovrascrive quella scelta;
-4. `@react-three/fiber` non ha un campo `exports`, e per android/ios
-   `resolverMainFields` vale `['react-native','browser','main']` — senza
-   `module`. Il suo entry `/native` è quindi il **CJS**, e chiede `require`.
-
-Risultato: fiber prende `build/three.cjs`; l'app e i file dentro
-`three/examples/jsm/` (ESM, perché `three` è `"type": "module"`) prendono
-`build/three.module.js` + `build/three.core.js`. Due istanze in un bundle.
-
-**Solo sul nativo.** Sul web i main field arrivano all'entry ESM di fiber
-(`react-three-fiber-native.esm.js`), tutto converge già su `three.module.js` e
-l'istanza era una sola anche prima — verificato confrontando le source map dei
-due bundle web. Il punto 4 è quindi l'anello che rompe, e vale per l'APK: la
-piattaforma su cui il banco gira davvero.
-
-Il danno non è il warning: è che le mesh che `GLTFLoader` costruisce vengono da
-una `three` e il renderer che le monta sotto `<primitive>` dalla **`instanceof`
-di un'altra**. Più ~2 MB di sorgente duplicato (528 KB di bytecode Hermes sul
-bundle Android — misurato **con `--no-minify`**, come il comando di ricontrollo
-qui sotto; l'APK passa da EAS che minifica, quindi il risparmio reale è un
-altro numero. La minificazione non cambia la risoluzione: a discriminare è
-l'elenco dei moduli, non i byte).
-
-**Il tampone**: un `resolveRequest` che, per il solo `moduleName === 'three'`,
-forza `isESMImport: false` — così ogni richiesta finisce sul ramo `require`.
-Narrow di proposito: `unstable_conditionNames = ['require']` o l'aggiunta di
-`'module'` a `resolverMainFields` avrebbero riscritto la risoluzione di **ogni**
-pacchetto del grafo per un problema che ne riguarda uno.
-
-Non è ristretto al nativo pur essendo un difetto del nativo: «`three` è sempre la
-build CJS» si spiega in una riga, «`three` è CJS sul telefono ed ESM sul web» no
-— e su web il pin è comunque innocuo (una istanza prima, una dopo) e toglie
-83 KB dal bundle. Se un domani quel verso desse problemi sul web, la
-restrizione è `platform !== 'web'`, non un secondo tampone.
-
-**Perché è un tampone e non un rimedio:** togliendolo, il problema torna. La
-causa è a monte e da qui non si raggiunge.
-
-**Cosa serve (e cosa cancellare quando arriva):** basta **una** delle tre, e in
-tutti i casi le righe del `resolveRequest` in `metro.config.js` vanno **tolte**,
-non lasciate accanto al rimedio:
-
-- `three` aggiunge una chiave `default` (o `react-native`) al suo `exports`, che
-  farebbe convergere i due rami — è l'anomalia vera, un `exports` con solo
-  `import`/`require` non è risolvibile da un bundler che non asserisce da sé;
-- `@react-three/fiber` pubblica un campo `exports`, o Expo aggiunge `module` a
-  `resolverMainFields`, così l'entry `/native` smette di essere CJS;
-- Expo popola `unstable_conditionNames` per le piattaforme native.
-
-**Da ricontrollare a ogni bump di `three` o di `@react-three/fiber`**, con il
-comando che ha prodotto la misura qui sopra:
-
-```bash
-npx expo export --platform android --output-dir /tmp/x --no-minify --source-maps
-jq -r '.sources[] | select(startswith("/node_modules/three"))' /tmp/x/_expo/static/js/android/*.map
-```
-
-Deve comparire `build/three.cjs` e **non** `build/three.module.js`.
-
-### T-36 — Il banco `app/dev/prova-3d.tsx` è una rotta, e viaggia nell'APK rilasciato
-**Trovato il:** 2026-09-15 · **Dove:** `apps/mobile/app/dev/prova-3d.tsx` · **Gravità:** bassa · **Chi:** `mobile`
-
-`main` è `expo-router/entry`: ogni file sotto `app/` è una **rotta**, anche senza
-un link che ci porti. `app/dev/prova-3d.tsx` compare infatti nella source map del
-bundle Android — quello che `mobile.yml` impacchetta nell'APK della Release — e
-si tira dietro `three` e `@react-three/fiber` (~2 MB di sorgente anche dopo
-`T-35`). Lo stesso vale per il `build:web` di CI, che però è solo un check: non
-c'è un sito pubblicato.
-
-Non è una violazione: `.claude/rules/react-native.md` vieta i **test** sotto
-`app/`, non una schermata di sviluppo, e il docblock del file dichiara già che è
-temporanea. È un costo che conviene sapere, non un difetto.
-
-**Cosa serve:** decidere se il banco va tolto a Cancello 1 chiuso (è la via
-naturale: il file nasce dichiarato temporaneo), oppure — se serve tenerlo — se
-vale la pena escluderlo dai build di rilascio. Non c'è una scelta ovvia finché
-il Cancello 1 non ha risposto, quindi la voce sta qui e non in una issue.
+**Rimedio:** nel target `mobile`, `scrivi()` aggiorna anche
+`packages["apps/mobile"].version` in `package-lock.json`, e `mobile.yml` lo
+aggiunge al `git add` del commit di bump. `package-lock.json` sta già nel filtro
+`paths:` di `mobile.yml`, ma il commit porta `[skip ci]`, quindi non si rimette
+in coda. Poi l'invariante 5 di `ci-release.md` va detta per entrambi i gestori.
+Da non fare: correggere la riga a mano — il prossimo rilascio la rimetterebbe
+indietro.
 
 ---
 
@@ -1289,3 +1210,126 @@ sposta di proposito**: il fondo dell'attributo «incerto» passa da `#FFF1EC` a
 `#FFE3DA`, leggermente più saturo — deciso con l'utente prima di applicarlo,
 non scoperto dopo. Il ramo non-incerto della stessa riga (`rgba(21,21,26,0.04)`)
 è diventato `velo(colori.inchiostro, 0.04)`, senza cambiare pixel.
+
+---
+
+Chiuse il **2026-09-24**, **senza un commit che le chiuda**: il codice che
+descrivevano (`app/dev/prova-3d.tsx`, `src/avatar/caricatore.ts`, il
+`resolveRequest` in `metro.config.js`, le dipendenze `three`,
+`@react-three/fiber`, `@types/three`, `expo-gl` ed `expo-dev-client`) **non è mai
+entrato nel repo**: è rimasto nel working tree di una sessione dal 2026-09-15, e
+le due voci erano state committate senza di lui. Il 2026-09-24 l'utente ha
+deciso di scartare il banco, e quel working tree è stato ripulito. Su `main`
+nessun file sotto `app/dev/`, nessun `three` nel lock e nessun tampone in
+`metro.config.js`: `grep -rn "three\|prova-3d" apps/mobile --include=*.ts
+--include=*.tsx --include=*.js` non trova niente.
+
+Restano scritte perché la catena di `T-35` è stata cara da ricostruire: se il
+3D torna — con `@react-three/fiber` sul nativo — la doppia risoluzione di
+`three` torna con lui, e la voce dice già dove guardare e come misurarla.
+
+### T-35 — Due istanze di `three` da una sola copia installata (chiusa: il banco è stato scartato)
+**Trovato il:** 2026-09-15 · **Dove il tampone:** `apps/mobile/metro.config.js` (il `resolver.resolveRequest`) · **Gravità:** media · **Chi:** `mobile`
+
+Sintomo: «`THREE.WARNING: Multiple instances of Three.js being imported`»
+all'avvio del banco `app/dev/prova-3d.tsx`.
+
+**Non è il caso di `T-23`**: la copia installata è **una sola**. `find` ne trova
+una (`node_modules/three`) e `npm ls three --all` la dà `deduped`. A duplicarsi è
+la *risoluzione*, non l'installazione.
+
+Prima cosa fatta, e da non rifare al contrario: `three` era stato dichiarato
+**anche in `dependencies` di root**, per analogia con il rimedio di `T-23`. Lì
+serviva perché decine di pacchetti hoisted chiedono `react` come peer con `*` e
+npm, senza una risposta in root, installava l'ultima. Qui il peer è **uno solo**
+— `@react-three/fiber`, con `>=0.156`, soddisfatto dal pin esatto di
+`apps/mobile` — quindi quella riga non impediva niente: tolta, `npm install`
+lascia sempre una copia sola, hoistata in `node_modules/three`. Non va
+reintrodotta pensando di curare questo warning: non lo tocca.
+
+La catena vera è un'altra:
+
+1. `three` pubblica due build della stessa libreria e le distingue con le sole
+   condizioni `import`/`require` del campo `exports` — **nessuna `default`,
+   nessuna `react-native`**;
+2. Metro asserisce quella condizione **per modulo importatore**, non una volta
+   per pacchetto: `context.isESMImport === true ? 'import' : 'require'`, in
+   `metro-resolver/src/utils/matchSubpathFromExportsLike.js`;
+3. Expo lascia `unstable_conditionNames` a `[]` (verificato stampando la config
+   risolta), quindi niente sovrascrive quella scelta;
+4. `@react-three/fiber` non ha un campo `exports`, e per android/ios
+   `resolverMainFields` vale `['react-native','browser','main']` — senza
+   `module`. Il suo entry `/native` è quindi il **CJS**, e chiede `require`.
+
+Risultato: fiber prende `build/three.cjs`; l'app e i file dentro
+`three/examples/jsm/` (ESM, perché `three` è `"type": "module"`) prendono
+`build/three.module.js` + `build/three.core.js`. Due istanze in un bundle.
+
+**Solo sul nativo.** Sul web i main field arrivano all'entry ESM di fiber
+(`react-three-fiber-native.esm.js`), tutto converge già su `three.module.js` e
+l'istanza era una sola anche prima — verificato confrontando le source map dei
+due bundle web. Il punto 4 è quindi l'anello che rompe, e vale per l'APK: la
+piattaforma su cui il banco gira davvero.
+
+Il danno non è il warning: è che le mesh che `GLTFLoader` costruisce vengono da
+una `three` e il renderer che le monta sotto `<primitive>` dalla **`instanceof`
+di un'altra**. Più ~2 MB di sorgente duplicato (528 KB di bytecode Hermes sul
+bundle Android — misurato **con `--no-minify`**, come il comando di ricontrollo
+qui sotto; l'APK passa da EAS che minifica, quindi il risparmio reale è un
+altro numero. La minificazione non cambia la risoluzione: a discriminare è
+l'elenco dei moduli, non i byte).
+
+**Il tampone**: un `resolveRequest` che, per il solo `moduleName === 'three'`,
+forza `isESMImport: false` — così ogni richiesta finisce sul ramo `require`.
+Narrow di proposito: `unstable_conditionNames = ['require']` o l'aggiunta di
+`'module'` a `resolverMainFields` avrebbero riscritto la risoluzione di **ogni**
+pacchetto del grafo per un problema che ne riguarda uno.
+
+Non è ristretto al nativo pur essendo un difetto del nativo: «`three` è sempre la
+build CJS» si spiega in una riga, «`three` è CJS sul telefono ed ESM sul web» no
+— e su web il pin è comunque innocuo (una istanza prima, una dopo) e toglie
+83 KB dal bundle. Se un domani quel verso desse problemi sul web, la
+restrizione è `platform !== 'web'`, non un secondo tampone.
+
+**Perché è un tampone e non un rimedio:** togliendolo, il problema torna. La
+causa è a monte e da qui non si raggiunge.
+
+**Cosa serve (e cosa cancellare quando arriva):** basta **una** delle tre, e in
+tutti i casi le righe del `resolveRequest` in `metro.config.js` vanno **tolte**,
+non lasciate accanto al rimedio:
+
+- `three` aggiunge una chiave `default` (o `react-native`) al suo `exports`, che
+  farebbe convergere i due rami — è l'anomalia vera, un `exports` con solo
+  `import`/`require` non è risolvibile da un bundler che non asserisce da sé;
+- `@react-three/fiber` pubblica un campo `exports`, o Expo aggiunge `module` a
+  `resolverMainFields`, così l'entry `/native` smette di essere CJS;
+- Expo popola `unstable_conditionNames` per le piattaforme native.
+
+**Da ricontrollare a ogni bump di `three` o di `@react-three/fiber`**, con il
+comando che ha prodotto la misura qui sopra:
+
+```bash
+npx expo export --platform android --output-dir /tmp/x --no-minify --source-maps
+jq -r '.sources[] | select(startswith("/node_modules/three"))' /tmp/x/_expo/static/js/android/*.map
+```
+
+Deve comparire `build/three.cjs` e **non** `build/three.module.js`.
+
+### T-36 — Il banco `app/dev/prova-3d.tsx` è una rotta, e viaggia nell'APK rilasciato (chiusa: il banco è stato scartato)
+**Trovato il:** 2026-09-15 · **Dove:** `apps/mobile/app/dev/prova-3d.tsx` · **Gravità:** bassa · **Chi:** `mobile`
+
+`main` è `expo-router/entry`: ogni file sotto `app/` è una **rotta**, anche senza
+un link che ci porti. `app/dev/prova-3d.tsx` compare infatti nella source map del
+bundle Android — quello che `mobile.yml` impacchetta nell'APK della Release — e
+si tira dietro `three` e `@react-three/fiber` (~2 MB di sorgente anche dopo
+`T-35`). Lo stesso vale per il `build:web` di CI, che però è solo un check: non
+c'è un sito pubblicato.
+
+Non è una violazione: `.claude/rules/react-native.md` vieta i **test** sotto
+`app/`, non una schermata di sviluppo, e il docblock del file dichiara già che è
+temporanea. È un costo che conviene sapere, non un difetto.
+
+**Cosa serve:** decidere se il banco va tolto a Cancello 1 chiuso (è la via
+naturale: il file nasce dichiarato temporaneo), oppure — se serve tenerlo — se
+vale la pena escluderlo dai build di rilascio. Non c'è una scelta ovvia finché
+il Cancello 1 non ha risposto, quindi la voce sta qui e non in una issue.

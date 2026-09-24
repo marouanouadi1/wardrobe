@@ -68,12 +68,6 @@ describe('la barra delle schede sa dove va', () => {
     },
   )
 
-  test('il banco 3D non è una scheda e non ne accende nessuna', () => {
-    // `app/dev/prova-3d.tsx` è lavoro in corso sull'avatar: la barra lì
-    // cambierebbe una schermata che nessuno ha chiesto di cambiare.
-    expect(schedaDi('/dev/prova-3d')).toBeNull()
-  })
-
   test('la mappa non contiene rotte che non esistono più', () => {
     // Il difetto lento: una rotta viene rinominata o rimossa e la sua riga
     // nella mappa resta, muta, finché qualcuno non la legge come se fosse
