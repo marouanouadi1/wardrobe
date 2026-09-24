@@ -14,9 +14,12 @@ commit.
   affidabile da reti che non hanno IPv6 funzionante.
 - **Utente**: `marouan`, non-root, accesso SSH solo a chiave (login root e
   password disabilitati in `sshd_config`). Firewall `ufw`: solo 22/80/443.
-- **Dominio**: `ilmioarmadio.xyz` (Porkbun). Un solo record utile, `A` con
-  host `api` → `89.167.15.22`: l'app parla solo con `api.ilmioarmadio.xyz`,
-  il dominio nudo non serve a niente.
+- **Dominio**: `ilmioarmadio.xyz`, registrato e servito da **Hostinger** —
+  i nameserver sono `aster.dns-parking.com` e `helios.dns-parking.com`, e i
+  record si toccano da hPanel → Domini → DNS. (Fino al 17/09/2026 questa riga
+  diceva «Porkbun»: era sbagliata.) Un solo record utile, `A` con host `api`
+  → `89.167.15.22`: l'app parla solo con `api.ilmioarmadio.xyz`, il dominio
+  nudo non serve a niente.
 - **Servizi**: `docker-compose.yml` nella radice del repo, tre container —
   `postgres`, `api` (l'immagine di `services/api/Dockerfile`), `caddy`
   (reverse proxy HTTPS, certificato Let's Encrypt automatico al primo avvio).

@@ -192,6 +192,12 @@ travestita da registro.
   Ora è l'ultima.)
 
 ### progetto
+- Chiuse `T-35` e `T-36`: il banco 3D (`app/dev/prova-3d.tsx`) che
+  descrivevano non è mai entrato nel repo ed è stato scartato. Via anche il
+  caso di `test/convenzioni/navigazione.test.ts` che teneva ferma una rotta
+  inesistente. Aperta `T-52`: il bump dell'app lascia indietro la versione
+  registrata in `package-lock.json`. `docs/deploy.md` dice il registrar vero
+  del dominio (Hostinger, non Porkbun).
 - Lo stato del progetto vive in `docs/PROGRESS.md`, `docs/QUESTIONI.md`,
   `docs/DOMANDE_APERTE.md` e `docs/TEST_COVERAGE.md` invece che nel README.
 - Gli standard per area vivono in `.claude/rules/`; `CLAUDE.md` resta la sintesi.
