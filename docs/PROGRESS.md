@@ -438,11 +438,26 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       pallino; la prima schermata dell'app scriveva ancora «wardrobe». Se ne è
       accorto l'utente aprendo l'APK, non un gate.
       `app/intro.tsx` riscritta sui tre passi del deck: `welcome` con la
-      **stanga di capi appesi che scorre** (serie doppia, 26s, `translateX` col
-      driver nativo), `provalo` con l'omino e le due targhette, `chiedi` con le
+      **giostra**, `provalo` con l'omino e le due targhette, `chiedi` con le
       due battute di chat e la proposta a tre tessere, una tratteggiata.
-      Le immagini **vengono dal deck**, copiate in `assets/intro/`: non sono
-      sagome ridisegnate, sono gli stessi file.
+      La giostra (2026-09-23) ha preso il posto della stanga di capi appesi,
+      bocciata dal committente per le immagini: otto `Scheda` opache in cerchio,
+      un giro in 60 s lineare col driver nativo, e ogni tessera controruota per
+      restare dritta. Il cerchio si misura sul lato **corto** della scena:
+      sugli schermi bassi comanda l'altezza, e lì si rimpicciolisce (tessere di
+      ~30 pt a 320×568, ~50 a 360×640, ~90 a 390×844 — scelta dell'utente). Le
+      otto foto sono scontornate: sei sono capi generati dall'utente con
+      Gemini, due (giacca e borsa) sono foto senza fonte, montate per scelta
+      dell'utente come eccezione dichiarata (`T-49`). Provenienza, lavorazione e
+      scarti in `assets/intro/FONTI.md`.
+      *Verificato:* `typecheck` exit 0, `lint` 0 errori, `mobile:test` 69,
+      `build:web`, e scatti reali della build a 0, 7 e 15 s su 320×568,
+      360×640, 375×667 e 390×844 (Chrome headless pilotato via CDP, con attese
+      vere: i fotogrammi differiscono fra 47 mila e 246 mila pixel, quindi gira
+      davvero). Guardati uno per uno: nessuna tessera esce dallo schermo,
+      nessun capo capovolto.
+      Le immagini dei passi 2 e 3 **vengono dal deck**, copiate in
+      `assets/intro/`: non sono sagome ridisegnate, sono gli stessi file.
       `accedi` e `registrati` prendono l'occhiello del deck («IL TUO ARMADIO TI
       ASPETTA», «PASSO 1 DI 3»), il «Mostra» sulla password (`Campo` ha
       imparato `rivelabile`) e il piede con l'SSO e il recupero password —
@@ -517,6 +532,13 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       nessuno dei due che pushano. Poi in CI sulla PR #16: tutti i job passano.
       I due job che pushano girano solo su `main`, quindi la loro prima
       esecuzione vera è il prossimo rilascio*
+- [~] L'APK della Release si costruisce solo per `arm64-v8a` e `armeabi-v7a`,
+      non più anche per `x86`/`x86_64` degli emulatori (`eas.json`, profilo
+      `preview`). Atteso: da 117,6 MB (`mobile-v0.7.0`) a circa 67 MB. *Verificato
+      in locale che `ORG_GRADLE_PROJECT_reactNativeArchitectures` vince su
+      `gradle.properties` (`./gradlew :app:properties` con e senza la variabile);
+      il peso atteso è la somma delle librerie delle due ABI nell'APK 0.7.0. Manca:
+      il peso vero del primo APK rilasciato da EAS con la modifica*
 - [ ] Nessun rilascio iOS
 
 ## Cosa manca dall'esterno

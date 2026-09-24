@@ -7,9 +7,11 @@
  * rapporto lo dicesse. Questa è la prima cosa che si vede aprendo l'app, e
  * finché è rimasta indietro tutto il resto sembrava non essere successo.
  *
- * Le immagini vengono **dal deck**, copiate in `assets/intro/`: la felpa, i
- * pantaloni e le ciabatte della stanga, e l'omino del passo 2. Non sono
- * sagome ridisegnate — sono gli stessi file.
+ * Il primo passo era una stanga di capi appesi, con le immagini del deck: il
+ * committente le ha giudicate brutte, e al loro posto c'è la giostra, un
+ * cerchio di tessere che gira piano. Da dove vengono le sue foto, con la
+ * licenza di ciascuna, lo dice `assets/intro/FONTI.md`. La felpa e i
+ * pantaloni del passo 3, e l'omino del passo 2, sono ancora quelli del deck.
  *
  * Quello che il deck promette e l'app non sa ancora fare non è stato
  * cancellato né reso toccabile a vuoto: il terzo passo dice «Crea il mio
@@ -38,95 +40,135 @@ import { Corpo, Etichetta, Forte, Titolo } from '../src/ui/testo'
 
 const FELPA = require('../assets/intro/felpa-blu-con-cappuccio.png') as number
 const PANTALONI = require('../assets/intro/pantaloni-grigi-dritti.png') as number
-const CIABATTE = require('../assets/intro/ciabatte-blu-tre-strisce.png') as number
 const OMINO = require('../assets/intro/omino-fronte.png') as number
 
-/** La stanga: i capi appesi scorrono lenti verso sinistra, in loop.
- *  Sei tessere e non tre, come nel deck: la serie è **doppia**, così a metà
- *  corsa l'animazione ricomincia e il taglio non si vede. */
-const APPESI = [
-  { foto: FELPA, larghezza: 136 },
-  { foto: PANTALONI, larghezza: 120 },
-  { foto: CIABATTE, larghezza: 112 },
+/**
+ * La giostra: otto tessere in cerchio che girano piano, in loop.
+ *
+ * Il cerchio gira tutto insieme, e ogni tessera gira al contrario della stessa
+ * quantità: così orbita restando dritta — senza, a metà giro i capi sarebbero
+ * a testa in giù. L'inclinazione di ciascuna è già dentro gli estremi della sua
+ * rotazione, perché resti **una** voce di `transform` per vista: è quella che
+ * il driver nativo anima di sicuro.
+ *
+ * Le tessere sono `Scheda` opache e non `vetro`: si sovrappongono, e
+ * attraverso un vetro al 60% il capo di quella dietro si vedrebbe in quella
+ * davanti.
+ */
+const TESSERE = [
+  { foto: require('../assets/intro/felpa-rossa.png') as number, scala: 1, inclinazione: -6 },
+  { foto: require('../assets/intro/pantaloni-turchesi.png') as number, scala: 0.9, inclinazione: 5 },
+  { foto: require('../assets/intro/giacca-pelle.png') as number, scala: 1.06, inclinazione: -3 },
+  { foto: require('../assets/intro/abito-a-fiori.png') as number, scala: 0.94, inclinazione: 7 },
+  { foto: require('../assets/intro/cappello-fucsia.png') as number, scala: 1.02, inclinazione: -5 },
+  { foto: require('../assets/intro/borsa-nera.png') as number, scala: 0.88, inclinazione: 3 },
+  { foto: require('../assets/intro/maglietta-viola.png') as number, scala: 1.04, inclinazione: -8 },
+  { foto: require('../assets/intro/sneaker-multicolore.png') as number, scala: 0.92, inclinazione: 4 },
 ] as const
 
-const DISTANZA_APPESI = 16
-const LARGHEZZA_SERIE = APPESI.reduce((t, c) => t + c.larghezza + DISTANZA_APPESI, 0)
+/** Altezza su larghezza di una tessera. */
+const PROPORZIONE = 1.25
+/** Il raggio, in larghezze di tessera: le vicine si sovrappongono di circa un quinto. */
+const RAGGIO_IN_TESSERE = 1.05
+/** Quanto può sporgere dal suo centro la tessera più grande, comunque sia
+ *  inclinata: metà della sua diagonale, in larghezze di tessera. */
+const SPORGENZA = (Math.max(...TESSERE.map((t) => t.scala)) * Math.hypot(1, PROPORZIONE)) / 2
+/** Il margine dai bordi dello schermo: lo stesso del testo sotto. */
+const MARGINE = 26
+/** Il lato più grande che il cerchio si prende, cioè quello di un 390×844. Il
+ *  tetto viene dalle foto, non dallo schermo: sono ritagli da ~280 px di lato, e
+ *  su un telefono più grande (o su un tablet Android) le tessere le stirerebbero. */
+const LATO_MASSIMO = 340
+/** Un giro intero. Non è un token di `durate`: quelle misurano la risposta a un
+ *  gesto, questa è una scenografia che nessuno aspetta. */
+const DURATA_GIRO = 60000
 
-/** La gruccia sopra ogni tessera: lo stesso tracciato del deck. */
-function Gruccia() {
-  return (
-    <View style={{ alignItems: 'center', marginBottom: -3 }}>
-      <Image
-        source={{
-          uri:
-            'data:image/svg+xml;utf8,' +
-            encodeURIComponent(
-              `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 30" width="16" height="20"><path d="M12 30V10a4 4 0 1 1 4-4" fill="none" stroke="${testoSu.chiaro.debole}" stroke-width="1.6" stroke-linecap="round"/></svg>`,
-            ),
-        }}
-        style={{ width: 16, height: 20 }}
-      />
-    </View>
-  )
-}
-
-function Stanga() {
-  // `useState` con inizializzatore e non `useRef(...).current`: stessa
-  // scelta di `PistaIndeterminata` (`ui/stati.tsx`), per la stessa regola
-  // (`react-hooks/refs` vieta di leggere una ref durante il render).
-  const [scorrimento] = useState(() => new Animated.Value(0))
+function Giostra() {
+  // Il valore e le sue interpolazioni nascono una volta sola, nell'inizializzatore
+  // di `useState`: stessa scelta di `PistaIndeterminata` (`ui/stati.tsx`) e di
+  // `Comparsa` (`ui/base.tsx`), per la stessa regola (`react-hooks/refs`).
+  const [{ giro, angolo, controrotazioni }] = useState(() => {
+    const valore = new Animated.Value(0)
+    return {
+      giro: valore,
+      angolo: valore.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }),
+      controrotazioni: TESSERE.map((tessera) =>
+        valore.interpolate({
+          inputRange: [0, 1],
+          outputRange: [`${tessera.inclinazione}deg`, `${tessera.inclinazione - 360}deg`],
+        }),
+      ),
+    }
+  })
+  const [riquadro, setRiquadro] = useState({ larghezza: 0, altezza: 0 })
 
   useEffect(() => {
-    // 26 secondi per una serie, come il deck. `useNativeDriver` perché è una
-    // sola `translateX`: senza, l'animazione passa dal thread JS e si
-    // interrompe ogni volta che la schermata fa qualcos'altro.
-    const corsa = Animated.loop(
-      Animated.timing(scorrimento, {
-        toValue: -LARGHEZZA_SERIE,
-        duration: 26000,
+    // Lineare, perché un giro che accelera e rallenta a ogni ripartenza si vede:
+    // 360° e 0° sono lo stesso angolo, e il loop non ha un punto di cucitura.
+    const rotazione = Animated.loop(
+      Animated.timing(giro, {
+        toValue: 1,
+        duration: DURATA_GIRO,
         easing: Easing.linear,
         useNativeDriver: true,
       }),
     )
-    corsa.start()
-    return () => corsa.stop()
-  }, [scorrimento])
+    rotazione.start()
+    return () => rotazione.stop()
+  }, [giro])
+
+  // Il lato **corto** del riquadro: su un telefono basso comanda l'altezza, perché
+  // il testo sotto è alto quanto è alto, e un cerchio misurato sulla larghezza ci
+  // finirebbe sotto. Finché la misura non arriva il lato è 0, ma le viste ci sono
+  // già: un'animazione avviata su una vista montata dopo non arriva allo schermo
+  // (`PistaIndeterminata`, `ui/stati.tsx`).
+  const lato = Math.max(
+    0,
+    Math.min(riquadro.larghezza - 2 * MARGINE, riquadro.altezza, LATO_MASSIMO),
+  )
+  const base = lato / 2 / (RAGGIO_IN_TESSERE + SPORGENZA)
+  const raggio = base * RAGGIO_IN_TESSERE
 
   return (
-    <View style={{ flex: 1, minHeight: 0, overflow: 'hidden', paddingTop: 74 }}>
-      {/* La sbarra su cui i capi sono appesi. */}
-      <View
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          top: 83,
-          height: 2,
-          borderRadius: 2,
-          backgroundColor: linee.chiara,
-        }}
-      />
-      <Animated.View
-        style={{
-          flexDirection: 'row',
-          gap: DISTANZA_APPESI,
-          paddingLeft: 26,
-          transform: [{ translateX: scorrimento }],
-        }}
-      >
-        {[...APPESI, ...APPESI].map((capo, indice) => (
-          <View key={indice} style={{ width: capo.larghezza }}>
-            <Gruccia />
-            <Scheda
-              vetro
-              imbottitura={0}
-              style={{ height: 176, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
+    <View
+      style={{ flex: 1, minHeight: 0, alignItems: 'center', justifyContent: 'center' }}
+      onLayout={({ nativeEvent: { layout } }) =>
+        setRiquadro({ larghezza: layout.width, altezza: layout.height })
+      }
+    >
+      <Animated.View style={{ width: lato, height: lato, transform: [{ rotate: angolo }] }}>
+        {TESSERE.map((tessera, indice) => {
+          const larghezza = base * tessera.scala
+          const altezza = larghezza * PROPORZIONE
+          // La prima in alto, le altre in senso orario.
+          const posizione = (2 * Math.PI * indice) / TESSERE.length - Math.PI / 2
+          return (
+            <Animated.View
+              key={indice}
+              style={{
+                position: 'absolute',
+                left: lato / 2 + raggio * Math.cos(posizione) - larghezza / 2,
+                top: lato / 2 + raggio * Math.sin(posizione) - altezza / 2,
+                width: larghezza,
+                height: altezza,
+                transform: [{ rotate: controrotazioni[indice]! }],
+              }}
             >
-              <Image source={capo.foto} style={{ width: '88%', height: '88%' }} contentFit="contain" />
-            </Scheda>
-          </View>
-        ))}
+              <Scheda
+                imbottitura={0}
+                style={{
+                  flex: 1,
+                  // `raggi.scheda` su una tessera da quaranta punti sarebbe un tondo.
+                  borderRadius: larghezza >= 70 ? raggi.medio : raggi.piccolo,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Image source={tessera.foto} style={{ width: '82%', height: '82%' }} contentFit="contain" />
+              </Scheda>
+            </Animated.View>
+          )
+        })}
       </Animated.View>
     </View>
   )
@@ -241,7 +283,7 @@ const PASSI = [
     titolo: 'Il tuo armadio,\na portata di mano.',
     corpo: 'Lo fotografi una volta. Poi è lui a dirti cosa metterti.',
     azione: 'Guarda come funziona',
-    Scena: Stanga,
+    Scena: Giostra,
   },
   {
     occhiello: 'PROVA VIRTUALE',
@@ -299,7 +341,7 @@ export default function Intro() {
         <corrente.Scena />
 
         {/* La sfumatura sotto la scena: il testo deve restare leggibile anche
-            quando un capo della stanga ci passa sotto. */}
+            quando una tessera della giostra ci arriva vicino. */}
         <LinearGradient
           colors={[velo(colori.sfondo, 0), velo(colori.sfondo, 0.9)]}
           style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 320 }}
