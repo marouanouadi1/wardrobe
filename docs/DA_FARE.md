@@ -464,20 +464,6 @@ giacca e una borsa, nello stesso stile a colori pieni degli altri sei capi, bast
 Si sostituiscono i due PNG, si cancella la sezione «Eccezione» di `FONTI.md`, e
 questa voce passa fra le fatte.
 
-### T-48 — Due JPG dell'intro vecchia sono rimasti nel repo senza lettori
-**Trovato il:** 2026-09-23 · **Dove:** `apps/mobile/assets/intro-passo-1.jpg`, `apps/mobile/assets/intro-passo-2.jpg` · **Gravità:** bassa · **Chi:** `mobile`
-
-Sono le «due foto a tutto schermo» dell'apertura di prima (il docblock di
-`app/intro.tsx` la racconta). `grep -rn "intro-passo" apps/mobile` non trova
-nessun `require`, e `app.json` non dichiara `assetBundlePatterns`: con Metro
-finisce nel bundle solo ciò che un `require` raggiunge, quindi **nell'APK non
-viaggiano**. Restano nel repo (88 KB e 237 KB), e chi le trova non sa se servono.
-
-Trovata durante la riscrittura della giostra del passo 1, che non le tocca.
-
-**Cosa serve:** cancellarle, dopo aver riverificato il `grep` — un file che nessuno
-legge si toglie, non si documenta.
-
 ### T-47 — `POST /capi/analisi` non controlla di chi sia la `chiave_foto`
 
 **Gravità alta.** Trovata da `security` il 2026-09-23, sull'audit
@@ -815,25 +801,6 @@ provate; ripristinato, verdi.
 **Cosa resta:** il calendario ora disegna sette colonne un filo più strette, e
 **nessuno l'ha ancora guardato su un telefono** — il conto dice che entra, non
 come si vede.
-
-### T-55 — Quattro pacchetti Expo di nuovo indietro di una patch
-**Trovato il:** 2026-09-24 · **Dove:** `apps/mobile/package.json`, `package-lock.json` · **Gravità:** bassa · **Chi:** `mobile`
-
-Costruendo in locale l'APK della `0.9.3`, `expo doctor` ha dato **due**
-controlli rossi invece di uno. Oltre a `disableHierarchicalLookup`, che è
-voluto, riporta quattro pacchetti una patch sotto quella che l'SDK si aspetta:
-`expo` (57.0.24 → ~57.0.25), `expo-image-picker` (57.0.19 → ~57.0.20),
-`expo-linking` (57.0.10 → ~57.0.11) ed `expo-router` (57.0.22 → ~57.0.23).
-Non è una regressione di `T-54`: sono patch che Expo ha pubblicato dopo.
-Il controllo non è bloccante e la build è uscita 0, ma l'APK non porta quelle
-correzioni. Finché la voce resta aperta, «Build locale dell'APK» in
-`docs/deploy.md` dice ancora «una cosa sola».
-
-**Rimedio:** lo stesso di `T-54`, cioè `npx expo install --fix` da
-`apps/mobile`, con la stessa attenzione al lock. `npm ls react react-dom
-react-native --all` deve restare senza duplicati, e se si muove `react` il
-pin va alzato in entrambi i `package.json`. Poi test, `build:web`, ed
-`expo-doctor` a 20/21.
 
 ---
 
@@ -1445,3 +1412,59 @@ aggiunge al `git add` del commit di bump. `package-lock.json` sta già nel filtr
 in coda. Poi l'invariante 5 di `ci-release.md` va detta per entrambi i gestori.
 Da non fare: correggere la riga a mano — il prossimo rilascio la rimetterebbe
 indietro.
+
+---
+
+Chiuse il **2026-09-24**, commit `678dcd5` (`T-55`) e `26e002e` (`T-48`),
+nella stessa PR.
+
+- **`T-55`**: `npx expo install --fix` da `apps/mobile` porta `expo` a
+  57.0.25, `expo-image-picker` a 57.0.20, `expo-linking` a 57.0.11 ed
+  `expo-router` a 57.0.23. Stavolta **niente annidamenti**: la classe di `T-54`
+  non si è ripresentata, e il lock non è servito toccarlo a mano.
+- **`T-48`**: via `intro-passo-1.jpg` e `intro-passo-2.jpg`. Il `grep` rifatto
+  su tutto il repo prima di cancellarle trova `intro-passo` solo in questo
+  file, e `app.json` non dichiara `assetBundlePatterns`.
+
+*Verificato:* `npm ls --all` esce 0; `npm ls --parseable` dà una sola copia,
+in radice, di `react`, `react-dom`, `react-native`, `expo`, `expo-router`,
+`expo-linking` ed `expo-image-picker`. `expo-doctor` è 20/21 e il rosso è
+`disableHierarchicalLookup`, voluto: la riga di `docs/deploy.md` che dice «una
+cosa sola» torna vera. `typecheck`, `lint`, `mobile:test` (68 verdi),
+`build:web` e `contracts:check` escono tutti a 0, e `build:web` e i test sono
+stati rilanciati anche dopo aver tolto le foto. **Non verificato**: un APK
+costruito con queste versioni, né una prova sul telefono. Il merge fa partire
+il rilascio `0.9.4`, e l'APK si costruisce in locale dal suo tag.
+
+### T-55 — Quattro pacchetti Expo di nuovo indietro di una patch (chiusa)
+**Trovato il:** 2026-09-24 · **Dove:** `apps/mobile/package.json`, `package-lock.json` · **Gravità:** bassa · **Chi:** `mobile`
+
+Costruendo in locale l'APK della `0.9.3`, `expo doctor` ha dato **due**
+controlli rossi invece di uno. Oltre a `disableHierarchicalLookup`, che è
+voluto, riporta quattro pacchetti una patch sotto quella che l'SDK si aspetta:
+`expo` (57.0.24 → ~57.0.25), `expo-image-picker` (57.0.19 → ~57.0.20),
+`expo-linking` (57.0.10 → ~57.0.11) ed `expo-router` (57.0.22 → ~57.0.23).
+Non è una regressione di `T-54`: sono patch che Expo ha pubblicato dopo.
+Il controllo non è bloccante e la build è uscita 0, ma l'APK non porta quelle
+correzioni. Finché la voce resta aperta, «Build locale dell'APK» in
+`docs/deploy.md` dice ancora «una cosa sola».
+
+**Rimedio:** lo stesso di `T-54`, cioè `npx expo install --fix` da
+`apps/mobile`, con la stessa attenzione al lock. `npm ls react react-dom
+react-native --all` deve restare senza duplicati, e se si muove `react` il
+pin va alzato in entrambi i `package.json`. Poi test, `build:web`, ed
+`expo-doctor` a 20/21.
+
+### T-48 — Due JPG dell'intro vecchia sono rimasti nel repo senza lettori (chiusa)
+**Trovato il:** 2026-09-23 · **Dove:** `apps/mobile/assets/intro-passo-1.jpg`, `apps/mobile/assets/intro-passo-2.jpg` · **Gravità:** bassa · **Chi:** `mobile`
+
+Sono le «due foto a tutto schermo» dell'apertura di prima (il docblock di
+`app/intro.tsx` la racconta). `grep -rn "intro-passo" apps/mobile` non trova
+nessun `require`, e `app.json` non dichiara `assetBundlePatterns`: con Metro
+finisce nel bundle solo ciò che un `require` raggiunge, quindi **nell'APK non
+viaggiano**. Restano nel repo (88 KB e 237 KB), e chi le trova non sa se servono.
+
+Trovata durante la riscrittura della giostra del passo 1, che non le tocca.
+
+**Cosa serve:** cancellarle, dopo aver riverificato il `grep` — un file che nessuno
+legge si toglie, non si documenta.
