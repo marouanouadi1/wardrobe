@@ -133,7 +133,8 @@ sequenza:
    a girare "da qualche parte" senza nessun artefatto recuperabile in CI);
 4. download dell'APK e pubblicazione come **GitHub Release**, tag
    `mobile-v<versione>` — è lì che si trova l'ultimo APK da passare al socio
-   di test per il sideload, non più buildato a mano da terminale.
+   di test per il sideload. A quota EAS finita questo passo non arriva, e
+   l'APK si costruisce in locale: vedi «Build locale dell'APK» qui sotto.
 
 `apps/mobile/eas.json` ha `"autoIncrement": true` sul profilo `preview`: EAS
 alza da sola il `versionCode` Android a ogni build, cosa diversa dal bump
@@ -153,6 +154,50 @@ Actions di GitHub.
 
 Un push su `main` che tocca solo `services/api` non fa partire questo job:
 niente bump, niente build, niente release se l'app non è cambiata.
+
+## Build locale dell'APK
+
+**Oggi l'APK da distribuire si costruisce in locale**
+([`docs/adr/0009`](adr/0009-l-apk-si-costruisce-in-locale.md)). Le build in
+cloud di EAS stanno in una quota mensile del piano gratuito, e quando finisce
+il job `release` qui sopra si ferma allo step «Build Android preview», **dopo**
+aver già fatto bump, commit e tag. Da lì si prosegue sul computer locale.
+
+Si parte dopo il merge, quando il job `release` ha pushato il bump:
+
+```bash
+git switch main && git pull --ff-only
+TAG=$(git describe --tags --abbrev=0 --match 'mobile-v*')   # es. mobile-v0.9.1
+V=${TAG#mobile-v}
+
+# La Release c'è già? Allora la build in cloud è andata, e qui non serve niente.
+gh release view "$TAG" && echo "già pubblicata"
+
+git switch --detach "$TAG"            # si costruisce il tag, non la punta di main
+cd apps/mobile
+eas build --platform android --profile preview --local --non-interactive \
+  --output "$HOME/wardrobe-$V.apk"
+cd ../..
+git switch main
+
+gh release create "$TAG" "$HOME/wardrobe-$V.apk" \
+  --title "Wardrobe mobile v$V" \
+  --notes "Build locale da $TAG ($(git rev-parse "$TAG")), eas build --local."
+```
+
+- `--local` è la stessa build del cloud, eseguita qui: profilo `preview`,
+  variabili di `eas.json`, credenziali di firma scaricate da Expo,
+  `versionCode` incrementato in remoto. **Non consuma quota.**
+- Il tag, non `main`: fra il bump dell'app e la build può essere arrivato un
+  altro commit (un bump dell'API, per esempio), e l'APK deve contenere
+  esattamente la versione che porta nel nome.
+- Serve un working tree pulito: la build impacchetta il repo com'è.
+- **Cosa serve sulla macchina**: JDK 17, Android SDK con `ANDROID_HOME`,
+  `eas-cli` loggato sull'account Expo del progetto (`eas whoami`), `gh`
+  autenticato. Al 2026-09-24 il computer di sviluppo ha tutto.
+- Il job `release` rosso in quel caso è atteso: **non si rilancia**. «Re-run»
+  rifà il job da capo, bump compreso, e si ferma sul tag che esiste già — non
+  riprende dalla build. L'APK di quel tag si fa qui.
 
 ## I due `.env` sul server
 

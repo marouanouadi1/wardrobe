@@ -534,6 +534,18 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       estratto dal YAML, con `curl` sostituito da uno stub — e al contrario, con
       la forma precedente, che il comando iniettato lo esegue davvero. Lo step
       vive nel job `release`: la prima esecuzione vera è il prossimo rilascio.*
+- [!] **La build EAS in cloud è bloccata dalla quota del piano gratuito Expo**: dal
+      2026-09-23 il job `release` cade allo step «Build Android preview», dopo aver già
+      pushato bump e tag. Quattro rilasci senza APK (`0.7.0`, `0.8.0`, `0.9.0`,
+      `0.9.1`); l'ultima Release scaricabile è la `0.6.6`. La quota si rinnova il
+      2026-10-01, ma con un rilascio per merge si riesaurisce. **Il flusso, per ora, è
+      la build locale** (`docs/adr/0009`, procedura in `docs/deploy.md`); il rimedio
+      automatico è la issue #26. *Verificato: i log dei quattro run falliti riportano
+      tutti «This account has used its Android builds from the Free plan this month».
+      La procedura locale **non è ancora stata eseguita**: sulla macchina ci sono JDK
+      17, Android SDK (`ANDROID_HOME`), `eas-cli` 21.4 loggato (`eas whoami` →
+      `marouanouadi`) e `gh` autenticato, ma nessun APK è stato costruito con
+      `--local`.*
 - [x] Bump di versione dai conventional commit (ADR 0005), `pr-title.yml` che lo
       protegge — *ADR 0005 lo documenta; i 22 tag del repo ne sono la traccia*
 - [x] La soglia di coverage aggregata non nasconde più le due per sottoalbero:

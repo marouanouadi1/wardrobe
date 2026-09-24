@@ -152,8 +152,15 @@ stessa PR (es. toccando `packages/contracts/**`). Non serve un gruppo di concorr
 e aggiungerne uno con `cancel-in-progress` romperebbe di nuovo tutto: una release cancellerebbe
 l'altra invece di metterla in coda.
 
-**Un merge su `main` rilascia da solo**: sul backend rideploya sul VPS, sull'app builda un APK
-e pubblica una Release. Dettaglio in `.claude/rules/ci-release.md`.
+**Un merge su `main` rilascia da solo**: sul backend rideploya sul VPS, sull'app fa bump e
+tag. Dettaglio in `.claude/rules/ci-release.md`.
+
+**L'APK, per ora, si costruisce sul computer locale** (`docs/adr/0009`): la build in cloud di
+EAS ha una quota mensile, e quando finisce il job `release` di `mobile.yml` diventa rosso allo
+step «Build Android preview» **dopo** aver già pushato bump e tag. Quel rosso è atteso: non si
+rilancia (rifarebbe il bump) e non si «corregge» il workflow. Si costruisce l'APK da quel tag con
+`eas build --local` e lo si pubblica come Release: procedura in `docs/deploy.md`, «Build locale
+dell'APK». Vale finché l'utente non decide un rimedio automatico (issue #26) — fino ad allora è così.
 
 ## Migrazioni: irreversibili, e rieseguite a ogni avvio
 

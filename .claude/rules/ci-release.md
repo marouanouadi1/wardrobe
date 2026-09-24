@@ -32,6 +32,18 @@ Non c'è un passaggio manuale fra il merge e la produzione:
   `docker compose up -d --build`, **verifica di `GET /salute`**, poi commit e tag
 - merge che tocca `apps/mobile/**` → bump, build EAS Android, GitHub Release
 
+**La build EAS in cloud ha una quota mensile, e oggi la Release dell'app si fa
+in locale** (`docs/adr/0009`). A quota finita il job `release` cade allo step
+«Build Android preview» con bump e tag **già su `main`**: il resto — `eas build
+--local` dal tag, poi `gh release create` — è in `docs/deploy.md`, «Build
+locale dell'APK». Due cose da non fare in quel caso:
+
+- **rilanciare il job**: «Re-run» riparte dal bump, non dalla build, e si
+  ferma sul tag che esiste già;
+- **aggiungere un ripiego al workflow di propria iniziativa**: il rimedio
+  automatico è una scelta dell'utente, anche di costo, ed è la issue #26.
+  Finché non arriva, la build locale è il flusso, non un tampone da togliere.
+
 Prima di modificare qualunque file dentro un filtro `paths:`, sappi che stai
 toccando la catena che rilascia.
 
