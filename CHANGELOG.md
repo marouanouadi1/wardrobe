@@ -18,6 +18,9 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- Quattro pacchetti Expo alla patch che l'SDK 57 chiede oggi (`expo` 57.0.25,
+  `expo-router` 57.0.23, `expo-linking` 57.0.11, `expo-image-picker` 57.0.20).
+  Via dal repo le due foto dell'apertura vecchia, che l'app non usava più.
 - Expo SDK 57 alle patch che l'SDK chiede (`expo` 57.0.24, `expo-router`
   57.0.22, `react-native` 0.86.3 e altri nove), con una sola copia di
   `react-native` nel monorepo. Via da `app.json` due opzioni che Android 16 e
