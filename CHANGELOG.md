@@ -18,6 +18,9 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **La prima schermata ha una giostra nuova**: otto capi su tessere disposte in
+  cerchio, che girano piano e senza fermarsi. Prendono il posto dei tre capi
+  appesi che scorrevano di lato.
 - **Quando il server non risponde, «Oggi» lo dice chiaramente** invece di
   sembrare un armadio vuoto, e offre di riprovare.
 - **Con pochi capi si vede cosa manca**, non solo che manca qualcosa: una

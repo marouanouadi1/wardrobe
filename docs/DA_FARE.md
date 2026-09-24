@@ -404,6 +404,39 @@ react-dom` con `--all` che esce diverso da zero se ci sono `invalid`/duplicati
 — e in tal caso in quale workflow (`mobile.yml` ha già `paths:` su
 `apps/mobile/**`, ma la causa può tornare anche toccando solo la root).
 
+### T-49 — Due foto della giostra non hanno una fonte (tampone dichiarato)
+**Trovato il:** 2026-09-23 · **Dove:** `apps/mobile/assets/intro/giacca-pelle.png`, `apps/mobile/assets/intro/borsa-nera.png` · **Gravità:** media · **Chi:** `mobile`
+
+La giostra del passo 1 dell'intro ha otto tessere. Sei sono capi generati con
+Gemini, e la loro riga in `assets/intro/FONTI.md` dice da dove vengono. **Queste
+due no.** Le ha fornite l'utente senza fonte, e dai file sembrano foto da catalogo
+di un negozio online; la giacca portava un marchio leggibile, che è stato
+cancellato. L'utente, avvisato, ha deciso di montarle come eccezione: la decisione
+è sua e sta scritta in `FONTI.md`, ma il diritto d'autore delle due foto resta di
+chi le ha scattate, e finiscono in un APK distribuito.
+
+È un tampone: la giostra ha giacca e borsa, ma il motivo per cui mancavano — non
+c'era un'immagine di cui sapessimo la licenza — è ancora lì.
+
+**Rimedio:** due immagini con una riga in `FONTI.md` (una tavola Gemini con una
+giacca e una borsa, nello stesso stile a colori pieni degli altri sei capi, basta).
+Si sostituiscono i due PNG, si cancella la sezione «Eccezione» di `FONTI.md`, e
+questa voce passa fra le fatte.
+
+### T-48 — Due JPG dell'intro vecchia sono rimasti nel repo senza lettori
+**Trovato il:** 2026-09-23 · **Dove:** `apps/mobile/assets/intro-passo-1.jpg`, `apps/mobile/assets/intro-passo-2.jpg` · **Gravità:** bassa · **Chi:** `mobile`
+
+Sono le «due foto a tutto schermo» dell'apertura di prima (il docblock di
+`app/intro.tsx` la racconta). `grep -rn "intro-passo" apps/mobile` non trova
+nessun `require`, e `app.json` non dichiara `assetBundlePatterns`: con Metro
+finisce nel bundle solo ciò che un `require` raggiunge, quindi **nell'APK non
+viaggiano**. Restano nel repo (88 KB e 237 KB), e chi le trova non sa se servono.
+
+Trovata durante la riscrittura della giostra del passo 1, che non le tocca.
+
+**Cosa serve:** cancellarle, dopo aver riverificato il `grep` — un file che nessuno
+legge si toglie, non si documenta.
+
 ### T-47 — `POST /capi/analisi` non controlla di chi sia la `chiave_foto`
 
 **Gravità alta.** Trovata da `security` il 2026-09-23, sull'audit
