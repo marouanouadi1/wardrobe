@@ -36,6 +36,13 @@ Questo sovrascrive il codice sul server ma **non** i due file `.env` (esclusi
 apposta): quelli restano quelli scritti a mano sul server, mai versionati,
 mai transitati da qui.
 
+Non c'è `--delete`, quindi **un file tolto dal repo resta sul server**: oggi ce
+ne sono due, `migrations/0003_valutazioni.sql` e `0004_valutazioni_immagini.sql`,
+rimossi col playground e ancora eseguiti a ogni deploy. Sono innocui solo perché
+`0008` ridroppa dopo quello che loro ricreano. La voce è `T-50` in
+`docs/DA_FARE.md`: aggiungere `--delete` va deciso sapendo che sul server
+vivono due `.env` che non esistono da nessun'altra parte.
+
 Per aggiornare il server a mano dopo una modifica al codice: si rilancia lo
 stesso `rsync`, poi `docker compose up -d --build` (sotto). In pratica serve
 solo per un hotfix diretto sul server: il percorso normale è quello
@@ -56,13 +63,21 @@ SSH. Intorno a quei due passi c'è il versionamento:
    `uv lock`, perché `uv.lock` registra anche la versione del progetto stesso e
    altrimenti resterebbe indietro per sempre. Qui i file vengono solo scritti,
    così l'albero che parte col `rsync` porta già la versione nuova;
-2. `rsync` + `docker compose up -d --build`, come sopra;
-3. **verifica della versione servita**: `GET /salute` riporta la versione dai
+2. `rsync` + `docker compose up -d --build --wait`, come sopra;
+3. **applicazione delle migrazioni**: `docker compose exec -T api python
+   scripts/applica_migrazioni.py`. Va qui, dopo il rebuild, perché i `.sql`
+   viaggiano dentro l'immagine (`COPY migrations ./migrations` nel
+   `Dockerfile`) e non sul filesystem del server: lanciarlo prima eseguirebbe
+   quelli del rilascio precedente. Fino al 2026-09-16 questo passo **non
+   esisteva**, ed è costato uno schema di produzione fermo a `0006` per tre
+   rilasci — con chat e segnalazioni in `500` su un backend che si dichiarava
+   sano, perché il punto 4 qui sotto non tocca il database;
+4. **verifica della versione servita**: `GET /salute` riporta la versione dai
    metadati del pacchetto installato, e il job confronta quel valore con la
    versione appena rilasciata. Prima qui c'era solo un `curl --fail`: un rsync
    andato a metà, o un `up` che riusava l'immagine vecchia, passavano
    inosservati perché l'endpoint rispondeva comunque;
-4. **commit + tag `api-v<versione>`**, pushati per ultimi, a deploy verificato.
+5. **commit + tag `api-v<versione>`**, pushati per ultimi, a deploy verificato.
    Se qualcosa sopra è andato storto il rilascio non lascia traccia su `main` e
    il tentativo successivo riparte dallo stesso numero: un tag su una versione
    che non è mai andata in produzione sarebbe una bugia scritta nella storia.
@@ -211,8 +226,10 @@ docker compose logs -f api      # aspetta "API di Wardrobe in ascolto...", poi C
 ```
 
 **Migrazioni**: sul primissimo avvio le applica da sola Postgres
-(`docker-entrypoint-initdb.d`, che gira solo su un volume vuoto). Per una
-migrazione arrivata *dopo* che il volume esiste già, va applicata a mano:
+(`docker-entrypoint-initdb.d`, che gira solo su un volume vuoto). Dopo, e a
+ogni rilascio, le applica il job `deploy` di `api.yml` (punto 3 sopra). Il
+comando serve ancora **quando si aggiorna il server a mano**, che è l'unico
+percorso che non passa da quel job:
 
 ```bash
 docker compose exec api python scripts/applica_migrazioni.py

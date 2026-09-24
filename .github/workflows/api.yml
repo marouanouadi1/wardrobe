@@ -215,8 +215,38 @@ jobs:
             -e ssh ./ marouan@89.167.15.22:~/wardrobe/
         working-directory: .
 
+      # `--wait` e non solo `-d`: senza, il comando torna appena i container
+      # sono *creati*, e il `docker compose exec` dello step dopo può trovare
+      # l'api ancora a metà avvio e fallire per un motivo che non è suo.
+      #
+      # `--wait-timeout` è obbligatorio quanto `--wait`: il default è «aspetta
+      # per sempre», e `api` ha `restart: unless-stopped`. Un container che
+      # riparte in loop terrebbe il job appeso fino al tetto di sei ore di
+      # Actions invece di fallire. Un rilascio che si pianta deve diventare
+      # rosso, non restare giallo.
       - name: Rebuild + riavvio container
-        run: ssh marouan@89.167.15.22 'cd ~/wardrobe && docker compose up -d --build'
+        run: ssh marouan@89.167.15.22 'cd ~/wardrobe && docker compose up -d --build --wait --wait-timeout 120'
+        working-directory: .
+
+      # Le migrazioni non le applica nessun altro: docker-entrypoint-initdb.d
+      # gira solo su un volume vuoto (il primissimo avvio), e da lì in poi
+      # nessuno le tocca. Va *dopo* il rebuild perché i .sql stanno
+      # nell'immagine (Dockerfile: `COPY migrations ./migrations`), non sul
+      # filesystem del server: lanciarlo prima eseguirebbe quelli del rilascio
+      # precedente.
+      #
+      # Senza questo step lo schema resta indietro in silenzio, ed è il modo
+      # più subdolo di rompere la produzione: il container nuovo parte, GET
+      # /salute risponde — non tocca il database — e il rilascio passa verde
+      # con le tabelle mancanti. È successo davvero: la produzione è rimasta a
+      # `0006` per tre rilasci, e `/chat/*` e `/segnalazioni` rispondevano 500
+      # `errore_interno` sull'app dei tester.
+      #
+      # `-T` perché sul runner non c'è un TTY. Rieseguire *tutti* i file a ogni
+      # rilascio è il funzionamento previsto, non uno spreco: ognuno è
+      # idempotente per costruzione (.claude/rules/migrazioni.md).
+      - name: Applica migrazioni
+        run: ssh marouan@89.167.15.22 'cd ~/wardrobe && docker compose exec -T api python scripts/applica_migrazioni.py'
         working-directory: .
 
       # Non più solo "risponde": GET /salute riporta la versione dai metadati
@@ -224,6 +254,10 @@ jobs:
       # servendo *questo* rilascio. Prima di questo confronto un rsync andato a
       # metà, o un `docker compose up` che riusava l'immagine vecchia, passavano
       # inosservati: l'endpoint rispondeva comunque.
+      #
+      # Quello che questo step *non* verifica, e va saputo: /salute non
+      # interroga il database, quindi non dice niente sullo schema. A garantire
+      # quello è lo step qui sopra, che fallisce se una migrazione non passa.
       - name: Verifica salute e versione servita
         env:
           ATTESA: ${{ steps.bump.outputs.version }}

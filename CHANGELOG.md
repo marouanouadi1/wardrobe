@@ -186,6 +186,18 @@ travestita da registro.
   elenco di chiavi. Profilo, account e segnalazioni restano. Il corpo deve
   portare `conferma: "SVUOTA"`, un `Literal` nel contratto: una richiesta senza
   intenzione esplicita prende 422 e non cancella niente.
+- **Chat e segnalazioni tornano a funzionare in produzione.** Lo schema del
+  database sul VPS era fermo alla migrazione `0006`: `conversazioni_chat` e
+  `segnalazioni` non esistevano, e ogni chiamata dell'app a quelle due aree
+  rispondeva `500 errore_interno`. Le migrazioni `0007`, `0008` e `0009` sono
+  state applicate al database di produzione; i 22 messaggi di chat già
+  scritti sono stati raccolti nella conversazione storica prevista dal
+  backfill di `0009`, senza perdite.
+- Il deploy applica le migrazioni da sé (`api.yml`, step «Applica
+  migrazioni»). Prima nessun passo automatico lo faceva: `docker
+  compose up` riavviava il container col codice nuovo e `GET /salute` —
+  che non interroga il database — confermava il rilascio, schema indietro
+  compreso. Era il modo più silenzioso di rompere la produzione.
 - (niente di visibile: solo l'ordine dei gate di coverage in CI. La soglia
   aggregata si applicava *dentro* lo step Pytest, e quando scattava saltava le
   due soglie per sottoalbero — il gate più debole nascondeva i due che contano.
