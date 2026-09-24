@@ -53,7 +53,8 @@ toccando la catena che rilascia.
 `services/api/pyproject.toml` (`version`) sono scritti **solo** da
 `scripts/bump-versione.mjs`, che deduce major/minor/patch dai conventional
 commit dall'ultimo tag. Sono **tre** file: `app.json` è la fonte di verità
-dell'app e `package.json` le viene tenuto dietro (`bump-versione.mjs:30-38`).
+dell'app e `package.json` le viene tenuto dietro, insieme alla riga del
+workspace in `package-lock.json` (`bump-versione.mjs`, target `mobile`).
 Il perché sta in `docs/adr/0005-le-versioni-vengono-dai-commit.md`: *un numero
 che si alza sempre di uno non è una versione, è un contatore di merge.*
 
@@ -90,9 +91,12 @@ corpo del merge commit: è lì che lo script lo legge.
 4. **Il tag è lightweight**: `git push origin HEAD:main` non lo porta con sé,
    serve un `git push origin "$TAG"` esplicito. Nel retry il tag si sposta sul
    commit riscritto con `git tag -f`.
-5. **`uv lock` dopo il bump**: il lockfile registra la versione del pacchetto, e
-   lasciarlo indietro rimetterebbe in circolo la stessa bugia che il versioning
-   doveva togliere.
+5. **Il lockfile segue il bump, in entrambi i gestori**: sul backend `uv lock`
+   dopo lo script, sull'app lo script stesso riscrive
+   `packages["apps/mobile"].version` in `package-lock.json`, che entra nel
+   `git add` del commit di bump (`T-52`). Il lockfile registra la versione del
+   pacchetto, e lasciarlo indietro rimetterebbe in circolo la stessa bugia che
+   il versioning doveva togliere.
 6. **Commit e tag per ultimi, a deploy verificato.** `GET /salute` riporta la
    versione dai metadati del pacchetto e viene confrontata con quella attesa: si
    marca la storia solo dopo che il server serve davvero quel numero.
