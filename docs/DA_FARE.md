@@ -816,6 +816,25 @@ provate; ripristinato, verdi.
 **nessuno l'ha ancora guardato su un telefono** — il conto dice che entra, non
 come si vede.
 
+### T-55 — Quattro pacchetti Expo di nuovo indietro di una patch
+**Trovato il:** 2026-09-24 · **Dove:** `apps/mobile/package.json`, `package-lock.json` · **Gravità:** bassa · **Chi:** `mobile`
+
+Costruendo in locale l'APK della `0.9.3`, `expo doctor` ha dato **due**
+controlli rossi invece di uno. Oltre a `disableHierarchicalLookup`, che è
+voluto, riporta quattro pacchetti una patch sotto quella che l'SDK si aspetta:
+`expo` (57.0.24 → ~57.0.25), `expo-image-picker` (57.0.19 → ~57.0.20),
+`expo-linking` (57.0.10 → ~57.0.11) ed `expo-router` (57.0.22 → ~57.0.23).
+Non è una regressione di `T-54`: sono patch che Expo ha pubblicato dopo.
+Il controllo non è bloccante e la build è uscita 0, ma l'APK non porta quelle
+correzioni. Finché la voce resta aperta, «Build locale dell'APK» in
+`docs/deploy.md` dice ancora «una cosa sola».
+
+**Rimedio:** lo stesso di `T-54`, cioè `npx expo install --fix` da
+`apps/mobile`, con la stessa attenzione al lock. `npm ls react react-dom
+react-native --all` deve restare senza duplicati, e se si muove `react` il
+pin va alzato in entrambi i `package.json`. Poi test, `build:web`, ed
+`expo-doctor` a 20/21.
+
 ---
 
 ## Fatte
