@@ -18,6 +18,12 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- Expo SDK 57 alle patch che l'SDK chiede (`expo` 57.0.24, `expo-router`
+  57.0.22, `react-native` 0.86.3 e altri nove), con una sola copia di
+  `react-native` nel monorepo. Via da `app.json` due opzioni che Android 16 e
+  la New Architecture obbligatoria hanno reso inerti (`edgeToEdgeEnabled`,
+  `newArchEnabled`); aggiunto `expo-system-ui`, così il tema chiaro dichiarato
+  arriva anche ai componenti di sistema su Android.
 - **La prima schermata ha una giostra nuova**: otto capi su tessere disposte in
   cerchio, che girano piano e senza fermarsi. Prendono il posto dei tre capi
   appesi che scorrevano di lato.

@@ -193,10 +193,10 @@ gh release create "$TAG" "$HOME/wardrobe-$V.apk" \
   esattamente la versione che porta nel nome.
 - Serve un working tree pulito: la build impacchetta il repo com'è.
 - **`expo doctor` fallisce, e la build prosegue.** È un controllo che `eas
-  build` lancia prima di Gradle e non è bloccante. Al 2026-09-24 segnala tre cose:
-  `resolver.disableHierarchicalLookup` in `metro.config.js`, che è **voluto**
-  (tiene una sola copia di React, `T-23`) e non va tolto; più `T-53` e `T-54`
-  in `docs/DA_FARE.md`.
+  build` lancia prima di Gradle e non è bloccante. Dal 2026-09-24 (`T-53` e
+  `T-54` chiuse) segnala una cosa sola: `resolver.disableHierarchicalLookup` in
+  `metro.config.js`, che è **voluto** — tiene una sola copia di React, `T-23` —
+  e non va tolto. Un secondo controllo rosso è una novità, e va letto.
 - La prima esecuzione (`0.9.1`, 2026-09-24): Gradle 9 minuti, APK da 64 MB.
 - **Cosa serve sulla macchina**: JDK 17, Android SDK con `ANDROID_HOME`,
   `eas-cli` loggato sull'account Expo del progetto (`eas whoami`), `gh`

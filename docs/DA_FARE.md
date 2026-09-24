@@ -357,27 +357,6 @@ deciso sapendolo.
 PR che tocca solo l'altro. Oggi passerebbe verde, che è la condizione per
 accendere un gate.
 
-### T-31 — `jest-expo` chiede una versione di `@react-native/jest-preset` più nuova di quella installata
-**Trovato il:** 2026-09-13 · **Dove:** `node_modules/@react-native/jest-preset` risolto a `0.86.2`, richiesto `^0.86.3` da `jest-expo@57.0.5` — i due pin da cambiare sono `jest-expo` e `react-native` in `apps/mobile/package.json` · **Gravità:** bassa · **Chi:** `mobile` · **Pre-esistente**
-
-`npm ls` segna `@react-native/jest-preset@0.86.2 invalid: "^0.86.3" from
-node_modules/jest-expo`: `jest-expo@57.0.5` dichiara
-`peerDependencies["@react-native/jest-preset"]: "^0.86.3"`, ma
-`react-native@0.86.2` — pin esatto in `apps/mobile/package.json` — porta la
-`0.86.2`. Trovato lavorando su `T-23`, non causato da quella modifica:
-**verificato confrontando il lock prima e dopo** (`git show 4473db3` vs
-`HEAD`), `jest-expo` era già risolto a `57.0.5` e `@react-native/jest-preset`
-già a `0.86.2` sul `main` originale, identico peer range compreso.
-
-Non rompe niente oggi: **verificato** con `npm run mobile:test` su
-un'installazione pulita, 21 verdi (conteggio in `docs/TEST_COVERAGE.md`) — npm
-segnala l'incoerenza ma jest la tollera.
-
-**Cosa serve:** allineare `react-native` alla versione che `jest-expo` si
-aspetta (o viceversa, se è `jest-expo` a essere avanti rispetto al resto della
-SDK), quando si aggiorna Expo SDK 57 — non prima, per non disallineare il pin
-di RN dal resto dell'app senza motivo.
-
 ### T-32 — Niente impedisce che tornino due copie di React
 **Trovato il:** 2026-09-13 · **Dove:** `package.json`, `apps/mobile/package.json` · **Gravità:** bassa · **Chi:** `ci-cd` + `mobile`
 
@@ -836,39 +815,6 @@ provate; ripristinato, verdi.
 **Cosa resta:** il calendario ora disegna sette colonne un filo più strette, e
 **nessuno l'ha ancora guardato su un telefono** — il conto dice che entra, non
 come si vede.
-
-### T-54 — Dodici pacchetti Expo indietro di una patch rispetto all'SDK 57
-**Trovato il:** 2026-09-24 · **Dove:** `apps/mobile/package.json`, `package-lock.json` · **Gravità:** bassa · **Chi:** `mobile`
-
-`expo-doctor`, che `eas build` lancia prima di ogni build, riporta dodici
-pacchetti una patch sotto quella che l'SDK installato si aspetta: `expo`
-(57.0.13 → ~57.0.24), `expo-router` (57.0.13 → ~57.0.22), `react-native` (0.86.2
-→ 0.86.3), `expo-image-picker`, `expo-linking` e altri sette. Il controllo non è
-bloccante — la build della `0.9.1` è riuscita lo stesso — ma sono correzioni
-che l'APK non porta.
-
-**Rimedio:** `npx expo install --check` da `apps/mobile`, poi i test e il
-`build:web`. **Attenzione al lock**: qui ha già fatto male tre volte (`T-03`,
-`T-23`, `T-31`). Se il ricalcolo tocca `react` o `react-dom`, il pin va alzato
-**in entrambi** i `package.json` nella stessa modifica
-(`.claude/rules/react-native.md`, «Una sola copia di React»), e `npm ls react
-react-dom --all` deve restare senza duplicati.
-
-### T-53 — `edgeToEdgeEnabled` in `app.json` non esiste più
-**Trovato il:** 2026-09-24 · **Dove:** `apps/mobile/app.json` (`expo.android.edgeToEdgeEnabled`) · **Gravità:** bassa · **Chi:** `mobile`
-
-Il prebuild della `0.9.1` lo dice in chiaro: *«`edgeToEdgeEnabled` customization
-is no longer available - Android 16 makes edge-to-edge mandatory. Remove the
-`edgeToEdgeEnabled` entry»*, ed `expo-doctor` lo rifiuta come proprietà fuori
-schema. La riga non fa più niente: l'edge-to-edge c'è comunque.
-
-**Rimedio** (toglie una riga): cancellarla. Nello stesso passaggio vale la pena
-guardare l'altro avviso del prebuild, *«userInterfaceStyle: Install
-expo-system-ui in your project to enable this feature»*: `app.json` dichiara
-`"userInterfaceStyle": "light"` e su Android, senza quel pacchetto, la
-dichiarazione non arriva al sistema. Se al telefono in tema scuro qualcosa di
-nativo (la barra di sistema, un selettore) appare scuro sopra un'app chiara, la
-causa è questa.
 
 ### T-52 — Il bump dell'app non aggiorna `package-lock.json`
 **Trovato il:** 2026-09-24 · **Dove:** `scripts/bump-versione.mjs` (target `mobile`), `.github/workflows/mobile.yml` (step del commit di bump) · **Gravità:** bassa · **Chi:** `ci-cd`
@@ -1366,3 +1312,92 @@ temporanea. È un costo che conviene sapere, non un difetto.
 naturale: il file nasce dichiarato temporaneo), oppure — se serve tenerlo — se
 vale la pena escluderlo dai build di rilascio. Non c'è una scelta ovvia finché
 il Cancello 1 non ha risposto, quindi la voce sta qui e non in una issue.
+
+---
+
+Chiuse il **2026-09-24**, commit `0eb2957`, insieme: sono la stessa
+passata di `npx expo install --fix`.
+
+- **`T-54`**: i dodici pacchetti alla patch che l'SDK chiede (`expo` 57.0.24,
+  `expo-router` 57.0.22, `react-native` 0.86.3…). `expo install` da solo però
+  **ha annidato** `react-native` 0.86.3 in `apps/mobile/node_modules` e lasciato
+  la 0.86.2 in radice, dove la usavano tutti gli altri pacchetti: due copie
+  nell'app, la classe di `T-23`. `npm dedupe` si fermava sul conflitto di
+  `T-31`. Il rimedio è stato togliere dal lock le voci della famiglia
+  `react-native` (e poi di `jest-expo`, `react-native-worklets`,
+  `babel-preset-expo`, `expo`, che le richiedono) e lasciarle risolvere a npm:
+  una copia sola, in radice, e le copie 0.86.3 che prima stavano annidate sotto
+  `expo` e `babel-preset-expo` sono diventate la stessa. Via anche
+  `@testing-library/jest-dom`, `user-event` e `dom`: li chiedeva
+  `expo-router` 57.0.13, la 57.0.22 no.
+- **`T-31`**: si chiude da sola — era scritto che andava allineato
+  `react-native` «quando si aggiorna Expo SDK 57», ed è questa passata.
+  `@react-native/jest-preset` è a 0.86.3 come chiede `jest-expo`.
+- **`T-53`**: via `edgeToEdgeEnabled` e anche `newArchEnabled`, che lo schema di
+  `expo` 57.0.24 rifiuta per lo stesso motivo (la New Architecture è
+  obbligatoria). Aggiunto `expo-system-ui`, senza il quale
+  `"userInterfaceStyle": "light"` su Android non arriva al sistema.
+
+*Verificato:* `npm ls --all` esce 0 — prima segnalava `T-31`, ed è la prima
+volta dal 2026-09-13 che l'albero è coerente; `npm ls react react-dom
+react-native --all` dà una sola versione di ciascuno (19.2.3, 19.2.3, 0.86.3);
+`expo-doctor` 20/21, e il ventunesimo è `disableHierarchicalLookup`, voluto;
+`typecheck`, `lint`, `mobile:test` (68 verdi), `build:web`,
+`contracts:check` tutti a 0; e una build Android release in locale
+(`expo prebuild --clean` + `./gradlew assembleRelease`, senza passare da EAS)
+uscita a 0, con le classi di `expo-system-ui` dentro l'APK. **Non provato su un
+telefono.**
+
+### T-54 — Dodici pacchetti Expo indietro di una patch rispetto all'SDK 57 (chiusa)
+**Trovato il:** 2026-09-24 · **Dove:** `apps/mobile/package.json`, `package-lock.json` · **Gravità:** bassa · **Chi:** `mobile`
+
+`expo-doctor`, che `eas build` lancia prima di ogni build, riporta dodici
+pacchetti una patch sotto quella che l'SDK installato si aspetta: `expo`
+(57.0.13 → ~57.0.24), `expo-router` (57.0.13 → ~57.0.22), `react-native` (0.86.2
+→ 0.86.3), `expo-image-picker`, `expo-linking` e altri sette. Il controllo non è
+bloccante — la build della `0.9.1` è riuscita lo stesso — ma sono correzioni
+che l'APK non porta.
+
+**Rimedio:** `npx expo install --check` da `apps/mobile`, poi i test e il
+`build:web`. **Attenzione al lock**: qui ha già fatto male tre volte (`T-03`,
+`T-23`, `T-31`). Se il ricalcolo tocca `react` o `react-dom`, il pin va alzato
+**in entrambi** i `package.json` nella stessa modifica
+(`.claude/rules/react-native.md`, «Una sola copia di React»), e `npm ls react
+react-dom --all` deve restare senza duplicati.
+
+### T-53 — `edgeToEdgeEnabled` in `app.json` non esiste più (chiusa)
+**Trovato il:** 2026-09-24 · **Dove:** `apps/mobile/app.json` (`expo.android.edgeToEdgeEnabled`) · **Gravità:** bassa · **Chi:** `mobile`
+
+Il prebuild della `0.9.1` lo dice in chiaro: *«`edgeToEdgeEnabled` customization
+is no longer available - Android 16 makes edge-to-edge mandatory. Remove the
+`edgeToEdgeEnabled` entry»*, ed `expo-doctor` lo rifiuta come proprietà fuori
+schema. La riga non fa più niente: l'edge-to-edge c'è comunque.
+
+**Rimedio** (toglie una riga): cancellarla. Nello stesso passaggio vale la pena
+guardare l'altro avviso del prebuild, *«userInterfaceStyle: Install
+expo-system-ui in your project to enable this feature»*: `app.json` dichiara
+`"userInterfaceStyle": "light"` e su Android, senza quel pacchetto, la
+dichiarazione non arriva al sistema. Se al telefono in tema scuro qualcosa di
+nativo (la barra di sistema, un selettore) appare scuro sopra un'app chiara, la
+causa è questa.
+
+### T-31 — `jest-expo` chiede una versione di `@react-native/jest-preset` più nuova di quella installata (chiusa)
+**Trovato il:** 2026-09-13 · **Dove:** `node_modules/@react-native/jest-preset` risolto a `0.86.2`, richiesto `^0.86.3` da `jest-expo@57.0.5` — i due pin da cambiare sono `jest-expo` e `react-native` in `apps/mobile/package.json` · **Gravità:** bassa · **Chi:** `mobile` · **Pre-esistente**
+
+`npm ls` segna `@react-native/jest-preset@0.86.2 invalid: "^0.86.3" from
+node_modules/jest-expo`: `jest-expo@57.0.5` dichiara
+`peerDependencies["@react-native/jest-preset"]: "^0.86.3"`, ma
+`react-native@0.86.2` — pin esatto in `apps/mobile/package.json` — porta la
+`0.86.2`. Trovato lavorando su `T-23`, non causato da quella modifica:
+**verificato confrontando il lock prima e dopo** (`git show 4473db3` vs
+`HEAD`), `jest-expo` era già risolto a `57.0.5` e `@react-native/jest-preset`
+già a `0.86.2` sul `main` originale, identico peer range compreso.
+
+Non rompe niente oggi: **verificato** con `npm run mobile:test` su
+un'installazione pulita, 21 verdi (conteggio in `docs/TEST_COVERAGE.md`) — npm
+segnala l'incoerenza ma jest la tollera.
+
+**Cosa serve:** allineare `react-native` alla versione che `jest-expo` si
+aspetta (o viceversa, se è `jest-expo` a essere avanti rispetto al resto della
+SDK), quando si aggiorna Expo SDK 57 — non prima, per non disallineare il pin
+di RN dal resto dell'app senza motivo.
