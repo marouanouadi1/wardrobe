@@ -532,6 +532,13 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       nessuno dei due che pushano. Poi in CI sulla PR #16: tutti i job passano.
       I due job che pushano girano solo su `main`, quindi la loro prima
       esecuzione vera è il prossimo rilascio*
+- [~] L'APK della Release si costruisce solo per `arm64-v8a` e `armeabi-v7a`,
+      non più anche per `x86`/`x86_64` degli emulatori (`eas.json`, profilo
+      `preview`). Atteso: da 117,6 MB (`mobile-v0.7.0`) a circa 67 MB. *Verificato
+      in locale che `ORG_GRADLE_PROJECT_reactNativeArchitectures` vince su
+      `gradle.properties` (`./gradlew :app:properties` con e senza la variabile);
+      il peso atteso è la somma delle librerie delle due ABI nell'APK 0.7.0. Manca:
+      il peso vero del primo APK rilasciato da EAS con la modifica*
 - [ ] Nessun rilascio iOS
 
 ## Cosa manca dall'esterno
