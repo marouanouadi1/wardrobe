@@ -25,17 +25,31 @@ const TARGET = {
     prefissoTag: "mobile-v",
     percorsi: ["apps/mobile", "packages/contracts"],
     // Unica fonte di verità: apps/mobile/app.json (expo.version).
-    // apps/mobile/package.json viene tenuto sincronizzato.
+    // apps/mobile/package.json viene tenuto sincronizzato, e così la riga del
+    // workspace in package-lock.json: il lock registra la versione di ogni
+    // workspace, e se resta indietro ogni `npm install` in locale la riscrive,
+    // sporcando un diff che nessuno ha toccato (T-52). È la metà npm di
+    // `uv lock` dopo il bump del backend.
     leggi: () => leggiJson(percorso("../apps/mobile/app.json")).expo.version,
     scrivi(nuova) {
       const app = percorso("../apps/mobile/app.json");
       const pkg = percorso("../apps/mobile/package.json");
+      const lock = percorso("../package-lock.json");
       const appJson = leggiJson(app);
       const pkgJson = leggiJson(pkg);
+      const lockJson = leggiJson(lock);
+      // Senza questo controllo un lock rigenerato con un'altra struttura
+      // farebbe nascere una voce `apps/mobile` finta, con la sola versione.
+      const workspace = lockJson.packages?.["apps/mobile"];
+      if (!workspace) {
+        throw new Error('package-lock.json: manca la voce packages["apps/mobile"]');
+      }
       appJson.expo.version = nuova;
       pkgJson.version = nuova;
+      workspace.version = nuova;
       scriviJson(app, appJson);
       scriviJson(pkg, pkgJson);
+      scriviJson(lock, lockJson);
     },
   },
   api: {

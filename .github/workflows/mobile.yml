@@ -103,6 +103,8 @@ jobs:
       # Il commit generato qui ha [skip ci] nel messaggio apposta: tocca
       # apps/mobile/**, che rientra nei path che fanno partire questo stesso
       # workflow — senza [skip ci] il push sotto si rimetterebbe in coda da solo.
+      # Vale anche per package-lock.json, che sta nello stesso filtro: lo script
+      # ci aggiorna la versione del workspace apps/mobile (T-52).
       - name: Bump versione app
         id: bump
         run: |
@@ -113,7 +115,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/mobile/app.json apps/mobile/package.json
+          git add apps/mobile/app.json apps/mobile/package.json package-lock.json
           git commit -m "chore(mobile): bump versione a ${{ steps.bump.outputs.version }} [skip ci]"
 
           TAG="mobile-v${{ steps.bump.outputs.version }}"

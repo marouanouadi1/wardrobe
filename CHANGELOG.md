@@ -211,6 +211,9 @@ travestita da registro.
   Ora è l'ultima.)
 
 ### progetto
+- Il rilascio dell'app aggiorna anche la versione registrata in
+  `package-lock.json`: un `npm install` in locale non sporca più il lockfile
+  con una riga che nessuno ha toccato. Chiusa `T-52`.
 - **L'APK si costruisce in locale finché non si decide altrimenti**
   (`docs/adr/0009`): la build in cloud di EAS ha una quota mensile, finita il
   2026-09-23, e da lì quattro rilasci si sono fermati senza APK. La procedura è
