@@ -542,10 +542,13 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       la build locale** (`docs/adr/0009`, procedura in `docs/deploy.md`); il rimedio
       automatico è la issue #26. *Verificato: i log dei quattro run falliti riportano
       tutti «This account has used its Android builds from the Free plan this month».
-      La procedura locale **non è ancora stata eseguita**: sulla macchina ci sono JDK
-      17, Android SDK (`ANDROID_HOME`), `eas-cli` 21.4 loggato (`eas whoami` →
-      `marouanouadi`) e `gh` autenticato, ma nessun APK è stato costruito con
-      `--local`.*
+      La procedura locale **eseguita il 2026-09-24** per `mobile-v0.9.1`, pari a
+      `docs/deploy.md`: `eas build --local` dal tag, Gradle in 9 min, Release
+      pubblicata. Controllato sull'APK con `aapt2 dump badging` e `apksigner`:
+      `versionName` 0.9.1, `versionCode` 30, etichetta «Aura», URL dell'API di
+      produzione nel bundle, e **lo stesso certificato di firma della `0.6.6`**
+      (SHA-256 `253a2658…63916`), quindi si installa sopra senza disinstallare.
+      Non provato: l'installazione su un telefono.*
 - [x] Bump di versione dai conventional commit (ADR 0005), `pr-title.yml` che lo
       protegge — *ADR 0005 lo documenta; i 22 tag del repo ne sono la traccia*
 - [x] La soglia di coverage aggregata non nasconde più le due per sottoalbero:
@@ -562,13 +565,12 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       nessuno dei due che pushano. Poi in CI sulla PR #16: tutti i job passano.
       I due job che pushano girano solo su `main`, quindi la loro prima
       esecuzione vera è il prossimo rilascio*
-- [~] L'APK della Release si costruisce solo per `arm64-v8a` e `armeabi-v7a`,
+- [x] L'APK della Release si costruisce solo per `arm64-v8a` e `armeabi-v7a`,
       non più anche per `x86`/`x86_64` degli emulatori (`eas.json`, profilo
-      `preview`). Atteso: da 117,6 MB (`mobile-v0.7.0`) a circa 67 MB. *Verificato
-      in locale che `ORG_GRADLE_PROJECT_reactNativeArchitectures` vince su
-      `gradle.properties` (`./gradlew :app:properties` con e senza la variabile);
-      il peso atteso è la somma delle librerie delle due ABI nell'APK 0.7.0. Manca:
-      il peso vero del primo APK rilasciato da EAS con la modifica*
+      `preview`). Da 117,2 MB (`mobile-v0.6.6`) a **64 MB** (`mobile-v0.9.1`).
+      *Verificato sul primo APK costruito con la modifica, in locale con `eas build
+      --local` (stesso profilo del cloud): `aapt2 dump badging` riporta `native-code:
+      'arm64-v8a' 'armeabi-v7a'`, e nell'archivio non c'è nessun `lib/x86*`*
 - [ ] Nessun rilascio iOS
 
 ## Cosa manca dall'esterno
