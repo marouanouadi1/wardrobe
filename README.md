@@ -166,8 +166,10 @@ migrazioni e le scelte deliberate (Postgres non raggiungibile da Internet) — �
 
 Ogni merge su `main` fa partire da sola la parte di rilascio che tocca: un
 merge sul backend rideploya l'API sul VPS e verifica che `/salute` risponda con
-la versione appena rilasciata, un merge sull'app builda un nuovo APK con EAS e
-lo pubblica come GitHub Release.
+la versione appena rilasciata, un merge sull'app ne alza versione e tag e prova
+a buildare l'APK con EAS. **Per ora l'APK si costruisce in locale** e si
+pubblica a mano come GitHub Release: la build in cloud ha una quota mensile che
+finisce ([`docs/adr/0009`](docs/adr/0009-l-apk-si-costruisce-in-locale.md)).
 
 Il numero di versione **non conta i merge**: il livello (major, minor, patch)
 viene dedotto dai conventional commit dall'ultimo tag, e il titolo delle PR è

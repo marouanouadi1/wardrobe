@@ -204,6 +204,12 @@ travestita da registro.
   Ora è l'ultima.)
 
 ### progetto
+- **L'APK si costruisce in locale finché non si decide altrimenti**
+  (`docs/adr/0009`): la build in cloud di EAS ha una quota mensile, finita il
+  2026-09-23, e da lì quattro rilasci si sono fermati senza APK. La procedura è
+  in `docs/deploy.md`, «Build locale dell'APK»; `CLAUDE.md` e
+  `.claude/rules/ci-release.md` dicono che il job rosso a quota finita è atteso.
+  Il rimedio automatico è la issue #26.
 - Chiuse `T-35` e `T-36`: il banco 3D (`app/dev/prova-3d.tsx`) che
   descrivevano non è mai entrato nel repo ed è stato scartato. Via anche il
   caso di `test/convenzioni/navigazione.test.ts` che teneva ferma una rotta
