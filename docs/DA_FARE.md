@@ -816,33 +816,6 @@ provate; ripristinato, verdi.
 **nessuno l'ha ancora guardato su un telefono** — il conto dice che entra, non
 come si vede.
 
-### T-52 — Il bump dell'app non aggiorna `package-lock.json`
-**Trovato il:** 2026-09-24 · **Dove:** `scripts/bump-versione.mjs` (target `mobile`), `.github/workflows/mobile.yml` (step del commit di bump) · **Gravità:** bassa · **Chi:** `ci-cd`
-
-`package-lock.json` registra la versione di ogni workspace, sotto
-`packages["apps/mobile"].version`. Il target `mobile` di `bump-versione.mjs`
-scrive `app.json` e `apps/mobile/package.json`, e il job di rilascio committa
-**solo quei due**. Al 2026-09-24 l'app è alla `0.9.0` e il lock dice ancora
-`0.6.4`: fermo dall'ultimo ricalcolo a mano (`501d6e8`, `T-23`).
-
-Il sintomo è che **ogni `npm install` in locale sporca il lockfile** con una
-riga che nessuno ha toccato, e chi la trova nel diff non sa se committarla.
-`npm ci` in CI non se ne accorge, perché la versione di un workspace non entra
-nella risoluzione delle dipendenze: per questo nessun job è rosso.
-
-È lo stesso difetto che sul backend è già stato chiuso con `uv lock` dopo il
-bump (`.claude/rules/ci-release.md`, invariante 5): un lockfile che registra la
-versione e resta indietro rimette in circolo la bugia che il versioning doveva
-togliere. Sull'app manca la metà npm.
-
-**Rimedio:** nel target `mobile`, `scrivi()` aggiorna anche
-`packages["apps/mobile"].version` in `package-lock.json`, e `mobile.yml` lo
-aggiunge al `git add` del commit di bump. `package-lock.json` sta già nel filtro
-`paths:` di `mobile.yml`, ma il commit porta `[skip ci]`, quindi non si rimette
-in coda. Poi l'invariante 5 di `ci-release.md` va detta per entrambi i gestori.
-Da non fare: correggere la riga a mano — il prossimo rilascio la rimetterebbe
-indietro.
-
 ---
 
 ## Fatte
@@ -1402,3 +1375,53 @@ segnala l'incoerenza ma jest la tollera.
 aspetta (o viceversa, se è `jest-expo` a essere avanti rispetto al resto della
 SDK), quando si aggiorna Expo SDK 57 — non prima, per non disallineare il pin
 di RN dal resto dell'app senza motivo.
+
+---
+
+Chiusa il **2026-09-24**, commit `c12da08`, dall'agente principale col ruolo di
+`ci-cd`.
+
+- **`T-52`**: il rimedio scritto sotto, senza varianti. `scrivi()` del target
+  `mobile` aggiorna `packages["apps/mobile"].version` in `package-lock.json` e
+  **si ferma prima di scrivere qualunque file** se quella voce manca, invece di
+  crearne una finta; `mobile.yml` aggiunge il lock al `git add` del commit di
+  bump; l'invariante 5 di `.claude/rules/ci-release.md` è detta per `uv` e per
+  npm. La riga del lock **non è stata corretta a mano**: oggi dice `0.9.1`
+  contro la `0.9.2` dell'app, e la riallinea il prossimo rilascio.
+
+*Verificato* in un worktree usa e getta, col lock di `main`:
+`node scripts/bump-versione.mjs mobile` porta `0.9.2 -> 0.9.3` e il diff del
+lock è **una riga sola** (`0.9.1` → `0.9.3`), JSON valido, stessa
+formattazione di npm (`JSON.stringify(…, 2)` rilegge il file byte per byte).
+Poi `npm install --package-lock-only` sul risultato esce 0 e **non tocca più il
+lock**: è esattamente il sintomo della voce, e non c'è più. Tolta la voce
+`apps/mobile` dal lock, lo script esce 1 col suo messaggio e non scrive
+`app.json` né `package.json`. **Non verificato**: il job `release` vero, che
+gira al primo merge su `main` che tocca `apps/mobile/**`.
+
+### T-52 — Il bump dell'app non aggiorna `package-lock.json` (chiusa)
+**Trovato il:** 2026-09-24 · **Dove:** `scripts/bump-versione.mjs` (target `mobile`), `.github/workflows/mobile.yml` (step del commit di bump) · **Gravità:** bassa · **Chi:** `ci-cd`
+
+`package-lock.json` registra la versione di ogni workspace, sotto
+`packages["apps/mobile"].version`. Il target `mobile` di `bump-versione.mjs`
+scrive `app.json` e `apps/mobile/package.json`, e il job di rilascio committa
+**solo quei due**. Al 2026-09-24 l'app è alla `0.9.0` e il lock dice ancora
+`0.6.4`: fermo dall'ultimo ricalcolo a mano (`501d6e8`, `T-23`).
+
+Il sintomo è che **ogni `npm install` in locale sporca il lockfile** con una
+riga che nessuno ha toccato, e chi la trova nel diff non sa se committarla.
+`npm ci` in CI non se ne accorge, perché la versione di un workspace non entra
+nella risoluzione delle dipendenze: per questo nessun job è rosso.
+
+È lo stesso difetto che sul backend è già stato chiuso con `uv lock` dopo il
+bump (`.claude/rules/ci-release.md`, invariante 5): un lockfile che registra la
+versione e resta indietro rimette in circolo la bugia che il versioning doveva
+togliere. Sull'app manca la metà npm.
+
+**Rimedio:** nel target `mobile`, `scrivi()` aggiorna anche
+`packages["apps/mobile"].version` in `package-lock.json`, e `mobile.yml` lo
+aggiunge al `git add` del commit di bump. `package-lock.json` sta già nel filtro
+`paths:` di `mobile.yml`, ma il commit porta `[skip ci]`, quindi non si rimette
+in coda. Poi l'invariante 5 di `ci-release.md` va detta per entrambi i gestori.
+Da non fare: correggere la riga a mano — il prossimo rilascio la rimetterebbe
+indietro.

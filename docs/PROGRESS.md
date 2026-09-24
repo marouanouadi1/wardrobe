@@ -553,6 +553,12 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       un giro di tutte le schermate.*
 - [x] Bump di versione dai conventional commit (ADR 0005), `pr-title.yml` che lo
       protegge — *ADR 0005 lo documenta; i 22 tag del repo ne sono la traccia*
+- [~] Il bump dell'app aggiorna anche la versione del workspace in
+      `package-lock.json` (`T-52`, chiusa). *Verificato in un worktree usa e getta:
+      lo script cambia una riga sola del lock, e un `npm install --package-lock-only`
+      subito dopo non lo tocca più.* **Manca** la prima esecuzione del job `release`
+      vero, al prossimo merge che tocca `apps/mobile/**`: fino ad allora il lock dice
+      `0.9.1` contro la `0.9.2` dell'app
 - [x] La soglia di coverage aggregata non nasconde più le due per sottoalbero:
       è l'ultimo step, non il primo. *Verificato in locale eseguendo i tre
       `coverage report` nell'ordine del workflow: dominio, handler e totale
