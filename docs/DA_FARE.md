@@ -1345,8 +1345,9 @@ react-native --all` dà una sola versione di ciascuno (19.2.3, 19.2.3, 0.86.3);
 `typecheck`, `lint`, `mobile:test` (68 verdi), `build:web`,
 `contracts:check` tutti a 0; e una build Android release in locale
 (`expo prebuild --clean` + `./gradlew assembleRelease`, senza passare da EAS)
-uscita a 0, con le classi di `expo-system-ui` dentro l'APK. **Non provato su un
-telefono.**
+uscita a 0, con le classi di `expo-system-ui` dentro l'APK. Sul telefono: la
+`0.9.2` che porta queste modifiche, installata dall'utente il 2026-09-24 —
+*«sembra funzionare»*. Una prova a mano, non un giro di tutte le schermate.
 
 ### T-54 — Dodici pacchetti Expo indietro di una patch rispetto all'SDK 57 (chiusa)
 **Trovato il:** 2026-09-24 · **Dove:** `apps/mobile/package.json`, `package-lock.json` · **Gravità:** bassa · **Chi:** `mobile`

@@ -548,7 +548,9 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       `versionName` 0.9.1, `versionCode` 30, etichetta «Aura», URL dell'API di
       produzione nel bundle, e **lo stesso certificato di firma della `0.6.6`**
       (SHA-256 `253a2658…63916`), quindi si installa sopra senza disinstallare.
-      Non provato: l'installazione su un telefono.*
+      Sul telefono: la `0.9.2`, costruita con la stessa procedura, installata
+      dall'utente il 2026-09-24 — *«sembra funzionare»*. È una prova a mano, non
+      un giro di tutte le schermate.*
 - [x] Bump di versione dai conventional commit (ADR 0005), `pr-title.yml` che lo
       protegge — *ADR 0005 lo documenta; i 22 tag del repo ne sono la traccia*
 - [x] La soglia di coverage aggregata non nasconde più le due per sottoalbero:
