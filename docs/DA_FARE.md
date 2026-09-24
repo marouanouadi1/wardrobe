@@ -837,6 +837,39 @@ provate; ripristinato, verdi.
 **nessuno l'ha ancora guardato su un telefono** — il conto dice che entra, non
 come si vede.
 
+### T-54 — Dodici pacchetti Expo indietro di una patch rispetto all'SDK 57
+**Trovato il:** 2026-09-24 · **Dove:** `apps/mobile/package.json`, `package-lock.json` · **Gravità:** bassa · **Chi:** `mobile`
+
+`expo-doctor`, che `eas build` lancia prima di ogni build, riporta dodici
+pacchetti una patch sotto quella che l'SDK installato si aspetta: `expo`
+(57.0.13 → ~57.0.24), `expo-router` (57.0.13 → ~57.0.22), `react-native` (0.86.2
+→ 0.86.3), `expo-image-picker`, `expo-linking` e altri sette. Il controllo non è
+bloccante — la build della `0.9.1` è riuscita lo stesso — ma sono correzioni
+che l'APK non porta.
+
+**Rimedio:** `npx expo install --check` da `apps/mobile`, poi i test e il
+`build:web`. **Attenzione al lock**: qui ha già fatto male tre volte (`T-03`,
+`T-23`, `T-31`). Se il ricalcolo tocca `react` o `react-dom`, il pin va alzato
+**in entrambi** i `package.json` nella stessa modifica
+(`.claude/rules/react-native.md`, «Una sola copia di React»), e `npm ls react
+react-dom --all` deve restare senza duplicati.
+
+### T-53 — `edgeToEdgeEnabled` in `app.json` non esiste più
+**Trovato il:** 2026-09-24 · **Dove:** `apps/mobile/app.json` (`expo.android.edgeToEdgeEnabled`) · **Gravità:** bassa · **Chi:** `mobile`
+
+Il prebuild della `0.9.1` lo dice in chiaro: *«`edgeToEdgeEnabled` customization
+is no longer available - Android 16 makes edge-to-edge mandatory. Remove the
+`edgeToEdgeEnabled` entry»*, ed `expo-doctor` lo rifiuta come proprietà fuori
+schema. La riga non fa più niente: l'edge-to-edge c'è comunque.
+
+**Rimedio** (toglie una riga): cancellarla. Nello stesso passaggio vale la pena
+guardare l'altro avviso del prebuild, *«userInterfaceStyle: Install
+expo-system-ui in your project to enable this feature»*: `app.json` dichiara
+`"userInterfaceStyle": "light"` e su Android, senza quel pacchetto, la
+dichiarazione non arriva al sistema. Se al telefono in tema scuro qualcosa di
+nativo (la barra di sistema, un selettore) appare scuro sopra un'app chiara, la
+causa è questa.
+
 ### T-52 — Il bump dell'app non aggiorna `package-lock.json`
 **Trovato il:** 2026-09-24 · **Dove:** `scripts/bump-versione.mjs` (target `mobile`), `.github/workflows/mobile.yml` (step del commit di bump) · **Gravità:** bassa · **Chi:** `ci-cd`
 
