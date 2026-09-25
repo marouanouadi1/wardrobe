@@ -18,6 +18,8 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- Il fondo delle schermate con la barra delle schede non finisce più sotto la
+  pillola: sul profilo «Esci» era coperto a metà.
 - Quattro pacchetti Expo alla patch che l'SDK 57 chiede oggi (`expo` 57.0.25,
   `expo-router` 57.0.23, `expo-linking` 57.0.11, `expo-image-picker` 57.0.20).
   Via dal repo le due foto dell'apertura vecchia, che l'app non usava più.

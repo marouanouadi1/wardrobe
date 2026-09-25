@@ -100,9 +100,36 @@ export function schedaDi(percorso: string): string | null {
   return SCHEDA_DI[primo] ?? null
 }
 
-/** Lo spazio che la barra occupa in fondo, per chi ci deve stare sopra. */
+/**
+ * Le misure della barra, scritte una volta: le legge `BarraSchede` per
+ * disegnarsi e `altezzaBarra` per dire quanto spazio lasciarle.
+ *
+ * Prima `altezzaBarra` rifaceva il conto a mano, `48 + 8`, e perdeva una delle
+ * due imbottiture: il fondo di ogni schermata di scheda finiva 8pt **sotto** la
+ * pillola, e sul profilo «Esci» restava coperto a metà. Due copie degli stessi
+ * numeri divergono in silenzio; una no.
+ */
+const BARRA = {
+  /** Il minimo dal bordo inferiore, quando il telefono non dichiara un bordo sicuro. */
+  bordoMinimo: 10,
+  /** Lo stacco fra il bordo sicuro e la pillola. */
+  stacco: 6,
+  imbottitura: 8,
+  altezzaVoce: 48,
+} as const
+
+/** Dove poggia la pillola, misurato dal fondo dello schermo. */
+function baseBarra(bordoInferiore: number): number {
+  return Math.max(bordoInferiore, BARRA.bordoMinimo) + BARRA.stacco
+}
+
+/**
+ * Lo spazio che la barra occupa in fondo, per chi ci deve stare sopra: la
+ * pillola intera, più un `spazi.l` d'aria perché l'ultimo elemento non ci
+ * resti appoggiato contro.
+ */
 export function altezzaBarra(bordoInferiore: number): number {
-  return Math.max(bordoInferiore, 10) + 6 + 48 + 8
+  return baseBarra(bordoInferiore) + BARRA.altezzaVoce + 2 * BARRA.imbottitura + spazi.l
 }
 
 export function BarraSchede() {
@@ -117,7 +144,7 @@ export function BarraSchede() {
         position: 'absolute',
         left: 16,
         right: 16,
-        bottom: Math.max(bordi.bottom, 10) + 6,
+        bottom: baseBarra(bordi.bottom),
       }}
     >
       <View
@@ -125,7 +152,7 @@ export function BarraSchede() {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 2,
-          padding: 8,
+          padding: BARRA.imbottitura,
           borderRadius: raggi.pillola,
           backgroundColor: velo(colori.inchiostro, 0.96),
           ...ombre.alta,
@@ -144,7 +171,7 @@ export function BarraSchede() {
               style={{
                 flex: voce.centrale ? 0 : 1,
                 width: voce.centrale ? 60 : undefined,
-                height: 48,
+                height: BARRA.altezzaVoce,
                 borderRadius: raggi.pillola,
                 alignItems: 'center',
                 justifyContent: 'center',
