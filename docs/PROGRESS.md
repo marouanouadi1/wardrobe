@@ -506,6 +506,74 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       cadere — dichiarato in README al 2026-09-08. Rieseguito il 2026-09-11:
       `npm run contracts:check` verde.*
 
+## Supabase (`supabase/`, ADR 0010) — sul branch `feat/supabase`, non su `main`
+
+- [~] **Fase 1: schema, RLS e regole.** Una migrazione (`supabase/migrations/`) con le
+      tabelle a colonne vere, gli enum, le chiavi esterne composte (un riferimento resta
+      dentro lo stesso utente), la correzione di un attributo come trigger,
+      `segna_indossato` e `svuota_armadio` come funzioni `security invoker`, i due bucket
+      privati con una cartella per utente, e l'hook degli inviti al posto di
+      `EMAIL_AMMESSE`. RLS su ogni tabella.
+      *Verificato* sullo stack locale:
+      - i test pgTAP sono verdi (`supabase test db`), da zero e su un database con dati
+        di sviluppo;
+      - quattro difese **viste fallire per davvero** togliendole: RLS spenta, stato
+        delle segnalazioni aperto a tutti, trigger della correzione tolto, policy degli
+        inviti tolta;
+      - un `with check` aperto da solo **non** apre il passaggio di un capo a un altro,
+        perché lo ferma anche la policy di lettura, e il test lo dice;
+      - gli advisor di sicurezza sono puliti;
+      - `verifica_database.py` confronta database e Python, ed è stato visto fallire
+        con un valore aggiunto a un enum;
+      - una registrazione vera sull'Auth locale: l'invitato entra con il profilo
+        creato, l'estraneo riceve 403;
+      - via HTTP: `segna_indossato` su un capo che non c'è risponde 404, `anon` riceve
+        401 sulle tabelle e 404 su una funzione non esposta.
+
+      Poi un audit di `security` (nessun IDOR trovato) e una review di `reviewer`, e le
+      correzioni che ne sono uscite, tutte con il loro test:
+      - via i permessi di default: `authenticated` aveva TRUNCATE, che ignora l'RLS, e
+        ogni funzione nuova era eseguibile da `anon`;
+      - i percorsi delle foto rifiutano `..` e la doppia barra;
+      - un capo con un'analisi completata si cancella (prima il suo esito lo impediva);
+      - confermare un valore giusto porta la sua confidenza a 100, come faceva
+        `correggi_attributo`, e solo sui capi con un'analisi;
+      - togliere scarpe o capospalla non cancella più l'outfit;
+      - `verifica_database.py` confronta anche il formato del colore e l'intervallo
+        delle confidenze, e gira solo sullo stack locale.
+
+      I test pgTAP provano ogni policy, cancellazioni comprese, come A contro B, più il
+      catalogo: nessuna tabella senza RLS, nessun permesso ad `anon`, nessuna `security
+      definer` in `public`. Rivisti fallire dopo le correzioni cinque sabotaggi: TRUNCATE
+      concesso, una funzione aperta ad `anon`, una funzione `security definer`, RLS
+      spenta sugli esiti, il controllo dei `..` tolto.
+
+      **Trovato e chiuso strada facendo:** l'hook leggeva gli inviti come
+      `supabase_auth_admin`, che l'RLS non la scavalca, e rifiutava tutti. I test pgTAP
+      passavano lo stesso, perché giravano come `postgres`.
+
+      **Cosa manca:**
+      - il progetto Supabase vero (lo crea l'utente) e le fasi 2-5 del piano: il backend
+        e l'app di oggi non usano ancora niente di tutto questo;
+      - gli script `npm run db:*` restano quelli del Postgres di `docker-compose`, perché
+        li usa ancora il backend: passano alla CLI nella fase 2, insieme a lui;
+      - `Profilo.foto_url` non ha una colonna: non lo scriveva nessuno, ma quattro
+        schermate lo leggono, e nella fase 3 `tsc` le indicherà;
+      - per la fase 4 (i dati dal VPS): gli id `storica-{utente}` delle conversazioni
+        non sono uuid, i CHECK su nomi e testi sono più severi di Pydantic (spazi), e le
+        chiavi delle foto passano da `capi/{utente}/…` a `{utente}/…`.
+
+      **Da impostare nel pannello del progetto vero, il giorno del passaggio** (niente
+      lo verifica ancora: `T-56`):
+      - hook degli inviti acceso, oppure registrazioni chiuse (`Q-13`);
+      - conferma dell'email accesa, e `secure_password_change` acceso;
+      - password di almeno 8 caratteri;
+      - solo `public` e `graphql_public` esposti; `pg_graphql` spento se non serve;
+      - JWT firmati con chiavi asimmetriche.
+
+      E sul VPS nessuna credenziale che scavalchi l'RLS: né la chiave di servizio, né la
+      password del database, né le chiavi S3 dello Storage.
+
 ## Infrastruttura e rilascio
 
 - [x] VPS Hetzner, Caddy, Let's Encrypt emesso al primo avvio, dominio reale. Deploy

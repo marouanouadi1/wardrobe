@@ -20,9 +20,24 @@ Per esteso, con l'esempio, in `CLAUDE.md` e in `docs/adr/0008`.
 
 ## L'invariante
 
-**L'unico diff legittimo sotto `packages/contracts/` è l'output di
-`npm run contracts:generate`.** Qualunque altra riga è una seconda fonte di
-verità in incubazione.
+**Sotto `packages/contracts/` si scrive a mano solo il cablaggio** —
+`src/index.ts` che espone i file generati, `package.json`, gli script dei
+generatori. Tutto il resto è l'output di `npm run contracts:generate` e, per i
+dati salvati su Supabase, di `npm run supabase:tipi`. Un tipo scritto a mano lì
+dentro è una seconda fonte di verità in incubazione.
+
+## Durante il passaggio a Supabase: una seconda fonte, con un confine
+
+Dal 2026-09-25 (ADR 0010) i **dati salvati** hanno come fonte lo schema SQL di
+`supabase/migrations/`. I loro tipi TypeScript li scrive `npm run supabase:tipi`
+(`supabase gen types`) in `packages/contracts/src/generated/database.ts`, e il job
+`database` della CI rigenera e confronta, come `contracts:check` fa per l'altra catena.
+
+Pydantic resta la fonte di ciò che attraversa il backend dell'IA. Le enum e i limiti
+che esistono in entrambi li confronta `services/api/scripts/verifica_database.py`: un
+valore aggiunto da una parte sola fa diventare rosso quel job.
+
+`database.ts` è output come gli altri file di `src/generated/`: non si tocca a mano.
 
 ## La catena, in tre passi e due linguaggi
 
@@ -92,13 +107,14 @@ diff generato prima di committarlo.
 `@wardrobe/contracts`. Riscrivere `86` in TypeScript significa che un giorno le
 due divergeranno in silenzio, e nessuno se ne accorgerà.
 
-## Le enum: tre posti, una fonte
+## Le enum: quattro posti, una fonte
 
 Questa regola sta **qui e solo qui**; gli altri file la citano.
 
 | Dove | Cosa |
 |---|---|
 | `services/api/src/domain/models.py` | la definizione — **la fonte** |
+| `supabase/migrations/` | la stessa enum come tipo Postgres, per i dati salvati: **la confronta `verifica_database.py`** nel job `database`, valori e ordine |
 | `@wardrobe/contracts` → `runtime.ts` | `VALORI_TIPO_CAPO`, `VALORI_ATTRIBUTO_CAPO`, … — i valori **in ordine** |
 | `apps/mobile/src/dati/dominio.ts` | `TIPI_CAPO`, `STAGIONI` — l'ordine di presentazione |
 | `apps/mobile/src/tema/tokens.ts` | `ETICHETTE` — le rese italiane |

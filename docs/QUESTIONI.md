@@ -16,6 +16,25 @@ prima del codice**.
 
 ## Aperte
 
+### Q-13 — Inviti con l'hook, o registrazioni chiuse sul progetto Supabase?
+**Aperta il:** 2026-09-25 · **Tocca:** `supabase/migrations/` (hook e `privato.inviti`), il pannello di Supabase
+
+Oggi chi può creare un account lo decide l'hook `privato.accetta_solo_invitati`, che
+guarda la tabella `privato.inviti`: è `EMAIL_AMMESSE` portato nel database, e vale anche
+per chi entra con Google. Ma **vale solo se l'hook è acceso sul progetto vero**:
+`config.toml` accende quello locale, non l'altro, e un progetto nuovo nasce con le
+registrazioni aperte. Spento per sbaglio, chiunque abbia la chiave pubblica dell'app — che
+sta nell'APK — si registra, e con l'account usa l'IA a spese tue e le quote del piano Free.
+Nessun controllo oggi se ne accorgerebbe (`T-56`).
+
+*Cosa cambia a seconda della risposta:*
+- **Hook** (com'è oggi): si aggiungono gli inviti da SQL o dal pannello, e serve il
+  controllo di `T-56` perché lo spegnimento non passi in silenzio.
+- **Registrazioni chiuse** (`enable_signup = false`) e account creati o invitati dal
+  pannello: sparisce l'hook con la sua tabella, la policy e lo step della CI. Il rimedio
+  toglie righe. Va provato prima che l'accesso con Google di un utente già esistente si
+  colleghi al suo account anche con le registrazioni chiuse.
+
 ### Q-08 — Il «+» della barra delle schede è l'unica azione tinta d'accento
 **Aperta il:** 2026-09-22 · **Tocca:** `apps/mobile/app/(tabs)/_layout.tsx`
 

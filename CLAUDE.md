@@ -171,6 +171,11 @@ successivo**.
 
 Prima di scriverne una, leggi `.claude/rules/migrazioni.md` per intero.
 
+**Durante il passaggio a Supabase (ADR 0010) le cartelle sono due.** Lo schema nuovo nasce
+in `supabase/migrations/`, con la CLI e la sua tabella di storico; `services/api/migrations/`
+serve ancora il backend di oggi, finché il branch `feat/supabase` non arriva su `main`. La
+regola per la prima è diversa, ed è nella stessa rule.
+
 ## Operazioni distruttive
 
 **Mai eseguire un'operazione distruttiva o irreversibile senza accordo esplicito e preventivo
@@ -281,5 +286,8 @@ altre. Se i test falliscono, si dice, con l'output. Se un passaggio è stato sal
 - `npm run api:lint` — ruff check + format + `mypy --strict`
 - `npm run mobile:test` — i test dell'app (leggibilità e convenzioni delle primitive)
 - `npm run contracts:check` — da rilanciare dopo ogni modifica a `domain/models.py`
+- `npm run supabase:start`, poi `supabase:reset`, `supabase:test` (policy e regole, pgTAP),
+  `supabase:verifica` (enum e limiti uguali fra database e Python) e `supabase:tipi` — dopo
+  ogni migrazione in `supabase/migrations/`
 - `npm run dev:app` — stack locale completo (Postgres + API + Expo) per provare un flusso a
   mano prima di considerarlo finito

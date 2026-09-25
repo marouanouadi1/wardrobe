@@ -18,6 +18,33 @@ aggiunge.**
 
 Per esteso, con l'esempio, in `CLAUDE.md` e in `docs/adr/0008`.
 
+## Due cartelle, durante il passaggio a Supabase
+
+Dal 2026-09-25 (ADR 0010) lo schema nuovo nasce in **`supabase/migrations/`**. Lì le
+regole sotto **non valgono**, perché il meccanismo è un altro: la CLI di Supabase tiene
+una tabella di storico, applica ogni file una volta sola, e non lo riesegue.
+
+- **Un file nuovo** si crea con `supabase migration new <nome> < /dev/null`. Senza
+  `< /dev/null` il comando resta appeso ad aspettare SQL da stdin.
+- **Si può riscrivere finché non è arrivato sul progetto vero** (`supabase db push`).
+  Da lì è storia, come la regola 5 qui sotto: si aggiunge un file nuovo.
+- **Si verifica da zero**: `npm run supabase:reset && npm run supabase:test`, più
+  `supabase:verifica` e `supabase:tipi`. È quello che fa il job `database` della CI.
+- **Ogni tabella di `public` ha l'RLS attiva e le sue policy**, con i test pgTAP in
+  `supabase/tests/database/` che provano A contro B. Una policy che nessun test prova
+  non esiste.
+- **Un permesso si prova con il ruolo che lo usa.** L'hook degli inviti gira come
+  `supabase_auth_admin`, non come `postgres`: provato da `postgres` passava, mentre ogni
+  registrazione vera veniva rifiutata. Da allora la CI fa due registrazioni vere.
+- **`supabase/seed.sql` è solo per lo stack locale.** Mai `supabase db push
+  --include-seed` verso il progetto vero: il seed inserisce un invito di sviluppo.
+- **La CLI è la stessa della CI** (`database.yml`, oggi 2.109.1): un'altra versione
+  genera tipi diversi e il confronto fallisce per quello. `supabase --version`.
+- **`drop`** resta distruttivo e si chiede prima, come sotto.
+
+Il resto di questo file vale per **`services/api/migrations/`**, finché il backend non
+passa a Supabase.
+
 ## Il meccanismo, che spiega tutte le regole
 
 `services/api/scripts/applica_migrazioni.py` fa una cosa sola:

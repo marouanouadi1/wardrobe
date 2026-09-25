@@ -21,6 +21,9 @@ Due tipi di numero, e si comportano diversamente:
 - **Soglia coverage totale:** 73% — `services/api/pyproject.toml`
 - **Soglia coverage `src/domain/`:** 97% — `.github/workflows/api.yml`
 - **Soglia coverage `src/handlers/`:** 92% — idem, escluso `local_server.py`
+- **Asserzioni pgTAP sul database:** 100 — `supabase/tests/database/regole.test.sql`,
+  sul branch `feat/supabase`. Il numero vero è il `plan()` del file, che pgTAP fa
+  rispettare nel job `database`; `docs.yml` confronta questa riga con quel `plan()`
 
 Le soglie sono un **cricchetto**: si alzano nella stessa PR che alza la coverage
 vera, non si abbassano mai. Abbassarne una non è un commit: è una voce in

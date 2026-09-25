@@ -1,7 +1,7 @@
 {
   "name": "@wardrobe/contracts",
   "private": true,
-  "description": "Tipi condivisi, generati dai modelli Pydantic del backend",
+  "description": "Tipi condivisi, generati dai modelli Pydantic del backend e dallo schema Supabase",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
