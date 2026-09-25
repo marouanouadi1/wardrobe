@@ -374,9 +374,25 @@ export function Schermata({
   // `tavolozza` il fondo è per forza chiaro: vedi la prop.
   const fondo: Su = tavolozza ? 'chiaro' : (su ?? 'chiaro')
 
+  const ancora = ancoraInFondo ? () => scrollRef.current?.scrollToEnd({ animated: true }) : undefined
+
   return (
     <Fondo su={fondo}>
-      <View style={{ flex: 1, backgroundColor: fondo === 'scuro' ? colori.inchiostro : undefined }}>
+      {/* La tastiera non ridimensiona la finestra: con l'edge-to-edge di
+          Android (obbligatorio da Expo SDK 54) le passa sopra, come su iOS, e
+          copriva la metà bassa di ogni schermata — in chat, proprio il campo
+          in cui si stava scrivendo. `padding` su entrambe le piattaforme alza
+          il contenuto di quanto la tastiera sale.
+
+          L'offset negativo toglie `paddingBottom`: quello spazio è per la
+          barra delle schede (o per respirare in fondo), e con la tastiera
+          aperta la barra ci sta sotto — lasciarlo avrebbe staccato il campo
+          dalla tastiera di un'intera barra vuota. `spazi.m` resta di aria. */}
+      <KeyboardAvoidingView
+        behavior="padding"
+        keyboardVerticalOffset={spazi.m - paddingBottom}
+        style={{ flex: 1, backgroundColor: fondo === 'scuro' ? colori.inchiostro : undefined }}
+      >
         {tavolozza ? <SfondoAura tavolozza={tavolozza} /> : null}
         <Testata
           occhiello={occhiello}
@@ -394,11 +410,18 @@ export function Schermata({
             contentStyle,
           ]}
           showsVerticalScrollIndicator={false}
-          onContentSizeChange={ancoraInFondo ? () => scrollRef.current?.scrollToEnd({ animated: true }) : undefined}
+          // Il tocco sul bottone d'invio arriva al bottone anche a tastiera
+          // aperta, invece di servire solo a chiuderla.
+          keyboardShouldPersistTaps="handled"
+          onContentSizeChange={ancora}
+          // Quando sale la tastiera il contenuto non cresce: si stringe la
+          // vista. Senza questo la chat restava ferma dov'era, col campo e
+          // l'ultimo messaggio sotto il bordo nuovo.
+          onLayout={ancora}
         >
           {children}
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Fondo>
   )
 }

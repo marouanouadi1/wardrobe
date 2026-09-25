@@ -18,6 +18,10 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **In chat la tastiera non copre più quello che scrivi**: il contenuto sale
+  sopra la tastiera e la conversazione resta ancorata in fondo, col campo
+  appena sopra. Vale per ogni schermata, non solo la chat; e il bottone
+  d'invio risponde al primo tocco anche a tastiera aperta.
 - Quattro pacchetti Expo alla patch che l'SDK 57 chiede oggi (`expo` 57.0.25,
   `expo-router` 57.0.23, `expo-linking` 57.0.11, `expo-image-picker` 57.0.20).
   Via dal repo le due foto dell'apertura vecchia, che l'app non usava più.
