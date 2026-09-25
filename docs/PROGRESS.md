@@ -48,7 +48,10 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
 - [x] `GET|PUT /profilo` — *coperto da `test_handlers.py`, creazione al primo accesso compresa*
 - [x] `POST|GET /segnalazioni`, `PATCH /segnalazioni/{id}` — amministratori da
       `EMAIL_AMMINISTRATORI`, fail-closed. *coperto da `test_handlers.py`: chi vede cosa, il 403 di chi non è
-      amministratore, il 404*
+      amministratore, il 404*. Sul server la variabile **mancava** fino al 2026-09-25
+      (nessun amministratore, segnalazioni ferme su «Ricevuta»); ora ha un'email.
+      *Verificato con `printenv` nel container ricreato e `GET /salute` a 200;
+      **non** provato dall'app con l'account amministratore.*
 - [x] `POST /foto/upload` — URL firmata, la PUT la fa l'app. *coperto da `test_handlers.py`: la firma e il
       rifiuto di un tipo non immagine*
 - [~] `POST /capi/analisi` + `GET /capi/analisi/{id}` — la pipeline a due fasi gira e
