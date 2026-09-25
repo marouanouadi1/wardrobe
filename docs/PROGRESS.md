@@ -486,6 +486,16 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       peggio di una spunta assente. SSO e recupero password invece ci sono,
       spenti.
       **Cosa manca:** ancora nessuna prova su un telefono.
+- [x] **Il vetro non porta ombra.** La `Scheda vetro` e `CapoInGriglia`
+      avevano un fondo bianco al 60% e l'ombra nativa (`ombre.scheda`): su
+      Android l'`elevation` si disegna anche sotto la vista e traspare, e le
+      schede di `impostazioni.tsx` mostravano un riquadro più chiaro dentro
+      (segnalazione da Sentry, screenshot dal telefono). Tolta l'ombra dai due
+      punti; resta il bordo `superfici.bordo`. *Verificato con
+      `test/ui/ombre.test.tsx`, rosso sui due casi prima della correzione e
+      verde dopo; `npm run typecheck`, `npm run lint --workspace
+      @wardrobe/mobile` e `npm run mobile:test` verdi. Non provato su un
+      telefono: nessun emulatore in questa sessione*
 - [x] Una sola copia di React nel monorepo (`T-23`, chiusa): `react` e
       `react-dom` dichiarati anche in `dependencies` di root, alla versione
       esatta di `apps/mobile`. Il `jest.moduleNameMapper` che tamponava il

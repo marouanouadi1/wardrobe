@@ -18,6 +18,11 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **Le schede di vetro non hanno più un riquadro dentro.** Su Android l'ombra
+  si vedeva attraverso il fondo traslucido: le schede delle impostazioni (e le
+  tessere dell'armadio) sfumavano nel grigio ai bordi, con un rettangolo più
+  chiaro in mezzo. Il vetro ora non porta ombra; lo stacca dallo sfondo il filo
+  di luce sul bordo.
 - Quattro pacchetti Expo alla patch che l'SDK 57 chiede oggi (`expo` 57.0.25,
   `expo-router` 57.0.23, `expo-linking` 57.0.11, `expo-image-picker` 57.0.20).
   Via dal repo le due foto dell'apertura vecchia, che l'app non usava più.
