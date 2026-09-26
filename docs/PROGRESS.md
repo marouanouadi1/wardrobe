@@ -177,9 +177,16 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       (`test/convenzioni/navigazione.test.ts`) **visto rosso per davvero**
       capovolgendo la mappa in «tutto tranne»: cinque casi rossi, fra cui
       `/accedi` e il banco 3D.
-      **Cosa manca:** **nessuna prova su un telefono** — che la barra non copra
-      il contenuto in fondo a una schermata spinta lo dice il conto di
-      `altezzaBarra()`, non l'occhio.
+      **Il telefono ha smentito il conto** (2026-09-25): sul profilo «Esci»
+      finiva mezzo sotto la pillola. `altezzaBarra()` ricopiava a mano le
+      misure della barra e ne perdeva un'imbottitura (8pt), senza lasciare
+      aria. Ora le misure stanno in `BARRA`, lette sia dalla barra sia dal
+      conto, più uno `spazi.l` di stacco.
+      *Verificato:* `test/ui/barra.test.tsx` rende `BarraSchede` e misura la
+      cima della pillola contro `altezzaBarra()`: **visto rosso** sul codice
+      di prima (72 contro 80 con bordo 0), verde dopo. `typecheck` exit 0,
+      `lint` 0 errori, `mobile:test` 71 passati su 8 suite.
+      **Cosa manca:** la prova sul telefono della correzione, da un APK nuovo.
 - [~] **Il percorso della foto** (fase 3) — `src/dati/foto.ts` raccoglie la
       sequenza di caricamento e analisi che era scritta a mano in **tre** punti
       (`T-21`, chiusa): `carica.tsx` due volte e `archivio.tsx` una a metà.

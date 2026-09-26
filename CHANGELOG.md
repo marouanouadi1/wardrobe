@@ -18,6 +18,8 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- Il fondo delle schermate con la barra delle schede non finisce più sotto la
+  pillola: sul profilo «Esci» era coperto a metà.
 - **Le schede di vetro non hanno più un riquadro dentro.** Su Android l'ombra
   si vedeva attraverso il fondo traslucido: le schede delle impostazioni (e le
   tessere dell'armadio) sfumavano nel grigio ai bordi, con un rettangolo più
