@@ -388,7 +388,7 @@ react-dom` con `--all` che esce diverso da zero se ci sono `invalid`/duplicati
 
 `config.toml` vale per lo stack locale. Sul progetto vero le stesse scelte si fanno nel
 pannello, e niente verifica che ci siano:
-- l'hook degli inviti acceso (o le registrazioni chiuse, secondo `Q-13`);
+- l'hook degli inviti acceso (`Q-13`, chiusa: la lista resta finché non ci sono limiti di spesa);
 - la conferma dell'email accesa;
 - `secure_password_change` acceso;
 - la password di almeno 8 caratteri (il default è 6);

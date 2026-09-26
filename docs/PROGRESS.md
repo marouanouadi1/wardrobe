@@ -565,7 +565,7 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
 
       **Da impostare nel pannello del progetto vero, il giorno del passaggio** (niente
       lo verifica ancora: `T-56`):
-      - hook degli inviti acceso, oppure registrazioni chiuse (`Q-13`);
+      - hook degli inviti acceso: la lista resta finché non ci sono limiti di spesa (`Q-13`);
       - conferma dell'email accesa, e `secure_password_change` acceso;
       - password di almeno 8 caratteri;
       - solo `public` e `graphql_public` esposti; `pg_graphql` spento se non serve;

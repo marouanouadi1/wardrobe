@@ -16,25 +16,6 @@ prima del codice**.
 
 ## Aperte
 
-### Q-13 — Inviti con l'hook, o registrazioni chiuse sul progetto Supabase?
-**Aperta il:** 2026-09-25 · **Tocca:** `supabase/migrations/` (hook e `privato.inviti`), il pannello di Supabase
-
-Oggi chi può creare un account lo decide l'hook `privato.accetta_solo_invitati`, che
-guarda la tabella `privato.inviti`: è `EMAIL_AMMESSE` portato nel database, e vale anche
-per chi entra con Google. Ma **vale solo se l'hook è acceso sul progetto vero**:
-`config.toml` accende quello locale, non l'altro, e un progetto nuovo nasce con le
-registrazioni aperte. Spento per sbaglio, chiunque abbia la chiave pubblica dell'app — che
-sta nell'APK — si registra, e con l'account usa l'IA a spese tue e le quote del piano Free.
-Nessun controllo oggi se ne accorgerebbe (`T-56`).
-
-*Cosa cambia a seconda della risposta:*
-- **Hook** (com'è oggi): si aggiungono gli inviti da SQL o dal pannello, e serve il
-  controllo di `T-56` perché lo spegnimento non passi in silenzio.
-- **Registrazioni chiuse** (`enable_signup = false`) e account creati o invitati dal
-  pannello: sparisce l'hook con la sua tabella, la policy e lo step della CI. Il rimedio
-  toglie righe. Va provato prima che l'accesso con Google di un utente già esistente si
-  colleghi al suo account anche con le registrazioni chiuse.
-
 ### Q-08 — Il «+» della barra delle schede è l'unica azione tinta d'accento
 **Aperta il:** 2026-09-22 · **Tocca:** `apps/mobile/app/(tabs)/_layout.tsx`
 
@@ -105,6 +86,29 @@ Le migrazioni saltano `0003` e `0004` (playground rimosso); gli ADR partono da
 sarebbe **pericoloso**, perché l'ordine di esecuzione è lessicografico.
 
 ## Chiuse
+
+### Q-13 — Inviti con l'hook, o registrazioni chiuse sul progetto Supabase?
+**Chiusa il:** 2026-09-26 · **Risposta:** *la lista degli inviti resta, per ora* ·
+**Motivo dato:** è temporanea. Oggi l'app la provano solo l'utente e il suo socio, e non ci
+sono ancora un sistema di monitoraggio, un limite di spesa per persona né un metodo di
+pagamento: finché mancano, chi entra spende a carico del progetto.
+
+**La domanda era.** Chi può creare un account lo decide l'hook
+`privato.accetta_solo_invitati`, che guarda la tabella `privato.inviti`: è `EMAIL_AMMESSE`
+portato nel database, e vale anche per chi entra con Google. Ma vale solo se l'hook è acceso
+sul progetto vero: `config.toml` accende quello locale, e un progetto nuovo nasce con le
+registrazioni aperte. L'alternativa era chiudere le registrazioni (`enable_signup = false`)
+e creare gli account dal pannello, togliendo l'hook con la sua tabella.
+
+**Cosa comporta la risposta.** L'hook resta com'è, e il giorno del passaggio va acceso nel
+pannello: è la prima voce della lista in `docs/PROGRESS.md`, e il controllo che lo verifichi
+da sé è `T-56`. Gli inviti si aggiungono da SQL o dal pannello.
+
+**Quando si riapre**, e il segnale è preciso: **quando ci sono il metodo di pagamento, il
+limite di spesa per persona e le protezioni dai costi.** Da lì la lista si toglie — e con
+lei l'interruttore da cui dipendono `T-46`, `T-47` e `Q-12`, che il giorno in cui chiunque
+può registrarsi smettono di essere dettagli. Anche `T-58` (nessun limite di lunghezza sui
+testi, che finiscono nei prompt a pagamento) diventa da fare allora.
 
 ### Q-12 — «Scarica i tuoi dati» passa da una credenziale al portatore
 **Chiusa il:** 2026-09-23 · **Risposta:** *va bene così, niente `expo-sharing`*
