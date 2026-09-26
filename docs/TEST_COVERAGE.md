@@ -17,7 +17,7 @@ Due tipi di numero, e si comportano diversamente:
 ## Numeri correnti
 
 - **Test backend:** 213
-- **Test app:** 71
+- **Test app:** 74
 - **Soglia coverage totale:** 73% — `services/api/pyproject.toml`
 - **Soglia coverage `src/domain/`:** 97% — `.github/workflows/api.yml`
 - **Soglia coverage `src/handlers/`:** 92% — idem, escluso `local_server.py`
@@ -98,6 +98,7 @@ onboarding light button»).
 | File | Test | Cosa verifica |
 |---|---:|---|
 | `test/ui/leggibilita.test.tsx` | 18 | il colore risolto di un testo dentro `Scheda` (compresa la variante **`vetro`**), `BottonePrimario` (nelle cinque varianti, inclusa la combinazione `pericolo + disabilitato` e la nuova `accento`), `Pillola` (attiva e no, nei due ambienti), `Segmenti`, `BottoneSecondario`, e **`Foglio`**: che la sua scheda asserisca il proprio fondo chiaro sotto il velo scuro, e che il «perché» di una voce spenta stia a `tenue` e non al tono dell'interfaccia inattiva. E **`RigaImpostazione`**, che non dipinge nulla ma compone tre colori a mano: che li prenda dal fondo ereditato invece che da `chiaro` fisso |
+| `test/ui/ombre.test.tsx` | 3 | che nessuna vista con un fondo traslucido porti un'ombra nativa — su Android si vede attraverso il vetro, come un riquadro più chiaro in mezzo alla scheda: la `Scheda vetro` e la tessera `CapoInGriglia`, più un controllo che la `Scheda` opaca l'ombra la tenga |
 | `test/ui/fondo.test.tsx` | 5 | il meccanismo: `useFondo()` senza provider, ereditarietà, annidamento a tre livelli |
 | `test/convenzioni/primitive.test.ts` | 4 | che nessuno ridipinga il fondo di una primitiva dal di fuori: né con `style={{ backgroundColor }}` — la forma esatta della regressione di PR #4 — né passando `sfondo` senza dire con `su` su che fondo ci si posa |
 | `test/convenzioni/griglie.test.ts` | 15 | che una riga di griglia **ci stia**: tre tessere d'armadio e sette celle di mese, dalla larghezza di 320pt a quella di 480, dentro la larghezza utile di `Schermata`. In React Native `flexShrink` vale 0, quindi una cella che non entra non si stringe: va a capo, senza errori né avvisi. `griglie.mese` chiedeva `7 × 13.1% + 6 × 6px`, che entra solo in uno schermo da 478pt — il calendario mostrava sei giorni per riga su ogni telefono |

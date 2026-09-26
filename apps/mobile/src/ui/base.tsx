@@ -253,7 +253,12 @@ export function Scheda({
           vetro
             ? { borderWidth: StyleSheet.hairlineWidth, borderColor: superfici.bordo }
             : null,
-          scura ? null : ombre.scheda,
+          // Il vetro non porta ombra: l'ombra nativa si disegna anche *sotto*
+          // la vista, e un fondo al 60% la lascia vedere — su Android il bordo
+          // sfuma nel grigio e al centro resta un riquadro più chiaro. Nel deck
+          // il `box-shadow` del CSS sta solo fuori dal bordo; qui non si può
+          // ottenere, e a staccare il vetro dal gradiente basta il filo di luce.
+          scura || vetro ? null : ombre.scheda,
           style,
         ]}
       >
