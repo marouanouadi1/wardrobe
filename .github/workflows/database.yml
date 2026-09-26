@@ -1,0 +1,117 @@
+name: database
+
+# Lo schema di Supabase, le sue policy e le sue regole (ADR 0010), provati
+# contro un database vero: lo stack locale della CLI. È il solo posto dove
+# l'RLS si può verificare — un finto in memoria non ha policy da violare.
+#
+# I path comprendono i due file Python che il gate `verifica_database.py`
+# confronta con lo schema: cambiare un'enum da una parte sola deve far
+# diventare rossa proprio questa pipeline.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/**"
+      - "scripts/tipi-database.sh"
+      - "services/api/src/domain/models.py"
+      - "services/api/src/domain/wardrobe.py"
+      - "services/api/scripts/verifica_database.py"
+      - "packages/contracts/src/generated/database.ts"
+      - ".github/workflows/database.yml"
+  pull_request:
+    paths:
+      - "supabase/**"
+      - "scripts/tipi-database.sh"
+      - "services/api/src/domain/models.py"
+      - "services/api/src/domain/wardrobe.py"
+      - "services/api/scripts/verifica_database.py"
+      - "packages/contracts/src/generated/database.ts"
+      - ".github/workflows/database.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: database-${{ github.ref }}
+  cancel-in-progress: true
+
+# Sola lettura: questo job esegue il codice della PR e non pusha niente.
+permissions:
+  contents: read
+
+jobs:
+  schema:
+    name: schema, RLS e regole
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      # La stessa versione della CLI usata in sviluppo: un'altra potrebbe
+      # generare tipi diversi, e il confronto qui sotto fallirebbe per quello.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      # Su un runner nuovo lo stack parte da zero e applica tutte le migrazioni:
+      # una migrazione che regge solo su un database già avanzato cade qui, non
+      # sul progetto vero.
+      - name: Avvia lo stack locale, con tutte le migrazioni
+        run: supabase start
+
+      # Comprende i controlli sul catalogo (supabase/tests/database/regole.test.sql):
+      # nessuna tabella di `public` senza RLS, nessun permesso ad `anon`, niente
+      # TRUNCATE per `authenticated`, nessuna funzione `security definer` in
+      # `public`. Sono lì e non negli advisor, che nella CLI 2.109.1 non li hanno.
+      - name: Test delle policy e delle regole
+        run: supabase test db
+
+      # Il linter di sicurezza di Supabase, in più dei test: per esempio una
+      # funzione con il `search_path` modificabile, o una vista che scavalca
+      # l'RLS. Rosso da «warn» in su; gli «info» (un indice mai usato su un
+      # database appena nato) non fermano la PR.
+      - name: Advisor di sicurezza
+        run: supabase db advisors --local --type security --level warn --fail-on warn
+
+      # L'hook degli inviti con i permessi veri, quelli con cui lo chiama Auth:
+      # pgTAP non li può assumere, e il 2026-09-25 i test passavano mentre ogni
+      # registrazione veniva rifiutata. Due registrazioni vere: un invitato
+      # deve entrare, un estraneo no.
+      - name: Solo gli invitati si registrano
+        run: |
+          eval "$(supabase status -o env | grep -E '^(API_URL|DB_URL|ANON_KEY|PUBLISHABLE_KEY)=')"
+          CHIAVE="${PUBLISHABLE_KEY:-$ANON_KEY}"
+          psql "$DB_URL" -qc "insert into privato.inviti (email) values ('invitato.ci@esempio.invalid')"
+          registra() {
+            curl -s -o /dev/null -w '%{http_code}' -X POST "$API_URL/auth/v1/signup" \
+              -H "apikey: $CHIAVE" -H 'content-type: application/json' \
+              -d "{\"email\":\"$1\",\"password\":\"una-password-lunga\"}"
+          }
+          INVITATO=$(registra invitato.ci@esempio.invalid)
+          ESTRANEO=$(registra estraneo.ci@esempio.invalid)
+          echo "invitato: $INVITATO, estraneo: $ESTRANEO"
+          [ "$INVITATO" = 200 ] || { echo "::error::un invitato non riesce a registrarsi ($INVITATO)"; exit 1; }
+          [ "$ESTRANEO" = 403 ] || { echo "::error::un estraneo non viene fermato ($ESTRANEO)"; exit 1; }
+
+      # I tipi TypeScript dei dati salvati si generano dallo schema e non si
+      # scrivono a mano: se il committato è vecchio, questo step lo dice.
+      - name: I tipi generati coincidono con lo schema
+        run: |
+          bash scripts/tipi-database.sh "$RUNNER_TEMP/database.ts"
+          if ! diff -u packages/contracts/src/generated/database.ts "$RUNNER_TEMP/database.ts"; then
+            echo "::error file=packages/contracts/src/generated/database.ts::tipi vecchi: npm run supabase:tipi e committa"
+            exit 1
+          fi
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/api/uv.lock
+
+      - run: uv sync --frozen
+        working-directory: services/api
+
+      # Enum, slot e limiti delle misure: il database e il dominio Python
+      # devono dire la stessa cosa.
+      - name: Database e dominio Python coincidono
+        run: uv run python scripts/verifica_database.py
+        working-directory: services/api
