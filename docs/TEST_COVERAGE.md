@@ -17,7 +17,7 @@ Due tipi di numero, e si comportano diversamente:
 ## Numeri correnti
 
 - **Test backend:** 213
-- **Test app:** 68
+- **Test app:** 74
 - **Soglia coverage totale:** 73% — `services/api/pyproject.toml`
 - **Soglia coverage `src/domain/`:** 97% — `.github/workflows/api.yml`
 - **Soglia coverage `src/handlers/`:** 92% — idem, escluso `local_server.py`
@@ -98,11 +98,13 @@ onboarding light button»).
 | File | Test | Cosa verifica |
 |---|---:|---|
 | `test/ui/leggibilita.test.tsx` | 18 | il colore risolto di un testo dentro `Scheda` (compresa la variante **`vetro`**), `BottonePrimario` (nelle cinque varianti, inclusa la combinazione `pericolo + disabilitato` e la nuova `accento`), `Pillola` (attiva e no, nei due ambienti), `Segmenti`, `BottoneSecondario`, e **`Foglio`**: che la sua scheda asserisca il proprio fondo chiaro sotto il velo scuro, e che il «perché» di una voce spenta stia a `tenue` e non al tono dell'interfaccia inattiva. E **`RigaImpostazione`**, che non dipinge nulla ma compone tre colori a mano: che li prenda dal fondo ereditato invece che da `chiaro` fisso |
+| `test/ui/ombre.test.tsx` | 3 | che nessuna vista con un fondo traslucido porti un'ombra nativa — su Android si vede attraverso il vetro, come un riquadro più chiaro in mezzo alla scheda: la `Scheda vetro` e la tessera `CapoInGriglia`, più un controllo che la `Scheda` opaca l'ombra la tenga |
 | `test/ui/fondo.test.tsx` | 5 | il meccanismo: `useFondo()` senza provider, ereditarietà, annidamento a tre livelli |
 | `test/convenzioni/primitive.test.ts` | 4 | che nessuno ridipinga il fondo di una primitiva dal di fuori: né con `style={{ backgroundColor }}` — la forma esatta della regressione di PR #4 — né passando `sfondo` senza dire con `su` su che fondo ci si posa |
 | `test/convenzioni/griglie.test.ts` | 15 | che una riga di griglia **ci stia**: tre tessere d'armadio e sette celle di mese, dalla larghezza di 320pt a quella di 480, dentro la larghezza utile di `Schermata`. In React Native `flexShrink` vale 0, quindi una cella che non entra non si stringe: va a capo, senza errori né avvisi. `griglie.mese` chiedeva `7 × 13.1% + 6 × 6px`, che entra solo in uno schermo da 478pt — il calendario mostrava sei giorni per riga su ogni telefono |
 | `test/dati/misure.test.ts` | 10 | l'aritmetica fra centimetri e pollici. Due difetti che `tsc` non vede: un giro che non torna (digiti `66″`, riapri e leggi `65″`), e un campo che accetta ciò che il server rifiuta — il minimo di 120 cm è 47,24″, e arrotondarlo per difetto farebbe passare `47` che diventa 119 cm. `limitiIn` arrotonda il minimo per eccesso e il massimo per difetto, e il test lo verifica in entrambi i versi: nessun valore ammesso esce dai limiti veri, e subito fuori si esce davvero |
 | `test/convenzioni/navigazione.test.ts` | 14 | dove la barra delle schede si vede e quale scheda accende. Da quando vive fuori dal navigatore (`ui/guscio.tsx`) è disegnata sopra qualunque schermata, quindi l'errore peggiore non è cosmetico: la pillola comparirebbe **sulla schermata di accesso**, cinque scorciatoie verso rotte protette da un `Redirect`. Il test tiene fermo che `schedaDi()` resti un elenco di ciò che c'è e non di ciò che si esclude, e che nessuna rotta nuova resti senza una decisione |
+| `test/ui/barra.test.tsx` | 3 | che lo spazio che `Schermata` riserva in fondo (`altezzaBarra()`) contenga **la barra delle schede disegnata davvero** — misurata dagli stili che `BarraSchede` rende, non da una seconda copia delle sue misure — con un bordo inferiore di 0, 24 e 34pt. Il conto a mano perdeva un'imbottitura, e sul profilo «Esci» finiva mezzo sotto la pillola |
 | `test/convenzioni/colori.test.ts` | 2 | che nessun `rgba()`/esadecimale sia scritto a mano in `app/` o `src/` — i valori vengono da `tema/tokens.ts` o si compongono con `velo()`. `src/tema/tokens.ts` (la fonte) e `src/dati/dominio.ts` (`PALETTE_COLORI`, dati di dominio) sono le due esenzioni dichiarate |
 
 I test non verificano che una prop venga inoltrata: **verificano il colore

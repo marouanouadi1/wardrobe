@@ -177,9 +177,16 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       (`test/convenzioni/navigazione.test.ts`) **visto rosso per davvero**
       capovolgendo la mappa in «tutto tranne»: cinque casi rossi, fra cui
       `/accedi` e il banco 3D.
-      **Cosa manca:** **nessuna prova su un telefono** — che la barra non copra
-      il contenuto in fondo a una schermata spinta lo dice il conto di
-      `altezzaBarra()`, non l'occhio.
+      **Il telefono ha smentito il conto** (2026-09-25): sul profilo «Esci»
+      finiva mezzo sotto la pillola. `altezzaBarra()` ricopiava a mano le
+      misure della barra e ne perdeva un'imbottitura (8pt), senza lasciare
+      aria. Ora le misure stanno in `BARRA`, lette sia dalla barra sia dal
+      conto, più uno `spazi.l` di stacco.
+      *Verificato:* `test/ui/barra.test.tsx` rende `BarraSchede` e misura la
+      cima della pillola contro `altezzaBarra()`: **visto rosso** sul codice
+      di prima (72 contro 80 con bordo 0), verde dopo. `typecheck` exit 0,
+      `lint` 0 errori, `mobile:test` 71 passati su 8 suite.
+      **Cosa manca:** la prova sul telefono della correzione, da un APK nuovo.
 - [~] **Il percorso della foto** (fase 3) — `src/dati/foto.ts` raccoglie la
       sequenza di caricamento e analisi che era scritta a mano in **tre** punti
       (`T-21`, chiusa): `carica.tsx` due volte e `archivio.tsx` una a metà.
@@ -497,6 +504,16 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       errori, `mobile:test` 68 verdi, `build:web`. **Non verificato:** su un
       telefono — nessun dispositivo in questa sessione. Lo stesso difetto,
       probabile, sulle schermate d'accesso: `T-56`
+- [x] **Il vetro non porta ombra.** La `Scheda vetro` e `CapoInGriglia`
+      avevano un fondo bianco al 60% e l'ombra nativa (`ombre.scheda`): su
+      Android l'`elevation` si disegna anche sotto la vista e traspare, e le
+      schede di `impostazioni.tsx` mostravano un riquadro più chiaro dentro
+      (segnalazione da Sentry, screenshot dal telefono). Tolta l'ombra dai due
+      punti; resta il bordo `superfici.bordo`. *Verificato con
+      `test/ui/ombre.test.tsx`, rosso sui due casi prima della correzione e
+      verde dopo; `npm run typecheck`, `npm run lint --workspace
+      @wardrobe/mobile` e `npm run mobile:test` verdi. Non provato su un
+      telefono: nessun emulatore in questa sessione*
 - [x] Una sola copia di React nel monorepo (`T-23`, chiusa): `react` e
       `react-dom` dichiarati anche in `dependencies` di root, alla versione
       esatta di `apps/mobile`. Il `jest.moduleNameMapper` che tamponava il
