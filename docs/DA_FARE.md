@@ -584,6 +584,25 @@ si prende senza rileggere `docs/PROGRESS.md` su questa fetta.
 **Cosa non fare intanto:** alzare `write_timeout` nel `Caddyfile`. È un
 tampone, e quel file porta modifiche non committate dell'utente.
 
+### T-56 — `GuscioAutenticazione` non alza il contenuto sopra la tastiera su Android
+
+**Trovata** il 2026-09-25 correggendo la stessa cosa in `Schermata` (la chat:
+la tastiera copriva il campo in cui si scriveva). `GuscioAutenticazione`
+(`src/ui/guscio.tsx`) ha già un `KeyboardAvoidingView`, ma con
+`behavior={Platform.OS === 'ios' ? 'padding' : undefined}`: su Android non fa
+nulla. Era giusto quando Android ridimensionava la finestra da sé
+(`adjustResize`); con l'edge-to-edge obbligatorio la finestra non si
+ridimensiona più, e la tastiera passa sopra come su iOS.
+
+**Probabile sintomo**, non visto: su un telefono Android basso il campo
+password di `accedi`/`registrati` finisce sotto la tastiera.
+
+**Rimedio** (toglie righe): `behavior="padding"` senza il ramo per
+piattaforma, come in `Schermata`. **Perché non l'ho fatto subito:** il guscio
+centra il contenuto verticalmente (`justifyContent: 'center'`), e il risultato
+con la tastiera va guardato su un telefono prima di dichiararlo giusto — non
+era la schermata segnalata.
+
 ### T-44 — `Taglia` conosce solo le lettere, e il sistema di taglie non le cambia
 
 **Aperta il:** 2026-09-23, scrivendo `Misure`. **Decisione prima del lavoro:**

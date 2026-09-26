@@ -493,6 +493,17 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       peggio di una spunta assente. SSO e recupero password invece ci sono,
       spenti.
       **Cosa manca:** ancora nessuna prova su un telefono.
+- [~] La tastiera non copre più il contenuto di `Schermata` — segnalato
+      dall'utente su Android, in chat: il campo in cui scriveva finiva sotto la
+      tastiera. Causa: con l'edge-to-edge Android non ridimensiona più la
+      finestra, e `Schermata` non aveva un `KeyboardAvoidingView`. Ora ce l'ha
+      (`padding` su entrambe le piattaforme, con l'offset che toglie lo spazio
+      della barra delle schede), la vista si riancora in fondo quando si
+      stringe (`onLayout`), e `keyboardShouldPersistTaps="handled"` fa arrivare
+      il tocco al bottone d'invio. *Verificato:* `typecheck` exit 0, `lint` 0
+      errori, `mobile:test` 68 verdi, `build:web`. **Non verificato:** su un
+      telefono — nessun dispositivo in questa sessione. Lo stesso difetto,
+      probabile, sulle schermate d'accesso: `T-56`
 - [x] **Il vetro non porta ombra.** La `Scheda vetro` e `CapoInGriglia`
       avevano un fondo bianco al 60% e l'ombra nativa (`ombre.scheda`): su
       Android l'`elevation` si disegna anche sotto la vista e traspare, e le

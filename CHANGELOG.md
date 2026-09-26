@@ -18,6 +18,10 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **In chat la tastiera non copre più quello che scrivi**: il contenuto sale
+  sopra la tastiera e la conversazione resta ancorata in fondo, col campo
+  appena sopra. Vale per ogni schermata, non solo la chat; e il bottone
+  d'invio risponde al primo tocco anche a tastiera aperta.
 - Il fondo delle schermate con la barra delle schede non finisce più sotto la
   pillola: sul profilo «Esci» era coperto a metà.
 - **Le schede di vetro non hanno più un riquadro dentro.** Su Android l'ombra
