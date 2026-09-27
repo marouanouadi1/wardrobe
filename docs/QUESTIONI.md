@@ -16,6 +16,27 @@ prima del codice**.
 
 ## Aperte
 
+### Q-14 — L'opzione «RLS automatico» del progetto Supabase: la si tiene?
+**Aperta il:** 2026-09-27 · **Tocca:** il pannello di Supabase, `supabase/migrations/`
+
+Accesa alla creazione del progetto, l'opzione ha messo in `public` una funzione
+`rls_auto_enable()` e un event trigger (`ensure_rls`) che attiva l'RLS su ogni tabella
+nuova. La funzione è `security definer` ed eseguibile da `anon` e `authenticated`: gli
+advisor del progetto la segnalano con due avvisi. Chiamarla dall'API non serve a niente
+(una funzione di event trigger non si esegue direttamente), ma rompe due invarianti che i
+test pgTAP fanno rispettare — nessuna `security definer` in `public`, nessuna funzione di
+`public` eseguibile da `anon` — e sul progetto vero, a differenza dello stack locale,
+diventerebbero falsi.
+
+*Cosa cambia a seconda della risposta:*
+- **Spegnerla** (consigliato): sparisce la funzione, e il progetto vero coincide con lo
+  stack locale. L'RLS su ogni tabella la attiva già la migrazione, e il job `database` la
+  pretende. Il prezzo: una tabella creata a mano dal pannello nascerebbe senza RLS, ma le
+  tabelle nascono dalle migrazioni, non dal pannello.
+- **Tenerla**: la migrazione le toglie l'esecuzione (`revoke execute … from public, anon,
+  authenticated`), dentro un blocco che la cerca, perché in locale non esiste. Righe in più,
+  valide su un solo ambiente.
+
 ### Q-08 — Il «+» della barra delle schede è l'unica azione tinta d'accento
 **Aperta il:** 2026-09-22 · **Tocca:** `apps/mobile/app/(tabs)/_layout.tsx`
 

@@ -574,6 +574,24 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       E sul VPS nessuna credenziale che scavalchi l'RLS: né la chiave di servizio, né la
       password del database, né le chiavi S3 dello Storage.
 
+      **Il progetto vero esiste** (`lmjsrhwzjxubecgctrmd`, creato dall'utente il
+      2026-09-26). *Verificato il 2026-09-27 in sola lettura*, con l'MCP di Supabase e con la
+      chiave publishable:
+      - è vuoto: nessuna migrazione, nessuna tabella; `pg_graphql` non è installata;
+      - la conferma dell'email è accesa, e i token sono firmati con ES256;
+      - le registrazioni sono **aperte**, finché l'utente non le spegne;
+      - l'«esposizione automatica» spenta toglie ad `anon` e `authenticated` lettura e
+        scrittura sulle tabelle nuove, ma lascia TRUNCATE, TRIGGER, REFERENCES e MAINTAIN.
+        La migrazione li revoca (`alter default privileges`), e sul progetto vero serve
+        davvero;
+      - l'opzione «RLS automatico» ha creato `public.rls_auto_enable()`, `security definer`
+        ed eseguibile da `anon`: una funzione di event trigger, quindi non si chiama
+        dall'API, ma rompe due invarianti dei test pgTAP (`Q-14`).
+
+      Non si leggono né con l'MCP né con la chiave, e restano da controllare a occhio nel
+      pannello: il «Secure password change», la lunghezza minima della password e gli schemi
+      esposti.
+
 ## Infrastruttura e rilascio
 
 - [x] VPS Hetzner, Caddy, Let's Encrypt emesso al primo avvio, dominio reale. Deploy
