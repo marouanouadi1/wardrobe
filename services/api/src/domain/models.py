@@ -25,6 +25,10 @@ SOGLIA_INCERTEZZA = 86
 # tessuto inventato. Vedi `domain.vision.applica_soglie`.
 SOGLIA_SCARTO = 60
 
+# Un capo fermo da più di sei mesi è denaro immobile: è l'osservazione su cui si
+# regge la schermata del calendario. La conta l'app; la soglia la importa da qui.
+MESI_PER_DORMIENTE = 6
+
 
 class ModelloWardrobe(BaseModel):
     """Base comune: nessun campo extra passa, né in ingresso né dai provider."""

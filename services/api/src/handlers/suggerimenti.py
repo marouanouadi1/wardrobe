@@ -1,4 +1,5 @@
-"""POST /suggerimenti — lo stilista."""
+"""POST /suggerimenti — lo stilista, sull'armadio di chi chiama (letto con il
+suo token: ADR 0010)."""
 
 from __future__ import annotations
 
@@ -13,7 +14,7 @@ from domain.stylist import (
     richiesta_suggerimento,
 )
 from handlers._container import orologio, repository
-from handlers._http import Evento, Risposta, corpo, endpoint, ok, utente_id
+from handlers._http import Evento, Risposta, corpo, endpoint, ok, sessione
 
 logger = logging.getLogger("wardrobe")
 
@@ -25,11 +26,12 @@ MODELLO_DEFAULT = os.environ.get("MODELLO_STILISTA", "")
 def proponi(evento: Evento) -> Risposta:
     from adapters.llm.registry import provider_per_nome
 
+    chi = sessione(evento)
     richiesta = corpo(evento, RichiestaSuggerimenti)
-    utente = utente_id(evento)
 
-    capi = repository().elenca_capi(utente)
-    profilo = repository().leggi_profilo(utente)
+    deposito = repository(chi)
+    capi = deposito.elenca_capi()
+    profilo = deposito.leggi_profilo()
 
     contesto = costruisci_contesto(
         capi,

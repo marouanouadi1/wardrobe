@@ -3,6 +3,11 @@
 Ogni Protocol qui dentro ha almeno due implementazioni: una vera in
 `adapters/`, una finta in `tests/fakes.py`. È questa simmetria che rende i test
 del dominio istantanei e senza rete.
+
+**L'archivio e il repository agiscono come l'utente** (ADR 0010): un'istanza nasce
+per una sessione, con il suo token, e quello che vede lo decide l'RLS di
+Supabase, non un filtro scritto qui. Per questo i metodi non prendono un
+`utente_id`: non c'è un altro utente a cui chiedere.
 """
 
 from __future__ import annotations
@@ -14,7 +19,6 @@ from pydantic import Field
 
 from domain.models import (
     Capo,
-    ContoSvuotamento,
     ConversazioneChat,
     EsitoAnalisi,
     MessaggioChat,
@@ -23,9 +27,7 @@ from domain.models import (
     Outfit,
     Profilo,
     Segnalazione,
-    UploadFirmato,
     UsoToken,
-    VoceElencoConversazioni,
 )
 
 
@@ -88,43 +90,34 @@ class ProviderLlm(Protocol):
 
 
 @runtime_checkable
-class ArchivioFoto(Protocol):
-    """Su disco se c'è `CARTELLA_FOTO`, in memoria altrimenti. Un dict nei test."""
+class Archivio(Protocol):
+    """Un bucket dello Storage, visto da chi chiama: legge e scrive solo nella sua
+    cartella (`{utente_id}/…`), perché così dicono le policy di Storage."""
 
-    def url_upload(
-        self, chiave: str, content_type: str, scade_in_s: int = 900
-    ) -> UploadFirmato: ...
-
-    def url_lettura(self, chiave: str, scade_in_s: int = 604_800) -> str: ...
-
-    def leggi(self, chiave: str) -> tuple[bytes, str]:
-        """Restituisce (contenuto, media_type)."""
+    def leggi(self, percorso: str) -> tuple[bytes, str]:
+        """Restituisce (contenuto, media_type). `FotoNonTrovata` se non c'è, o
+        se non è di chi chiede: per lui le due cose non si distinguono."""
         ...
 
-    def salva(self, chiave: str, contenuto: bytes, media_type: str) -> None:
-        """Scrive un contenuto derivato (es. la foto scontornata), non caricato dall'app."""
+    def salva(self, percorso: str, contenuto: bytes, media_type: str) -> None:
+        """Scrive, sovrascrivendo se c'è già: la foto scontornata, lo zip di
+        un'esportazione."""
         ...
 
-    def elimina_sotto(self, prefisso: str, tranne: frozenset[str] = frozenset()) -> int:
-        """Cancella tutto ciò che sta sotto `prefisso`. Torna quanti file.
+    def firma_lettura(self, percorso: str, scade_in_s: int) -> str:
+        """Un indirizzo che apre il file senza token, per `scade_in_s` secondi."""
+        ...
 
-        **Per prefisso e non per elenco di chiavi**, ed è una scelta di
-        sicurezza, non di comodità. Le chiavi memorizzate nei capi possono
-        puntare fuori dal sottoalbero di chi chiede — `POST /capi/analisi`
-        accetta una `chiave_foto` arbitraria (`T-47`) — e cancellare per
-        elenco trasformerebbe quel difetto in «cancello i file di un altro»,
-        dentro l'unica operazione che è irreversibile per disegno. Un prefisso
-        non può uscire da sé stesso, qualunque cosa dicano le righe.
 
-        Prende anche le foto caricate che non sono mai diventate un capo
-        (analisi fallita): sono di quella persona lo stesso, e un elenco di
-        chiavi le lascerebbe lì per sempre.
+@runtime_checkable
+class ChiaviAuth(Protocol):
+    """Le chiavi pubbliche con cui Supabase Auth firma i token (il JWKS del
+    progetto). `domain/accesso.py` verifica; questa porta dice solo con quale
+    chiave."""
 
-        `tranne` serve a un caso solo, e va nella direzione sicura: la foto
-        dell'avatar vive sotto lo stesso prefisso ma **non** si cancella con
-        l'armadio. Escludere una chiave non può distruggere niente — nel
-        peggiore dei casi protegge un file che andava tolto.
-        """
+    def chiave(self, kid: str) -> object | None:
+        """La chiave con quell'id, o `None` se non la conosce.
+        `AccessoNonDisponibile` se non riesce a saperlo affatto."""
         ...
 
 
@@ -144,118 +137,57 @@ class ServizioScontorno(Protocol):
 
 @runtime_checkable
 class RepositoryArmadio(Protocol):
-    def elenca_capi(self, utente_id: str) -> list[Capo]: ...
+    """L'armadio di chi chiama, come lo serve PostgREST con il suo token. Serve
+    all'IA: leggere i capi e il profilo, creare il capo che l'analisi ha letto,
+    tenere la chat, raccogliere l'esportazione. Il resto l'app lo legge e lo
+    scrive da sé (ADR 0010)."""
 
-    def leggi_capo(self, utente_id: str, capo_id: str) -> Capo | None: ...
+    def elenca_capi(self) -> list[Capo]: ...
 
-    def salva_capo(self, utente_id: str, capo: Capo) -> Capo: ...
-
-    def elimina_capo(self, utente_id: str, capo_id: str) -> None: ...
-
-    def svuota_armadio(self, utente_id: str) -> ContoSvuotamento:
-        """Cancella **tutto il contenuto** di un utente, in una transazione.
-
-        Capi, outfit, conversazioni coi loro messaggi, e il registro degli usi.
-        **Non** il profilo — misure, preferenze e foto dell'avatar restano: chi
-        svuota per ricominciare non deve reinserire la propria altezza (scelta
-        dell'utente, 2026-09-23). **Non** l'account, che è un'altra operazione.
-        **Non** le segnalazioni, che hanno un lato amministratore e non sono
-        contenuto dell'armadio.
-
-        In una transazione sola, e non per la velocità: a metà strada
-        resterebbero outfit che indossano capi inesistenti, e nessuno saprebbe
-        a che punto si è fermata — un'operazione irreversibile non può avere
-        uno stato intermedio osservabile.
-        """
+    def crea_capo(self, capo: Capo) -> Capo:
+        """Il capo nato da un'analisi. Lo slot lo calcola il database dal tipo."""
         ...
 
-    def elenca_outfit(self, utente_id: str) -> list[Outfit]: ...
+    def leggi_profilo(self) -> Profilo | None: ...
 
-    def salva_outfit(self, utente_id: str, outfit: Outfit) -> Outfit: ...
+    def elenca_outfit(self) -> list[Outfit]: ...
 
-    def leggi_profilo(self, utente_id: str) -> Profilo | None: ...
+    def elenca_segnalazioni(self) -> list[Segnalazione]:
+        """Solo le proprie, anche per l'amministratore, che l'RLS lascerebbe
+        vedere tutte: serve all'esportazione, che è dei dati di chi la chiede."""
+        ...
 
-    def salva_profilo(self, profilo: Profilo) -> Profilo: ...
+    # ── esiti dell'analisi ─────────────────────────────────────────────────
+    def registra_esito_analisi(self, esito: EsitoAnalisi) -> None:
+        """L'esito, scritto **una volta sola**, a lavoro finito: completata con il
+        suo capo, oppure fallita con il motivo. Un esito aperto prima e chiuso
+        dopo resterebbe «in corso» per sempre a ogni analisi interrotta — da un
+        deploy, da un Supabase che non risponde alla seconda scrittura."""
+        ...
 
-    def registra_uso(self, utente_id: str, capo_ids: list[str], giorno: date) -> None: ...
+    # ── chat ───────────────────────────────────────────────────────────────
+    def leggi_conversazione_chat(self, conversazione_id: str) -> ConversazioneChat | None:
+        """`None` se non esiste o non è di chi chiede: per lui le due cose non si
+        distinguono, e l'id di una conversazione altrui non si rivela."""
+        ...
 
-    def elenca_messaggi_chat(
-        self, utente_id: str, conversazione_id: str, limite: int = 200
+    def crea_conversazione_chat(self, conversazione: ConversazioneChat) -> ConversazioneChat: ...
+
+    def elenca_conversazioni_chat(self) -> list[ConversazioneChat]:
+        """Dalla più recente."""
+        ...
+
+    def elenca_messaggi_chat(self, conversazione_id: str, limite: int = 200) -> list[MessaggioChat]:
+        """Gli ultimi `limite` turni di una conversazione, in ordine cronologico."""
+        ...
+
+    def salva_messaggi_chat(
+        self, conversazione_id: str, messaggi: list[MessaggioChat]
     ) -> list[MessaggioChat]:
-        """I turni di una conversazione, in ordine cronologico."""
-        ...
-
-    def salva_messaggio_chat(
-        self, utente_id: str, conversazione_id: str, messaggio: MessaggioChat
-    ) -> MessaggioChat: ...
-
-    def elenca_conversazioni_chat(self, utente_id: str) -> list[VoceElencoConversazioni]:
-        """Le conversazioni di un utente, dalla più recente."""
-        ...
-
-    def leggi_conversazione_chat(
-        self, utente_id: str, conversazione_id: str
-    ) -> ConversazioneChat | None:
-        """`None` se non esiste o non è di questo utente: le due cose non si
-        distinguono al chiamante, per non rivelare l'id di una conversazione
-        altrui."""
-        ...
-
-    def salva_conversazione_chat(
-        self, utente_id: str, conversazione: ConversazioneChat
-    ) -> ConversazioneChat:
-        """Idempotente su `id`: crea la prima volta, aggiorna `ultimo_turno_il`
-        le successive."""
-        ...
-
-    def elimina_conversazione_chat(self, utente_id: str, conversazione_id: str) -> None:
-        """Porta via anche i suoi turni: nessuna riga di `messaggi_chat` resta
-        orfana."""
-        ...
-
-    # ── esiti dell'analisi inline ──────────────────────────────────────────
-    def salva_esito_analisi(self, esito: EsitoAnalisi) -> None:
-        """Sopravvive a un riavvio del processo: a differenza di un dict in
-        memoria, il polling del client trova l'esito anche dopo un deploy."""
-        ...
-
-    def leggi_esito_analisi(self, esecuzione_id: str) -> EsitoAnalisi | None: ...
-
-    # ── segnalazioni ────────────────────────────────────────────────────────
-    def salva_segnalazione(self, segnalazione: Segnalazione) -> Segnalazione:
-        """Idempotente su `id`: la stessa riga che nasce con POST /segnalazioni
-        viene aggiornata da PATCH /segnalazioni/{id}, non duplicata."""
-        ...
-
-    def leggi_segnalazione(self, segnalazione_id: str) -> Segnalazione | None: ...
-
-    def elenca_segnalazioni(self, utente_id: str) -> list[Segnalazione]:
-        """Le segnalazioni di un solo utente, più recenti prima."""
-        ...
-
-    def elenca_tutte_segnalazioni(self) -> list[Segnalazione]:
-        """Ogni segnalazione, di ogni utente: solo l'amministratore la chiama
-        (vedi `handlers/segnalazioni.py`)."""
-        ...
-
-
-@runtime_checkable
-class RepositoryUtenti(Protocol):
-    """Le credenziali di login: un'identità, non un armadio — porta separata
-    da `RepositoryArmadio` di proposito."""
-
-    def trova_per_email(self, email: str) -> tuple[str, str] | None:
-        """`(utente_id, hash_password)`, o `None` se l'email non esiste."""
-        ...
-
-    def crea(self, email: str, hash_password: str) -> str:
-        """Crea l'utente e restituisce il suo id."""
-        ...
-
-    def trova_email(self, utente_id: str) -> str | None:
-        """L'inverso di `crea`: serve solo a riconoscere l'amministratore
-        (vedi `handlers/segnalazioni.py`) contro `EMAIL_AMMINISTRATORI`, la
-        sola cosa per cui l'id da solo non basta."""
+        """I turni nuovi, **in una scrittura sola**: la domanda e la risposta
+        entrano insieme o non entra nessuna delle due, e lo storico non resta mai
+        con una domanda senza risposta. La conversazione sale in cima da sé (un
+        trigger)."""
         ...
 
 

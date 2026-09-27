@@ -77,8 +77,10 @@ branch o una PR, quelle.
    sta prendendo una decisione che spetta al dominio
 8. **Un `except` che traduce a mano un errore in HTTP** invece di sollevare un
    `ErroreDominio`: `@endpoint` è l'unico punto che conosce gli status code
-9. **Una migrazione non idempotente** — vedi `.claude/rules/migrazioni.md`. Qui
-   non sbagliare è più importante che altrove: il file viene rieseguito a ogni avvio
+9. **Una migrazione che riscrive un file già arrivato sul progetto vero**, o una
+   tabella di `public` senza RLS e senza il suo test pgTAP — vedi
+   `.claude/rules/migrazioni.md`. Qui non sbagliare è più importante che altrove:
+   sul piano Free non ci sono backup
 10. **Un numero di versione alzato a mano**
 11. **Una soluzione fatta solo di aggiunte**: una configurazione in più, un
     flag, un'eccezione, un adattatore — senza una riga che dichiari perché la

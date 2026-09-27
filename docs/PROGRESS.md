@@ -5,7 +5,7 @@
 > modulo citato da un ADR può non esistere più. Prima di dare per esistente — o per
 > inesistente — qualunque cosa, si apre questo file.
 
-**Ultimo aggiornamento:** 2026-09-23
+**Ultimo aggiornamento:** 2026-09-27
 
 > ### Sulla provenienza di questa prima versione
 >
@@ -28,7 +28,10 @@
 
 ## Backend (`services/api`)
 
-Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:51`.
+Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:51` —
+**su `main`**. Sul branch `feat/supabase` ne restano cinque: la fase 2, nella sezione
+«Supabase» qui sotto, dice quali e perché. Le righe di questa sezione descrivono
+`main` fino al giorno del passaggio.
 
 - [x] `GET /salute` — riporta la versione dai metadati del pacchetto. *Verificato a ogni
       deploy da `api.yml`, step «Verifica salute e versione servita»: è l'unica riga di
@@ -555,8 +558,8 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       **Cosa manca:**
       - il progetto Supabase vero (lo crea l'utente) e le fasi 2-5 del piano: il backend
         e l'app di oggi non usano ancora niente di tutto questo;
-      - gli script `npm run db:*` restano quelli del Postgres di `docker-compose`, perché
-        li usa ancora il backend: passano alla CLI nella fase 2, insieme a lui;
+      - ~~gli script `npm run db:*` restano quelli del Postgres di `docker-compose`~~: tolti
+        nella fase 2, al loro posto ci sono i `supabase:*`;
       - `Profilo.foto_url` non ha una colonna: non lo scriveva nessuno, ma quattro
         schermate lo leggono, e nella fase 3 `tsc` le indicherà;
       - per la fase 4 (i dati dal VPS): gli id `storica-{utente}` delle conversazioni
@@ -591,6 +594,119 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       Non si leggono né con l'MCP né con la chiave, e restano da controllare a occhio nel
       pannello: il «Secure password change», la lunghezza minima della password e gli schemi
       esposti.
+
+- [~] **Fase 2: il backend dell'IA su Supabase.** Branch `feat/supabase-fase-2`, PR verso
+      `feat/supabase`. Il backend verifica il token di Supabase Auth con le chiavi pubbliche
+      del progetto (JWKS: ES256, `aud`, `iss`, `role`, in `domain/accesso.py`) e fa ogni
+      lettura e scrittura su PostgREST e Storage **con quel token**
+      (`adapters/supabase.py`): sul VPS nessuna credenziale che scavalchi l'RLS. Il
+      repository e l'archivio nascono per ogni richiesta, e un test impedisce di metterli
+      in cache: darebbero al chiamante dopo il token di quello prima.
+
+      Restano cinque rotte: `GET /salute`, `POST /capi/analisi`, `POST /suggerimenti`,
+      `POST /chat`, `POST /esportazione`. Tolti:
+      - il login, il CRUD, le foto firmate con l'HMAC, `bcrypt`, `JWT_SECRET`,
+        `EMAIL_AMMESSE` ed `EMAIL_AMMINISTRATORI`, che diventa `app_metadata.ruolo`;
+      - gli adapter `postgres`, `filesystem` e `memory`;
+      - le migrazioni di `services/api/migrations/` e il loro runner;
+      - il Postgres di `docker-compose.yml` e gli script `db:*`.
+
+      Cosa cambia per chi resta:
+      - l'analisi legge la foto dallo Storage come l'utente, e rifiuta una foto fuori
+        dalla sua cartella: `T-47` chiusa, `T-46` superata. L'esito si scrive **una volta
+        sola**, a lavoro finito: aperto prima e chiuso dopo restava «in corso» per sempre
+        a ogni analisi interrotta;
+      - i due turni di una chat entrano in una scrittura sola, quindi insieme o per
+        niente;
+      - lo scontorno scrive `<foto>-scontornata` nella stessa cartella;
+      - l'esportazione carica lo zip in `esportazioni/{utente}/` e risponde con un
+        indirizzo firmato di 15 minuti.
+
+      I due valori di Supabase del server stanno in `docker-compose.yml`: sono pubblici, e
+      il giorno del passaggio non si tocca il `.env` del server. `dev.sh` li prende dallo
+      stack locale, estraendo solo quelle due righe.
+
+      *Verificato* il 2026-09-27, in locale:
+      - `npm run api:lint` verde (ruff, format, `mypy --strict`); `npm run api:cov` con il
+        totale all'86%, `domain/` al 99% e `handlers/` al 98%. Le tre soglie sono salite
+        (numeri in `docs/TEST_COVERAGE.md`);
+      - `npm run contracts:check` verde, e i file generati **non cambiano**: i modelli
+        che l'app legge ancora restano finché la fase 3 non li toglie;
+      - **E2E sullo stack locale con due utenti veri**: adapter veri, modello finto, utenti
+        creati con l'API admin **locale**. 27 verifiche su 27:
+        - il token vero è ES256, con il `kid` nel JWKS e l'`iss` atteso;
+        - A non scrive nella cartella di B;
+        - tre analisi creano i capi di A con lo slot calcolato dal database, e B non li
+          vede;
+        - l'analisi della foto di B dà 422, e una foto che manca chiude l'esito come
+          fallito con il motivo;
+        - i suggerimenti partono dai capi di A;
+        - la chat salva due turni, e B nella conversazione di A riceve 404;
+        - lo zip di A ha i suoi capi e le loro foto, B non lo scarica, e lo zip di B è
+          vuoto;
+        - sul server HTTP vero: `/salute`, 401 senza token, un token vero passa l'accesso,
+          `GET /capi` è 404.
+
+        Alla fine sono state cancellate le sole cose create dal test: nessun file rimasto.
+      - l'immagine Docker si costruisce, risponde a `/salute` e dà 401 senza token, e
+        senza i due valori di Supabase si rifiuta di partire.
+
+      Poi un audit di `security` e una review di `reviewer`. **Nessuna via per agire come un
+      altro utente né per uscire dall'RLS**. Le correzioni che ne sono uscite, ognuna con il
+      suo test, e ognuno **visto fallire** rimettendo il difetto nel codice:
+      - un token di un **accesso anonimo** passava: Supabase gli dà `role` e `aud` come a
+        tutti. Ora è 401, come `service_role`;
+      - un `iat` di pochi secondi nel futuro faceva rifiutare il token appena rinnovato, se
+        l'orologio del VPS è indietro: `iat` non si controlla più, `exp` resta rigido;
+      - il **client HTTP condiviso** portava i cookie di una risposta ad A nella richiesta di
+        B. Ora si condivide il pool, e il client è uno per sessione;
+      - il JWKS: un corpo malformato dava 500 invece di 503, una chiave di un altro tipo
+        faceva buttare anche quella buona, e un `kid` noto aspettava dietro il download
+        provocato da uno inventato;
+      - l'esportazione saltava in silenzio le foto anche con lo Storage giù, e rispondeva 200
+        con uno zip incompleto: ora salta solo una foto che non c'è, e il resto è 502;
+      - un `conversazione_id` che non è un uuid era un 502: ora 422;
+      - due test passavano anche con il codice sbagliato (l'ordine dei turni; un esito
+        chiuso senza essere aperto), e uno falliva su una macchina accesa da più di 2 ore e
+        36 minuti.
+
+      Rimessi fallire, uno per uno, sette difetti più quello dei cookie: tutti presi. Rifatto
+      l'E2E dopo le correzioni: 27 su 27.
+
+      **Cosa manca:**
+      - l'app parla ancora con il backend vecchio, e su questo branch non funziona fino
+        alla fase 3: è voluto, `main` non la vede fino al giorno del passaggio;
+      - nessun job prova gli adapter contro un Supabase vero: l'E2E qui sopra è stato
+        fatto a mano (`T-18`);
+      - il modello vero non è stato interrogato: vale quello che dice la sezione
+        «Backend» su analisi e suggerimenti;
+      - per la fase 3: `FiltroArmadio` e `RichiestaUpload` non li usa più nessuno, né il
+        backend né l'app, e `tsc` non li segnalerà: vanno tolti per nome. E l'app non ha
+        più bisogno di interrogare l'esito dopo il 202: l'esito si scrive una volta, a
+        lavoro finito, e il 202 porta già lo stato finale;
+      - due finding dell'audit **valgono già su `main`** e restano fuori di proposito
+        (`T-51`: il corpo letto senza limite; `T-60`: il client sceglie provider e
+        modello). Qui arriverebbero solo il giorno X: vanno in una PR loro su `main`;
+      - `README.md` («Partire», «Produzione») e `docs/deploy.md` descrivono ancora `main`:
+        `db:up`, `JWT_SECRET`, le migrazioni del VPS. Il piano li riscrive nella fase 5;
+        fino ad allora, per partire da zero su questo branch vale `services/api/.env.example`;
+
+      **Il giorno del passaggio, per questa fase** (sul server, con il via dell'utente):
+      - la copia di riserva sono i volumi `postgres_data` e `foto_dati`, non il container:
+        nessuno lancia `down -v`. Il container `wardrobe-postgres` il deploy non lo tocca
+        (niente `--remove-orphans`), e resterebbe acceso sulla stessa rete di `api` con i
+        dati di tutti, hash compresi. **Dopo lo script della fase 4 si ferma**, con
+        `docker stop wardrobe-postgres`: il volume resta. Prima, in sola lettura, `docker
+        ps -a --filter name=wardrobe-postgres` e `docker network inspect wardrobe_default`;
+      - l'orologio del VPS va controllato (`timedatectl`: NTP attivo). Il backend non
+        controlla più `iat`, ma `exp` resta rigido, e un orologio avanti accorcia le
+        sessioni;
+      - sul progetto vero, gli accessi anonimi spenti (`T-56`);
+      - nel `.env` del server restano `JWT_SECRET`, `EMAIL_AMMESSE`,
+        `EMAIL_AMMINISTRATORI` e `BASE_URL_PUBBLICA`, che non legge più nessuno. Sono
+        innocui, e toglierli tocca il `.env` del server: lo decide l'utente;
+      - `rsync` senza `--delete` lascia sul server gli handler e gli adapter tolti
+        (`T-50`).
 
 ## Infrastruttura e rilascio
 

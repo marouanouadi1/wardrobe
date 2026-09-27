@@ -16,6 +16,23 @@ prima del codice**.
 
 ## Aperte
 
+### Q-15 — Lo zip di «Scarica i tuoi dati» resta nello Storage: lo svuotamento lo toglie?
+**Aperta il:** 2026-09-27 (review della fase 2 di ADR 0010) · **Tocca:** `handlers/esportazione.py`, `public.svuota_armadio`, il modulo dati dell'app (fase 3)
+
+Prima lo zip si componeva e si scaricava nella stessa risposta, e non restava da nessuna
+parte: era la ragione per cui «Elimina l'armadio» poteva dire di togliere tutto. Dalla fase
+2 il backend lo carica in `esportazioni/{utente}/aura-i-tuoi-dati.zip` e risponde con un
+indirizzo firmato di 15 minuti; lo zip resta lì, sovrascritto alla richiesta successiva. È
+una **copia completa**, foto comprese, e dopo «Svuota» sopravvive: `svuota_armadio` toglie
+le righe, e `T-59` dice che le foto le toglierà l'app, ma dello zip non parla nessuno.
+
+*Cosa cambia a seconda della risposta:*
+- **Lo svuotamento toglie anche lo zip** (consigliato): una riga nel modulo dati dell'app,
+  accanto a quella che toglie le foto (`T-59`), e «Svuota» resta onesto.
+- **Lo zip si cancella da sé dopo il download**: niente copia in giacenza, ma serve un
+  lavoro programmato, e sul piano Free non c'è.
+- **Resta com'è**: la schermata dello svuotamento deve dirlo.
+
 ### Q-14 — L'opzione «RLS automatico» del progetto Supabase: la si tiene?
 **Aperta il:** 2026-09-27 · **Tocca:** il pannello di Supabase, `supabase/migrations/`
 

@@ -5,8 +5,9 @@ description = "API di Wardrobe: handlers sottili sopra un domain puro"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.12",
+    # Il solo trasporto verso Supabase: PostgREST e Storage, sempre con il
+    # token dell'utente (ADR 0010). Anche i provider LLM non di riferimento.
     "httpx>=0.28",
-    "psycopg[binary]>=3.2",
     # Anthropic è il provider di riferimento e ha l'SDK ufficiale: retry,
     # errori tipizzati e structured output li gestisce lui. Gli altri provider
     # sono adapter HTTP sottili, perché servono al confronto nel playground.
@@ -14,14 +15,16 @@ dependencies = [
     # Solo per `local_server.py`: un file .env è più facile da spiegare a chi
     # non ha mai usato un terminale di una variabile d'ambiente di sistema.
     "python-dotenv>=1.0",
-    # Login autofirmato (domain/autenticazione.py). Dipendenze normali, non
-    # opzionali: servono sempre, non solo in produzione.
-    "bcrypt>=4.2",
-    "pyjwt>=2.9",
+    # La verifica dei token di Supabase (domain/accesso.py): ES256, quindi con
+    # `cryptography`. Il login non lo fa più il backend, lo fa Supabase Auth.
+    "pyjwt[crypto]>=2.9",
 ]
 
 [dependency-groups]
 dev = [
+    # Solo per gli script (`scripts/verifica_database.py`, la migrazione dei
+    # dati dal VPS): il backend non ha nessuna credenziale del database.
+    "psycopg[binary]>=3.2",
     "pytest>=8.3",
     "pytest-cov>=6.0",
     "ruff>=0.9",
@@ -53,14 +56,15 @@ show_missing = true
 # che alza la coverage vera, e non si abbassa mai — abbassarla è una voce in
 # docs/QUESTIONI.md, non un commit.
 #
-# 73 perché il rilevato del 2026-09-09 è 74%, meno un punto per non far cadere
-# una PR che cancella un file ben coperto.
+# 85 perché il rilevato del 2026-09-27 è 86% (fase 2 di ADR 0010: via il CRUD,
+# dentro l'adapter Supabase con i suoi test), meno un punto per non far cadere
+# una PR che cancella un file ben coperto. Prima era 73, sul 74% del 2026-09-09.
 #
-# Da sola questa soglia è debole: 74% è la media fra domain/ al 97% e
-# adapters/ al 40%, quindi il dominio potrebbe scendere all'80% mentre un
+# Da sola questa soglia è debole: 86% è la media fra domain/ al 99% e
+# adapters/ al 70%, quindi il dominio potrebbe scendere all'80% mentre un
 # provider HTTP compensa. Le due soglie che contano davvero sono in
 # .github/workflows/api.yml, applicate per sottoalbero sullo stesso .coverage.
-fail_under = 73
+fail_under = 85
 
 [tool.ruff]
 line-length = 100
@@ -87,9 +91,6 @@ ignore = [
 "src/adapters/**" = ["TID251"]
 "tests/**" = ["TID251"]
 "scripts/**" = ["TID251", "A"]
-# La tabella dei semi è una tabella: spezzarla su più righe la rende
-# illeggibile proprio nell'unico punto in cui si legge per colonne.
-"src/adapters/memory.py" = ["TID251", "E501"]
 
 [tool.mypy]
 python_version = "3.12"

@@ -77,13 +77,12 @@ Se il cambiamento tocca una enum, ricorda a `mobile` di guardare **anche**
 `src/dati/dominio.ts` e `ETICHETTE` in `tokens.ts`: una enum che cresce nel
 backend non compare da sola nell'ordine e nelle etichette italiane.
 
-### Il task tocca `services/api/migrations/`
+### Il task tocca `supabase/migrations/`
 
 `api` con il protocollo di `.claude/rules/migrazioni.md`, poi `reviewer`.
 
 Se la migrazione contiene un `drop` o un `drop column`: **fermati e usa
-`AskUserQuestion`**. È distruttivo, irreversibile, e verrebbe rieseguito a ogni
-avvio.
+`AskUserQuestion`**. È distruttivo, e sul piano Free non ci sono backup.
 
 ### Finding di sicurezza
 
