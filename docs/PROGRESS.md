@@ -847,6 +847,81 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
         dall'API admin con `password_hash` bcrypt ed email confermata entra con la sua
         password, ha il ruolo in sessione e il suo profilo. Il trigger non lo tocca.
 
+- [~] **Il passaggio, il 2026-09-27** (anticipato su richiesta dell'utente, senza la fase 4):
+      - lo schema è sul progetto vero (`supabase db push`, senza il seed). *Verificato* con l'MCP:
+        la migrazione registrata, le 8 tabelle con l'RLS, i due trigger su `auth.users`, i due
+        bucket. Gli advisor di sicurezza sono vuoti, dopo che l'utente ha tolto `rls_auto_enable()`
+        (`Q-14`);
+      - il merge di `feat/supabase` su `main` (#47) ha rilasciato l'API **0.6.0**. *Verificato*:
+        `/salute` in produzione risponde `0.6.0`, e senza token si riceve 401. Sul VPS
+        `wardrobe-postgres` è ancora acceso, con i volumi `postgres_data` e `foto_dati`;
+      - l'app **0.10.1** è costruita in locale dal suo tag e pubblicata come Release. La build in
+        cloud si è fermata per la quota, come previsto. *Verificato* sull'APK: la firma ha lo
+        stesso SHA-1 registrato su Google Cloud, e il bundle contiene l'indirizzo di Supabase e
+        l'ID del client Google. google-signin 16.1.5 si compila con React Native 0.86;
+      - nel pannello, dall'utente: l'hook degli inviti, lo SMTP con Resend, i quattro template con
+        il codice, gli accessi anonimi spenti e il provider Google. **L'hook è verificato dal
+        vivo**: un'email non invitata riceve 403 con il nostro messaggio, e nessun utente nasce.
+        Il resto l'ha impostato l'utente, e lo prova la prima registrazione vera;
+      - l'unico invito è `ouadimarouan@gmail.com`, l'account con cui l'utente ha creato il
+        progetto Supabase.
+
+      **Provato sul telefono dall'utente** (2026-09-27, APK 0.10.1):
+      - **la registrazione con il codice via email** funziona. Il codice è arrivato nello spam:
+        il dominio è nuovo, e manca il record DMARC;
+      - **«Continua con Google» funziona**, dopo aver aggiunto su Google Cloud il client Android
+        (`com.wardrobe.armadio` con lo SHA-1 della chiave EAS) nello stesso progetto del client
+        Web. Senza quel client la libreria rifiutava l'accesso sul telefono, e a Supabase non
+        arrivava niente. L'ID del client Android non va scritto da nessuna parte: basta che esista.
+
+      **Cosa manca:**
+      - la prova sul telefono del recupero della password e di una foto analizzata;
+      - il record DMARC di `ilmioarmadio.xyz` (TXT `_dmarc`, `v=DMARC1; p=none;`) su Hostinger;
+      - `cherragui.ismail63@gmail.com` non si è potuto aggiungere fra i tester Google. Per lui
+        Google non serve (entra con la sua password), e pubblicare l'app OAuth toglierebbe la
+        lista dei tester senza aprire le registrazioni, che restano dietro gli inviti;
+      - la **fase 4**, perché i tre account non ritrovano ancora il loro armadio;
+      - la **fase 5**, perché README e `docs/deploy.md` descrivono ancora il backend di prima;
+      - ~~l'account di prova non è uno dei tre account veri~~: **falso**, lo era. È stato scritto
+        senza controllarlo: `ouadimarouan@gmail.com` era anche un account del VPS. La questione
+        l'ha chiusa l'utente, qui sotto.
+
+- [x] **Fase 4: l'import, solo per Ismail** (2026-09-27, per scelta dell'utente).
+      `services/api/scripts/migra_a_supabase.py`, lanciato dal computer locale:
+      - legge il VPS **in sola lettura**, con una query via `ssh` e le foto con un `tar` dal
+        volume;
+      - crea l'account con l'API admin, **stesso id e stesso hash bcrypt**;
+      - carica le foto nello Storage da `capi/{utente}/…` a `{utente}/capi/…`;
+      - scrive le righe in SQL come `postgres`, dai modelli Pydantic e da `riga_da_capo`.
+
+      La chiave di servizio e il token della CLI li prende al momento e non li salva. Le
+      tabelle **non** si scrivono con la chiave di servizio: con l'esposizione automatica
+      spenta, `service_role` non ha permessi su `public`, ed è una difesa da tenere.
+
+      Gli id di 32 cifre esadecimali diventano uuid con gli stessi valori, e le conversazioni
+      `storica-…` un uuid derivato, stabile. Un'email che su Supabase esiste già con un altro
+      id ferma tutto. Rilanciarlo non duplica niente.
+
+      *Verificato*:
+      - prima sullo stack locale, poi sul progetto vero;
+      - conteggi uguali fra VPS e Supabase: 5 capi, 3 usi, 1 conversazione, 36 messaggi,
+        5 segnalazioni, 5 esiti, 10 foto. I file `.contenttype` del vecchio archivio su disco
+        non sono foto, e restano fuori;
+      - poi **dall'account di Ismail**, sul progetto vero: entra con la sua password di prima,
+        vede i suoi capi, le foto si firmano e si scaricano, la chat ha i suoi turni, le
+        proposte puntano a capi che esistono, le segnalazioni ci sono;
+      - una seconda esecuzione in locale non ha duplicato niente.
+
+      **Gli altri due account non si migrano: li ha fatti cancellare l'utente**, anche dal VPS
+      (2026-09-27). Erano `marouan@meltingbugs.com` (vuoto) e `ouadimarouan@gmail.com`: i suoi 3
+      capi, la chat, le segnalazioni e le 12 foto. Tolti in una transazione, con i conti di
+      Ismail controllati prima del commit. `ouadimarouan@gmail.com` ha un account nuovo su
+      Supabase, vuoto, creato dall'utente il giorno stesso.
+
+      **Cosa resta:** il Postgres e le foto sul VPS ora sono solo di Ismail, e sono la sua
+      copia di riserva. Fermare `wardrobe-postgres` (il volume resta) e poi togliere i volumi è
+      una decisione dell'utente.
+
 ## Infrastruttura e rilascio
 
 - [x] VPS Hetzner, Caddy, Let's Encrypt emesso al primo avvio, dominio reale. Deploy
