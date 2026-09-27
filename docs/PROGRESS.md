@@ -870,8 +870,45 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       - la prova sul telefono: registrazione, recupero, Google, una foto;
       - la **fase 4**, perché i tre account non ritrovano ancora il loro armadio;
       - la **fase 5**, perché README e `docs/deploy.md` descrivono ancora il backend di prima;
-      - l'account di prova `ouadimarouan@gmail.com` non è uno dei tre account veri: la fase 4
-        non se lo troverà davanti.
+      - ~~l'account di prova non è uno dei tre account veri~~: **falso**, lo era. È stato scritto
+        senza controllarlo: `ouadimarouan@gmail.com` era anche un account del VPS. La questione
+        l'ha chiusa l'utente, qui sotto.
+
+- [x] **Fase 4: l'import, solo per Ismail** (2026-09-27, per scelta dell'utente).
+      `services/api/scripts/migra_a_supabase.py`, lanciato dal computer locale:
+      - legge il VPS **in sola lettura**, con una query via `ssh` e le foto con un `tar` dal
+        volume;
+      - crea l'account con l'API admin, **stesso id e stesso hash bcrypt**;
+      - carica le foto nello Storage da `capi/{utente}/…` a `{utente}/capi/…`;
+      - scrive le righe in SQL come `postgres`, dai modelli Pydantic e da `riga_da_capo`.
+
+      La chiave di servizio e il token della CLI li prende al momento e non li salva. Le
+      tabelle **non** si scrivono con la chiave di servizio: con l'esposizione automatica
+      spenta, `service_role` non ha permessi su `public`, ed è una difesa da tenere.
+
+      Gli id di 32 cifre esadecimali diventano uuid con gli stessi valori, e le conversazioni
+      `storica-…` un uuid derivato, stabile. Un'email che su Supabase esiste già con un altro
+      id ferma tutto. Rilanciarlo non duplica niente.
+
+      *Verificato*:
+      - prima sullo stack locale, poi sul progetto vero;
+      - conteggi uguali fra VPS e Supabase: 5 capi, 3 usi, 1 conversazione, 36 messaggi,
+        5 segnalazioni, 5 esiti, 10 foto. I file `.contenttype` del vecchio archivio su disco
+        non sono foto, e restano fuori;
+      - poi **dall'account di Ismail**, sul progetto vero: entra con la sua password di prima,
+        vede i suoi capi, le foto si firmano e si scaricano, la chat ha i suoi turni, le
+        proposte puntano a capi che esistono, le segnalazioni ci sono;
+      - una seconda esecuzione in locale non ha duplicato niente.
+
+      **Gli altri due account non si migrano: li ha fatti cancellare l'utente**, anche dal VPS
+      (2026-09-27). Erano `marouan@meltingbugs.com` (vuoto) e `ouadimarouan@gmail.com`: i suoi 3
+      capi, la chat, le segnalazioni e le 12 foto. Tolti in una transazione, con i conti di
+      Ismail controllati prima del commit. `ouadimarouan@gmail.com` ha un account nuovo su
+      Supabase, vuoto, creato dall'utente il giorno stesso.
+
+      **Cosa resta:** il Postgres e le foto sul VPS ora sono solo di Ismail, e sono la sua
+      copia di riserva. Fermare `wardrobe-postgres` (il volume resta) e poi togliere i volumi è
+      una decisione dell'utente.
 
 ## Infrastruttura e rilascio
 
