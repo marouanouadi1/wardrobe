@@ -27,6 +27,12 @@
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down",
     "db:migrate": "cd services/api && uv run python scripts/applica_migrazioni.py",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:reset": "supabase db reset",
+    "supabase:test": "supabase test db",
+    "supabase:tipi": "bash scripts/tipi-database.sh",
+    "supabase:verifica": "cd services/api && uv run python scripts/verifica_database.py",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
   },

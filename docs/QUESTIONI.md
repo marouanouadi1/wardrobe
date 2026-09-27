@@ -16,6 +16,27 @@ prima del codice**.
 
 ## Aperte
 
+### Q-14 — L'opzione «RLS automatico» del progetto Supabase: la si tiene?
+**Aperta il:** 2026-09-27 · **Tocca:** il pannello di Supabase, `supabase/migrations/`
+
+Accesa alla creazione del progetto, l'opzione ha messo in `public` una funzione
+`rls_auto_enable()` e un event trigger (`ensure_rls`) che attiva l'RLS su ogni tabella
+nuova. La funzione è `security definer` ed eseguibile da `anon` e `authenticated`: gli
+advisor del progetto la segnalano con due avvisi. Chiamarla dall'API non serve a niente
+(una funzione di event trigger non si esegue direttamente), ma rompe due invarianti che i
+test pgTAP fanno rispettare — nessuna `security definer` in `public`, nessuna funzione di
+`public` eseguibile da `anon` — e sul progetto vero, a differenza dello stack locale,
+diventerebbero falsi.
+
+*Cosa cambia a seconda della risposta:*
+- **Spegnerla** (consigliato): sparisce la funzione, e il progetto vero coincide con lo
+  stack locale. L'RLS su ogni tabella la attiva già la migrazione, e il job `database` la
+  pretende. Il prezzo: una tabella creata a mano dal pannello nascerebbe senza RLS, ma le
+  tabelle nascono dalle migrazioni, non dal pannello.
+- **Tenerla**: la migrazione le toglie l'esecuzione (`revoke execute … from public, anon,
+  authenticated`), dentro un blocco che la cerca, perché in locale non esiste. Righe in più,
+  valide su un solo ambiente.
+
 ### Q-08 — Il «+» della barra delle schede è l'unica azione tinta d'accento
 **Aperta il:** 2026-09-22 · **Tocca:** `apps/mobile/app/(tabs)/_layout.tsx`
 
@@ -86,6 +107,29 @@ Le migrazioni saltano `0003` e `0004` (playground rimosso); gli ADR partono da
 sarebbe **pericoloso**, perché l'ordine di esecuzione è lessicografico.
 
 ## Chiuse
+
+### Q-13 — Inviti con l'hook, o registrazioni chiuse sul progetto Supabase?
+**Chiusa il:** 2026-09-26 · **Risposta:** *la lista degli inviti resta, per ora* ·
+**Motivo dato:** è temporanea. Oggi l'app la provano solo l'utente e il suo socio, e non ci
+sono ancora un sistema di monitoraggio, un limite di spesa per persona né un metodo di
+pagamento: finché mancano, chi entra spende a carico del progetto.
+
+**La domanda era.** Chi può creare un account lo decide l'hook
+`privato.accetta_solo_invitati`, che guarda la tabella `privato.inviti`: è `EMAIL_AMMESSE`
+portato nel database, e vale anche per chi entra con Google. Ma vale solo se l'hook è acceso
+sul progetto vero: `config.toml` accende quello locale, e un progetto nuovo nasce con le
+registrazioni aperte. L'alternativa era chiudere le registrazioni (`enable_signup = false`)
+e creare gli account dal pannello, togliendo l'hook con la sua tabella.
+
+**Cosa comporta la risposta.** L'hook resta com'è, e il giorno del passaggio va acceso nel
+pannello: è la prima voce della lista in `docs/PROGRESS.md`, e il controllo che lo verifichi
+da sé è `T-56`. Gli inviti si aggiungono da SQL o dal pannello.
+
+**Quando si riapre**, e il segnale è preciso: **quando ci sono il metodo di pagamento, il
+limite di spesa per persona e le protezioni dai costi.** Da lì la lista si toglie — e con
+lei l'interruttore da cui dipendono `T-46`, `T-47` e `Q-12`, che il giorno in cui chiunque
+può registrarsi smettono di essere dettagli. Anche `T-58` (nessun limite di lunghezza sui
+testi, che finiscono nei prompt a pagamento) diventa da fare allora.
 
 ### Q-12 — «Scarica i tuoi dati» passa da una credenziale al portatore
 **Chiusa il:** 2026-09-23 · **Risposta:** *va bene così, niente `expo-sharing`*

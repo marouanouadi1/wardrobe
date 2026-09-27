@@ -383,6 +383,48 @@ react-dom` con `--all` che esce diverso da zero se ci sono `invalid`/duplicati
 — e in tal caso in quale workflow (`mobile.yml` ha già `paths:` su
 `apps/mobile/**`, ma la causa può tornare anche toccando solo la root).
 
+### T-56 — Niente controlla la configurazione dell'Auth sul progetto Supabase vero
+**Trovato il:** 2026-09-25 (audit di `security`, fase 1 di ADR 0010) · **Dove:** il pannello di Supabase, `supabase/config.toml` · **Gravità:** alta il giorno del passaggio · **Chi:** `ci-cd`
+
+`config.toml` vale per lo stack locale. Sul progetto vero le stesse scelte si fanno nel
+pannello, e niente verifica che ci siano:
+- l'hook degli inviti acceso (`Q-13`, chiusa: la lista resta finché non ci sono limiti di spesa);
+- la conferma dell'email accesa;
+- `secure_password_change` acceso;
+- la password di almeno 8 caratteri (il default è 6);
+- esposti solo gli schemi `public` e `graphql_public`, e lo stato di `pg_graphql`;
+- i JWT firmati con chiavi asimmetriche (JWKS), non col segreto condiviso.
+
+**Il rimedio:** un job che legga la configurazione Auth del progetto collegato con la
+Management API, in sola lettura, e diventi rosso se una di queste non vale. Serve un token
+nei segreti della CI, e lo crea l'utente. Fino ad allora, la lista sta nella voce di fase 1
+di `docs/PROGRESS.md` e si controlla a mano il giorno del passaggio.
+
+### T-57 — `database.ts` sta dentro i filtri che rilasciano backend e app
+**Trovato il:** 2026-09-25 (review della fase 1) · **Dove:** `.github/workflows/api.yml` e `mobile.yml`, filtro `packages/contracts/**` · **Gravità:** bassa · **Chi:** `ci-cd`
+
+Dal passaggio, ogni cambio di schema rigenera `packages/contracts/src/generated/database.ts`,
+che sta sotto `packages/contracts/**`: fa scattare il rilascio di `api.yml`, che quel file
+non lo legge, e di `mobile.yml`. E lo schema sul progetto vero lo porta `supabase db push`,
+fatto a mano, non il merge. **Da decidere nella fase 5**, quando l'app lo userà davvero:
+togliere `database.ts` dal filtro di `api.yml`, e legare il `db push` al merge.
+
+### T-58 — Nessun limite di lunghezza sui testi liberi
+**Trovato il:** 2026-09-25 (audit di `security`, fase 1) · **Dove:** `supabase/migrations/`, colonne `testo`, `appunti`, `suggerimenti`, `etichette` · **Gravità:** bassa · **Chi:** `api`
+
+Con l'app che scrive da sé, niente limita la lunghezza di un messaggio di chat, degli
+appunti di un capo o dei suggerimenti salvati. Sono dati di chi li scrive, ma finiscono nei
+prompt dell'IA — che costano per token — e nelle quote del piano Free. **Il rimedio:** un
+CHECK di lunghezza per colonna, con i valori che l'app già non supera.
+
+### T-59 — Cancellare un account o svuotare l'armadio non toglie le foto dallo Storage
+**Trovato il:** 2026-09-25 (audit di `security`, fase 1) · **Dove:** `public.svuota_armadio`, `on delete cascade` su `auth.users` · **Gravità:** bassa · **Chi:** `mobile` (svuotamento), `api` (account)
+
+Le righe spariscono nel database; i file nello Storage no, perché sono un altro servizio.
+Per lo svuotamento il piano li fa togliere al modulo dati dell'app subito dopo la RPC
+(fase 3). Per la cancellazione dell'account non c'è ancora niente: oggi l'app non la offre,
+e il giorno che la offrirà deve togliere anche la cartella `{utente_id}/` dei due bucket.
+
 ### T-51 — Un corpo di richiesta non UTF-8 uccide il thread invece di dare 400
 **Trovato il:** 2026-09-16 · **Dove:** `services/api/src/handlers/local_server.py:104` · **Gravità:** bassa · **Chi:** `api`
 
