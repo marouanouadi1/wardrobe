@@ -28,38 +28,19 @@
 
 ## Backend (`services/api`)
 
-Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:51` —
-**su `main`**. Sul branch `feat/supabase` ne restano cinque: la fase 2, nella sezione
-«Supabase» qui sotto, dice quali e perché. Le righe di questa sezione descrivono
-`main` fino al giorno del passaggio.
+Dal passaggio a Supabase (ADR 0010, 2026-09-27) le rotte sono cinque, nella tabella `ROTTE`
+di `src/handlers/local_server.py:40`: `GET /salute`, `POST /capi/analisi`, `POST /suggerimenti`,
+`POST /chat`, `POST /esportazione`. Accesso, capi, storico della chat, outfit, profilo,
+segnalazioni e foto l'app li fa da sé su Supabase: la sezione «Supabase» qui sotto. Le 25 rotte
+di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
 
 - [x] `GET /salute` — riporta la versione dai metadati del pacchetto. *Verificato a ogni
       deploy da `api.yml`, step «Verifica salute e versione servita»: è l'unica riga di
       questo file che una macchina ricontrolla da sola.*
-- [x] `POST /auth/accedi`, `POST /auth/registrati` — JWT autofirmato, bcrypt, allowlist
-      `EMAIL_AMMESSE` fail-closed. *coperto da `tests/handlers/test_handlers.py`:
-      allowlist vuota, email fuori lista, 409, password corta, normalizzazione. In più
-      provato con richieste vere in locale e contro il server pubblico — dichiarato in
-      README al 2026-09-08, non rieseguito dopo.*
-- [x] `GET /capi`, `GET|PATCH /capi/{id}`, `POST /capi/{id}/indossato`,
-      `GET /armadio/riepilogo` — *coperto da `test_handlers.py`: filtro, ricerca
-      testuale, URL firmate, 404 e 422 compresi*
-- [x] `GET|POST /chat`, `GET /chat/conversazioni`, `GET|DELETE /chat/conversazioni/{id}`
-      — ADR 0006, migrazione `0009`. *coperto da `test_chat_handler.py`*
-- [x] `GET|POST /outfit`, `GET /outfit/{id}/colori` — *coperto da `test_handlers.py`,
-      compreso il rifiuto di un outfit non indossabile*
-- [x] `GET|PUT /profilo` — *coperto da `test_handlers.py`, creazione al primo accesso compresa*
-- [x] `POST|GET /segnalazioni`, `PATCH /segnalazioni/{id}` — amministratori da
-      `EMAIL_AMMINISTRATORI`, fail-closed. *coperto da `test_handlers.py`: chi vede cosa, il 403 di chi non è
-      amministratore, il 404*. Sul server la variabile **mancava** fino al 2026-09-25
-      (nessun amministratore, segnalazioni ferme su «Ricevuta»); ora ha un'email.
-      *Verificato con `printenv` nel container ricreato e `GET /salute` a 200;
-      **non** provato dall'app con l'account amministratore.*
-- [x] `POST /foto/upload` — URL firmata, la PUT la fa l'app. *coperto da `test_handlers.py`: la firma e il
-      rifiuto di un tipo non immagine*
-- [~] `POST /capi/analisi` + `GET /capi/analisi/{id}` — la pipeline a due fasi gira e
-      riporta il motivo del fallimento, ma **nessun modello è mai stato interrogato
-      davvero**: manca una chiave (vedi «Cosa manca dall'esterno»)
+- [~] `POST /capi/analisi` — legge la foto dallo Storage come l'utente e restituisce l'esito
+      intero. *Coperto da `tests/handlers/test_analisi.py`, e provato sullo stack locale con
+      due utenti (fase 2)*, ma **nessun modello è mai stato interrogato davvero**: manca una
+      chiave (vedi «Cosa manca dall'esterno»)
 - [~] `POST /suggerimenti` — risponde `503 provider_non_configurato` senza credenziali,
       non 500. Il prompt di `domain/stylist.py` non è mai stato visto all'opera
 - [~] Scontorno foto (`adapters/scontorno/fal_provider.py`) — passo facoltativo di
@@ -537,7 +518,7 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       cadere — dichiarato in README al 2026-09-08. Rieseguito il 2026-09-11:
       `npm run contracts:check` verde.*
 
-## Supabase (`supabase/`, ADR 0010) — sul branch `feat/supabase`, non su `main`
+## Supabase (`supabase/`, ADR 0010) — su `main` dal 2026-09-27
 
 - [~] **Fase 1: schema, RLS e regole.** Una migrazione (`supabase/migrations/`) con le
       tabelle a colonne vere, gli enum, le chiavi esterne composte (un riferimento resta

@@ -196,8 +196,7 @@ travestita da registro.
   a versione esatta, alle ultime versioni compatibili con i loro range.
 
 ### api
-- **Il backend fa solo l'IA, e la fa come te** (ADR 0010, sul branch
-  `feat/supabase` fino al giorno del passaggio). Restano la lettura delle foto, i
+- **Il backend fa solo l'IA, e la fa come te** (ADR 0010). Restano la lettura delle foto, i
   suggerimenti, la chat, l'esportazione e `/salute`. Tutto il resto (accesso,
   armadio, outfit, profilo, segnalazioni) l'app lo farà direttamente con
   Supabase. Il backend riconosce chi chiama dal token di Supabase, e legge e

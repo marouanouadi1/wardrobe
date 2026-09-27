@@ -175,11 +175,6 @@ backup, quindi un `drop` arrivato lassù non torna.
 
 Prima di scriverne una, leggi `.claude/rules/migrazioni.md` per intero.
 
-**Su `main`, fino al giorno del passaggio, c'è ancora il sistema di prima**:
-`services/api/migrations/` con un runner che riesegue ogni file a ogni avvio, e che regge
-solo perché ogni file è idempotente. Su questo branch la fase 2 l'ha tolto; chi lavora su
-`main` segue le regole scritte su `main`.
-
 ## Operazioni distruttive
 
 **Mai eseguire un'operazione distruttiva o irreversibile senza accordo esplicito e preventivo

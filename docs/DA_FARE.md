@@ -940,8 +940,7 @@ come si vede.
 ## Fatte
 
 Chiuse il **2026-09-27** dalla fase 2 di ADR 0010 (branch `feat/supabase-fase-2`,
-PR verso `feat/supabase`): arrivano su `main` il giorno del passaggio, insieme al
-codice che le chiude.
+PR verso `feat/supabase`), arrivate su `main` con il passaggio lo stesso giorno.
 
 ### T-47 — `POST /capi/analisi` non controlla di chi sia la `chiave_foto` (**chiusa**)
 

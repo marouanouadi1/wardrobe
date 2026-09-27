@@ -20,11 +20,10 @@ Per esteso, con l'esempio, in `CLAUDE.md` e in `docs/adr/0008`.
 
 ## Una cartella sola
 
-Dal 2026-09-25 (ADR 0010) lo schema sta in **`supabase/migrations/`**, e dalla fase 2
-(2026-09-27) è l'unico: `services/api/migrations/` e il suo runner, che rieseguiva
-ogni file a ogni avvio, su questo branch non esistono più. **Su `main` ci sono ancora
-fino al giorno del passaggio**, con le loro regole: chi lavora su `main` legge la
-versione di questo file che sta su `main`.
+Dal 2026-09-25 (ADR 0010) lo schema sta in **`supabase/migrations/`**, e dal passaggio
+(2026-09-27) è l'unico: `services/api/migrations/` e il suo runner, che rieseguiva ogni
+file a ogni avvio, non esistono più. Il Postgres di prima resta sul VPS, fermo, come copia
+di riserva: nessuno ci applica più niente.
 
 Il meccanismo è quello della CLI di Supabase: una tabella di storico, ogni file
 applicato **una volta sola**, in ordine di timestamp, e mai rieseguito. L'idempotenza
