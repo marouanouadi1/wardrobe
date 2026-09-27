@@ -763,7 +763,12 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
         codice e password, e l'estraneo non entra più; un invitato nuovo entra e sceglie la
         password; un non invitato è rifiutato anche per codice; il recupero in due tempi
         regge un primo tentativo fallito; un utente importato già confermato tiene la sua.
-        In pgTAP il trigger è **visto fallire** togliendolo;
+        In pgTAP il trigger è **visto fallire** togliendolo. E un secondo audit sul rimedio:
+        il trigger non toglie la password a un account confermato, in nessuna sequenza
+        provata, e il login per codice non apre strade nuove. Ma regge su un ordine interno
+        di GoTrue, quindi è un **tampone dichiarato** (`T-65`), e la CI rifà l'attacco
+        passando dall'Auth vera (`services/api/scripts/prova_accesso.py`, visto fallire
+        togliendo il trigger);
       - **E2E sullo stack locale con due utenti veri**: le operazioni di `supabase.ts` rifatte
         con supabase-js, 34 verifiche su 34:
         - caricamento della foto come lo fa l'app;
@@ -818,6 +823,19 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       - gli accessi anonimi spenti.
 
       Senza un SMTP proprio le email arrivano solo ai membri del team, due all'ora.
+
+      **Il giorno del passaggio, per questa fase:**
+      - gli utenti di prova creati sul progetto vero si tolgono **prima** dello script della
+        fase 4, con le loro cartelle nello Storage: cancellare l'utente non toglie i file
+        (`T-59`). E lo script deve **rifiutare** un'email che esiste già con un id diverso,
+        invece di passarci sopra: i tre account arrivano con il loro id;
+      - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` va anche nel profilo `preview` di `eas.json`, quello
+        del rilascio: senza, l'APK del giorno X esce con Google spento;
+      - la rotta di prova nel `Caddyfile` del server sparisce al primo deploy da `main`, che lo
+        sovrascrive: vale anche per una PR su `main` prima del giorno X (`T-51`, `T-60`).
+      - *Verificato* il percorso esatto dell'import sullo stack locale: un utente creato
+        dall'API admin con `password_hash` bcrypt ed email confermata entra con la sua
+        password, ha il ruolo in sessione e il suo profilo. Il trigger non lo tocca.
 
 ## Infrastruttura e rilascio
 

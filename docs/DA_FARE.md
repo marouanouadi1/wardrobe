@@ -412,7 +412,10 @@ pannello, e niente verifica che ci siano:
 - un **SMTP proprio**: dalla fase 3 serve a **ogni registrazione**, non solo al recupero.
   Senza, il codice arriva solo ai membri del team, due volte all'ora;
 - il provider **Google** acceso, con il client Web primo in «Client IDs», e su Google
-  Cloud un client Android con lo SHA-1 della chiave EAS (`src/dati/google.ts`).
+  Cloud un client Android con lo SHA-1 della chiave EAS (`src/dati/google.ts`);
+- l'intervallo minimo fra due email allo stesso indirizzo (`max_frequency`, 60 s di
+  default nel pannello, 1 s in locale): ogni richiesta nuova invalida il codice di prima, e
+  con un intervallo corto un terzo può tenere scaduto il codice di un invitato.
 
 **Il rimedio:** un job che legga la configurazione Auth del progetto collegato con la
 Management API, in sola lettura, e diventi rosso se una di queste non vale. Serve un token
@@ -548,6 +551,25 @@ quando il telefono parlerà con lo stack locale.
 E un rischio che vale anche per Android: la libreria gratuita di google-signin poggia
 sull'SDK di Google Sign-In che Google ha dichiarato superato. Il ripiego è una libreria
 su Credential Manager, e allora il nonce diventa obbligatorio (`src/dati/google.ts`).
+
+### T-65 — La password tolta alla conferma è un tampone su un ordine interno di GoTrue
+**Trovato il:** 2026-09-27 (audit di `security` sul rimedio della fase 3) · **Dove:** `supabase/migrations/20260925192322_schema.sql` (`privato.password_solo_dopo_la_prova`), `services/api/scripts/prova_accesso.py`, `.github/workflows/database.yml` · **Gravità:** bassa oggi, alta se regredisce · **Chi:** `api`, `ci-cd`
+
+La causa della presa di possesso è in GoTrue: accetta una password prima che l'email sia
+dimostrata, e a una seconda registrazione di un account non confermato tiene la prima. Il
+trigger toglie quella password alla prima conferma, ma regge su due ordini interni di
+GoTrue: la conferma scritta mentre il `confirmation_token` c'è ancora, e all'import la
+conferma prima della password. Il pgTAP simula l'aggiornamento in SQL e resterebbe verde
+se cambiassero; per questo la CI rifà l'attacco passando dall'Auth vera
+(`prova_accesso.py`: quattro casi, visti fallire togliendo il trigger). L'app, in più,
+sovrascrive la password dopo il codice, quindi chi arriva fino in fondo è coperto
+comunque: il rischio che resta è il titolare che si ferma prima di scegliere la password.
+
+**Il rimedio che toglie la causa** è quello scartato in `Q-13`: registrazioni chiuse, e
+account creati con gli inviti di Supabase, dove la password la sceglie solo chi ha
+ricevuto l'invito. Allora spariscono l'hook, `privato.inviti`, questo trigger e la sua
+prova. **Quando:** il giorno che la lista degli inviti smette di essere di persone che si
+conoscono, o se `prova_accesso.py` diventa rosso dopo un aggiornamento della CLI.
 
 ### T-64 — Due giorni ancora in UTC, e tre cose trovate di passaggio nella review della fase 3
 **Trovato il:** 2026-09-27 (review della fase 3; tutte c'erano già prima) · **Gravità:** bassa · **Chi:** `mobile`

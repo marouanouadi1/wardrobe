@@ -16,6 +16,7 @@ on:
       - "services/api/src/domain/models.py"
       - "services/api/src/domain/wardrobe.py"
       - "services/api/scripts/verifica_database.py"
+      - "services/api/scripts/prova_accesso.py"
       - "packages/contracts/src/generated/database.ts"
       - ".github/workflows/database.yml"
   pull_request:
@@ -25,6 +26,7 @@ on:
       - "services/api/src/domain/models.py"
       - "services/api/src/domain/wardrobe.py"
       - "services/api/scripts/verifica_database.py"
+      - "services/api/scripts/prova_accesso.py"
       - "packages/contracts/src/generated/database.ts"
       - ".github/workflows/database.yml"
   workflow_dispatch:
@@ -114,4 +116,13 @@ jobs:
       # devono dire la stessa cosa.
       - name: Database e dominio Python coincidono
         run: uv run python scripts/verifica_database.py
+        working-directory: services/api
+
+      # La presa di possesso di un'email invitata, rifatta passando dall'Auth
+      # vera e leggendo i codici da Mailpit. Il trigger che la ferma regge su un
+      # ordine interno di GoTrue (la conferma scritta mentre il codice c'è
+      # ancora): il pgTAP lo simula in SQL e resterebbe verde se quell'ordine
+      # cambiasse, questo no. Tampone dichiarato: `T-65` in docs/DA_FARE.md.
+      - name: Chi arriva prima su un'email invitata non ne sceglie la password
+        run: uv run python scripts/prova_accesso.py
         working-directory: services/api

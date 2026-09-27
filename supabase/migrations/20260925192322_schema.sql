@@ -186,11 +186,22 @@ create trigger crea_profilo_alla_registrazione
 -- ne sceglie una a sessione aperta (`apps/mobile/app/registrati.tsx`). L'app non
 -- manda mai una password prima del codice.
 --
--- Vale solo per la **prima** conferma **che segue un codice** (`confirmation_token`
--- emesso): cioè quando la conferma è la prova di un'email. Un account creato già
--- confermato dall'API admin — gli utenti importati dalla fase 4 con la loro
--- password, o Google — viene confermato con un aggiornamento a parte, subito dopo
--- l'inserimento, ma senza nessun codice emesso: quella password resta.
+-- Vale solo per la **prima** conferma di un account che ha un codice di conferma
+-- in attesa (`confirmation_token`): la prova di un'email, o la conferma che un
+-- amministratore dà a un account rimasto in attesa — in entrambi i casi la
+-- password scelta prima non è di nessuno che abbia dimostrato qualcosa. Un
+-- account creato già confermato dall'API admin — gli utenti importati dalla fase
+-- 4 con la loro password, o Google — viene confermato con un aggiornamento a
+-- parte, subito dopo l'inserimento, ma senza nessun codice emesso: quella
+-- password resta.
+--
+-- **È un tampone, dichiarato.** La causa è in GoTrue, che accetta una password
+-- prima della prova dell'email e, a una seconda registrazione di un account non
+-- confermato, tiene la prima; da qui non si toglie senza chiudere le
+-- registrazioni (`Q-13`). E regge su un ordine interno di GoTrue — la conferma
+-- scritta mentre il codice c'è ancora, e all'import la conferma prima della
+-- password —, che la CI prova passando dall'Auth vera
+-- (`services/api/scripts/prova_accesso.py`). La voce è `T-65`.
 create function privato.password_solo_dopo_la_prova()
 returns trigger
 language plpgsql

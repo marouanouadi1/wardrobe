@@ -127,6 +127,11 @@ onboarding light button»).
 | `test/convenzioni/navigazione.test.ts` | 15 | dove la barra delle schede si vede e quale scheda accende. Da quando vive fuori dal navigatore (`ui/guscio.tsx`) è disegnata sopra qualunque schermata, quindi l'errore peggiore non è cosmetico: la pillola comparirebbe **sulla schermata di accesso**, cinque scorciatoie verso rotte protette da un `Redirect`. Il test tiene fermo che `schedaDi()` resti un elenco di ciò che c'è e non di ciò che si esclude, e che nessuna rotta nuova resti senza una decisione |
 | `test/convenzioni/colori.test.ts` | 2 | che nessun `rgba()`/esadecimale sia scritto a mano in `app/` o `src/` — i valori vengono da `tema/tokens.ts` o si compongono con `velo()`. `src/tema/tokens.ts` (la fonte) e `src/dati/dominio.ts` (`PALETTE_COLORI`, dati di dominio) sono le due esenzioni dichiarate |
 
+**Fuori dai conteggi, un gate che non è un test**: `services/api/scripts/prova_accesso.py`,
+nel job `database`, rifà contro l'Auth vera dello stack locale la presa di possesso di
+un'email invitata (quattro casi, codici letti da Mailpit). Il pgTAP prova il trigger in SQL;
+questa prova che GoTrue lo faccia scattare davvero (`T-65`).
+
 **Il fuso è fissato a Roma** (`test/fuso-orario.js`, `globalSetup` di jest): la CI gira
 in UTC, e lì un test sul «giorno locale» passerebbe anche con `toISOString()`, che è il
 difetto da prendere. Un test che dipende dall'ora usa un'ora vicina alla mezzanotte, dove
