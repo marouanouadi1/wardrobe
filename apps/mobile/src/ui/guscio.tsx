@@ -360,6 +360,7 @@ export function Schermata({
   su,
   tavolozza,
   ancoraInFondo,
+  piede,
   children,
   contentStyle,
 }: {
@@ -384,6 +385,10 @@ export function Schermata({
   /** Ancora la vista in fondo quando il contenuto cresce: la chat, dove
    * l'ultimo messaggio deve restare visibile senza uno scroll manuale. */
   ancoraInFondo?: boolean
+  /** Ciò che sta **fuori** dallo scroll, fisso in fondo: la barra di scrittura
+   * della chat, come su WhatsApp. Lo spazio per la barra delle schede passa
+   * allora dal contenuto al piede, perché è il piede a doverci stare sopra. */
+  piede?: ReactNode
   children: ReactNode
   contentStyle?: ViewStyle
 }) {
@@ -432,8 +437,12 @@ export function Schermata({
         />
         <ScrollView
           ref={scrollRef}
+          style={piede ? { flex: 1 } : undefined}
           contentContainerStyle={[
-            { paddingHorizontal: spazi.xl, paddingBottom, gap: spazi.l },
+            { paddingHorizontal: spazi.xl, paddingBottom: piede ? spazi.m : paddingBottom, gap: spazi.l },
+            // Con un piede e l'ancora, i pochi messaggi di una chat appena
+            // aperta si posano sul campo, non sotto la testata.
+            piede && ancoraInFondo ? { flexGrow: 1, justifyContent: 'flex-end' } : null,
             contentStyle,
           ]}
           showsVerticalScrollIndicator={false}
@@ -448,6 +457,11 @@ export function Schermata({
         >
           {children}
         </ScrollView>
+        {piede ? (
+          <View style={{ paddingHorizontal: spazi.xl, paddingTop: spazi.s, paddingBottom, gap: spazi.s }}>
+            {piede}
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </Fondo>
   )

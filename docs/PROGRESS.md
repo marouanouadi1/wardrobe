@@ -493,6 +493,14 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       peggio di una spunta assente. SSO e recupero password invece ci sono,
       spenti.
       **Cosa manca:** ancora nessuna prova su un telefono.
+- [~] **La chat attaccata al fondo** (`suggeritore.tsx`) — chiesto
+      dall'utente: «come su WhatsApp». `Schermata` ha una prop `piede`, fuori
+      dallo `ScrollView`: lì stanno gli spunti e `BarraChiedi`, fermi sopra la
+      barra delle schede; con `ancoraInFondo` i messaggi si posano sul campo
+      (`flexGrow` + `justifyContent: 'flex-end'`). Tolta la nota «Le proposte
+      usano solo i capi che hai…». *Verificato:* `typecheck` exit 0, `lint` 0
+      errori, `mobile:test` 74 verdi, `build:web` ok. **Non verificato:** su un
+      telefono né a schermo — nessun dispositivo in questa sessione.
 - [~] La tastiera non copre più il contenuto di `Schermata` — segnalato
       dall'utente su Android, in chat: il campo in cui scriveva finiva sotto la
       tastiera. Causa: con l'edge-to-edge Android non ridimensiona più la

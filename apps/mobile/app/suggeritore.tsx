@@ -24,7 +24,7 @@ import { useEffect, useState } from 'react'
 import { ScrollView, View } from 'react-native'
 import { useArmadio, useVestiEVai } from '../src/dati/archivio'
 import { type SceltaConversazione, useChat } from '../src/dati/chat'
-import { linee, spazi } from '../src/tema/tokens'
+import { spazi } from '../src/tema/tokens'
 import {
   BarraChiedi,
   BollaChat,
@@ -112,7 +112,32 @@ export default function Suggeritore() {
   }
 
   return (
-    <Schermata occhiello="Il tuo stilista" titolo="Chiedi ad Aura" tavolozza="caldo" indietro ancoraInFondo>
+    <Schermata
+      occhiello="Il tuo stilista"
+      titolo="Chiedi ad Aura"
+      tavolozza="caldo"
+      indietro
+      ancoraInFondo
+      // Il campo sta fermo in fondo, come su WhatsApp: scorrono solo i
+      // messaggi, sopra di lui.
+      piede={
+        <>
+          {/* Gli spunti: la scorciatoia per chi non ha voglia di scrivere. Erano
+              già qui, e adesso portano da soli il peso che era del modo «Guidato». */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
+            {SPUNTI.map((spunto) => (
+              <Pillola key={spunto} testo={spunto} onPress={() => void invia(spunto)} />
+            ))}
+          </ScrollView>
+          <BarraChiedi
+            valore={bozza}
+            onCambia={setBozza}
+            onInvia={() => void invia()}
+            placeholder="Cena fuori, e fa freddo…"
+          />
+        </>
+      }
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
         <Etichetta taglia={11} tono="tenue" style={{ flex: 1 }} numberOfLines={1}>
           {conversazioneAttuale?.titolo ?? 'Nuova conversazione'}
@@ -187,28 +212,6 @@ export default function Suggeritore() {
         ) : null}
       </View>
 
-      {/* Gli spunti: la scorciatoia per chi non ha voglia di scrivere. Erano
-          già qui, e adesso portano da soli il peso che era del modo «Guidato». */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-        {SPUNTI.map((spunto) => (
-          <Pillola key={spunto} testo={spunto} onPress={() => void invia(spunto)} />
-        ))}
-      </ScrollView>
-
-      <BarraChiedi
-        valore={bozza}
-        onCambia={setBozza}
-        onInvia={() => void invia()}
-        placeholder="Cena fuori, e fa freddo…"
-      />
-
-      <Corpo
-        taglia={11.5}
-        tono="debole"
-        style={{ textAlign: 'center', borderTopWidth: 1, borderTopColor: linee.tenue, paddingTop: spazi.m }}
-      >
-        Le proposte usano solo i capi che hai, e mai quelli in lavatrice.
-      </Corpo>
     </Schermata>
   )
 }
