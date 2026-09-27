@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Avvia tutto lo stack locale con un comando solo.
 #
-#   npm run dev       -> Postgres (aspetta che sia pronto) + API in primo piano
+#   npm run dev       -> Supabase locale (aspetta che sia pronto) + API in primo piano
 #   npm run dev:app   -> ... e in più l'app Expo, che tiene il terminale
 #
 # Perché uno script e non `concurrently`: sotto un multiplexer di processi lo
@@ -9,13 +9,12 @@
 # smettono di rispondere. Qui Expo resta in primo piano sul terminale vero e
 # solo l'API passa da una pipe, con il suo prefisso.
 #
-# Postgres non viene mai spento all'uscita: è staccato, non costa niente
-# tenerlo su, e spegnerlo taglierebbe le gambe a un secondo terminale che sta
-# usando lo stesso database. Per fermarlo: npm run db:down
+# Lo stack di Supabase non viene mai spento all'uscita: è staccato, e
+# spegnerlo taglierebbe le gambe a un secondo terminale che sta usando lo
+# stesso database. Per fermarlo: npm run supabase:stop
 set -euo pipefail
 
 RADICE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMPOSE=(docker compose --file "$RADICE/docker-compose.yml")
 PORTA_API="${PORTA:-8787}"
 CON_APP=0
 [[ "${1:-}" == "--app" ]] && CON_APP=1
@@ -61,14 +60,21 @@ command -v uv >/dev/null 2>&1 || {
   exit 1
 }
 
-"${COMPOSE[@]}" version >/dev/null 2>&1 && docker info >/dev/null 2>&1 || {
-  echo "✗ Serve Docker Desktop (o un daemon Docker) in esecuzione: qui Postgres gira sempre in un container." >&2
+command -v supabase >/dev/null 2>&1 || {
+  echo "✗ Manca «supabase», la CLI che avvia il database in locale." >&2
+  echo "  Installala: https://supabase.com/docs/guides/local-development/cli/getting-started" >&2
+  echo "  La versione è quella della CI (.github/workflows/database.yml)." >&2
+  exit 1
+}
+
+docker info >/dev/null 2>&1 || {
+  echo "✗ Serve Docker Desktop (o un daemon Docker) in esecuzione: lo stack di Supabase gira in container." >&2
   exit 1
 }
 
 [[ -f "$RADICE/services/api/.env" ]] || {
   echo "⚠ Manca services/api/.env — copialo da .env.example e mettici la tua ANTHROPIC_API_KEY."
-  echo "  L'API parte lo stesso, ma i capi resteranno in memoria e l'analisi delle foto darà 503."
+  echo "  L'API parte lo stesso, ma l'analisi delle foto e lo stilista daranno 503."
 }
 
 if porta_in_ascolto "$PORTA_API"; then
@@ -77,47 +83,50 @@ if porta_in_ascolto "$PORTA_API"; then
   exit 1
 fi
 
-# ---------------------------------------------------------------- Postgres
+# ---------------------------------------------------------------- Supabase
 
-echo "→ Postgres (Docker)"
-# --wait sfrutta l'healthcheck già scritto in docker-compose.yml
-# (pg_isready): quando questa riga ritorna, il database accetta connessioni
-# davvero — niente sleep a caso, nessuna dipendenza tipo wait-on. Il
-# timeout è largo (120s, non i 50s dell'healthcheck) perché una initdb a
-# freddo su WSL2 può sforare.
-"${COMPOSE[@]}" up --detach --wait --wait-timeout 120 postgres || {
-  echo "✗ Postgres non è diventato pronto in tempo." >&2
-  echo "  Guarda cosa dice:  docker compose logs postgres" >&2
+echo "→ Supabase (stack locale)"
+# Su uno stack già acceso `supabase start` non rifà niente ed esce con 0: si
+# può chiamare a ogni avvio. Il primo avvio scarica le immagini e può
+# metterci minuti.
+supabase start >/dev/null || {
+  echo "✗ Lo stack di Supabase non è partito." >&2
+  echo "  Guarda cosa dice:  supabase start" >&2
   exit 1
 }
 
-# Applica le migrazioni mancanti — funziona identico su Docker e su un
-# Postgres nativo, perché parla solo DATABASE_URL, mai docker compose. È
-# anche il modo in cui una migrazione arrivata con l'ultimo `git pull` si
-# applica da sola, invece di restare lì finché qualcuno non se ne accorge a
-# mano: ogni file è `create ... if not exists`, quindi rilanciarli tutti a
-# ogni avvio non fa danni. Se manca `.env` o `DATABASE_URL`, lo script sotto
-# non fa nulla (restano i capi in memoria, come sempre) invece di fallire.
-if [[ -f "$RADICE/services/api/.env" ]]; then
-  echo "→ Migrazioni"
-  ( cd "$RADICE/services/api" && uv run python scripts/applica_migrazioni.py ) || exit 1
-fi
+# Dallo stack servono due righe, e solo quelle. `status -o env` stampa anche
+# la chiave di servizio e il segreto dei JWT: niente `source` né `eval` di
+# quell'output, e niente che lo stampi. L'API non deve poter scavalcare l'RLS
+# neanche in locale (ADR 0010).
+#
+# Vincono sul .env: `npm run dev` parla sempre con lo stack locale. Un valore
+# già nell'ambiente della shell resta, per chi lo vuole puntare altrove.
+STATO="$(supabase status -o env 2>/dev/null)"
+riga_di() { printf '%s\n' "$STATO" | sed -n "s/^$1=\"\(.*\)\"\$/\1/p"; }
+SUPABASE_URL="${SUPABASE_URL:-$(riga_di API_URL)}"
+SUPABASE_CHIAVE_PUBBLICA="${SUPABASE_CHIAVE_PUBBLICA:-$(riga_di PUBLISHABLE_KEY)}"
+unset STATO
+[[ -n "$SUPABASE_URL" && -n "$SUPABASE_CHIAVE_PUBBLICA" ]] || {
+  echo "✗ Da «supabase status» non escono l'indirizzo e la chiave pubblica." >&2
+  exit 1
+}
+export SUPABASE_URL SUPABASE_CHIAVE_PUBBLICA
 
 # ---------------------------------------------------------- livello 1: API
 
-# La CWD è parte del contratto, non un vezzo:
-#  1. CARTELLA_FOTO=./dati/foto è relativa — da un'altra cartella le foto
-#     finirebbero altrove, e in una cartella che il .gitignore non copre;
-#  2. `uv run` cerca il pyproject.toml risalendo da qui: dalla radice non lo
-#     trova e il modulo `handlers` non esiste.
+# La CWD è parte del contratto, non un vezzo: `uv run` cerca il
+# pyproject.toml risalendo da qui, e dalla radice non lo trova — il modulo
+# `handlers` non esisterebbe. E `load_dotenv()` legge il .env di questa
+# cartella.
 if [[ "$CON_APP" -eq 0 ]]; then
   echo "→ API su http://localhost:$PORTA_API   (Ctrl-C per fermare)"
-  echo "  Postgres resta acceso: «npm run db:down» per spegnerlo."
+  echo "  Supabase resta acceso: «npm run supabase:stop» per spegnerlo."
   cd "$RADICE/services/api"
   # Uscire con 0 su Ctrl-C: altrimenti npm stampa un blocco d'errore rosso
   # ogni volta che si chiude normalmente. Se invece l'API muore da sola,
   # `set -e` lascia passare il suo codice d'uscita vero.
-  trap 'echo; echo "→ chiuso. Postgres resta acceso (npm run db:down)."; exit 0' INT
+  trap 'echo; echo "→ chiuso. Supabase resta acceso (npm run supabase:stop)."; exit 0' INT
   uv run python -m handlers.local_server
   exit $?
 fi
@@ -141,7 +150,7 @@ pulisci() {
   pkill -TERM -f "handlers\.local_server" 2>/dev/null || true
   [[ -n "$PID_API" ]] && kill -TERM "$PID_API" 2>/dev/null || true
   wait 2>/dev/null || true
-  printf '\n→ chiuso. Postgres resta acceso: «npm run db:down» per spegnerlo.\n'
+  printf '\n→ chiuso. Supabase resta acceso: «npm run supabase:stop» per spegnerlo.\n'
 }
 trap pulisci EXIT INT TERM
 

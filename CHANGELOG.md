@@ -176,6 +176,13 @@ travestita da registro.
   a versione esatta, alle ultime versioni compatibili con i loro range.
 
 ### api
+- **Il backend fa solo l'IA, e la fa come te** (ADR 0010, sul branch
+  `feat/supabase` fino al giorno del passaggio). Restano la lettura delle foto, i
+  suggerimenti, la chat, l'esportazione e `/salute`. Tutto il resto (accesso,
+  armadio, outfit, profilo, segnalazioni) l'app lo farà direttamente con
+  Supabase. Il backend riconosce chi chiama dal token di Supabase, e legge e
+  scrive con quello: vede solo quello che vedi tu. Un'analisi chiesta su una
+  foto che non è nella tua cartella viene rifiutata.
 - **Il profilo porta le misure del corpo** (`Profilo.misure`): sistema di
   taglie, taglia, altezza, corporatura, spalle e lunghezza gamba — tutte
   facoltative, e l'intero blocco può non esserci. Gli estremi accettati

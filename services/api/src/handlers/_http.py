@@ -1,8 +1,9 @@
 """Il pezzo di HTTP che gli handler non devono ripetere.
 
-Formato eventi: un dict con `headers`, `pathParameters`,
-`queryStringParameters` e `body`, sintetizzato da `local_server.py` per ogni
-richiesta in arrivo.
+Formato eventi: un dict con `headers` e `body`, sintetizzato da
+`local_server.py` per ogni richiesta in arrivo. Le rotte rimaste (ADR 0010) sono
+tutte POST con un corpo JSON, più `GET /salute`: niente parametri nel percorso
+né nella query.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from domain.accesso import Sessione
 from domain.errors import ErroreDominio, NonAutenticato, RichiestaNonValida
 
 _LIVELLO = os.environ.get("LOG_LEVEL", "INFO")
@@ -36,23 +38,29 @@ INTESTAZIONI = {
 }
 
 
-def utente_id(evento: Evento) -> str:
-    """L'utente autenticato: sempre e solo da un JWT valido (`JWT_SECRET`,
-    vedi `handlers/auth.py`). Nessun bypass: senza token, o con un token
-    scaduto o firmato con un altro segreto, la richiesta non ha un utente —
-    401, perché il client deve poterlo distinguere da un corpo malformato e
-    rimandare al login, non solo mostrare un errore generico.
-    """
-    intestazioni = {str(k).lower(): str(v) for k, v in (evento.get("headers") or {}).items()}
+def sessione(evento: Evento) -> Sessione:
+    """Chi chiama: sempre e solo da un token di Supabase Auth verificato
+    (`domain/accesso.py`), con le chiavi pubbliche del progetto. Nessun bypass:
+    senza token, o con un token scaduto, firmato da altri o per un altro
+    progetto, la richiesta non ha un utente — 401, perché il client deve poterlo
+    distinguere da un corpo malformato e rinnovare la sessione, o rimandare al
+    login.
 
-    segreto = os.environ["JWT_SECRET"]
+    Restituisce anche il token, perché il backend agisce **come** quella persona
+    verso Supabase (ADR 0010): è il token, non un filtro nel codice, a decidere
+    cosa vede.
+    """
+    from domain.accesso import emittente_di, verifica_token
+    from handlers._container import chiavi_auth, url_progetto
+
+    intestazioni = {str(k).lower(): str(v) for k, v in (evento.get("headers") or {}).items()}
     autorizzazione = intestazioni.get("authorization", "")
     if autorizzazione.lower().startswith("bearer "):
-        from domain.autenticazione import verifica_token
-
-        sub = verifica_token(autorizzazione[7:], segreto)
-        if sub:
-            return sub
+        verificata = verifica_token(
+            autorizzazione[7:].strip(), chiavi_auth().chiave, emittente_di(url_progetto())
+        )
+        if verificata is not None:
+            return verificata
 
     raise NonAutenticato("richiesta senza un token valido")
 
@@ -60,25 +68,10 @@ def utente_id(evento: Evento) -> str:
 def corpo[M: BaseModel](evento: Evento, modello: type[M]) -> M:
     """Valida il body contro un modello di dominio. Fuori formato = 422."""
     grezzo = evento.get("body") or "{}"
-    if evento.get("isBase64Encoded"):
-        import base64
-
-        grezzo = base64.b64decode(grezzo).decode("utf-8")
     try:
         return modello.model_validate_json(grezzo)
     except ValidationError as exc:
         raise RichiestaNonValida(f"corpo non valido: {exc.error_count()} problemi") from exc
-
-
-def query(evento: Evento) -> dict[str, str]:
-    return {k: v for k, v in (evento.get("queryStringParameters") or {}).items() if v is not None}
-
-
-def parametro(evento: Evento, nome: str) -> str:
-    valore = (evento.get("pathParameters") or {}).get(nome)
-    if not valore:
-        raise RichiestaNonValida(f"parametro «{nome}» mancante nel path")
-    return str(valore)
 
 
 def ok(dati: BaseModel | list[Any] | dict[str, Any] | None, stato: int = 200) -> Risposta:

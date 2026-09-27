@@ -16,11 +16,11 @@ Due tipi di numero, e si comportano diversamente:
 
 ## Numeri correnti
 
-- **Test backend:** 213
+- **Test backend:** 188
 - **Test app:** 68
-- **Soglia coverage totale:** 73% — `services/api/pyproject.toml`
-- **Soglia coverage `src/domain/`:** 97% — `.github/workflows/api.yml`
-- **Soglia coverage `src/handlers/`:** 92% — idem, escluso `local_server.py`
+- **Soglia coverage totale:** 85% — `services/api/pyproject.toml`
+- **Soglia coverage `src/domain/`:** 99% — `.github/workflows/api.yml`
+- **Soglia coverage `src/handlers/`:** 97% — idem, escluso `local_server.py`
 - **Asserzioni pgTAP sul database:** 100 — `supabase/tests/database/regole.test.sql`,
   sul branch `feat/supabase`. Il numero vero è il `plan()` del file, che pgTAP fa
   rispettare nel job `database`; `docs.yml` confronta questa riga con quel `plan()`
@@ -31,51 +31,65 @@ vera, non si abbassano mai. Abbassarne una non è un commit: è una voce in
 
 ## Backend — cosa è coperto
 
+Dalla fase 2 di ADR 0010 il backend è solo l'IA, l'esportazione e `/salute`: il
+CRUD, il login e le foto firmate sono passati a Supabase, e con loro i test che
+li provavano. Il calo del conteggio viene da lì, non da una copertura persa: le
+stesse regole ora le provano le asserzioni pgTAP sul database.
+
 | File | Test | Righe |
 |---|---:|---:|
-| `tests/domain/test_wardrobe.py` | 30 | 196 |
+| `tests/domain/test_accesso.py` | 18 | 114 |
+| `tests/domain/test_wardrobe.py` | 7 | 51 |
 | `tests/domain/test_vision.py` | 25 | 196 |
 | `tests/domain/test_stylist.py` | 23 | 184 |
 | `tests/domain/test_chat.py` | 15 | 164 |
-| `tests/domain/test_esportazione.py` | 23 | 171 |
-| `tests/domain/test_firma_foto.py` | 5 | 39 |
-| `tests/domain/test_segnalazioni.py` | 2 | 40 |
-| `tests/handlers/test_handlers.py` | 59 | 810 |
-| `tests/handlers/test_chat_handler.py` | 13 | 246 |
-| `tests/handlers/test_analisi.py` | 4 | 125 |
-| `tests/handlers/test_suggerimenti.py` | 2 | 88 |
-| `tests/adapters/test_archivio_filesystem.py` | 7 | 87 |
+| `tests/domain/test_esportazione.py` | 7 | 71 |
+| `tests/handlers/test_handlers.py` | 23 | 312 |
+| `tests/handlers/test_analisi.py` | 13 | 250 |
+| `tests/handlers/test_chat_handler.py` | 10 | 229 |
+| `tests/handlers/test_suggerimenti.py` | 4 | 107 |
+| `tests/adapters/test_supabase.py` | 37 | 502 |
 | `tests/adapters/test_google_provider.py` | 6 | 63 |
-| **Totale** | **213** | **2.369** |
+| **Totale** | **188** | **2.243** |
 
-Più `conftest.py` (139) e `fakes.py` (65), che non contengono test.
+Più `conftest.py` (174) e `fakes.py` (235), che non contengono test.
 
-Nessun `@pytest.mark.parametrize` nel repo: **il conteggio dei `def test_`
-coincide con quello che pytest raccoglie.** Il gate in `docs.yml` usa comunque
-`pytest --collect-only`, così il primo test parametrizzato non farà mentire
-questo file per difetto.
+**L'accesso si prova con token veri.** `fakes.ChiaviFinte` genera una coppia
+ES256 per la sessione di pytest, e `conftest.intestazioni_utente()` firma con
+quella i token che gli handler verificano: stessa libreria, stesse
+rivendicazioni della produzione. `test_handlers.py` prova i modi noti di
+spacciarsi per qualcun altro — HS256 con il `kid` giusto, `alg: none`, un altro
+emittente, un altro pubblico, i ruoli `anon` e `service_role`, un accesso anonimo,
+un `kid` sconosciuto — e il 503 quando le chiavi di Supabase non si raggiungono.
+
+**L'adapter di Supabase si prova senza rete**, con `httpx.MockTransport`: si
+guarda cosa chiede (l'indirizzo, il filtro `utente_id`, il token di chi chiama) e
+come traduce le risposte. Che l'RLS faccia il suo lavoro non lo dice questo
+file: lo dicono i test pgTAP.
+
+**Ci sono dei `@pytest.mark.parametrize`** (`test_supabase.py`: gli errori di
+PostgREST, i JWKS malformati): da qui il conteggio dei `def test_` non coincide più
+con quello che pytest raccoglie. Il gate in `docs.yml` usa `pytest --collect-only` proprio per
+questo giorno: il numero sopra è quello raccolto.
 
 ## Backend — cosa non lo è, e perché
 
-Il 74% totale (73,51% esatto) è una media che nasconde la forma vera:
-
 | Area | Coverage | Istruzioni |
 |---|---:|---:|
-| `src/domain/` | **98%** (97,85) | 746, di cui 16 scoperte |
-| `src/handlers/` | **73%** — **93%** (93,03) senza `local_server.py` | 579, di cui 152 scoperte |
-| `src/adapters/` | **40%** | 551, di cui 329 scoperte |
+| `src/domain/` | **99%** (99,73) | 733, di cui 2 scoperte |
+| `src/handlers/` | **81%** — **98%** (98,20) senza `local_server.py` | 338, di cui 65 scoperte |
+| `src/adapters/` | **70%** | 467, di cui 141 scoperte |
 
 **A zero:**
 
 | File | Istruzioni | Cos'è |
 |---|---:|---|
-| `src/adapters/postgres.py` | 123 | **il percorso dati che gira in produzione.** Tutti i 213 test girano su `ArchivioInMemoria` (97%) |
-| `src/handlers/local_server.py` | 120 | la tabella `ROTTE` e il dispatch: il codice che serve ogni richiesta sul VPS |
-| `src/adapters/filesystem.py` | 57 | le foto su disco |
+| `src/handlers/local_server.py` | 60 | la tabella `ROTTE` e il dispatch: il codice che serve ogni richiesta sul VPS |
 | `src/adapters/scontorno/fal_provider.py` | 25 | lo scontorno via fal.ai |
 
-I provider LLM stanno fra il 38% e il 61%: è coperta la costruzione del prompt,
-non la chiamata.
+I provider LLM stanno fra il 38% e il 64%: è coperta la costruzione del prompt,
+non la chiamata. `adapters/supabase.py` è al 99%: restano fuori tre righe, la
+creazione del pool vero e un errore di Supabase con un corpo che non è JSON.
 
 **Non è un incidente: è la stessa separazione che il linter impone.** Il dominio è
 puro e quindi testabile offline; gli adapter fanno I/O e non lo sono senza
@@ -85,11 +99,14 @@ violata»*.
 
 Per questo **non c'è una soglia su `adapters/`**: imporla spingerebbe verso mock
 della SDK, cioè verso il contrario di quello che quella separazione ottiene. Il
-40% si dichiara qui, fra i debiti, che è il posto giusto per un numero che non si
+70% si dichiara qui, fra i debiti, che è il posto giusto per un numero che non si
 vuole difendere.
 
-Il punto non è alzare la media: è **sapere** che il percorso dati in produzione
-non è coperto da nessun test.
+**Quello che nessun job prova, e va saputo: gli adapter contro un Supabase vero.**
+`test_supabase.py` guarda le richieste, pgTAP guarda il database, ma che una riga
+scritta da `riga_da_capo` passi i CHECK della tabella vera lo ha provato solo un
+E2E a mano sullo stack locale (due utenti, `docs/PROGRESS.md`). Il
+rimedio è `T-18` in `docs/DA_FARE.md`.
 
 ## App — cosa è coperto
 
@@ -187,28 +204,27 @@ In `@testing-library/react-native` 14 **`render` restituisce una Promise**: i
 test sono `async` e fanno `await render(...)`. Senza `await` le query non
 esistono ancora e l'errore che si legge è `getByText is not a function`.
 
-## Rilevazione del 2026-09-09 — run `34321516325`
+## Rilevazione del 2026-09-27 — in locale, `feat/supabase-fase-2`
 
-`163 passed in 7.60s` · `TOTAL 1876 497 74%` — il totale esatto è **73,51%**,
-ed è quello che `fail_under` confronta: la tabella arrotonda, il gate no.
+`188 passed` · `TOTAL 1538 208 86%` — il totale esatto è **86,48%**, ed è quello
+che `fail_under` confronta: la tabella arrotonda, il gate no. Misurata in locale,
+prima della PR: la run della CI la sostituirà qui.
 
-I numeri per modulo di questa sezione vengono da quella run. **Sono datati di
+Le soglie sono salite con questa misura, come vuole il cricchetto: il totale da 73
+a 85, `domain/` da 97 a 99, `handlers/` da 92 a 97 — ognuna un punto sotto il
+rilevato arrotondato.
+
+I numeri per modulo di questa sezione vengono da quella misura. **Sono datati di
 proposito e non sono gatati**: gatare una percentuale per modulo farebbe fallire
 ogni PR che la sposta di mezzo punto, e un gate che fa rumore viene disattivato.
 
 | Modulo | Coverage |
 |---|---:|
-| `domain/models.py`, `ports.py`, `chat.py`, `firma_foto.py`, `segnalazioni.py` | 100% |
+| `domain/accesso.py`, `chat.py`, `errors.py`, `esportazione.py`, `models.py`, `ports.py`, `wardrobe.py` | 100% |
 | `domain/stylist.py`, `domain/vision.py` | 98% |
-| `domain/wardrobe.py` | 95% |
-| `domain/autenticazione.py` | 93% |
-| `domain/errors.py` | 90% |
-| `handlers/chat.py`, `foto.py`, `health.py`, `segnalazioni.py`, `suggerimenti.py`, `_foto_capo.py` | 100% |
-| `handlers/auth.py` | 97% |
-| `handlers/_http.py`, `outfit.py` | 92% |
-| `handlers/capi.py`, `analisi.py` | 90-91% |
-| `handlers/profilo.py` | 81% |
-| `handlers/_container.py` | 79% |
-| `adapters/memory.py` | 97% |
+| `handlers/analisi.py`, `chat.py`, `esportazione.py`, `health.py`, `suggerimenti.py` | 100% |
+| `handlers/_http.py` | 98% |
+| `handlers/_container.py` | 91% |
+| `adapters/supabase.py` | 99% |
 | `adapters/llm/*` | 38-64% |
-| `adapters/postgres.py`, `filesystem.py`, `scontorno/fal_provider.py`, `handlers/local_server.py` | **0%** |
+| `adapters/scontorno/fal_provider.py`, `handlers/local_server.py` | **0%** |

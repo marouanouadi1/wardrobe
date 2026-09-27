@@ -1,11 +1,14 @@
-"""POST /chat, GET /chat, /chat/conversazioni — la chat vera dello stilista.
+"""POST /chat — la chat vera dello stilista.
 
 Sullo stesso armadio vero di /suggerimenti, ma con memoria e con la voce:
 ogni messaggio si aggiunge alla cronologia della sua conversazione, il
 modello la rivede prima di rispondere, e può rispondere a parole — non solo
 con una lista di outfit. Più conversazioni per utente, dalla decisione
-registrata in docs/adr/0006-lo-storico-della-chat.md — prima ce n'era una
-sola, continua.
+registrata in docs/adr/0006-lo-storico-della-chat.md.
+
+Lo storico e l'elenco delle conversazioni l'app li legge da sé da Supabase
+(ADR 0010); qui resta solo il turno che chiede il modello, e lo si scrive con il
+token di chi chiama: una conversazione di un altro, per lui, non esiste.
 """
 
 from __future__ import annotations
@@ -23,8 +26,6 @@ from domain.chat import (
 from domain.errors import ConversazioneNonTrovata
 from domain.models import (
     ConversazioneChat,
-    ElencoConversazioniChat,
-    ElencoMessaggiChat,
     MessaggioChat,
     RichiestaMessaggioChat,
     RispostaChat,
@@ -32,59 +33,10 @@ from domain.models import (
 )
 from domain.stylist import costruisci_contesto
 from handlers._container import generatore_id, orologio, repository
-from handlers._http import Evento, Risposta, corpo, endpoint, ok, parametro, utente_id
+from handlers._http import Evento, Risposta, corpo, endpoint, ok, sessione
 
 PROVIDER_DEFAULT = os.environ.get("PROVIDER_STILISTA", "anthropic")
 MODELLO_DEFAULT = os.environ.get("MODELLO_STILISTA", "")
-
-
-@endpoint
-def elenca(evento: Evento) -> Risposta:
-    """GET /chat — l'ultima conversazione, con i suoi messaggi. Vuota se
-    l'utente non ne ha ancora nessuna."""
-    utente = utente_id(evento)
-    conversazioni = repository().elenca_conversazioni_chat(utente)
-    if not conversazioni:
-        return ok(ElencoMessaggiChat(messaggi=[], conversazione=None))
-
-    ultima = conversazioni[0].conversazione
-    messaggi = repository().elenca_messaggi_chat(utente, ultima.id)
-    return ok(ElencoMessaggiChat(messaggi=messaggi, conversazione=ultima))
-
-
-@endpoint
-def elenca_conversazioni(evento: Evento) -> Risposta:
-    """GET /chat/conversazioni — l'elenco delle conversazioni, dalla più recente."""
-    utente = utente_id(evento)
-    return ok(ElencoConversazioniChat(conversazioni=repository().elenca_conversazioni_chat(utente)))
-
-
-@endpoint
-def leggi_conversazione(evento: Evento) -> Risposta:
-    """GET /chat/conversazioni/{conversazioneId} — i messaggi di una
-    conversazione specifica. 404 se non esiste o non è di chi chiama."""
-    utente = utente_id(evento)
-    conversazione_id = parametro(evento, "conversazioneId")
-    conversazione = repository().leggi_conversazione_chat(utente, conversazione_id)
-    if conversazione is None:
-        raise ConversazioneNonTrovata(conversazione_id)
-
-    messaggi = repository().elenca_messaggi_chat(utente, conversazione_id)
-    return ok(ElencoMessaggiChat(messaggi=messaggi, conversazione=conversazione))
-
-
-@endpoint
-def elimina_conversazione(evento: Evento) -> Risposta:
-    """DELETE /chat/conversazioni/{conversazioneId} — la conversazione e i
-    suoi turni, insieme."""
-    utente = utente_id(evento)
-    conversazione_id = parametro(evento, "conversazioneId")
-    conversazione = repository().leggi_conversazione_chat(utente, conversazione_id)
-    if conversazione is None:
-        raise ConversazioneNonTrovata(conversazione_id)
-
-    repository().elimina_conversazione_chat(utente, conversazione_id)
-    return ok(None, 204)
 
 
 @endpoint
@@ -103,23 +55,24 @@ def invia(evento: Evento) -> Risposta:
     """
     from adapters.llm.registry import provider_per_nome
 
+    chi = sessione(evento)
     richiesta = corpo(evento, RichiestaMessaggioChat)
-    utente = utente_id(evento)
+    deposito = repository(chi)
+    # L'ora in cui la domanda arriva, prima del modello: il turno dell'utente
+    # porta questa, quello dello stilista l'ora della risposta. Con la stessa
+    # ora per entrambi, l'ordine dei due nello storico sarebbe un pareggio.
+    arrivata_il = orologio().adesso()
 
     conversazione_esistente: ConversazioneChat | None = None
     if richiesta.conversazione_id:
-        conversazione_esistente = repository().leggi_conversazione_chat(
-            utente, richiesta.conversazione_id
-        )
+        conversazione_esistente = deposito.leggi_conversazione_chat(richiesta.conversazione_id)
         if conversazione_esistente is None:
             raise ConversazioneNonTrovata(richiesta.conversazione_id)
 
-    capi = repository().elenca_capi(utente)
-    profilo = repository().leggi_profilo(utente)
+    capi = deposito.elenca_capi()
+    profilo = deposito.leggi_profilo()
     precedenti = (
-        repository().elenca_messaggi_chat(utente, conversazione_esistente.id)
-        if conversazione_esistente
-        else []
+        deposito.elenca_messaggi_chat(conversazione_esistente.id) if conversazione_esistente else []
     )
 
     contesto = costruisci_contesto(
@@ -148,37 +101,37 @@ def invia(evento: Evento) -> Risposta:
     # scrivere, sia la conversazione sia i suoi due turni.
     risposta_stilista = interpreta_risposta_chat(risposta_llm.testo, capi)
 
-    adesso = orologio().adesso()
-    conversazione = repository().salva_conversazione_chat(
-        utente,
-        (
-            conversazione_esistente.model_copy(update={"ultimo_turno_il": adesso})
-            if conversazione_esistente
-            else ConversazioneChat(
+    risposta_il = orologio().adesso()
+    conversazione = conversazione_esistente or deposito.crea_conversazione_chat(
+        ConversazioneChat(
+            id=generatore_id().nuovo(),
+            titolo=titolo_da_primo_messaggio(richiesta.testo),
+            creata_il=arrivata_il,
+            ultimo_turno_il=arrivata_il,
+        )
+    )
+
+    messaggio_utente, messaggio_wardrobe = deposito.salva_messaggi_chat(
+        conversazione.id,
+        [
+            MessaggioChat(
                 id=generatore_id().nuovo(),
-                titolo=titolo_da_primo_messaggio(richiesta.testo),
-                creata_il=adesso,
-                ultimo_turno_il=adesso,
-            )
-        ),
+                ruolo=RuoloChat.UTENTE,
+                testo=richiesta.testo,
+                creato_il=arrivata_il,
+            ),
+            MessaggioChat(
+                id=generatore_id().nuovo(),
+                ruolo=RuoloChat.WARDROBE,
+                testo=risposta_stilista.risposta,
+                suggerimenti=risposta_stilista.proposte,
+                creato_il=risposta_il,
+            ),
+        ],
     )
-
-    messaggio_utente = MessaggioChat(
-        id=generatore_id().nuovo(),
-        ruolo=RuoloChat.UTENTE,
-        testo=richiesta.testo,
-        creato_il=adesso,
-    )
-    repository().salva_messaggio_chat(utente, conversazione.id, messaggio_utente)
-
-    messaggio_wardrobe = MessaggioChat(
-        id=generatore_id().nuovo(),
-        ruolo=RuoloChat.WARDROBE,
-        testo=risposta_stilista.risposta,
-        suggerimenti=risposta_stilista.proposte,
-        creato_il=adesso,
-    )
-    repository().salva_messaggio_chat(utente, conversazione.id, messaggio_wardrobe)
+    # Il trigger sul messaggio ha spostato in cima la conversazione: la si
+    # rilegge, così la risposta porta l'`ultimo_turno_il` vero.
+    conversazione = deposito.leggi_conversazione_chat(conversazione.id) or conversazione
 
     return ok(
         RispostaChat(
