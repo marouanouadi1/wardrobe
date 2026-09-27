@@ -5,7 +5,7 @@
 > modulo citato da un ADR può non esistere più. Prima di dare per esistente — o per
 > inesistente — qualunque cosa, si apre questo file.
 
-**Ultimo aggiornamento:** 2026-09-23
+**Ultimo aggiornamento:** 2026-09-27
 
 > ### Sulla provenienza di questa prima versione
 >
@@ -120,7 +120,10 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
 - [~] **L'armadio sulla disposizione del deck** — `(tabs)/armadio.tsx` con
       griglia a tre colonne quadrate, due righe di filtri (categoria + qualità,
       un filtro per dimensione), `CasellaAggiungi` dentro la griglia, conteggio
-      sotto, due stati vuoti distinti, fondo `freddo`. Nuove in `ui/capi.tsx`:
+      sotto, fondo `freddo`. Lo stato vuoto è uno solo, ad armadio vuoto: se i
+      filtri non lasciano passare niente resta la griglia con la sola
+      `CasellaAggiungi` (scelta dell'utente del 2026-09-27; prima c'era una card
+      «Niente in …»). Nuove in `ui/capi.tsx`:
       `CapoInGriglia` riscritta (vetro, `contain`, cuore, nome sotto) e
       `CasellaAggiungi`; `Pillola` ha la variante `compatta`.
       *Verificato:* `typecheck`, `lint`, `mobile:test` e `build:web` verdi.

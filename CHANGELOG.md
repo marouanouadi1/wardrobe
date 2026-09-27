@@ -18,6 +18,9 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **Nell'armadio il quadratino «+» c'è sempre**, anche in una categoria
+  ancora senza capi: al posto della card «Niente in accessorio» (e simili) resta
+  la griglia con la sola casella per aggiungerne uno.
 - **In chat la tastiera non copre più quello che scrivi**: il contenuto sale
   sopra la tastiera e la conversazione resta ancorata in fondo, col campo
   appena sopra. Vale per ogni schermata, non solo la chat; e il bottone
