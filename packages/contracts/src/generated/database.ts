@@ -499,7 +499,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      svuota_armadio: { Args: { conferma: string }; Returns: Json }
+      svuota_armadio: {
+        Args: { conferma: string }
+        Returns: {
+          capi: number
+          conversazioni: number
+          outfit: number
+          usi_registrati: number
+        }[]
+      }
     }
     Enums: {
       attributo_capo:

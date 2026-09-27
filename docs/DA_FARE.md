@@ -402,7 +402,17 @@ pannello, e niente verifica che ci siano:
 - esposti solo gli schemi `public` e `graphql_public`, e lo stato di `pg_graphql`;
 - i JWT firmati con chiavi asimmetriche (JWKS), non col segreto condiviso.
 - gli accessi anonimi **spenti**: un token anonimo ha `role` e `aud` `authenticated`
-  come tutti, e il backend lo rifiuta solo perché lo controlla (`is_anonymous`, fase 2).
+  come tutti, e il backend lo rifiuta solo perché lo controlla (`is_anonymous`, fase 2);
+- il codice via email **di 8 cifre** e la sua scadenza, che i template dicono di un'ora
+  (`otp_length`, `otp_expiry`): è il solo freno ai tentativi, oltre al limite per IP
+  (audit della fase 3);
+- i **quattro template** con il codice (`supabase/templates/`): conferma, codice
+  d'accesso (`magic_link`), recupero, riautenticazione. Senza, arriva un link che l'app
+  non sa aprire;
+- un **SMTP proprio**: dalla fase 3 serve a **ogni registrazione**, non solo al recupero.
+  Senza, il codice arriva solo ai membri del team, due volte all'ora;
+- il provider **Google** acceso, con il client Web primo in «Client IDs», e su Google
+  Cloud un client Android con lo SHA-1 della chiave EAS (`src/dati/google.ts`).
 
 **Il rimedio:** un job che legga la configurazione Auth del progetto collegato con la
 Management API, in sola lettura, e diventi rosso se una di queste non vale. Serve un token
@@ -430,8 +440,13 @@ CHECK di lunghezza per colonna, con i valori che l'app già non supera.
 **Trovato il:** 2026-09-25 (audit di `security`, fase 1) · **Dove:** `public.svuota_armadio`, `on delete cascade` su `auth.users` · **Gravità:** bassa · **Chi:** `mobile` (svuotamento), `api` (account)
 
 Le righe spariscono nel database; i file nello Storage no, perché sono un altro servizio.
-Per lo svuotamento il piano li fa togliere al modulo dati dell'app subito dopo la RPC
-(fase 3). Per la cancellazione dell'account non c'è ancora niente: oggi l'app non la offre,
+**Lo svuotamento è sistemato nella fase 3**: `svuotaArmadio` (`apps/mobile/src/dati/supabase.ts`)
+chiama la RPC e poi toglie **tutta la cartella** `{utente}/capi/`, comprese le foto di
+analisi fallite che nessuna riga ricorda. In quest'ordine, così a metà strada restano al
+più dei file che nessuno vede, mai dei capi senza foto; e se una foto non si toglie la
+schermata lo dice, e rilanciare lo svuotamento finisce il lavoro. Resta la foto
+dell'avatar, perché il profilo resta. Per la cancellazione dell'account non c'è
+ancora niente: oggi l'app non la offre,
 e il giorno che la offrirà deve togliere anche la cartella `{utente_id}/` dei due bucket.
 Lo zip dell'esportazione, che dalla fase 2 resta nel bucket `esportazioni`, è `Q-15`.
 
@@ -504,7 +519,9 @@ PR sua su `main`, quando l'utente lo decide (un merge su `main` è un rilascio).
 Per la specifica Fetch il jolly di `access-control-allow-headers` **non** comprende
 `Authorization`: sul web una richiesta con il token può cadere al preflight. C'era già
 prima; conta dalla fase 3, quando l'app web manderà il token di Supabase al backend.
-**Da verificare nel browser**, poi: `authorization, content-type` scritti per nome.
+**Il rimedio c'è dalla fase 3**: `authorization, content-type` scritti per nome in
+`_rispondi`. **Manca la verifica nel browser**, con l'app web che manda il token al backend:
+fatta quella, la voce si chiude.
 
 ### T-62 — In sviluppo l'indirizzo firmato dell'esportazione nasce da `127.0.0.1`
 **Trovato il:** 2026-09-27 (review della fase 2) · **Dove:** `ArchivioSupabase.firma_lettura`, `scripts/dev.sh` · **Gravità:** bassa, solo sviluppo · **Chi:** `api`, `mobile` nella fase 3
@@ -514,6 +531,42 @@ prima; conta dalla fase 3, quando l'app web manderà il token di Supabase al bac
 `HOST_LOCALE`. Non basta cambiare `SUPABASE_URL` con l'IP della LAN: è anche l'emittente
 dei token, e lo stack locale li firma con `127.0.0.1`. Il rimedio va scelto nella fase 3,
 quando il telefono parlerà con lo stack locale.
+
+### T-63 — Il giorno che arriva iOS: tre cose che oggi valgono solo per Android
+**Trovato il:** 2026-09-27 (fase 3 di ADR 0010) · **Dove:** `apps/mobile/src/dati/sessione-archivio.ts`, `src/dati/google.ts`, `app.json`, `src/ui/guscio.tsx` (`PiedeAccesso`) · **Gravità:** bloccante per iOS, nulla oggi · **Chi:** `mobile`
+
+1. **La sessione nel portachiavi.** Sta in `expo-secure-store`, cifrata, per scelta. Su
+   iOS alcune versioni rifiutano valori sopra circa 2 KB, e una sessione con l'identità
+   Google li supera. Il rimedio indicato da auth-js è `userStorage` (i token nel
+   portachiavi, l'utente altrove), oggi sperimentale.
+2. **Il config plugin di google-signin** non c'è in `app.json`: senza opzioni configura
+   Firebase, e con le opzioni tocca solo iOS. Per iOS torna, con il suo `iosUrlScheme`
+   (`com.googleusercontent.apps.…`) e un client iOS su Google Cloud.
+3. **«Continua con Apple»** è spento col motivo in `PiedeAccesso`. Su iOS Apple lo
+   pretende, se c'è un accesso con Google (App Store Review Guidelines 4.8).
+
+E un rischio che vale anche per Android: la libreria gratuita di google-signin poggia
+sull'SDK di Google Sign-In che Google ha dichiarato superato. Il ripiego è una libreria
+su Credential Manager, e allora il nonce diventa obbligatorio (`src/dati/google.ts`).
+
+### T-64 — Due giorni ancora in UTC, e tre cose trovate di passaggio nella review della fase 3
+**Trovato il:** 2026-09-27 (review della fase 3; tutte c'erano già prima) · **Gravità:** bassa · **Chi:** `mobile`
+
+- **`quandoUsato`** (`src/dati/dominio.ts`) conta i giorni fra un `AAAA-MM-GG` letto come
+  mezzanotte UTC e l'ora di adesso: dalle 14 in poi, con l'ora legale, un capo segnato
+  oggi risulta usato «ieri». E `app/calendario.tsx` fa `new Date(ultimo_uso)`, giusto solo
+  a est di Greenwich. Il rimedio è quello di `dormiente`: giorni locali come stringhe,
+  con `giornoLocale()`.
+- **`applica`** (`src/dati/archivio.tsx`) non torna indietro quando la chiamata fallisce,
+  mentre il docblock in cima al file dice che lo fa: mostra l'avviso e lascia il valore
+  ottimistico.
+- **`salvaProfilo`** riscrive la riga intera (`aggiornamentoDiProfilo`): due telefoni che
+  salvano cose diverse si cancellano a vicenda. Con Supabase un aggiornamento dei soli
+  campi cambiati è facile.
+- **La foto vecchia dell'avatar** resta nello Storage a ogni cambio.
+- **`app/calendario.tsx` e `app/capo/[id].tsx`** dicono che gli usi non si leggono e che un
+  capo non si cancella «perché non c'è un backend»: dalla fase 3 l'RLS lo permette all'app.
+  Non è un difetto: è una premessa caduta, da rileggere quando si toccano quelle schermate.
 
 ### T-50 — `rsync` senza `--delete`: sul VPS restano migrazioni che il repo non ha più
 **Trovato il:** 2026-09-16 · **Dove:** `.github/workflows/api.yml` (step «Rsync codice sul VPS»), `docs/deploy.md` · **Gravità:** media · **Chi:** `ci-cd`
@@ -680,8 +733,8 @@ disponibile»*.
 
 **Cosa è stato fatto, perché è vero.** La schermata dice «La foto ce l'ho già:
 riprovare non la ricarica», e il bottone «Riprova» chiama `analizzaCaricata`,
-che riparte da `avviaAnalisi` sulla chiave esistente. La foto **è** sul server:
-sale per URL firmato prima che il modello la guardi.
+che riparte dall'analisi sulla chiave esistente. La foto **è** nello Storage:
+sale lì prima che il modello la guardi (fase 3 di ADR 0010).
 
 **Cosa non è stato fatto, e perché non è stato scritto lo stesso.** Il tentativo
 *automatico* «appena il servizio torna» non ha niente dietro: non esiste una

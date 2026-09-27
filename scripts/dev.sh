@@ -112,6 +112,11 @@ unset STATO
   exit 1
 }
 export SUPABASE_URL SUPABASE_CHIAVE_PUBBLICA
+# Anche l'app parla con lo stack locale (`src/dati/supabase.ts`): la chiave le
+# arriva da qui. L'indirizzo no — l'app lo ricava dall'host del bundle, come
+# quello dell'API, perché un telefono sulla rete di casa non raggiunge
+# `127.0.0.1`.
+export EXPO_PUBLIC_SUPABASE_CHIAVE_PUBBLICA="${EXPO_PUBLIC_SUPABASE_CHIAVE_PUBBLICA:-$SUPABASE_CHIAVE_PUBBLICA}"
 
 # ---------------------------------------------------------- livello 1: API
 

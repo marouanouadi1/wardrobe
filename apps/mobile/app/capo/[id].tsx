@@ -28,6 +28,7 @@ import {
   fotoDaMostrare,
   quandoUsato,
 } from '../../src/dati/dominio'
+import { giornoLocale } from '../../src/dati/righe'
 import { ETICHETTE, colori, durate, linee, raggi, spazi, superfici, velo } from '../../src/tema/tokens'
 import { BadgeIa, BottonePrimario, BottoneTondo, Campo, Pillola, Scheda, Toccabile } from '../../src/ui/base'
 import { Attributo, Miniatura, SchedaFoto } from '../../src/ui/capi'
@@ -122,7 +123,9 @@ export default function DettaglioCapo() {
   const altriCapi = capi.filter((altro) => altro.slot !== capo.slot).slice(0, 6)
   // «Segnato per oggi» si legge dal dato vero, non da uno stato locale: se
   // rientri nella schermata il segno è ancora lì.
-  const messoOggi = capo.ultimo_uso?.slice(0, 10) === new Date().toISOString().slice(0, 10)
+  // Il giorno locale, come quello che scrive `segna_indossato`: con quello UTC,
+  // fra mezzanotte e le due il capo appena segnato risultava ancora da segnare.
+  const messoOggi = capo.ultimo_uso?.slice(0, 10) === giornoLocale()
 
   return (
     <Schermata
@@ -167,7 +170,7 @@ export default function DettaglioCapo() {
             dell'armadio — un cappotto lungo tagliato a metà non si riconosce,
             e questa è la schermata dove il capo si guarda davvero. */}
         <Image
-          source={{ uri: fotoDaMostrare(capo) }}
+          source={fotoDaMostrare(capo)}
           style={{ width: '100%', height: 330 }}
           contentFit="contain"
           transition={durate.breve}

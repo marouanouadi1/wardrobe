@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import StrEnum
-from typing import Annotated, Final, Literal
+from typing import Annotated, Final
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -468,64 +468,6 @@ class Profilo(ModelloWardrobe):
     creato_il: datetime
 
 
-class FiltroArmadio(ModelloWardrobe):
-    tipo: TipoCapo | None = None
-    stato: StatoCapo | None = None
-    solo_preferiti: bool = False
-    testo: str | None = None
-
-
-class ElencoCapi(ModelloWardrobe):
-    capi: list[Capo]
-    totale: int
-
-
-class RiepilogoArmadio(ModelloWardrobe):
-    totale: int
-    da_lavare: int
-    dormienti: int
-    valore_dormiente_eur: float | None = None
-
-
-class UploadFirmato(ModelloWardrobe):
-    """Risposta all'app prima che carichi la foto: l'upload va diretto
-    all'archivio foto, senza passare dal backend."""
-
-    chiave: str
-    url: str
-    metodo: str = "PUT"
-    intestazioni: dict[str, str] = Field(default_factory=dict)
-    scade_in_s: int
-
-
-class RichiestaUpload(ModelloWardrobe):
-    content_type: str
-    nota: str | None = None
-
-
-class Credenziali(ModelloWardrobe):
-    """Il corpo di POST /auth/accedi. Nessun requisito sulla password: qui
-    deve solo passare a `bcrypt.checkpw`, non essere accettabile — quello
-    vincolo vive in `Registrazione`, non qui, altrimenti un account creato
-    quando il minimo era più basso non potrebbe più accedere."""
-
-    email: str
-    password: str
-
-
-class Registrazione(ModelloWardrobe):
-    """Il corpo di POST /auth/registrati. L'allowlist (`EMAIL_AMMESSE`) e il
-    hash della password li applica `handlers/auth.py`; qui c'è solo la forma
-    del dato, non la sua ammissibilità."""
-
-    email: str
-    password: str = Field(min_length=8)
-
-
-class TokenAccesso(ModelloWardrobe):
-    token: str
-
-
 class RichiestaAnalisi(ModelloWardrobe):
     chiave_foto: str
     provider: str | None = None
@@ -538,50 +480,11 @@ class StatoAnalisi(StrEnum):
     FALLITA = "fallita"
 
 
-class AnalisiAvviata(ModelloWardrobe):
-    """L'app riceve un identificativo e interroga lo stato: l'analisi è lenta.
-
-    Tenerla asincrona è ciò che permette il caricamento in blocco di venti foto
-    senza che l'app resti appesa a una richiesta HTTP di quaranta secondi.
-    """
-
-    esecuzione_id: str
-    stato: StatoAnalisi = StatoAnalisi.IN_CORSO
-
-
 class EsitoAnalisi(ModelloWardrobe):
     esecuzione_id: str
     stato: StatoAnalisi
     capo: Capo | None = None
     errore: str | None = None
-
-
-class CorrezioniCapo(ModelloWardrobe):
-    """Le correzioni dell'utente, una per attributo, tutte tipizzate.
-
-    Volutamente non è `dict[str, str]`: correggere il colore significa mandare
-    nome più hex, e il tipo deve stare nell'enum. Un dizionario di stringhe
-    farebbe passare «maglietta» come tipo e lo scopriremmo sull'avatar.
-    """
-
-    tipo: TipoCapo | None = None
-    colore: Colore | None = None
-    materiale: str | None = None
-    fantasia: str | None = None
-    stagione: Stagione | None = None
-    vestibilita: str | None = None
-    lavaggio: str | None = None
-
-
-class AggiornamentoCapo(ModelloWardrobe):
-    correzioni: CorrezioniCapo = CorrezioniCapo()
-    nome: str | None = None
-    preferito: bool | None = None
-    stato: StatoCapo | None = None
-    # `None` vuol dire «non toccare»: per svuotare le etichette manda una lista
-    # vuota esplicita, per svuotare gli appunti manda una stringa vuota.
-    etichette: list[str] | None = None
-    appunti: str | None = None
 
 
 class RichiestaSuggerimenti(ModelloWardrobe):
@@ -625,27 +528,14 @@ class ConversazioneChat(ModelloWardrobe):
 
     Rispecchia esattamente le colonne di `conversazioni_chat` — niente qui
     dentro che l'adapter debba inventare per poterla salvare. `turni` e
-    `anteprima`, che servono solo all'elenco, vivono in
-    `VoceElencoConversazioni`, non qui.
+    `anteprima`, che servono solo all'elenco, li calcola la vista
+    `conversazioni_elenco` del database, che l'app legge da sé.
     """
 
     id: str
     titolo: str
     creata_il: datetime
     ultimo_turno_il: datetime
-
-
-class VoceElencoConversazioni(ModelloWardrobe):
-    """`ConversazioneChat` più ciò che solo l'elenco calcola — un aggregato
-    su `messaggi_chat`, non colonne proprie di `conversazioni_chat`."""
-
-    conversazione: ConversazioneChat
-    turni: int
-    anteprima: str
-
-
-class ElencoConversazioniChat(ModelloWardrobe):
-    conversazioni: list[VoceElencoConversazioni]
 
 
 class RichiestaMessaggioChat(ModelloWardrobe):
@@ -668,11 +558,6 @@ class RispostaChat(ModelloWardrobe):
     latenza_ms: int
 
 
-class ElencoMessaggiChat(ModelloWardrobe):
-    messaggi: list[MessaggioChat]
-    conversazione: ConversazioneChat | None = None
-
-
 class Segnalazione(ModelloWardrobe):
     """La copia che l'app tiene di una segnalazione già inviata a Sentry
     (vedi `apps/mobile/src/dati/segnalazioni.ts`, `apriSegnalazione()`).
@@ -688,30 +573,6 @@ class Segnalazione(ModelloWardrobe):
     stato: StatoSegnalazione = StatoSegnalazione.RICEVUTA
     creata_il: datetime
     aggiornata_il: datetime
-
-
-class NuovaSegnalazione(ModelloWardrobe):
-    testo: str = Field(min_length=1)
-
-
-class AggiornamentoSegnalazione(ModelloWardrobe):
-    stato: StatoSegnalazione
-
-
-class ElencoSegnalazioni(ModelloWardrobe):
-    segnalazioni: list[Segnalazione]
-    # Chi è nell'allowlist EMAIL_AMMINISTRATORI vede le segnalazioni di tutti
-    # (non solo le proprie) e può cambiarne lo stato: l'app usa questo flag
-    # per decidere se mostrare i controlli di stato, invece di indovinarlo
-    # confrontando gli utente_id delle righe.
-    amministratore: bool = False
-
-
-class NuovoOutfit(ModelloWardrobe):
-    nome: str
-    vestizione: Vestizione
-    occasione: str | None = None
-    origine: OrigineOutfit = OrigineOutfit.MANUALE
 
 
 class ModelloDisponibile(ModelloWardrobe):
@@ -773,41 +634,6 @@ class ContenutoEsportazione(ModelloWardrobe):
     outfit: list[Outfit] = Field(default_factory=list)
     conversazioni: list[ConversazioneEsportata] = Field(default_factory=list)
     segnalazioni: list[Segnalazione] = Field(default_factory=list)
-
-
-class RichiestaSvuotamento(ModelloWardrobe):
-    """Il corpo di `POST /armadio/svuota`.
-
-    **La parola esiste per rendere impossibile l'incidente.** Il tocco sullo
-    schermo è già dietro un campo in cui scrivere «SVUOTA», ma quella è una
-    difesa dell'interfaccia: sparisce con un refresh, un deep-link, un `curl`
-    ricopiato, o una richiesta rimandata due volte dalla libreria di rete. Un
-    `Literal` la porta nel contratto, quindi un `POST` senza intenzione
-    esplicita prende un 422 e non cancella niente — e il tipo TypeScript
-    generato contiene la parola, così non la si ridigita di là.
-    """
-
-    conferma: Literal["SVUOTA"]
-
-
-class ContoSvuotamento(ModelloWardrobe):
-    """Quanto è stato cancellato davvero.
-
-    Non è telemetria: è l'unico modo che ha la persona di sapere che
-    l'operazione ha fatto ciò che prometteva. Un `204 No Content` dopo
-    un'azione irreversibile lascia solo da fidarsi.
-    """
-
-    capi: int
-    outfit: int
-    conversazioni: int
-    #: Righe della tabella `usi`, cioè coppie **capo × giorno** — non giorni.
-    #: Si chiamava `giorni_di_uso` finché una prova su un Postgres vero non ha
-    #: mostrato sei righe dove i giorni erano uno: un nome che conta una cosa
-    #: per un'altra è una bugia che nessun test prende, perché il numero è
-    #: giusto — è l'etichetta a essere sbagliata.
-    usi_registrati: int
-    foto: int
 
 
 class EsportazionePronta(ModelloWardrobe):

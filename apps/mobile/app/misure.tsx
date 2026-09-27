@@ -27,7 +27,7 @@ import type {
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { View } from 'react-native'
-import { api } from '../src/dati/api'
+import { salvaProfilo } from '../src/dati/supabase'
 import { useArmadio } from '../src/dati/archivio'
 import { aCentimetri, daCentimetri, limitiIn, simboloUnita } from '../src/dati/dominio'
 import { useAzione } from '../src/dati/risorsa'
@@ -134,7 +134,7 @@ export default function MisureSchermata() {
       avvisa('Non riesco a leggere il tuo profilo: riprova tra poco.')
       return
     }
-    const salvato = await esegui(() => api.salvaProfilo({ ...profilo, misure }))
+    const salvato = await esegui(() => salvaProfilo({ ...profilo, misure }))
     if (!salvato) {
       avvisa('Non sono riuscito a salvare le misure.')
       return

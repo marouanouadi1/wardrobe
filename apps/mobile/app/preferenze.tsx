@@ -1,8 +1,8 @@
 /**
  * Le preferenze di stile: tre tocchi, dopo il login.
  *
- * Era il terzo passo dell'onboarding, spostato qui perché salva sul backend
- * (`api.salvaProfilo`, che vuole un bearer token) — prima del login non c'è
+ * Era il terzo passo dell'onboarding, spostato qui perché salva il profilo
+ * (`salvaProfilo`, che vuole una sessione) — prima del login non c'è
  * un utente a cui appoggiare quel salvataggio. Un questionario obbligatorio
  * qui perderebbe comunque l'utente: si può saltare, e si può rivedere da
  * Profilo → «Le mie preferenze» in qualunque momento, già precompilato.
@@ -11,7 +11,7 @@
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { View } from 'react-native'
-import { api } from '../src/dati/api'
+import { salvaProfilo } from '../src/dati/supabase'
 import { useArmadio } from '../src/dati/archivio'
 import { useAzione } from '../src/dati/risorsa'
 import { segnaPreferenzeViste } from '../src/dati/intro'
@@ -66,7 +66,7 @@ export default function Preferenze() {
       return
     }
     const salvato = await esegui(() =>
-      api.salvaProfilo({ ...profilo, preferenze: { ...profilo.preferenze, stili: stiliScelti } }),
+      salvaProfilo({ ...profilo, preferenze: { ...profilo.preferenze, stili: stiliScelti } }),
     )
     if (salvato) await ricarica()
     else avvisa('Le preferenze non sono state salvate. Le trovi comunque in Profilo.')

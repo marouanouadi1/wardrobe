@@ -176,6 +176,42 @@ create trigger crea_profilo_alla_registrazione
   after insert on auth.users
   for each row execute function privato.crea_profilo();
 
+-- **Una password scelta prima di dimostrare l'email non sopravvive alla prova.**
+-- La registrazione è aperta a chi è nella lista degli inviti, e l'API di Supabase
+-- accetta una password già alla registrazione, prima della conferma. Senza questo
+-- trigger chi conosce un'email invitata la registra per primo con una password
+-- sua; il titolare poi conferma col codice che arriva a lui, e l'account resta con
+-- la password dell'altro (audit di `security`, fase 3). La conferma è l'unico
+-- momento in cui si sa di chi è l'email: lì la password si toglie, e il titolare
+-- ne sceglie una a sessione aperta (`apps/mobile/app/registrati.tsx`). L'app non
+-- manda mai una password prima del codice.
+--
+-- Vale solo per la **prima** conferma **che segue un codice** (`confirmation_token`
+-- emesso): cioè quando la conferma è la prova di un'email. Un account creato già
+-- confermato dall'API admin — gli utenti importati dalla fase 4 con la loro
+-- password, o Google — viene confermato con un aggiornamento a parte, subito dopo
+-- l'inserimento, ma senza nessun codice emesso: quella password resta.
+create function privato.password_solo_dopo_la_prova()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  new.encrypted_password := '';
+  return new;
+end;
+$$;
+
+create trigger password_solo_dopo_la_prova
+  before update of email_confirmed_at on auth.users
+  for each row
+  when (
+    old.email_confirmed_at is null
+    and new.email_confirmed_at is not null
+    and coalesce(old.confirmation_token, '') <> ''
+  )
+  execute function privato.password_solo_dopo_la_prova();
+
 -- ── capi ───────────────────────────────────────────────────────────────────
 create table public.capi (
   id                         uuid primary key default gen_random_uuid(),
@@ -492,18 +528,16 @@ create trigger esiti_prima_di_aggiornare
 -- Le righe in una transazione, e ognuna solo dell'utente che chiama. Le foto
 -- nello Storage le toglie dopo il modulo dati dell'app: sono un altro servizio,
 -- e non entrano in una transazione del database.
+-- Il conto è una riga con le sue colonne, non un `jsonb`: così `supabase gen
+-- types` ne scrive la forma, e l'app non la ridigita a mano.
 create function public.svuota_armadio(conferma text)
-returns jsonb
+returns table (capi integer, outfit integer, conversazioni integer, usi_registrati integer)
 language plpgsql
 security invoker
 set search_path = ''
 as $$
 declare
   utente uuid := (select auth.uid());
-  capi integer;
-  outfit integer;
-  conversazioni integer;
-  usi integer;
 begin
   if utente is null then
     raise exception using errcode = '42501', message = 'non_autenticato';
@@ -517,7 +551,7 @@ begin
   delete from public.conversazioni_chat c where c.utente_id = utente;
   get diagnostics conversazioni = row_count;
   delete from public.usi u where u.utente_id = utente;
-  get diagnostics usi = row_count;
+  get diagnostics usi_registrati = row_count;
   delete from public.outfit o where o.utente_id = utente;
   get diagnostics outfit = row_count;
   -- Gli esiti di un capo spariscono con lui; questi sono quelli senza capo,
@@ -526,9 +560,7 @@ begin
   delete from public.capi k where k.utente_id = utente;
   get diagnostics capi = row_count;
 
-  return jsonb_build_object(
-    'capi', capi, 'outfit', outfit, 'conversazioni', conversazioni, 'usi_registrati', usi
-  );
+  return next;
 end;
 $$;
 grant execute on function public.svuota_armadio(text) to authenticated;

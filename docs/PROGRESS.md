@@ -674,16 +674,13 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       l'E2E dopo le correzioni: 27 su 27.
 
       **Cosa manca:**
-      - l'app parla ancora con il backend vecchio, e su questo branch non funziona fino
-        alla fase 3: è voluto, `main` non la vede fino al giorno del passaggio;
+      - ~~l'app parla ancora con il backend vecchio~~: fatto nella fase 3, qui sotto;
       - nessun job prova gli adapter contro un Supabase vero: l'E2E qui sopra è stato
         fatto a mano (`T-18`);
       - il modello vero non è stato interrogato: vale quello che dice la sezione
         «Backend» su analisi e suggerimenti;
-      - per la fase 3: `FiltroArmadio` e `RichiestaUpload` non li usa più nessuno, né il
-        backend né l'app, e `tsc` non li segnalerà: vanno tolti per nome. E l'app non ha
-        più bisogno di interrogare l'esito dopo il 202: l'esito si scrive una volta, a
-        lavoro finito, e il 202 porta già lo stato finale;
+      - ~~per la fase 3: `FiltroArmadio` e `RichiestaUpload` vanno tolti~~: tolti nella
+        fase 3, con gli altri modelli delle rotte che non ci sono più;
       - due finding dell'audit **valgono già su `main`** e restano fuori di proposito
         (`T-51`: il corpo letto senza limite; `T-60`: il client sceglie provider e
         modello). Qui arriverebbero solo il giorno X: vanno in una PR loro su `main`;
@@ -707,6 +704,120 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
         innocui, e toglierli tocca il `.env` del server: lo decide l'utente;
       - `rsync` senza `--delete` lascia sul server gli handler e gli adapter tolti
         (`T-50`).
+
+- [~] **Fase 3: l'app su Supabase.** Branch `feat/supabase-fase-3`, PR verso `feat/supabase`.
+      L'app legge e scrive da sé capi, outfit, profilo, chat e segnalazioni, e carica le
+      foto nello Storage. L'accesso passa da Supabase Auth. Il livello dati:
+      - `src/dati/supabase.ts` è l'unico modulo che importa supabase-js per i dati, e
+        `accesso.ts` per l'accesso;
+      - le traduzioni fra righe e modelli stanno in `righe.ts`, con i tipi di `database.ts`;
+      - `api.ts` resta per l'IA, con il token della sessione, e su un 401 rinnova e
+        riprova una volta;
+      - `sessione.tsx` ascolta `onAuthStateChange`, e l'armadio si ricarica quando cambia
+        l'utente, non il token.
+
+      Cosa c'è di nuovo per chi usa l'app:
+      - **registrazione su invito in tre passi**: email, codice via email, password;
+      - **«Password dimenticata?»** con la stessa forma: email, codice, password nuova;
+      - **cambio password** da Impostazioni, con un codice se l'accesso ha più di 24 ore;
+      - **«Continua con Google»**, su Android.
+
+      **Prima si dimostra l'email, poi si sceglie la password.** L'audit ha trovato che, con
+      la password chiesta alla registrazione, chi arrivava per primo su un'email invitata la
+      sceglieva al posto del titolare: il titolare confermava col suo codice, e l'account
+      restava con la password dell'altro. Riprodotto sullo stack locale, e chiuso in due metà:
+      l'app chiede la password solo dopo il codice, e nel database
+      `privato.password_solo_dopo_la_prova` toglie la password alla prima conferma che segue
+      un codice. Un account confermato dall'amministratore senza codice — l'import della
+      fase 4, con la password di Ismail — la tiene.
+
+      Le email portano un codice, non un link (`supabase/templates/`, otto cifre): niente
+      deep link.
+      La sessione sta nel portachiavi del sistema, come il token di prima, e non in chiaro
+      come propongono le guide: il prezzo su iOS è `T-63`.
+
+      E poi:
+      - **svuotamento**: toglie la cartella dei capi dallo Storage, comprese le foto di analisi
+        fallite, e dice se qualcosa è rimasto (`T-59`: resta l'account);
+      - **capi dormienti**: si contano su giorni locali, e a fine mese non scivolano più
+        di tre giorni;
+      - **date**: «l'ho messo oggi» scrive il giorno locale, non quello UTC;
+      - **backend**: `/capi/analisi` restituisce l'esito intero, capo compreso; gli header
+        CORS sono scritti per nome (`T-61`); i modelli delle rotte tolte escono dai
+        contratti; `svuota_armadio` restituisce colonne, non `jsonb`.
+
+      *Verificato* il 2026-09-27, in locale:
+      - `npm run typecheck`, `lint`, `mobile:test` e `build:web` verdi;
+      - `api:lint`, `api:cov`, `contracts:check`, `supabase:test` (100 asserzioni),
+        `supabase:verifica` e `supabase:tipi` verdi;
+      - **i flussi di Auth provocati sullo stack locale**, leggendo i codici da Mailpit:
+        - registrazione su invito e fuori lista;
+        - accesso con email non confermata;
+        - conferma con codice giusto e sbagliato;
+        - recupero con password nuova, stessa password, password corta;
+        - riautenticazione con codice.
+
+        I codici d'errore che `accesso.ts` riconosce sono quelli osservati lì;
+      - **l'attacco della presa di possesso, rifatto dopo il rimedio**: 17 verifiche su 17.
+        L'estraneo registra per primo con una password sua, il titolare passa da email,
+        codice e password, e l'estraneo non entra più; un invitato nuovo entra e sceglie la
+        password; un non invitato è rifiutato anche per codice; il recupero in due tempi
+        regge un primo tentativo fallito; un utente importato già confermato tiene la sua.
+        In pgTAP il trigger è **visto fallire** togliendolo;
+      - **E2E sullo stack locale con due utenti veri**: le operazioni di `supabase.ts` rifatte
+        con supabase-js, 34 verifiche su 34:
+        - caricamento della foto come lo fa l'app;
+        - firma in blocco;
+        - correzione e conferma di un attributo (slot ricalcolato, confidenza a 100, colonne
+          dell'analisi intoccabili);
+        - `segna_indossato`;
+        - outfit indossabile e no;
+        - profilo;
+        - vista delle conversazioni e cancellazione a cascata;
+        - segnalazioni da amministratore e no;
+        - svuotamento con le foto tolte.
+
+        B non vede né tocca niente di A. Pulito alla fine. Rifatto dopo le correzioni con lo
+        svuotamento per cartella: 36 su 36.
+
+      Poi un audit di `security` e una review di `reviewer`. Oltre alla presa di possesso, le
+      correzioni:
+      - un 401 dal backend chiamava `esci()`, che revoca le sessioni ovunque: con un APK
+        puntato al backend sbagliato si usciva un secondo dopo l'accesso. Ora il backend non
+        chiude mai una sessione di Supabase;
+      - chi entrava dopo un'uscita, sullo stesso telefono, vedeva le proposte di chi era
+        uscito: lo store si azzera al cambio d'utente, e un caricamento vecchio si scarta;
+      - il recupero riusava il codice già consumato al secondo tentativo della password;
+      - «oggi» nel dettaglio di un capo si leggeva in UTC;
+      - il limite d'invio del recupero rivelava chi è iscritto (tampone dichiarato in
+        `accesso.ts`);
+      - un outfit non indossabile riceveva un errore generico;
+      - dopo un riavvio «Esci» non usciva da Google;
+      - i test del giorno locale passavano anche col codice sbagliato: il fuso è fissato a
+        Roma, e i tre difetti rimessi nel codice ora li fanno fallire;
+      - la regola «solo `supabase.ts` e `accesso.ts` importano supabase-js» ha un gate in
+        ESLint, visto fallire.
+
+      **Cosa manca:**
+      - **nessuna prova su un telefono**: le schermate le ha viste solo `tsc`, e Google non è
+        mai stato provato. Serve l'ambiente di prova, qui sotto;
+      - il web non carica le foto: `File` di expo-file-system lì è vuoto. Era così anche
+        prima, e il web serve allo sviluppo;
+      - l'esportazione in sviluppo dà un indirizzo su `127.0.0.1` (`T-62`).
+
+      **L'ambiente di prova** (la «prima strada», scelta dall'utente il 2026-09-27):
+      - lo schema sul progetto vero, con `supabase db push`;
+      - il backend nuovo in un secondo container sul VPS;
+      - un APK con un profilo EAS suo. `preview` resta quello del rilascio, e porta già
+        l'indirizzo e la chiave del progetto vero.
+
+      Nel pannello vanno ancora fatti a mano:
+      - l'hook degli inviti, **dopo** il push;
+      - i tre template con il codice (`supabase/templates/`);
+      - il provider Google con il client Web per primo;
+      - gli accessi anonimi spenti.
+
+      Senza un SMTP proprio le email arrivano solo ai membri del team, due all'ora.
 
 ## Infrastruttura e rilascio
 

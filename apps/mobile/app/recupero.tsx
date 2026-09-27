@@ -1,65 +1,54 @@
 /**
- * La registrazione, in tre passi: l'email, il codice che arriva lì, la password.
+ * «Password dimenticata?»: l'email, il codice, la password nuova.
  *
- * **La password viene per ultima, di proposito.** Si sceglie a sessione
- * aperta, dopo che il codice ha dimostrato di chi è l'email: una password
- * accettata prima permetterebbe a chi conosce un'email invitata di sceglierla al
- * posto del titolare (audit di `security`, fase 3; `accesso.ts`).
+ * Per un'email senza account Supabase non manda niente e non lo dice, perché
+ * rispondere diversamente rivelerebbe chi è iscritto. Per questo il passo del
+ * codice si apre per tutti, con le stesse parole: «se c'è un account, ti è
+ * arrivato un codice».
  *
- * Pubblica ma non aperta: la lista degli inviti vive nel database (l'hook di
- * Supabase Auth), non qui — questa schermata non sa in anticipo chi può
- * registrarsi, lo scopre dalla risposta, come qualunque altro errore.
- *
- * **I passi sono stati, non rotte** (`.claude/rules/react-native.md`). Ci si
- * arriva anche dall'accesso con `?conferma=<email>`, quando un account non
- * ancora confermato prova a entrare: allora il codice è già partito, e si parte
- * da lì.
+ * **Il codice e la password sono due passi.** Il codice si consuma quando lo si
+ * verifica, e apre la sessione: se poi la password non va — troppo corta, la
+ * stessa di prima, la rete — si riprova la password, non il codice, che non
+ * varrebbe più. Come in `registrati.tsx`, i passi sono stati di una schermata,
+ * non rotte.
  */
 
 import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import { View } from 'react-native'
-import {
-  accediConGoogle,
-  cambiaPassword,
-  chiediCodiceDiIngresso,
-  motivoGoogleSpento,
-  verificaCodice,
-} from '../src/dati/accesso'
+import { cambiaPassword, chiediRecupero, verificaRecupero } from '../src/dati/accesso'
 import { useAzione } from '../src/dati/risorsa'
 import { spazi } from '../src/tema/tokens'
 import { BottonePrimario, Campo, LinkTesto } from '../src/ui/base'
 import { Corpo, Forte, TestoErrore } from '../src/ui/testo'
-import { GuscioAutenticazione, PiedeAccesso } from '../src/ui/guscio'
+import { GuscioAutenticazione } from '../src/ui/guscio'
 
-/** Solo una verifica di forma: basta a scartare un errore di battitura prima di scomodare la rete. */
 const FORMATO_EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 /** Da 6 a 10 cifre: la lunghezza la decide il progetto Supabase, non l'app. */
 const FORMATO_CODICE = /^\d{6,10}$/
 
 type Passo = 'email' | 'codice' | 'password'
 
-export default function Registrati() {
-  const { conferma } = useLocalSearchParams<{ conferma?: string }>()
-  const [email, setEmail] = useState(conferma ?? '')
+export default function Recupero() {
+  const parametri = useLocalSearchParams<{ email?: string }>()
+  const [email, setEmail] = useState(parametri.email ?? '')
   const [codice, setCodice] = useState('')
-  const [password, setPassword] = useState('')
+  const [nuova, setNuova] = useState('')
   const [ripetuta, setRipetuta] = useState('')
-  const [passo, setPasso] = useState<Passo>(conferma ? 'codice' : 'email')
+  const [passo, setPasso] = useState<Passo>('email')
   const [rimandato, setRimandato] = useState(false)
-  const invio = useAzione<true>()
+  const richiesta = useAzione<true>()
   const verifica = useAzione<true>()
   const scelta = useAzione<true>()
-  const conGoogle = useAzione<boolean>()
 
-  const emailPronta = FORMATO_EMAIL.test(email.trim()) && !invio.caricamento
+  const emailPronta = FORMATO_EMAIL.test(email.trim()) && !richiesta.caricamento
   const codicePronto = FORMATO_CODICE.test(codice.trim()) && !verifica.caricamento
-  const coincidono = password === ripetuta
-  const passwordPronta = password.length >= 8 && coincidono && !scelta.caricamento
+  const coincidono = nuova === ripetuta
+  const passwordPronta = nuova.length >= 8 && coincidono && !scelta.caricamento
 
-  async function manda() {
-    const fatto = await invio.esegui(async () => {
-      await chiediCodiceDiIngresso(email)
+  async function chiedi() {
+    const fatto = await richiesta.esegui(async () => {
+      await chiediRecupero(email)
       return true
     })
     if (fatto) {
@@ -70,38 +59,26 @@ export default function Registrati() {
 
   async function verificaIlCodice() {
     const dentro = await verifica.esegui(async () => {
-      await verificaCodice(email, codice)
+      await verificaRecupero(email, codice)
       return true
     })
     if (dentro) setPasso('password')
   }
 
-  async function scegliPassword() {
+  async function salva() {
     const fatto = await scelta.esegui(async () => {
-      await cambiaPassword(password)
+      await cambiaPassword(nuova)
       return true
     })
-    // Un account nuovo: `index.tsx` lo manda ai passi del primo accesso.
     if (fatto) router.replace('/')
-  }
-
-  async function entraConGoogle() {
-    const dentro = await conGoogle.esegui(() => accediConGoogle())
-    if (dentro) router.replace('/')
-  }
-
-  function tornaAllEmail() {
-    setCodice('')
-    setRimandato(false)
-    setPasso('email')
   }
 
   if (passo === 'password') {
     return (
       <GuscioAutenticazione
-        occhiello="PASSO 1 DI 3"
-        titolo="Scegli la password"
-        sottotitolo="L’email è tua: adesso la password con cui entrerai."
+        occhiello="PASSWORD NUOVA"
+        titolo="Scegli la password nuova"
+        sottotitolo="Il codice è giusto: sei dentro. Adesso la password con cui entrerai."
         errore={scelta.errore}
         onLinkFantasma={() => router.replace('/')}
         testoLinkFantasma={
@@ -111,31 +88,31 @@ export default function Registrati() {
         }
         azione={
           <BottonePrimario
-            testo="Continua"
+            testo="Salva ed entra"
             caricando={scelta.caricamento}
-            onPress={() => void scegliPassword()}
+            onPress={() => void salva()}
             disabilitato={!passwordPronta}
           />
         }
       >
         <Campo
-          etichetta="Password"
-          value={password}
-          onChangeText={setPassword}
+          etichetta="Password nuova"
+          value={nuova}
+          onChangeText={setNuova}
           rivelabile
           textContentType="newPassword"
           placeholder="almeno 8 caratteri"
         />
         <View style={{ gap: spazi.s }}>
           <Campo
-            etichetta="Conferma password"
+            etichetta="Ripetila"
             value={ripetuta}
             onChangeText={setRipetuta}
             secureTextEntry
             textContentType="newPassword"
-            placeholder="ripetila"
+            placeholder="la stessa di sopra"
             onSubmitEditing={() => {
-              if (passwordPronta) void scegliPassword()
+              if (passwordPronta) void salva()
             }}
           />
           {ripetuta.length > 0 && !coincidono ? <TestoErrore>Le due password non coincidono.</TestoErrore> : null}
@@ -147,22 +124,26 @@ export default function Registrati() {
   if (passo === 'codice') {
     return (
       <GuscioAutenticazione
-        occhiello="PASSO 1 DI 3"
+        occhiello="PASSWORD DIMENTICATA"
         titolo="Controlla la tua email"
-        sottotitolo={`Ti ho mandato un codice a ${email.trim()}. Scrivilo qui.`}
-        errore={verifica.errore ?? invio.errore}
+        sottotitolo={`Se c’è un account con ${email.trim()}, ti è arrivato un codice. Scrivilo qui.`}
+        errore={verifica.errore ?? richiesta.errore}
         piede={
           rimandato ? (
             <Corpo taglia="micro" tono="debole" style={{ textAlign: 'center' }}>
               Te ne ho mandato uno nuovo: vale l’ultimo arrivato.
             </Corpo>
           ) : (
-            <LinkTesto taglia="micro" onPress={invio.caricamento ? undefined : () => void manda()}>
+            <LinkTesto taglia="micro" onPress={richiesta.caricamento ? undefined : () => void chiedi()}>
               Non è arrivato? Mandamene un altro
             </LinkTesto>
           )
         }
-        onLinkFantasma={tornaAllEmail}
+        onLinkFantasma={() => {
+          setCodice('')
+          setRimandato(false)
+          setPasso('email')
+        }}
         testoLinkFantasma={
           <>
             Email sbagliata? <Forte taglia="corpo">Torna indietro</Forte>
@@ -170,7 +151,7 @@ export default function Registrati() {
         }
         azione={
           <BottonePrimario
-            testo="Conferma"
+            testo="Continua"
             caricando={verifica.caricamento}
             onPress={() => void verificaIlCodice()}
             disabilitato={!codicePronto}
@@ -195,30 +176,21 @@ export default function Registrati() {
 
   return (
     <GuscioAutenticazione
-      occhiello="PASSO 1 DI 3"
-      titolo="Crea il tuo account"
-      sottotitolo="Serve un invito: la tua email deve essere nella lista. Ti mando un codice per confermarla."
-      errore={invio.errore ?? conGoogle.errore}
-      piede={
-        <PiedeAccesso
-          google={{
-            onPress: () => void entraConGoogle(),
-            caricando: conGoogle.caricamento,
-            motivo: motivoGoogleSpento,
-          }}
-        />
-      }
+      occhiello="PASSWORD DIMENTICATA"
+      titolo="Ti mando un codice"
+      sottotitolo="Scrivi l’email con cui ti sei registrato: ti arriva un codice per sceglierne una nuova."
+      errore={richiesta.errore}
       onLinkFantasma={() => router.back()}
       testoLinkFantasma={
         <>
-          Hai già un account? <Forte taglia="corpo">Accedi</Forte>
+          Te la sei ricordata? <Forte taglia="corpo">Accedi</Forte>
         </>
       }
       azione={
         <BottonePrimario
           testo="Mandami il codice"
-          caricando={invio.caricamento}
-          onPress={() => void manda()}
+          caricando={richiesta.caricamento}
+          onPress={() => void chiedi()}
           disabilitato={!emailPronta}
         />
       }
@@ -233,7 +205,7 @@ export default function Registrati() {
         textContentType="emailAddress"
         placeholder="nome@esempio.it"
         onSubmitEditing={() => {
-          if (emailPronta) void manda()
+          if (emailPronta) void chiedi()
         }}
       />
     </GuscioAutenticazione>
