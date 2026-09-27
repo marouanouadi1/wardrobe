@@ -2,8 +2,9 @@
 
 Due fasi nello stesso processo: `analizza` legge la foto e interroga il
 modello, `salva` crea il capo. La risposta arriva quando sono finite entrambe,
-ma con la forma di un avvio asincrono (202 + id): l'esito vive in
-`analisi_esiti`, e l'app lo legge da sé da Supabase. Si scrive **una volta sola**,
+ed è l'esito intero — lo stato, il capo nato dalla lettura o il motivo per cui
+non è nato: l'app non ha niente da rileggere. L'esito resta anche in
+`analisi_esiti`, per chi lo cerca dopo. Si scrive **una volta sola**,
 a lavoro finito: «completata» con il suo capo, o «fallita» con il motivo. Un esito
 aperto prima e chiuso dopo resterebbe «in corso» per sempre a ogni analisi
 interrotta — da un deploy, da una seconda scrittura che non arriva.
@@ -22,7 +23,6 @@ from typing import Any
 from domain.accesso import Sessione, basta_per_un_lavoro_lungo, percorso_dell_utente
 from domain.errors import ErroreDominio, NonAutenticato, RichiestaNonValida
 from domain.models import (
-    AnalisiAvviata,
     Capo,
     EsitoAnalisi,
     LetturaCapo,
@@ -75,7 +75,7 @@ def avvia(evento: Evento) -> Risposta:
             errore="L'analisi non è riuscita: riprova con più luce.",
         )
     deposito.registra_esito_analisi(esito)
-    return ok(AnalisiAvviata(esecuzione_id=esecuzione, stato=esito.stato), 202)
+    return ok(esito)
 
 
 def analizza(chi: Sessione, richiesta: RichiestaAnalisi) -> dict[str, Any]:

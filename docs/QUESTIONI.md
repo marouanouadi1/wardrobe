@@ -16,6 +16,36 @@ prima del codice**.
 
 ## Aperte
 
+### Q-17 — «Esci» chiude la sessione solo qui, o su tutti i telefoni?
+**Aperta il:** 2026-09-27 (review della fase 3) · **Tocca:** `apps/mobile/src/dati/accesso.ts` (`esci`)
+
+Oggi `esci()` chiama `signOut()` di Supabase, che per default revoca le sessioni
+**ovunque**: chi esce dal telefono di casa esce anche da quello del lavoro. È il default
+della libreria, non una scelta fatta.
+
+*Cosa cambia a seconda della risposta:*
+- **Solo qui** (`signOut({ scope: 'local' })`, consigliato): è quello che ci si aspetta
+  da «Esci» in un'app. Per chiudere ovunque — un telefono perso — resta il cambio di
+  password, o un «Esci da tutti i dispositivi» a parte.
+- **Ovunque** (com'è): più prudente per un telefono perso, più scomodo per chi ne usa due.
+
+### Q-16 — Per cambiare la password, chiedere anche quella attuale?
+**Aperta il:** 2026-09-27 (fase 3 di ADR 0010) · **Tocca:** il pannello di Supabase (Authentication → Sign In / Providers → Email), `supabase/config.toml`, `apps/mobile/app/password.tsx`
+
+Con `secure_password_change` acceso, Supabase chiede un codice via email solo se
+l'accesso ha più di 24 ore. **Nelle prime 24 ore basta la sessione**: chi ha il token di
+qualcuno — il backend dell'IA lo riceve a ogni richiesta — ne cambia la password, e la
+vecchia non la chiede nessuno. Il commento in `config.toml` prometteva di più, ed è stato
+corretto.
+
+*Cosa cambia a seconda della risposta:*
+- **Chiedere anche la password attuale** (l'opzione «Require current password» del
+  pannello): il buco si chiude. Ma chi è entrato solo con Google una password non ce
+  l'ha, e per sceglierne una passerebbe dal recupero via email. `password.tsx` avrebbe un
+  campo in più.
+- **Lasciare com'è**: il rischio è un token rubato nelle prime 24 ore, e il furto del
+  token è già il danno grosso — con quello si legge tutto l'armadio.
+
 ### Q-15 — Lo zip di «Scarica i tuoi dati» resta nello Storage: lo svuotamento lo toglie?
 **Aperta il:** 2026-09-27 (review della fase 2 di ADR 0010) · **Tocca:** `handlers/esportazione.py`, `public.svuota_armadio`, il modulo dati dell'app (fase 3)
 

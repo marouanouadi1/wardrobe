@@ -18,6 +18,15 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **Password dimenticata? Adesso si recupera da soli**: arriva un codice per email, e con
+  quello si sceglie una password nuova. La password si cambia anche da Impostazioni.
+- **Si entra anche con Google**, su Android. La lista degli inviti vale anche lì.
+- **Registrarsi è email, codice, password**: prima il codice che arriva per email
+  dimostra che l'indirizzo è tuo, poi scegli la password.
+- L'app legge e scrive l'armadio direttamente su Supabase (ADR 0010); al server resta
+  l'IA. Svuotare l'armadio toglie anche le foto.
+- «Fermo da sei mesi» si conta sui giorni di qui, e a fine mese non scivola più di tre
+  giorni; «l'ho messo oggi» dopo mezzanotte finisce su oggi, non su ieri.
 - Quattro pacchetti Expo alla patch che l'SDK 57 chiede oggi (`expo` 57.0.25,
   `expo-router` 57.0.23, `expo-linking` 57.0.11, `expo-image-picker` 57.0.20).
   Via dal repo le due foto dell'apertura vecchia, che l'app non usava più.

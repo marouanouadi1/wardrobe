@@ -23,6 +23,7 @@ import {
   type VestizioneColori,
 } from '@wardrobe/contracts'
 import { ETICHETTE } from '../tema/tokens'
+import { giornoLocale } from './righe'
 
 /**
  * Le categorie di capo, nell'ordine in cui `ETICHETTE.tipo` le elenca — la
@@ -63,11 +64,31 @@ export function attributiIncerti(capo: Capo): AttributoCapo[] {
   })
 }
 
+/**
+ * Sottrae mesi a un giorno (`AAAA-MM-GG`) restando su un giorno che esiste:
+ * dal 31 agosto, sei mesi fa è il 28 febbraio (29 se bisestile), non il 3
+ * marzo in cui `Date.setMonth` scivolerebbe. È la regola di `mesi_fa`, che
+ * stava nel backend prima che l'app leggesse l'armadio da sé (ADR 0010).
+ */
+export function mesiFa(giorno: string, mesi: number): string {
+  const [anno, mese, di] = giorno.split('-').map(Number) as [number, number, number]
+  const totale = anno * 12 + (mese - 1) - mesi
+  const annoDopo = Math.floor(totale / 12)
+  const meseDopo = totale - annoDopo * 12
+  // Il giorno 0 del mese dopo è l'ultimo di questo.
+  const ultimo = new Date(Date.UTC(annoDopo, meseDopo + 1, 0)).getUTCDate()
+  const due = (n: number) => String(n).padStart(2, '0')
+  return `${annoDopo}-${due(meseDopo + 1)}-${due(Math.min(di, ultimo))}`
+}
+
+/**
+ * Fermo da più di `MESI_PER_DORMIENTE`. I due lati sono **giorni locali**, come
+ * stringhe: `new Date('2026-03-01')` è la mezzanotte di Greenwich, e
+ * confrontarla con un'ora locale spostava il confine di un giorno.
+ */
 export function dormiente(capo: Capo, adesso = new Date()): boolean {
   if (!capo.ultimo_uso) return true
-  const limite = new Date(adesso)
-  limite.setMonth(limite.getMonth() - MESI_PER_DORMIENTE)
-  return new Date(capo.ultimo_uso) < limite
+  return capo.ultimo_uso.slice(0, 10) < mesiFa(giornoLocale(adesso), MESI_PER_DORMIENTE)
 }
 
 /** I capi fermi da più di `MESI_PER_DORMIENTE`: Profilo e Calendario lo contavano ciascuno per conto proprio. */
@@ -176,9 +197,17 @@ export const PALETTE_COLORI = [
  * Uno sfondo trasparente non è sempre garantito — il servizio di scontorno
  * può non essere configurato o può fallire (vedi `handlers/analisi.py`) — e
  * in quel caso l'app deve comunque mostrare qualcosa, mai un riquadro vuoto.
+ *
+ * **Con la sua chiave di cache**, che è il percorso nello Storage: l'indirizzo
+ * firmato cambia a ogni caricamento dell'armadio (`supabase.ts`), il percorso
+ * no. Senza, `expo-image` vedrebbe ogni volta un indirizzo nuovo e
+ * riscaricherebbe tutte le foto.
  */
-export function fotoDaMostrare(capo: Capo): string | undefined {
-  return capo.foto.url_scontornata ?? capo.foto.url ?? undefined
+export function fotoDaMostrare(capo: Capo): { uri: string; cacheKey: string } | undefined {
+  if (capo.foto.url_scontornata && capo.foto.chiave_scontornata) {
+    return { uri: capo.foto.url_scontornata, cacheKey: capo.foto.chiave_scontornata }
+  }
+  return capo.foto.url ? { uri: capo.foto.url, cacheKey: capo.foto.chiave } : undefined
 }
 
 /** «3 giorni», «ieri», «4 mesi»: come lo scrive il design. */

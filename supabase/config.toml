@@ -230,13 +230,18 @@ double_confirm_changes = true
 # registra al posto del titolare con una password sua, e l'account nasce già
 # confermato. In locale le email arrivano a Mailpit (http://127.0.0.1:54324).
 enable_confirmations = true
-# Acceso: un token rubato non basta a cambiare la password. Il token dell'utente
-# arriva al backend dell'IA a ogni richiesta (ADR 0010).
+# Acceso: passate 24 ore dall'accesso, per cambiare la password serve un codice
+# via email (`reauthenticate`). **Prima di quelle 24 ore basta la sessione**, e
+# la password attuale non la chiede nessuno: un token rubato del giorno la
+# cambia. Il token dell'utente arriva al backend dell'IA a ogni richiesta (ADR
+# 0010). Se chiedere anche la password attuale è `Q-16`.
 secure_password_change = true
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
 max_frequency = "1s"
 # Number of characters used in the email OTP.
-otp_length = 6
+# Otto, come il default dei progetti ospitati nuovi: un codice di recupero apre
+# l'account, e il solo freno ai tentativi è il limite per IP (audit, fase 3).
+otp_length = 8
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
@@ -254,6 +259,26 @@ otp_expiry = 3600
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
+
+# Le quattro email che l'app usa portano un **codice**, non un link (`{{ .Token }}`):
+# nell'app si scrive a mano (`verifyOtp`), e non servono né deep link né un sito
+# a cui tornare. Sul progetto vero gli stessi testi vanno copiati nel pannello,
+# Authentication → Emails: questi file valgono solo per lo stack locale.
+[auth.email.template.magic_link]
+subject = "Il tuo codice per Aura"
+content_path = "./supabase/templates/codice.html"
+
+[auth.email.template.confirmation]
+subject = "Il tuo codice per Aura"
+content_path = "./supabase/templates/conferma.html"
+
+[auth.email.template.recovery]
+subject = "Il codice per una password nuova"
+content_path = "./supabase/templates/recupero.html"
+
+[auth.email.template.reauthentication]
+subject = "Conferma che sei tu"
+content_path = "./supabase/templates/riautenticazione.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]

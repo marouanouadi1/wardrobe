@@ -21,7 +21,7 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { View } from 'react-native'
-import { api } from '../src/dati/api'
+import { type ContoSvuotamento, elencaConversazioni, svuotaArmadio } from '../src/dati/supabase'
 import { useArmadio } from '../src/dati/archivio'
 import { useAzione, useRisorsa } from '../src/dati/risorsa'
 import { colori, linee, spazi, velature } from '../src/tema/tokens'
@@ -66,15 +66,15 @@ function Elenco({ voci }: { voci: { cosa: string; quanti?: string }[] }) {
 
 export default function Svuota() {
   const { capi, outfit, ricarica, avvisa } = useArmadio()
-  const { dati: elenco } = useRisorsa(() => api.chat.conversazioni())
-  const { caricamento: svuotando, esegui } = useAzione<Awaited<ReturnType<typeof api.svuotaArmadio>>>()
+  const { dati: elenco } = useRisorsa(() => elencaConversazioni())
+  const { caricamento: svuotando, esegui } = useAzione<ContoSvuotamento>()
   const [scritto, setScritto] = useState('')
 
-  const conversazioni = elenco?.conversazioni.length
+  const conversazioni = elenco?.length
   const puoProcedere = scritto.trim().toUpperCase() === PAROLA && !svuotando
 
   async function svuota() {
-    const conto = await esegui(() => api.svuotaArmadio())
+    const conto = await esegui(() => svuotaArmadio())
     if (!conto) {
       avvisa('Non sono riuscito a svuotare l’armadio. Non è stato cancellato niente.')
       return
@@ -82,7 +82,11 @@ export default function Svuota() {
     // Senza questo lo schermo continuerebbe a mostrare un armadio che non
     // esiste più, e il primo tocco su un capo darebbe un errore inspiegabile.
     await ricarica()
-    avvisa(`Fatto: ${conto.capi} capi, ${conto.outfit} outfit e ${conto.conversazioni} conversazioni.`)
+    avvisa(
+      conto.foto_rimaste > 0
+        ? `Fatto: ${conto.capi} capi, ${conto.outfit} outfit e ${conto.conversazioni} conversazioni. ${conto.foto_rimaste} foto non si sono tolte: svuota di nuovo per finire.`
+        : `Fatto: ${conto.capi} capi, ${conto.outfit} outfit e ${conto.conversazioni} conversazioni.`,
+    )
     router.replace('/(tabs)/armadio')
   }
 

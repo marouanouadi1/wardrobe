@@ -70,15 +70,18 @@ class TestAnalisi:
     ):
         risposta = analisi.avvia(_evento(), None)
 
-        assert risposta["statusCode"] == 202
-        esecuzione = str(_corpo(risposta)["esecuzione_id"])
-        esito = supabase.deposito.esiti[A][esecuzione]
+        assert risposta["statusCode"] == 200
+        corpo = _corpo(risposta)
+        esito = supabase.deposito.esiti[A][str(corpo["esecuzione_id"])]
         assert esito.stato is StatoAnalisi.COMPLETATA
         (capo,) = supabase.deposito.capi[A]
         assert esito.capo is not None and esito.capo.id == capo.id
         assert capo.foto.chiave == FOTO_DI_A
         assert capo.analisi is not None and capo.analisi.provider == "finto"
         assert provider.richieste, "il modello di visione è stato interrogato"
+        # La risposta porta il capo intero: l'app non ha niente da rileggere.
+        assert corpo["stato"] == "completata"
+        assert corpo["capo"]["id"] == capo.id  # type: ignore[index]
 
     def test_la_foto_di_un_altro_e_un_422_e_non_tocca_niente(
         self, supabase: Supabase, provider: ProviderFinto
@@ -101,11 +104,13 @@ class TestAnalisi:
     ):
         risposta = analisi.avvia(_evento(f"{A}/capi/sparita.jpg"), None)
 
-        assert risposta["statusCode"] == 202
+        assert risposta["statusCode"] == 200
         (esito,) = supabase.deposito.esiti[A].values()
         assert esito.stato is StatoAnalisi.FALLITA
         assert esito.errore and "non c'è" in esito.errore
         assert supabase.deposito.capi[A] == []
+        # Il motivo arriva anche nella risposta, come testo da mostrare.
+        assert _corpo(risposta)["errore"] == esito.errore
 
     def test_una_sessione_che_sta_per_scadere_e_un_401_prima_di_cominciare(
         self, supabase: Supabase, provider: ProviderFinto, foto_di_a: None

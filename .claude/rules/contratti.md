@@ -39,6 +39,16 @@ valore aggiunto da una parte sola fa diventare rosso quel job.
 
 `database.ts` è output come gli altri file di `src/generated/`: non si tocca a mano.
 
+**Dalla fase 3 l'app lo usa**: `apps/mobile/src/dati/righe.ts` prende da lì i tipi
+delle righe che legge e scrive (`Tables<'capi'>`, `TablesUpdate<'profili'>`…),
+esposti da `@wardrobe/contracts` **per nome**. Una colonna rinominata diventa rosso
+in `tsc` dell'app. I modelli delle rotte che non ci sono più (`TokenAccesso`,
+`AggiornamentoCapo`, `ElencoSegnalazioni`…) sono usciti da `models.py` e dalle
+tuple di `export_schema.py`; restano quelli che l'app tiene in memoria (`Capo`,
+`Profilo`, `Outfit`…) e quelli che attraversano il backend dell'IA. Una funzione SQL
+che l'app chiama restituisce **colonne**, non `jsonb` (`svuota_armadio`): così
+`database.ts` ne ha la forma, e l'app non la ridigita.
+
 ## La catena, in tre passi e due linguaggi
 
 ```

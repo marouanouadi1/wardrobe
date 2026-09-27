@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { messaggioDiErrore } from './api'
+import { messaggioDiErrore } from './errori'
 
 interface StatoRisorsa<T> {
   dati: T | null

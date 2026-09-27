@@ -112,6 +112,10 @@ strada: una nuova coppia `useState<boolean>` per caricamento ed errore, o una se
 chiamate API scritta a mano. Un `catch {}` vuoto — che ingoia l'errore perché la schermata non
 ha dove metterlo — è il segnale che serviva uno dei due fin dall'inizio.
 
+I dati salvati l'app li legge e li scrive su Supabase da **un modulo solo**,
+`src/dati/supabase.ts` (e `accesso.ts` per l'accesso): nessuna schermata importa
+supabase-js. `src/dati/api.ts` resta per il backend dell'IA.
+
 Dettaglio in `.claude/rules/react-native.md`.
 
 ## Design: i valori nei token, le forme nelle primitive

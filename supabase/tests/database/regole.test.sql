@@ -6,7 +6,7 @@
 -- una transazione che alla fine si annulla. I conteggi guardano solo le righe
 -- di queste tre persone: il database locale può avere già dati di sviluppo.
 begin;
-select plan(100);
+select plan(103);
 
 -- ── il catalogo: quello che deve valere per ogni oggetto, anche futuro ───────
 select is(
@@ -423,10 +423,20 @@ select throws_ok(
 insert into public.messaggi_chat (conversazione_id, ruolo, testo) values ('30000000-0000-4000-8000-00000000000b', 'utente', 'ciao');
 select is((select count(*)::integer from public.messaggi_chat), 1, 'B scrive nella sua conversazione');
 
--- Svuotamento
+-- Svuotamento. Quattro numeri diversi fra loro, così uno scambio fra due colonne
+-- del conto diventa rosso: un capo, nessun outfit, due conversazioni, tre usi.
+insert into public.conversazioni_chat (titolo) values ('Una seconda');
+do $$ begin
+  perform public.segna_indossato('10000000-0000-4000-8000-00000000000b', giorno)
+     from unnest(array['2026-09-01', '2026-09-02', '2026-09-03']::date[]) as giorno;
+end $$;
 select throws_ok($$ select public.svuota_armadio('svuota') $$, '22023', 'conferma_mancante',
   'svuotare chiede la parola intera');
-select is((select (public.svuota_armadio('SVUOTA') ->> 'capi')::integer), 1, 'B svuota il proprio armadio');
+select results_eq(
+  $$ select * from public.svuota_armadio('SVUOTA') $$,
+  $$ values (1, 0, 2, 3) $$,
+  'B svuota il proprio armadio, e il conto è riga per riga: capi, outfit, conversazioni, usi'
+);
 select is((select count(*)::integer from public.conversazioni_chat), 0, 'conversazioni e messaggi compresi');
 
 -- ── C, l'amministratore ────────────────────────────────────────────────────
@@ -526,6 +536,38 @@ select is(
   privato.accetta_solo_invitati('{"user": {"email": "  Invitato.Test@Esempio.invalid "}}'),
   '{}'::jsonb,
   'un''email invitata sì, scritta come capita'
+);
+
+-- ── la password dopo la prova ─────────────────────────────────────────────
+-- La presa di possesso trovata dall'audit della fase 3: chi registra per primo
+-- un'email invitata con una password sua. Alla prima conferma che segue un
+-- codice la password si toglie; un account confermato dall'amministratore, senza
+-- nessun codice emesso, tiene la sua. Il flusso intero (due registrazioni, il
+-- codice da Mailpit) è provato sullo stack locale, `docs/PROGRESS.md`, fase 3.
+insert into auth.users (id, email, aud, role, encrypted_password, confirmation_token)
+values
+  ('00000000-0000-4000-8000-0000000000d1', 'preso.test@esempio.invalid', 'authenticated', 'authenticated',
+   'hash-dell-estraneo', 'codice-emesso'),
+  ('00000000-0000-4000-8000-0000000000d2', 'importato.test@esempio.invalid', 'authenticated', 'authenticated',
+   'hash-importato', '');
+update auth.users set email_confirmed_at = now(), confirmation_token = ''
+ where id in ('00000000-0000-4000-8000-0000000000d1', '00000000-0000-4000-8000-0000000000d2');
+select is(
+  (select encrypted_password from auth.users where id = '00000000-0000-4000-8000-0000000000d1'),
+  '',
+  'una password scelta prima del codice sparisce alla conferma'
+);
+select is(
+  (select encrypted_password from auth.users where id = '00000000-0000-4000-8000-0000000000d2'),
+  'hash-importato',
+  'un account confermato senza codice tiene la sua'
+);
+update auth.users set encrypted_password = 'hash-del-titolare'
+ where id = '00000000-0000-4000-8000-0000000000d1';
+select is(
+  (select encrypted_password from auth.users where id = '00000000-0000-4000-8000-0000000000d1'),
+  'hash-del-titolare',
+  'dopo la conferma una password nuova resta'
 );
 
 select * from finish();

@@ -77,7 +77,10 @@ class Ponte(BaseHTTPRequestHandler):
         # L'app gira su un'origine diversa (Expo web): senza CORS non si vede
         # nulla.
         self.send_header("access-control-allow-origin", "*")
-        self.send_header("access-control-allow-headers", "*")
+        # Per nome, non `*`: per la specifica Fetch il jolly non comprende
+        # `authorization`, e sul web una richiesta con il token di Supabase
+        # cadrebbe al preflight (`T-61`).
+        self.send_header("access-control-allow-headers", "authorization, content-type")
         self.send_header("access-control-allow-methods", "GET,POST,OPTIONS")
         self.send_header("content-length", str(len(corpo)))
         self.end_headers()

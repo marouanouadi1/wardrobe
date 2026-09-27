@@ -121,7 +121,7 @@ qualunque input controllato dall'esterno che finisca in uno step.
 `api.yml` → `services/api/**`, `packages/contracts/**`, sé stesso.
 `mobile.yml` → `apps/mobile/**`, `packages/contracts/**`, `package.json`,
 `package-lock.json`, sé stesso.
-`database.yml` → `supabase/**`, lo script dei tipi, i due file Python che il suo
+`database.yml` → `supabase/**`, lo script dei tipi, `prova_accesso.py`, i due file Python che il suo
 gate confronta con lo schema (`domain/models.py`, `domain/wardrobe.py`),
 `database.ts`, sé stesso. **Non rilascia niente**: prova lo schema sullo stack
 locale. Sul progetto vero lo porta `supabase db push`, a mano (ADR 0010).

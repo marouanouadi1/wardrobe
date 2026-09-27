@@ -5,11 +5,6 @@
  * Rigenera con: npm run contracts:generate
  */
 
-export type TipoCapo = 'top' | 'pantaloni' | 'scarpe' | 'capospalla' | 'abito' | 'accessorio'
-export type Stagione = 'primavera' | 'estate' | 'autunno' | 'inverno' | 'mezza_stagione' | 'tutto_lanno'
-export type StatoCapo = 'pulito' | 'da_lavare' | 'in_lavaggio'
-export type StatoSegnalazione = 'ricevuta' | 'in_lavorazione' | 'risolta'
-export type StatoAnalisi = 'in_corso' | 'completata' | 'fallita'
 /**
  * Gli attributi che il modello di visione legge dalla foto.
  *
@@ -17,12 +12,15 @@ export type StatoAnalisi = 'in_corso' | 'completata' | 'fallita'
  * punteggio complessivo.
  */
 export type AttributoCapo = 'tipo' | 'colore' | 'materiale' | 'fantasia' | 'stagione' | 'vestibilita' | 'lavaggio'
+export type TipoCapo = 'top' | 'pantaloni' | 'scarpe' | 'capospalla' | 'abito' | 'accessorio'
 /**
  * Le cinque posizioni che l'avatar sa vestire.
  *
  * I valori coincidono con le chiavi di `mannequin.setOutfit()`.
  */
 export type SlotAvatar = 'top' | 'bottom' | 'outer' | 'shoes' | 'dress'
+export type Stagione = 'primavera' | 'estate' | 'autunno' | 'inverno' | 'mezza_stagione' | 'tutto_lanno'
+export type StatoCapo = 'pulito' | 'da_lavare' | 'in_lavaggio'
 /**
  * Tre corporature.
  *
@@ -32,6 +30,7 @@ export type SlotAvatar = 'top' | 'bottom' | 'outer' | 'shoes' | 'dress'
  * specifica, non una decisione presa.
  */
 export type Corporatura = 'minuta' | 'media' | 'robusta'
+export type StatoAnalisi = 'in_corso' | 'completata' | 'fallita'
 export type RuoloChat = 'utente' | 'wardrobe'
 /**
  * Su che taglie ragioniamo — **lo dice la persona, non lo deduciamo.**
@@ -72,32 +71,22 @@ export type OrigineOutfit = 'manuale' | 'ia' | 'suggerito_modificato'
  * due selettori che non comandano niente.
  */
 export type UnitaLunghezza = 'cm' | 'pollici'
+export type StatoSegnalazione = 'ricevuta' | 'in_lavorazione' | 'risolta'
 
 /**
  * Generato da services/api/src/domain/models.py — non modificare a mano.
  */
 export interface Contratti {
-  AggiornamentoCapo?: AggiornamentoCapo
-  AggiornamentoSegnalazione?: AggiornamentoSegnalazione
-  AnalisiAvviata?: AnalisiAvviata
   AnalisiVisione?: AnalisiVisione
   AttributoCapo?: AttributoCapo
   Capo?: Capo
   CapoSintetico?: CapoSintetico
   Colore?: Colore
   ContestoSuggerimento?: ContestoSuggerimento
-  ContoSvuotamento?: ContoSvuotamento
   ConversazioneChat?: ConversazioneChat
   Corporatura?: Corporatura
-  CorrezioniCapo?: CorrezioniCapo
-  Credenziali?: Credenziali
-  ElencoCapi?: ElencoCapi
-  ElencoConversazioniChat?: ElencoConversazioniChat
-  ElencoMessaggiChat?: ElencoMessaggiChat
-  ElencoSegnalazioni?: ElencoSegnalazioni
   EsitoAnalisi?: EsitoAnalisi
   EsportazionePronta?: EsportazionePronta
-  FiltroArmadio?: FiltroArmadio
   FotoCapo?: FotoCapo
   ImpegnoAgenda?: ImpegnoAgenda
   LetturaCapo?: LetturaCapo
@@ -105,19 +94,13 @@ export interface Contratti {
   Meteo?: Meteo
   Misure?: Misure
   ModelloDisponibile?: ModelloDisponibile
-  NuovaSegnalazione?: NuovaSegnalazione
-  NuovoOutfit?: NuovoOutfit
   OrigineOutfit?: OrigineOutfit
   Outfit?: Outfit
   PreferenzeStile?: PreferenzeStile
   Profilo?: Profilo
-  Registrazione?: Registrazione
   RichiestaAnalisi?: RichiestaAnalisi
   RichiestaMessaggioChat?: RichiestaMessaggioChat
   RichiestaSuggerimenti?: RichiestaSuggerimenti
-  RichiestaSvuotamento?: RichiestaSvuotamento
-  RichiestaUpload?: RichiestaUpload
-  RiepilogoArmadio?: RiepilogoArmadio
   RispostaChat?: RispostaChat
   RispostaSuggerimenti?: RispostaSuggerimenti
   RuoloChat?: RuoloChat
@@ -131,62 +114,10 @@ export interface Contratti {
   Suggerimento?: Suggerimento
   Taglia?: Taglia
   TipoCapo?: TipoCapo
-  TokenAccesso?: TokenAccesso
   UnitaLunghezza?: UnitaLunghezza
-  UploadFirmato?: UploadFirmato
   UsoToken?: UsoToken
   Vestizione?: Vestizione
   VestizioneColori?: VestizioneColori
-  VoceElencoConversazioni?: VoceElencoConversazioni
-}
-export interface AggiornamentoCapo {
-  correzioni?: CorrezioniCapo
-  nome?: string | null
-  preferito?: boolean | null
-  stato?: StatoCapo | null
-  etichette?: string[] | null
-  appunti?: string | null
-}
-/**
- * Le correzioni dell'utente, una per attributo, tutte tipizzate.
- *
- * Volutamente non è `dict[str, str]`: correggere il colore significa mandare
- * nome più hex, e il tipo deve stare nell'enum. Un dizionario di stringhe
- * farebbe passare «maglietta» come tipo e lo scopriremmo sull'avatar.
- */
-export interface CorrezioniCapo {
-  tipo?: TipoCapo | null
-  colore?: Colore | null
-  materiale?: string | null
-  fantasia?: string | null
-  stagione?: Stagione | null
-  vestibilita?: string | null
-  lavaggio?: string | null
-}
-/**
- * Nome leggibile più esadecimale.
- *
- * L'hex non è un vezzo: è quello che il manichino 3D di oggi usa per tingere le
- * mesh, e per ora senza hex l'avatar non sa indossare il capo. È il primo passo:
- * l'ADR 0004 porta l'avatar a vestire la foto scontornata del capo come texture,
- * e allora il colore diventa il ripiego invece del requisito.
- */
-export interface Colore {
-  nome: string
-  hex: string
-}
-export interface AggiornamentoSegnalazione {
-  stato: StatoSegnalazione
-}
-/**
- * L'app riceve un identificativo e interroga lo stato: l'analisi è lenta.
- *
- * Tenerla asincrona è ciò che permette il caricamento in blocco di venti foto
- * senza che l'app resti appesa a una richiesta HTTP di quaranta secondi.
- */
-export interface AnalisiAvviata {
-  esecuzione_id: string
-  stato?: StatoAnalisi
 }
 /**
  * Traccia di chi ha letto la foto, quando, e con quanta sicurezza.
@@ -230,6 +161,18 @@ export interface Capo {
   appunti?: string | null
   creato_il: string
   aggiornato_il: string
+}
+/**
+ * Nome leggibile più esadecimale.
+ *
+ * L'hex non è un vezzo: è quello che il manichino 3D di oggi usa per tingere le
+ * mesh, e per ora senza hex l'avatar non sa indossare il capo. È il primo passo:
+ * l'ADR 0004 porta l'avatar a vestire la foto scontornata del capo come texture,
+ * e allora il colore diventa il ripiego invece del requisito.
+ */
+export interface Colore {
+  nome: string
+  hex: string
 }
 export interface FotoCapo {
   /**
@@ -301,27 +244,13 @@ export interface PreferenzeStile {
   evita?: string[]
 }
 /**
- * Quanto è stato cancellato davvero.
- *
- * Non è telemetria: è l'unico modo che ha la persona di sapere che
- * l'operazione ha fatto ciò che prometteva. Un `204 No Content` dopo
- * un'azione irreversibile lascia solo da fidarsi.
- */
-export interface ContoSvuotamento {
-  capi: number
-  outfit: number
-  conversazioni: number
-  usi_registrati: number
-  foto: number
-}
-/**
  * Un contenitore di turni: da quando la chat ha smesso di essere una
  * sola sessione continua per utente (vedi docs/adr/0006).
  *
  * Rispecchia esattamente le colonne di `conversazioni_chat` — niente qui
  * dentro che l'adapter debba inventare per poterla salvare. `turni` e
- * `anteprima`, che servono solo all'elenco, vivono in
- * `VoceElencoConversazioni`, non qui.
+ * `anteprima`, che servono solo all'elenco, li calcola la vista
+ * `conversazioni_elenco` del database, che l'app legge da sé.
  */
 export interface ConversazioneChat {
   id: string
@@ -329,35 +258,47 @@ export interface ConversazioneChat {
   creata_il: string
   ultimo_turno_il: string
 }
-/**
- * Il corpo di POST /auth/accedi. Nessun requisito sulla password: qui
- * deve solo passare a `bcrypt.checkpw`, non essere accettabile — quello
- * vincolo vive in `Registrazione`, non qui, altrimenti un account creato
- * quando il minimo era più basso non potrebbe più accedere.
- */
-export interface Credenziali {
-  email: string
-  password: string
-}
-export interface ElencoCapi {
-  capi: Capo[]
-  totale: number
-}
-export interface ElencoConversazioniChat {
-  conversazioni: VoceElencoConversazioni[]
+export interface EsitoAnalisi {
+  esecuzione_id: string
+  stato: StatoAnalisi
+  capo?: Capo | null
+  errore?: string | null
 }
 /**
- * `ConversazioneChat` più ciò che solo l'elenco calcola — un aggregato
- * su `messaggi_chat`, non colonne proprie di `conversazioni_chat`.
+ * L'indirizzo da cui l'archivio si scarica, e per quanto ancora vale.
+ *
+ * **È l'unica parte che attraversa il confine.** L'app non riceve i dati: ne
+ * riceve un URL firmato, che apre nel browser di sistema — un'app React
+ * Native non ha un «scarica», e il browser ce l'ha.
+ *
+ * `scade_il` non è decorativo: l'URL è di fatto una credenziale al portatore
+ * su tutto l'armadio, quindi l'interfaccia deve poter dire che è a tempo
+ * invece di lasciar credere che sia un link da conservare.
  */
-export interface VoceElencoConversazioni {
-  conversazione: ConversazioneChat
-  turni: number
-  anteprima: string
+export interface EsportazionePronta {
+  url: string
+  scade_il: string
 }
-export interface ElencoMessaggiChat {
-  messaggi: MessaggioChat[]
-  conversazione?: ConversazioneChat | null
+/**
+ * Quello che il modello di visione dichiara di aver letto dalla foto.
+ *
+ * Tutto opzionale per costruzione: «se un attributo non è leggibile metti
+ * null, non tirare a indovinare». Non è ancora un `Capo` — diventa tale solo
+ * passando da `domain.vision.crea_capo`.
+ */
+export interface LetturaCapo {
+  tipo?: TipoCapo | null
+  sottotipo?: string | null
+  nome_proposto?: string | null
+  colore?: Colore | null
+  materiale?: string | null
+  fantasia?: string | null
+  stagione?: Stagione | null
+  vestibilita?: string | null
+  lavaggio?: string | null
+  confidenze?: {
+    [k: string]: number
+  }
 }
 /**
  * Un turno di una conversazione con lo stilista.
@@ -400,74 +341,6 @@ export interface Vestizione {
   shoes?: string | null
   dress?: string | null
 }
-export interface ElencoSegnalazioni {
-  segnalazioni: Segnalazione[]
-  amministratore?: boolean
-}
-/**
- * La copia che l'app tiene di una segnalazione già inviata a Sentry
- * (vedi `apps/mobile/src/dati/segnalazioni.ts`, `apriSegnalazione()`).
- *
- * Sentry resta il canale che avvisa chi lavora sull'app; questa riga è
- * quello che permette a chi ha segnalato — che a Sentry non ha accesso —
- * di vedere che è arrivata e a che punto è.
- */
-export interface Segnalazione {
-  id: string
-  utente_id: string
-  testo: string
-  stato?: StatoSegnalazione
-  creata_il: string
-  aggiornata_il: string
-}
-export interface EsitoAnalisi {
-  esecuzione_id: string
-  stato: StatoAnalisi
-  capo?: Capo | null
-  errore?: string | null
-}
-/**
- * L'indirizzo da cui l'archivio si scarica, e per quanto ancora vale.
- *
- * **È l'unica parte che attraversa il confine.** L'app non riceve i dati: ne
- * riceve un URL firmato, che apre nel browser di sistema — un'app React
- * Native non ha un «scarica», e il browser ce l'ha.
- *
- * `scade_il` non è decorativo: l'URL è di fatto una credenziale al portatore
- * su tutto l'armadio, quindi l'interfaccia deve poter dire che è a tempo
- * invece di lasciar credere che sia un link da conservare.
- */
-export interface EsportazionePronta {
-  url: string
-  scade_il: string
-}
-export interface FiltroArmadio {
-  tipo?: TipoCapo | null
-  stato?: StatoCapo | null
-  solo_preferiti?: boolean
-  testo?: string | null
-}
-/**
- * Quello che il modello di visione dichiara di aver letto dalla foto.
- *
- * Tutto opzionale per costruzione: «se un attributo non è leggibile metti
- * null, non tirare a indovinare». Non è ancora un `Capo` — diventa tale solo
- * passando da `domain.vision.crea_capo`.
- */
-export interface LetturaCapo {
-  tipo?: TipoCapo | null
-  sottotipo?: string | null
-  nome_proposto?: string | null
-  colore?: Colore | null
-  materiale?: string | null
-  fantasia?: string | null
-  stagione?: Stagione | null
-  vestibilita?: string | null
-  lavaggio?: string | null
-  confidenze?: {
-    [k: string]: number
-  }
-}
 /**
  * Come si veste un corpo, non com'è fatto.
  *
@@ -505,15 +378,6 @@ export interface ModelloDisponibile {
    */
   accetta_temperatura?: boolean
 }
-export interface NuovaSegnalazione {
-  testo: string
-}
-export interface NuovoOutfit {
-  nome: string
-  vestizione: Vestizione
-  occasione?: string | null
-  origine?: OrigineOutfit
-}
 export interface Outfit {
   id: string
   nome: string
@@ -538,15 +402,6 @@ export interface Profilo {
   avatar_foto_chiave?: string | null
   creato_il: string
 }
-/**
- * Il corpo di POST /auth/registrati. L'allowlist (`EMAIL_AMMESSE`) e il
- * hash della password li applica `handlers/auth.py`; qui c'è solo la forma
- * del dato, non la sua ammissibilità.
- */
-export interface Registrazione {
-  email: string
-  password: string
-}
 export interface RichiestaAnalisi {
   chiave_foto: string
   provider?: string | null
@@ -569,30 +424,6 @@ export interface RichiestaSuggerimenti {
   provider?: string | null
   modello?: string | null
 }
-/**
- * Il corpo di `POST /armadio/svuota`.
- *
- * **La parola esiste per rendere impossibile l'incidente.** Il tocco sullo
- * schermo è già dietro un campo in cui scrivere «SVUOTA», ma quella è una
- * difesa dell'interfaccia: sparisce con un refresh, un deep-link, un `curl`
- * ricopiato, o una richiesta rimandata due volte dalla libreria di rete. Un
- * `Literal` la porta nel contratto, quindi un `POST` senza intenzione
- * esplicita prende un 422 e non cancella niente — e il tipo TypeScript
- * generato contiene la parola, così non la si ridigita di là.
- */
-export interface RichiestaSvuotamento {
-  conferma: 'SVUOTA'
-}
-export interface RichiestaUpload {
-  content_type: string
-  nota?: string | null
-}
-export interface RiepilogoArmadio {
-  totale: number
-  da_lavare: number
-  dormienti: number
-  valore_dormiente_eur?: number | null
-}
 export interface RispostaChat {
   utente: MessaggioChat
   wardrobe: MessaggioChat
@@ -609,21 +440,21 @@ export interface RispostaSuggerimenti {
   modello: string
   latenza_ms: number
 }
-export interface TokenAccesso {
-  token: string
-}
 /**
- * Risposta all'app prima che carichi la foto: l'upload va diretto
- * all'archivio foto, senza passare dal backend.
+ * La copia che l'app tiene di una segnalazione già inviata a Sentry
+ * (vedi `apps/mobile/src/dati/segnalazioni.ts`, `apriSegnalazione()`).
+ *
+ * Sentry resta il canale che avvisa chi lavora sull'app; questa riga è
+ * quello che permette a chi ha segnalato — che a Sentry non ha accesso —
+ * di vedere che è arrivata e a che punto è.
  */
-export interface UploadFirmato {
-  chiave: string
-  url: string
-  metodo?: string
-  intestazioni?: {
-    [k: string]: string
-  }
-  scade_in_s: number
+export interface Segnalazione {
+  id: string
+  utente_id: string
+  testo: string
+  stato?: StatoSegnalazione
+  creata_il: string
+  aggiornata_il: string
 }
 export interface UsoToken {
   token_input?: number
