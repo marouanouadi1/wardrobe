@@ -210,7 +210,8 @@ export function CapoInGriglia({ capo, onPress }: { capo: Capo; onPress: () => vo
           borderColor: superfici.bordo,
           alignItems: 'center',
           justifyContent: 'center',
-          ...ombre.scheda,
+          // Niente ombra: un fondo traslucido la lascia vedere da sotto — la
+          // ragione sta sul `vetro` di `Scheda`.
         }}
       >
         <Image

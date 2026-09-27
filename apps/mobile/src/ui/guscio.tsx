@@ -101,9 +101,36 @@ export function schedaDi(percorso: string): string | null {
   return SCHEDA_DI[primo] ?? null
 }
 
-/** Lo spazio che la barra occupa in fondo, per chi ci deve stare sopra. */
+/**
+ * Le misure della barra, scritte una volta: le legge `BarraSchede` per
+ * disegnarsi e `altezzaBarra` per dire quanto spazio lasciarle.
+ *
+ * Prima `altezzaBarra` rifaceva il conto a mano, `48 + 8`, e perdeva una delle
+ * due imbottiture: il fondo di ogni schermata di scheda finiva 8pt **sotto** la
+ * pillola, e sul profilo «Esci» restava coperto a metà. Due copie degli stessi
+ * numeri divergono in silenzio; una no.
+ */
+const BARRA = {
+  /** Il minimo dal bordo inferiore, quando il telefono non dichiara un bordo sicuro. */
+  bordoMinimo: 10,
+  /** Lo stacco fra il bordo sicuro e la pillola. */
+  stacco: 6,
+  imbottitura: 8,
+  altezzaVoce: 48,
+} as const
+
+/** Dove poggia la pillola, misurato dal fondo dello schermo. */
+function baseBarra(bordoInferiore: number): number {
+  return Math.max(bordoInferiore, BARRA.bordoMinimo) + BARRA.stacco
+}
+
+/**
+ * Lo spazio che la barra occupa in fondo, per chi ci deve stare sopra: la
+ * pillola intera, più un `spazi.l` d'aria perché l'ultimo elemento non ci
+ * resti appoggiato contro.
+ */
 export function altezzaBarra(bordoInferiore: number): number {
-  return Math.max(bordoInferiore, 10) + 6 + 48 + 8
+  return baseBarra(bordoInferiore) + BARRA.altezzaVoce + 2 * BARRA.imbottitura + spazi.l
 }
 
 export function BarraSchede() {
@@ -118,7 +145,7 @@ export function BarraSchede() {
         position: 'absolute',
         left: 16,
         right: 16,
-        bottom: Math.max(bordi.bottom, 10) + 6,
+        bottom: baseBarra(bordi.bottom),
       }}
     >
       <View
@@ -126,7 +153,7 @@ export function BarraSchede() {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 2,
-          padding: 8,
+          padding: BARRA.imbottitura,
           borderRadius: raggi.pillola,
           backgroundColor: velo(colori.inchiostro, 0.96),
           ...ombre.alta,
@@ -145,7 +172,7 @@ export function BarraSchede() {
               style={{
                 flex: voce.centrale ? 0 : 1,
                 width: voce.centrale ? 60 : undefined,
-                height: 48,
+                height: BARRA.altezzaVoce,
                 borderRadius: raggi.pillola,
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -375,9 +402,25 @@ export function Schermata({
   // `tavolozza` il fondo è per forza chiaro: vedi la prop.
   const fondo: Su = tavolozza ? 'chiaro' : (su ?? 'chiaro')
 
+  const ancora = ancoraInFondo ? () => scrollRef.current?.scrollToEnd({ animated: true }) : undefined
+
   return (
     <Fondo su={fondo}>
-      <View style={{ flex: 1, backgroundColor: fondo === 'scuro' ? colori.inchiostro : undefined }}>
+      {/* La tastiera non ridimensiona la finestra: con l'edge-to-edge di
+          Android (obbligatorio da Expo SDK 54) le passa sopra, come su iOS, e
+          copriva la metà bassa di ogni schermata — in chat, proprio il campo
+          in cui si stava scrivendo. `padding` su entrambe le piattaforme alza
+          il contenuto di quanto la tastiera sale.
+
+          L'offset negativo toglie `paddingBottom`: quello spazio è per la
+          barra delle schede (o per respirare in fondo), e con la tastiera
+          aperta la barra ci sta sotto — lasciarlo avrebbe staccato il campo
+          dalla tastiera di un'intera barra vuota. `spazi.m` resta di aria. */}
+      <KeyboardAvoidingView
+        behavior="padding"
+        keyboardVerticalOffset={spazi.m - paddingBottom}
+        style={{ flex: 1, backgroundColor: fondo === 'scuro' ? colori.inchiostro : undefined }}
+      >
         {tavolozza ? <SfondoAura tavolozza={tavolozza} /> : null}
         <Testata
           occhiello={occhiello}
@@ -395,11 +438,18 @@ export function Schermata({
             contentStyle,
           ]}
           showsVerticalScrollIndicator={false}
-          onContentSizeChange={ancoraInFondo ? () => scrollRef.current?.scrollToEnd({ animated: true }) : undefined}
+          // Il tocco sul bottone d'invio arriva al bottone anche a tastiera
+          // aperta, invece di servire solo a chiuderla.
+          keyboardShouldPersistTaps="handled"
+          onContentSizeChange={ancora}
+          // Quando sale la tastiera il contenuto non cresce: si stringe la
+          // vista. Senza questo la chat restava ferma dov'era, col campo e
+          // l'ultimo messaggio sotto il bordo nuovo.
+          onLayout={ancora}
         >
           {children}
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Fondo>
   )
 }
