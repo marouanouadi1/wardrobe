@@ -117,6 +117,12 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       riga riguarda i colori e il fondo, non le 43 schermate del deck. E
       **nessuna prova su un telefono**: il web dimostra che l'SVG renderizza,
       non come si vede il vetro su un pannello vero.
+- [x] **L'armadio in «Tutti» è diviso per categoria** — `(tabs)/armadio.tsx`
+      raggruppa i capi filtrati nell'ordine di `TIPI_CAPO`, con un'`Etichetta`
+      «Tipo · n» sopra ogni gruppo; i gruppi vuoti non compaiono, la
+      `CasellaAggiungi` chiude l'ultimo. Con una categoria scelta resta la
+      griglia sola. *Verificato:* `typecheck`, `lint`, `mobile:test` (74/74) e
+      `build:web` verdi; **non** guardato a schermo con un armadio vero.
 - [~] **L'armadio sulla disposizione del deck** — `(tabs)/armadio.tsx` con
       griglia a tre colonne quadrate, due righe di filtri (categoria + qualità,
       un filtro per dimensione), `CasellaAggiungi` dentro la griglia, conteggio

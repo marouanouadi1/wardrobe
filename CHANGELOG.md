@@ -18,6 +18,9 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **In «Tutti» l'armadio mostra i capi divisi per categoria**: prima tutti i
+  top, poi tutti i pantaloni e così via, ciascun gruppo col suo titoletto e il
+  numero di capi, così si vede dove finisce un tipo e comincia l'altro.
 - **In chat la tastiera non copre più quello che scrivi**: il contenuto sale
   sopra la tastiera e la conversazione resta ancorata in fondo, col campo
   appena sopra. Vale per ogni schermata, non solo la chat; e il bottone
