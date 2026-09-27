@@ -838,8 +838,9 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
         fase 4, con le loro cartelle nello Storage: cancellare l'utente non toglie i file
         (`T-59`). E lo script deve **rifiutare** un'email che esiste già con un id diverso,
         invece di passarci sopra: i tre account arrivano con il loro id;
-      - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` va anche nel profilo `preview` di `eas.json`, quello
-        del rilascio: senza, l'APK del giorno X esce con Google spento;
+      - ~~`EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` va anche nel profilo `preview` di `eas.json`~~: c'è
+        dal 2026-09-27, con l'ID del client Web del progetto Google Cloud dell'utente. È
+        pubblico per costruzione; il secret sta solo nel pannello di Supabase;
       - la rotta di prova nel `Caddyfile` del server sparisce al primo deploy da `main`, che lo
         sovrascrive: vale anche per una PR su `main` prima del giorno X (`T-51`, `T-60`).
       - *Verificato* il percorso esatto dell'import sullo stack locale: un utente creato
