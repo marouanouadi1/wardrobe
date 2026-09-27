@@ -14,7 +14,8 @@ import { Alert } from 'react-native'
 import { api, messaggioDiErrore } from '../src/dati/api'
 import { conta, giornoRelativo } from '../src/dati/formato'
 import { useRisorsa } from '../src/dati/risorsa'
-import { spazi } from '../src/tema/tokens'
+import { colori, spazi, superfici } from '../src/tema/tokens'
+import { BottoneTondo } from '../src/ui/base'
 import { Conferma } from '../src/ui/avviso'
 import { Schermata } from '../src/ui/guscio'
 import { RigaNavigabile } from '../src/ui/righe'
@@ -40,7 +41,23 @@ export default function Chat() {
   }
 
   return (
-    <Schermata occhiello="Il tuo stilista" titolo="Le tue chat" indietro contentStyle={{ gap: spazi.s }}>
+    <Schermata
+      occhiello="Il tuo stilista"
+      titolo="Le tue chat"
+      indietro
+      // Da qui si comincia anche una chat nuova, non solo se ne riapre una.
+      azioni={
+        <BottoneTondo
+          nome="piu"
+          onPress={() => router.push({ pathname: '/suggeritore', params: { nuova: '1' } })}
+          misura={38}
+          misuraIcona={18}
+          sfondo={superfici.vetroAlto}
+          colore={colori.inchiostro}
+        />
+      }
+      contentStyle={{ gap: spazi.s }}
+    >
       <StatoRisorsa
         caricamento={caricamento}
         errore={Boolean(errore)}

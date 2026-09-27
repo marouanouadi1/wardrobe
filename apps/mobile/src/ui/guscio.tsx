@@ -280,10 +280,11 @@ export function Testata({
   onIndietro?: () => void
   fotoProfilo?: string | null
   /** I bersagli a destra del titolo — il cuore e il «···» del dettaglio di un
-   * capo. Occupano lo stesso posto di `fotoProfilo` e non si mettono insieme:
-   * una schermata di scheda porta l'avatar dell'utente, una spinta sopra porta
-   * le azioni di ciò che mostra. Se un giorno servissero entrambi, il posto
-   * dove decidere è qui, non nella schermata. */
+   * capo, lo storico e «nuova» della chat. Una spinta sopra porta le azioni di
+   * ciò che mostra; una schermata di scheda porta l'avatar dell'utente, e
+   * **può** portarle entrambe: «Oggi» mette il fumetto della chat prima
+   * dell'avatar (2026-09-27, per aprire la chat con un tocco). Le azioni
+   * stanno a sinistra, l'avatar resta sul bordo, dove lo si cerca. */
   azioni?: ReactNode
   su?: Su
 }) {

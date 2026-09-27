@@ -501,6 +501,14 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       usano solo i capi che hai…». *Verificato:* `typecheck` exit 0, `lint` 0
       errori, `mobile:test` 74 verdi, `build:web` ok. **Non verificato:** su un
       telefono né a schermo — nessun dispositivo in questa sessione.
+- [~] **Chat e storico più facili da aprire** — chiesto dall'utente. «Oggi»
+      ha un `BottoneTondo` col fumetto nella testata (slot `azioni`, accanto
+      all'avatar: `Testata` e la rule aggiornate); in `suggeritore.tsx`
+      «Storico» e «Nuova» sono bottoni in testata (icone `orologio`, `piu`);
+      `chat.tsx` ha un «+» che apre `/suggeritore?nuova=1`. Due icone nuove in
+      `TRACCIATI`: `fumetto`, `orologio`. *Verificato:* `typecheck` exit 0,
+      `lint` 0 errori, `mobile:test` 74 verdi, `build:web` ok. **Non
+      verificato:** a schermo — le due icone nuove non le ho viste disegnate.
 - [~] La tastiera non copre più il contenuto di `Schermata` — segnalato
       dall'utente su Android, in chat: il campo in cui scriveva finiva sotto la
       tastiera. Causa: con l'edge-to-edge Android non ridimensiona più la

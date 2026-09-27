@@ -21,6 +21,10 @@ travestita da registro.
 - **La chat è attaccata al fondo, come su WhatsApp**: il campo di scrittura e
   gli spunti stanno fermi in basso e scorrono solo i messaggi, che partono dal
   fondo. Tolta la nota «Le proposte usano solo i capi che hai…» sotto il campo.
+- **La chat si apre con un tocco da «Oggi»**: un fumetto in alto, accanto
+  alla tua foto. Dentro la chat lo storico e «nuova chat» sono due bottoni in
+  testata, non più due link piccoli che scorrevano via coi messaggi; e dallo
+  storico si comincia anche una chat nuova, col «+».
 - **In chat la tastiera non copre più quello che scrivi**: il contenuto sale
   sopra la tastiera e la conversazione resta ancorata in fondo, col campo
   appena sopra. Vale per ogni schermata, non solo la chat; e il bottone

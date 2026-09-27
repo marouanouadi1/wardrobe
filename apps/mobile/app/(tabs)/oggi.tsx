@@ -20,7 +20,7 @@ import {
 } from '../../src/dati/dominio'
 import { useArmadio, useVestiEVai } from '../../src/dati/archivio'
 import { parola } from '../../src/dati/formato'
-import { colori, durate, ETICHETTE, linee, ombre, raggi, spazi } from '../../src/tema/tokens'
+import { colori, durate, ETICHETTE, linee, ombre, raggi, spazi, superfici } from '../../src/tema/tokens'
 import {
   BadgeIa,
   BarraChiedi,
@@ -108,6 +108,18 @@ export default function Oggi() {
       titolo="Cosa metto oggi"
       fotoProfilo={profilo?.foto_url}
       tavolozza="caldo"
+      // La chat a un tocco, da dove si apre l'app: prima ci si arrivava solo
+      // scrivendo nella barra qui sotto o dal «Chiedi tu →» in fondo.
+      azioni={
+        <BottoneTondo
+          nome="fumetto"
+          onPress={() => router.push('/suggeritore')}
+          misura={42}
+          misuraIcona={19}
+          sfondo={superfici.vetroAlto}
+          colore={colori.inchiostro}
+        />
+      }
     >
       {erroreCaricamento ? (
         // Lo stato che prima non esisteva: un server irraggiungibile non è
