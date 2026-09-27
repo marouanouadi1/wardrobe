@@ -62,6 +62,7 @@ function RadiceApp() {
               >
                 <Stack.Screen name="accedi" options={{ animation: 'fade' }} />
                 <Stack.Screen name="registrati" options={{ animation: 'fade' }} />
+                <Stack.Screen name="recupero" options={{ animation: 'fade' }} />
                 <Stack.Screen name="intro" options={{ animation: 'fade' }} />
                 <Stack.Screen name="preferenze" options={{ animation: 'fade' }} />
                 <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
@@ -77,6 +78,7 @@ function RadiceApp() {
                 <Stack.Screen name="misure" />
                 <Stack.Screen name="unita" />
                 <Stack.Screen name="svuota" />
+                <Stack.Screen name="password" />
               </Stack>
               {/* Sopra lo Stack, non dentro il navigatore delle schede: è
                   l'unico modo perché una rotta spinta sopra le schede — il

@@ -37,7 +37,7 @@ solo di aggiunte, guardala ancora una volta prima di consegnarla.
 ## Letture obbligatorie
 
 1. `.claude/rules/ci-release.md`
-2. `.github/workflows/api.yml`, `mobile.yml`, `pr-title.yml` — **i commenti dentro
+2. `.github/workflows/api.yml`, `mobile.yml`, `database.yml`, `pr-title.yml` — **i commenti dentro
    quei file sono la documentazione**: ogni invariante è lì perché qualcosa si è
    rotto
 3. `scripts/bump-versione.mjs`

@@ -17,7 +17,7 @@
 
 import { VALORI_UNITA_LUNGHEZZA, type UnitaLunghezza } from '@wardrobe/contracts'
 import { View } from 'react-native'
-import { api } from '../src/dati/api'
+import { salvaProfilo } from '../src/dati/supabase'
 import { useArmadio } from '../src/dati/archivio'
 import { formattaLunghezza } from '../src/dati/dominio'
 import { useAzione } from '../src/dati/risorsa'
@@ -37,7 +37,7 @@ export default function Unita() {
   // cosa che si è già detta toccando.
   async function scegli(unita: UnitaLunghezza) {
     if (!profilo || unita === scelta) return
-    const salvato = await esegui(() => api.salvaProfilo({ ...profilo, unita_lunghezza: unita }))
+    const salvato = await esegui(() => salvaProfilo({ ...profilo, unita_lunghezza: unita }))
     if (salvato) await ricarica()
     else avvisa('Non sono riuscito a cambiare unità.')
   }

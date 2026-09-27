@@ -39,11 +39,11 @@ solo di aggiunte, guardala ancora una volta prima di consegnarla.
 
 1. `.claude/rules/python.md`
 2. `src/domain/ports.py` — le porte esistenti
-3. `src/handlers/_http.py` — `@endpoint`, `utente_id()`, `corpo()`, `ok()`
+3. `src/handlers/_http.py` — `@endpoint`, `sessione()`, `corpo()`, `ok()`
 4. `src/domain/errors.py` — il codice giusto quasi sempre esiste già
 5. `src/handlers/_container.py` — la composition root
-6. **Se tocchi `migrations/`: `.claude/rules/migrazioni.md`, per intero.** Quelle
-   regole hanno conseguenze irreversibili
+6. **Se tocchi `supabase/migrations/`: `.claude/rules/migrazioni.md`, per intero.**
+   Una migrazione arrivata sul progetto vero non si ritira
 
 ## Il dominio è in italiano
 
@@ -57,7 +57,7 @@ Contesto: serve un endpoint nuovo.
 utente: "Aggiungi l'endpoint per archiviare un capo"
 tu: "Prima l'errore di dominio se non esiste già, poi la funzione pura in domain/wardrobe.py, poi l'handler sottile, poi la riga in ROTTE."
 <commentary>
-L'ultimo passo è quello che si dimentica: senza la riga in `local_server.py:51`
+L'ultimo passo è quello che si dimentica: senza la riga in `local_server.py:40`
 l'endpoint esiste, i suoi test passano, e in locale risponde 404.
 </commentary>
 </example>
@@ -86,11 +86,11 @@ duplica in un posto solo — cioè diverge.
 <example>
 Contesto: una colonna nuova.
 utente: "Aggiungi la data di archiviazione ai capi"
-tu: "Migrazione 0010, colonna nullable, `add column if not exists`. E la verifico lanciando db:migrate due volte."
+tu: "Un file nuovo con `supabase migration new`, colonna nullable. Poi `supabase:reset`, `supabase:test`, `supabase:verifica` e `supabase:tipi`."
 <commentary>
-`add column … not null` senza default fallisce su una tabella che ha già righe —
-e siccome le migrazioni vengono rieseguite a ogni avvio, quel fallimento si
-ripete per sempre, non una volta sola.
+`add column … not null` senza default fallisce su una tabella che ha già righe:
+sul progetto vero il `db push` si ferma a metà. E il file, una volta arrivato
+lassù, è storia: la correzione è un file nuovo, non una riscrittura.
 </commentary>
 </example>
 

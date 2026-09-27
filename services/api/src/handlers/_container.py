@@ -1,8 +1,15 @@
 """Composition root: qui e solo qui si sceglie quale adapter usare.
 
 Sta in handlers/ e non in domain/ di proposito — è il posto dove il mondo entra.
-Le istanze sono pigre e riusate fra chiamate: un processo a lungo termine
-tiene aperta la stessa connessione invece di riaprirla ogni volta.
+
+**Cosa sta in cache e cosa no** (ADR 0010). In cache, per tutta la vita del
+processo, solo ciò che non conosce nessun utente: le chiavi pubbliche dell'Auth,
+l'orologio, il generatore di id, i servizi esterni — e il pool HTTP, che vive
+nell'adapter (`adapters/supabase.trasporto_condiviso`). Il
+repository e l'archivio **no**: nascono per una sessione, con il suo token, e
+servono solo quella richiesta. Un `@functools.cache` su di loro darebbe al
+prossimo chiamante il token del precedente — ogni test verde, e i dati di una
+persona a un'altra.
 """
 
 from __future__ import annotations
@@ -12,14 +19,20 @@ import os
 import uuid
 from datetime import UTC, date, datetime
 
+from domain.accesso import Sessione
 from domain.ports import (
-    ArchivioFoto,
+    Archivio,
+    ChiaviAuth,
     GeneratoreId,
     Orologio,
     RepositoryArmadio,
-    RepositoryUtenti,
     ServizioScontorno,
 )
+
+#: I due bucket di supabase/migrations/: le foto dei capi, e gli zip di «Scarica
+#: i tuoi dati».
+BUCKET_FOTO = "foto"
+BUCKET_ESPORTAZIONI = "esportazioni"
 
 
 class OrologioDiSistema:
@@ -31,8 +44,21 @@ class OrologioDiSistema:
 
 
 class IdCasuali:
+    """Uuid nella forma con i trattini: è quella che il database restituisce, e
+    un id confrontato con sé stesso in due grafie non sarebbe uguale."""
+
     def nuovo(self) -> str:
-        return uuid.uuid4().hex
+        return str(uuid.uuid4())
+
+
+def url_progetto() -> str:
+    return os.environ["SUPABASE_URL"]
+
+
+def chiave_pubblica() -> str:
+    """La chiave publishable: pubblica per costruzione, sta anche nell'APK.
+    Identifica il progetto; chi è l'utente lo dice il suo token."""
+    return os.environ["SUPABASE_CHIAVE_PUBBLICA"]
 
 
 @functools.cache
@@ -46,52 +72,24 @@ def generatore_id() -> GeneratoreId:
 
 
 @functools.cache
-def repository() -> RepositoryArmadio:
-    """Postgres se c'è `DATABASE_URL`, altrimenti memoria — vuota, mai finta.
+def chiavi_auth() -> ChiaviAuth:
+    from adapters.supabase import ChiaviAuthSupabase
 
-    `DATABASE_URL` (Postgres via docker-compose, vedi `db:up`) è lo switch per
-    i capi veri che devono sopravvivere a un riavvio. Senza, in `DEV_MODE=1`,
-    l'armadio in memoria parte vuoto: comodo per provare il flusso di
-    caricamento da zero, non un sostituto di Postgres per usare l'app davvero.
-    """
-    if os.environ.get("DATABASE_URL"):
-        from adapters.postgres import RepositoryPostgres
-
-        return RepositoryPostgres(dsn=os.environ["DATABASE_URL"])
-
-    from adapters.memory import RepositoryInMemoria
-
-    return RepositoryInMemoria()
+    return ChiaviAuthSupabase(url_progetto())
 
 
-@functools.cache
-def repository_utenti() -> RepositoryUtenti:
-    """Stessa scelta di `repository()`, ma per le credenziali di login: una
-    porta separata, un'istanza separata di `RepositoryPostgres` (che
-    implementa entrambi i Protocol) o di `RepositoryInMemoria`."""
-    if os.environ.get("DATABASE_URL"):
-        from adapters.postgres import RepositoryPostgres
+def repository(sessione: Sessione) -> RepositoryArmadio:
+    """L'armadio di chi chiama, con il suo token. Non in cache: vedi sopra."""
+    from adapters.supabase import RepositorySupabase
 
-        return RepositoryPostgres(dsn=os.environ["DATABASE_URL"])
-
-    from adapters.memory import RepositoryInMemoria
-
-    return RepositoryInMemoria()
+    return RepositorySupabase(sessione, url_progetto(), chiave_pubblica())
 
 
-@functools.cache
-def archivio_foto() -> ArchivioFoto:
-    """Su disco se c'è `CARTELLA_FOTO` (persistente, per usare l'app per
-    davvero, in locale o su un VPS), in memoria altrimenti (si azzera ad ogni
-    riavvio, comodo solo per provare)."""
-    if os.environ.get("CARTELLA_FOTO"):
-        from adapters.filesystem import ArchivioFileSystem
+def archivio(sessione: Sessione, bucket: str) -> Archivio:
+    """Un bucket dello Storage, con il token di chi chiama. Non in cache."""
+    from adapters.supabase import ArchivioSupabase
 
-        return ArchivioFileSystem(os.environ["CARTELLA_FOTO"])
-
-    from adapters.memory import ArchivioInMemoria
-
-    return ArchivioInMemoria()
+    return ArchivioSupabase(sessione, bucket, url_progetto(), chiave_pubblica())
 
 
 @functools.cache

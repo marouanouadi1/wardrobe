@@ -25,11 +25,23 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
 } from 'react'
-import { ErroreApi, api } from './api'
-import { perId, slotDiTipo } from './dominio'
+import { api } from './api'
+import { capiDiVestizione, perId, slotDiTipo, slotMancanti } from './dominio'
 import { caricaUnaFoto } from './foto'
+import { giornoLocale } from './righe'
 import { useSessione } from './sessione'
+import {
+  aggiornaCapo,
+  correggiCapo,
+  elencaCapi,
+  elencaOutfit,
+  leggiProfilo,
+  salvaOutfit as salvaOutfitSu,
+  salvaProfilo,
+  segnaIndossato,
+} from './supabase'
 
 interface Stato {
   pronto: boolean
@@ -59,17 +71,17 @@ interface Stato {
   /**
    * La foto a figura intera per l'avatar 2D, come URI sul dispositivo.
    *
-   * Sta qui e non dentro `profilo` perché il contratto porta solo la chiave
-   * dell'archivio foto (`avatar_foto_chiave`), non un URL da mostrare:
-   * finché il backend non firmerà anche la lettura, la foto visibile è
-   * quella scelta sul telefono.
+   * Sta qui e non dentro `profilo` perché il profilo porta solo il percorso
+   * nello Storage (`avatar_foto_chiave`), non un URL da mostrare: la foto
+   * visibile è quella scelta sul telefono.
    */
   fotoAvatar: string | null
   avviso: string | null
 }
 
 type Azione =
-  | { tipo: 'inCaricamento' }
+  | { tipo: 'inCaricamento'; altroUtente: boolean }
+  | { tipo: 'azzerato' }
   | { tipo: 'caricato'; capi: Capo[]; outfit: Outfit[]; profilo: Profilo | null }
   | { tipo: 'erroreCaricamento'; testo: string }
   | { tipo: 'capoAggiornato'; capo: Capo }
@@ -94,10 +106,18 @@ const INIZIALE: Stato = {
   avviso: null,
 }
 
+function altroUtente(stato: Stato, altro: boolean): Stato {
+  return altro ? { ...INIZIALE, pronto: false } : { ...stato, pronto: false }
+}
+
 function riduci(stato: Stato, azione: Azione): Stato {
   switch (azione.tipo) {
     case 'inCaricamento':
-      return { ...stato, pronto: false }
+      // Un altro utente non eredita niente di chi c'era: né le proposte — che
+      // descrivono i vestiti dell'altro —, né la vestizione, né un avviso.
+      return altroUtente(stato, azione.altroUtente)
+    case 'azzerato':
+      return { ...INIZIALE, pronto: true }
     case 'caricato':
       return {
         ...stato,
@@ -173,8 +193,7 @@ interface Archivio extends Stato {
   ) => Promise<void>
   chiediSuggerimenti: (richiesta?: string) => Promise<Suggerimento[]>
   avvisa: (testo: string | null) => void
-  /** Da chiamare dopo un login riuscito: il caricamento iniziale, se non
-   * c'era ancora un token, è partito vuoto di proposito. */
+  /** Rilegge tutto: dopo uno svuotamento, o quando il server torna raggiungibile. */
   ricarica: () => Promise<void>
 }
 
@@ -182,45 +201,46 @@ const Contesto = createContext<Archivio | null>(null)
 
 export function ArchivioProvider({ children }: { children: ReactNode }) {
   const [stato, invia] = useReducer(riduci, INIZIALE)
-  const { token, pronto: sessionePronta } = useSessione()
+  const { utente, pronto: sessionePronta } = useSessione()
+  // L'id, non il token: il token cambia a ogni rinnovo (ogni ora), e
+  // ricaricare l'armadio a ogni rinnovo sarebbe un giro di rete per niente.
+  // Cambia l'utente, si ricarica.
+  const utenteId = utente?.id ?? null
+  // Per chi è stato caricato lo store, e quale giro è l'ultimo: un caricamento
+  // di chi è appena uscito può arrivare dopo l'ingresso del prossimo, e non deve
+  // finirgli davanti.
+  const caricatoPer = useRef<string | null>(null)
+  const giro = useRef(0)
 
   const carica = useCallback(async () => {
-    // Senza token non c'è niente da caricare: è la schermata di accesso, che
-    // l'utente sta già vedendo, non un errore di rete. Senza questo
-    // controllo la richiesta partirebbe comunque senza Authorization e
-    // fallirebbe con un 401 che rimanderebbe subito al login da solo — non
-    // sbagliato, ma un giro a vuoto evitabile.
-    if (!token) {
-      invia({ tipo: 'caricato', capi: [], outfit: [], profilo: null })
+    const questo = (giro.current += 1)
+    const altro = caricatoPer.current !== utenteId
+    caricatoPer.current = utenteId
+    // Senza una sessione non c'è niente da caricare: è la schermata di
+    // accesso, che l'utente sta già vedendo, non un errore di rete.
+    if (!utenteId) {
+      invia({ tipo: 'azzerato' })
       return
     }
     // `pronto` torna a `false` finché questo giro di rete non finisce: senza,
-    // al login `pronto` restava `true` dal giro precedente (senza token,
+    // al login `pronto` restava `true` dal giro precedente (senza sessione,
     // partito subito con `capi: []`) e uno schermo con l'armadio pieno
     // mostrava per un attimo lo stato «armadio vuoto» — vedi la guardia in
     // `app/(tabs)/oggi.tsx`, che legge `pronto` per distinguere «vuoto per
     // davvero» da «ancora in caricamento».
-    invia({ tipo: 'inCaricamento' })
+    invia({ tipo: 'inCaricamento', altroUtente: altro })
     try {
-      const [elenco, outfit, profilo] = await Promise.all([
-        api.elencaCapi(),
-        api.elencaOutfit(),
-        api.profilo(),
-      ])
-      invia({ tipo: 'caricato', capi: elenco.capi, outfit: outfit.outfit, profilo })
+      const [capi, outfit, profilo] = await Promise.all([elencaCapi(), elencaOutfit(), leggiProfilo()])
+      if (questo !== giro.current) return
+      invia({ tipo: 'caricato', capi, outfit, profilo })
     } catch (errore) {
-      // Un 401 qui è un token scaduto: `suTokenNonValido` (vedi
-      // `sessione.tsx`) sta già riportando al login, un armadio vuoto con
-      // una causa in chiaro descriverebbe come «rete» un problema che non lo
-      // è — qui basta tornare pronti, senza dati e senza errore da mostrare.
-      if (errore instanceof ErroreApi && errore.stato === 401) {
-        invia({ tipo: 'caricato', capi: [], outfit: [], profilo: null })
-        return
-      }
-      // Niente più fallback ai dati di esempio: con un backend vero un
-      // errore di rete non deve mai far ricomparire l'armadio finto sopra ai
-      // capi veri — resta un armadio vuoto, ma ora con la causa in chiaro
-      // (`erroreCaricamento`), distinguibile da un armadio davvero vuoto.
+      if (questo !== giro.current) return
+      // Niente dati di esempio: un errore di rete non deve mai far comparire
+      // un armadio finto — resta un armadio vuoto, con la causa in chiaro
+      // (`erroreCaricamento`), distinguibile da un armadio davvero vuoto. È
+      // anche quello che si vede quando il progetto Supabase è in pausa
+      // (piano Free, dopo sette giorni senza richieste): «non ti raggiungo»,
+      // non «non hai niente».
       invia({
         tipo: 'erroreCaricamento',
         testo: `Non riesco a raggiungere il server. (${
@@ -228,11 +248,11 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
         })`,
       })
     }
-  }, [token])
+  }, [utenteId])
 
   useEffect(() => {
-    // Aspetta che la sessione abbia letto il portachiavi una volta: prima
-    // di allora `token` è sempre `null`, e caricare partirebbe a vuoto.
+    // Aspetta che la sessione sia stata letta una volta: prima di allora
+    // `utente` è sempre `null`, e caricare partirebbe a vuoto.
     if (!sessionePronta) return
     void carica()
   }, [sessionePronta, carica])
@@ -271,9 +291,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
             }
           : capo.analisi,
       } as Capo
-      await applica(locale, () =>
-        api.aggiornaCapo(capoId, { correzioni: { [attributo]: valore } as never }),
-      )
+      await applica(locale, () => correggiCapo(capo, attributo, { [attributo]: valore } as never))
     },
     [applica, indice],
   )
@@ -286,7 +304,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
     async (capoId, etichette) => {
       const capo = indice.get(capoId)
       if (!capo) return
-      await applica({ ...capo, etichette }, () => api.aggiornaCapo(capoId, { etichette }))
+      await applica({ ...capo, etichette }, () => aggiornaCapo(capo, { etichette }))
     },
     [applica, indice],
   )
@@ -295,7 +313,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
     async (capoId, appunti) => {
       const capo = indice.get(capoId)
       if (!capo) return
-      await applica({ ...capo, appunti }, () => api.aggiornaCapo(capoId, { appunti }))
+      await applica({ ...capo, appunti }, () => aggiornaCapo(capo, { appunti }))
     },
     [applica, indice],
   )
@@ -304,7 +322,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
     async (capoId, nuovo) => {
       const capo = indice.get(capoId)
       if (!capo) return
-      await applica({ ...capo, stato: nuovo }, () => api.aggiornaCapo(capoId, { stato: nuovo }))
+      await applica({ ...capo, stato: nuovo }, () => aggiornaCapo(capo, { stato: nuovo }))
     },
     [applica, indice],
   )
@@ -314,7 +332,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       const capo = indice.get(capoId)
       if (!capo) return
       const preferito = !capo.preferito
-      await applica({ ...capo, preferito }, () => api.aggiornaCapo(capoId, { preferito }))
+      await applica({ ...capo, preferito }, () => aggiornaCapo(capo, { preferito }))
     },
     [applica, indice],
   )
@@ -323,7 +341,8 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
     async (capoId) => {
       const capo = indice.get(capoId)
       if (!capo) return
-      const oggi = new Date().toISOString().slice(0, 10)
+      // Il giorno locale, come quello che scrive `segna_indossato`.
+      const oggi = giornoLocale()
       await applica(
         {
           ...capo,
@@ -331,7 +350,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
           volte_indossato: (capo.volte_indossato ?? 0) + 1,
           stato: 'da_lavare',
         },
-        () => api.segnaIndossato(capoId),
+        () => segnaIndossato(capo),
       )
     },
     [applica, indice],
@@ -361,12 +380,11 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
       invia({ tipo: 'fotoAvatar', uri })
       try {
         // Stessa strada delle foto dei capi — letteralmente la stessa
-        // funzione: URL firmato e PUT diretta all'archivio foto, la foto non
-        // passa dal nostro backend.
-        const chiave = await caricaUnaFoto(uri)
+        // funzione: dritta nello Storage, nella cartella dell'utente.
+        const chiave = await caricaUnaFoto(uri, 'avatar')
         invia({ tipo: 'fotoAvatar', uri, chiave })
         if (stato.profilo) {
-          await api.salvaProfilo({ ...stato.profilo, avatar_foto_chiave: chiave })
+          await salvaProfilo({ ...stato.profilo, avatar_foto_chiave: chiave })
         }
       } catch (errore) {
         invia({
@@ -405,8 +423,14 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
         vestizione: dettagli?.vestizione ?? stato.vestizione,
         origine: dettagli?.origine ?? ('manuale' as const),
       }
+      // Il database lo rifiuterebbe comunque (il vincolo `outfit_indossabile`),
+      // ma con un errore che qui arriverebbe generico: il motivo lo si sa prima.
+      if (slotMancanti(capiDiVestizione(nuovo.vestizione, indice)).length > 0) {
+        invia({ tipo: 'avviso', testo: 'Un outfit ha bisogno di un abito, oppure di un sopra e un sotto.' })
+        return
+      }
       try {
-        invia({ tipo: 'outfitAggiunto', outfit: await api.salvaOutfit(nuovo) })
+        invia({ tipo: 'outfitAggiunto', outfit: await salvaOutfitSu(nuovo) })
       } catch (errore) {
         invia({
           tipo: 'avviso',
@@ -414,7 +438,7 @@ export function ArchivioProvider({ children }: { children: ReactNode }) {
         })
       }
     },
-    [stato.vestizione],
+    [stato.vestizione, indice],
   )
 
   const chiediSuggerimenti = useCallback<Archivio['chiediSuggerimenti']>(async (richiesta) => {

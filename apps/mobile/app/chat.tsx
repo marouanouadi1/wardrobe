@@ -11,9 +11,10 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { Alert } from 'react-native'
-import { api, messaggioDiErrore } from '../src/dati/api'
+import { messaggioDiErrore } from '../src/dati/errori'
 import { conta, giornoRelativo } from '../src/dati/formato'
 import { useRisorsa } from '../src/dati/risorsa'
+import { elencaConversazioni, eliminaConversazione } from '../src/dati/supabase'
 import { spazi } from '../src/tema/tokens'
 import { Conferma } from '../src/ui/avviso'
 import { Schermata } from '../src/ui/guscio'
@@ -21,8 +22,8 @@ import { RigaNavigabile } from '../src/ui/righe'
 import { StatoRisorsa } from '../src/ui/stati'
 
 export default function Chat() {
-  const { dati, caricamento, errore, ricarica } = useRisorsa(() => api.chat.conversazioni())
-  const conversazioni = dati?.conversazioni ?? []
+  const { dati, caricamento, errore, ricarica } = useRisorsa(() => elencaConversazioni())
+  const conversazioni = dati ?? []
   // La conferma è di questa schermata (Conferma, non Alert.alert — sul web
   // Alert.alert con più bottoni non fa nulla), l'errore di rete resta
   // sull'Alert nativo: non è la conferma di un'azione, non ha bisogno dei
@@ -33,8 +34,7 @@ export default function Chat() {
     if (!daEliminare) return
     const { id } = daEliminare
     setDaEliminare(null)
-    api.chat
-      .elimina(id)
+    eliminaConversazione(id)
       .then(() => ricarica())
       .catch((err: unknown) => Alert.alert('Non riesco a eliminarla', messaggioDiErrore(err, '')))
   }

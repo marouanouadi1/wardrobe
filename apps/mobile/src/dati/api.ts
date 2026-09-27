@@ -1,44 +1,29 @@
 /**
- * Il client dell'API. Tipizzato dai contratti generati dal backend.
+ * Il client del backend dell'IA: analisi delle foto, suggerimenti, chat,
+ * esportazione. Tipizzato dai contratti generati dal backend.
  *
- * Nessun tipo scritto a mano qui dentro: `Capo`, `ElencoCapi` e compagnia
- * arrivano da `@wardrobe/contracts`, che è la proiezione TypeScript dei
- * modelli Pydantic. Se il backend rinomina un campo, il rosso appare qui —
- * al momento della build, non in produzione.
+ * Il resto — capi, outfit, profilo, storico della chat, segnalazioni — l'app
+ * lo legge e lo scrive da sé su Supabase (`supabase.ts`, ADR 0010). Il backend
+ * riceve il token della sessione di Supabase e agisce **come l'utente**: vede
+ * solo quello che vede lui.
+ *
+ * Nessun tipo scritto a mano qui dentro: arrivano da `@wardrobe/contracts`, che
+ * è la proiezione TypeScript dei modelli Pydantic. Se il backend rinomina un
+ * campo, il rosso appare qui — al momento della build, non in produzione.
  */
 
-import Constants from 'expo-constants'
-import { File } from 'expo-file-system'
-import * as SecureStore from 'expo-secure-store'
-import { Platform } from 'react-native'
 import type {
-  AggiornamentoCapo,
-  AggiornamentoSegnalazione,
-  AnalisiAvviata,
-  Capo,
-  ContoSvuotamento,
-  Credenziali,
-  ElencoCapi,
-  ElencoConversazioniChat,
-  ElencoMessaggiChat,
-  ElencoSegnalazioni,
   EsitoAnalisi,
   EsportazionePronta,
-  NuovaSegnalazione,
-  NuovoOutfit,
-  Outfit,
-  Profilo,
-  Registrazione,
   RichiestaMessaggioChat,
   RichiestaSuggerimenti,
-  RichiestaSvuotamento,
-  RiepilogoArmadio,
   RispostaChat,
   RispostaSuggerimenti,
-  Segnalazione,
-  TokenAccesso,
-  UploadFirmato,
 } from '@wardrobe/contracts'
+import Constants from 'expo-constants'
+import { Platform } from 'react-native'
+import { ErroreDati } from './errori'
+import { rinnovaSessione, tokenDiAccesso } from './supabase'
 
 /** La porta di `npm run api:local` (default di `services/api`). */
 const PORTA_API_LOCALE = '8787'
@@ -71,79 +56,20 @@ function rilevaUrlSviluppo(): string | null {
  */
 export const URL_API = process.env.EXPO_PUBLIC_API_URL ?? rilevaUrlSviluppo()
 
-export class ErroreApi extends Error {
-  constructor(
-    readonly stato: number,
-    readonly codice: string,
-    messaggio: string,
-  ) {
-    super(messaggio)
-  }
-}
-
-/**
- * Il messaggio da mostrare per un errore qualunque: `ErroreApi` è già un
- * `Error` (il suo `.message` è il testo del backend), quindi un solo
- * controllo copre sia la rete sia l'API — dove prima ogni schermata
- * ripeteva `errore instanceof Error ? errore.message : ripiego`.
- */
-export function messaggioDiErrore(errore: unknown, ripiego: string): string {
-  return errore instanceof Error ? errore.message : ripiego
-}
-
-/** Un percorso con la sua querystring, senza ripetere `URLSearchParams` per ogni rotta che ne ha una. */
-function conQuery(percorso: string, parametri: Record<string, string | number | boolean | undefined>): string {
-  const query = new URLSearchParams()
-  for (const [chiave, valore] of Object.entries(parametri)) {
-    if (valore === undefined || valore === false || valore === '') continue
-    query.set(chiave, valore === true ? '1' : String(valore))
-  }
-  const stringa = query.toString()
-  return stringa ? `${percorso}?${stringa}` : percorso
-}
-
-const CHIAVE_TOKEN = 'wardrobe.token'
-
-let tokenCorrente: string | null = null
-
-/**
- * Il token del login. Lo imposta la schermata `accedi`, e resta anche dopo
- * che l'app si riavvia — salvato nel portachiavi del sistema, non solo in
- * memoria. Sul web `expo-secure-store` non ha un'implementazione (il modulo
- * nativo non esiste): la sessione lì non sopravvive a un refresh, che per
- * l'uso da telefono di questa beta non è il caso che conta.
- */
-export function impostaToken(token: string | null): void {
-  tokenCorrente = token
-  if (Platform.OS === 'web') return
-  if (token) {
-    SecureStore.setItemAsync(CHIAVE_TOKEN, token).catch(() => undefined)
-  } else {
-    SecureStore.deleteItemAsync(CHIAVE_TOKEN).catch(() => undefined)
-  }
-}
-
-/** Da chiamare una volta all'avvio dell'app: rimette in memoria il token
- * dell'ultima sessione, se c'è. */
-export async function caricaTokenSalvato(): Promise<string | null> {
-  if (Platform.OS === 'web') return null
-  const token = await SecureStore.getItemAsync(CHIAVE_TOKEN).catch(() => null)
-  tokenCorrente = token
-  return token
-}
-
-/**
- * Chiamata da `SessioneProvider` quando un 401 arriva da qualunque richiesta:
- * un token scaduto (dura 30 giorni, nessun refresh) o revocato deve riportare
- * al login da dove si trova l'utente, non restare a mostrare per sempre
- * «non riesco a raggiungere il server» per un problema che è invece «devi
- * rientrare». Un modulo qui non deve importare `sessione.tsx` (dipenderebbe
- * da React): la notifica passa da questa singola callback registrata.
- */
-let alTokenNonValido: (() => void) | null = null
-
-export function suTokenNonValido(gestore: (() => void) | null): void {
-  alTokenNonValido = gestore
+async function una(
+  percorso: string,
+  token: string | null,
+  opzioni: { metodo?: string; corpo?: unknown; segnale?: AbortSignal },
+): Promise<Response> {
+  return fetch(`${URL_API}${percorso}`, {
+    method: opzioni.metodo ?? 'GET',
+    headers: {
+      'content-type': 'application/json',
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: opzioni.corpo === undefined ? undefined : JSON.stringify(opzioni.corpo),
+    signal: opzioni.segnale,
+  })
 }
 
 async function chiama<T>(
@@ -151,41 +77,39 @@ async function chiama<T>(
   opzioni: {
     metodo?: string
     corpo?: unknown
-    intestazioni?: Record<string, string>
     /** Per abortire una richiesta lunga (l'analisi di una foto) da un
      * timeout o da un tocco su «Annulla» — vedi `carica.tsx`. */
     segnale?: AbortSignal
   } = {},
 ): Promise<T> {
   if (!URL_API) {
-    throw new ErroreApi(
-      0,
+    throw new ErroreDati(
       'api_non_configurata',
       'Non riesco a determinare l\'indirizzo dell\'API: imposta EXPO_PUBLIC_API_URL.',
     )
   }
 
-  const risposta = await fetch(`${URL_API}${percorso}`, {
-    method: opzioni.metodo ?? 'GET',
-    headers: {
-      'content-type': 'application/json',
-      ...(tokenCorrente ? { authorization: `Bearer ${tokenCorrente}` } : {}),
-      ...opzioni.intestazioni,
-    },
-    body: opzioni.corpo === undefined ? undefined : JSON.stringify(opzioni.corpo),
-    signal: opzioni.segnale,
-  })
+  let risposta = await una(percorso, await tokenDiAccesso(), opzioni)
+
+  // Un 401 non vuol dire «sei fuori». Il backend lo dà anche a un token che
+  // scade fra pochi minuti prima di un lavoro lungo come l'analisi: si
+  // rinnova la sessione e si riprova, **una volta**. E il backend non chiude
+  // mai una sessione di Supabase: un 401 che resta è un errore di questa
+  // richiesta. Se il refresh token non vale più, supabase-js toglie la
+  // sessione da sé e `sessione.tsx` lo sente (`SIGNED_OUT`).
+  if (risposta.status === 401) {
+    const rinnovato = await rinnovaSessione()
+    if (rinnovato) risposta = await una(percorso, rinnovato, opzioni)
+  }
 
   if (!risposta.ok) {
-    if (risposta.status === 401) alTokenNonValido?.()
-
     // Il backend risponde sempre con { errore, messaggio }: lo rispettiamo
     // invece di inventare un messaggio nostro.
     const dettaglio = await risposta.json().catch(() => ({}))
-    throw new ErroreApi(
-      risposta.status,
+    throw new ErroreDati(
       String(dettaglio.errore ?? 'errore_sconosciuto'),
       String(dettaglio.messaggio ?? `L'API ha risposto ${risposta.status}`),
+      risposta.status,
     )
   }
 
@@ -196,86 +120,25 @@ async function chiama<T>(
 export const api = {
   salute: () => chiama<{ stato: string; versione: string }>('/salute'),
 
-  // ── accesso ──────────────────────────────────────────────────────────────
-  auth: {
-    accedi: (credenziali: Credenziali) =>
-      chiama<TokenAccesso>('/auth/accedi', { metodo: 'POST', corpo: credenziali }),
-    /** L'email deve essere nell'allowlist del server (`EMAIL_AMMESSE`):
-     * senza, il backend risponde 403, allowlist vuota compresa. */
-    registrati: (registrazione: Registrazione) =>
-      chiama<TokenAccesso>('/auth/registrati', { metodo: 'POST', corpo: registrazione }),
-  },
-
-  // ── armadio ──────────────────────────────────────────────────────────────
-  elencaCapi: (filtro?: { tipo?: string; stato?: string; testo?: string; preferiti?: boolean }) =>
-    chiama<ElencoCapi>(
-      conQuery('/capi', { tipo: filtro?.tipo, stato: filtro?.stato, testo: filtro?.testo, preferiti: filtro?.preferiti }),
-    ),
-  leggiCapo: (id: string) => chiama<Capo>(`/capi/${id}`),
-  aggiornaCapo: (id: string, modifica: AggiornamentoCapo) =>
-    chiama<Capo>(`/capi/${id}`, { metodo: 'PATCH', corpo: modifica }),
-  segnaIndossato: (id: string) => chiama<Capo>(`/capi/${id}/indossato`, { metodo: 'POST' }),
-  riepilogo: () => chiama<RiepilogoArmadio>('/armadio/riepilogo'),
-
-  // ── caricamento e analisi ────────────────────────────────────────────────
-  firmaUpload: (contentType: string) =>
-    chiama<UploadFirmato>('/foto/upload', { metodo: 'POST', corpo: { content_type: contentType } }),
   /**
-   * La PUT va diretta all'archivio foto: la foto non passa dal nostro backend.
-   *
-   * Il caricamento legge `uri` con `expo-file-system`, non con `fetch(uri).arrayBuffer()`:
-   * su Android quest'ultimo può restituire in silenzio un corpo 404 "File not found" al
-   * posto dei byte della foto (bug noto del fetch WinterCG di Expo con gli URI `file://`
-   * del selettore immagini), che finiva caricato come se fosse la foto.
+   * Legge una foto già nello Storage e crea il capo. La risposta arriva a
+   * lavoro finito ed è l'esito intero: lo stato, il capo — **senza gli
+   * indirizzi delle foto**, che firma l'app (`firmaCapo`) — o il motivo.
    */
-  caricaFoto: async (firma: UploadFirmato, uri: string) => {
-    const esito = await new File(uri).upload(firma.url, {
-      httpMethod: (firma.metodo as 'PUT' | 'POST' | 'PATCH' | undefined) ?? 'PUT',
-      headers: firma.intestazioni ?? {},
-    })
-    if (esito.status < 200 || esito.status >= 300) {
-      throw new ErroreApi(esito.status, 'upload_fallito', 'Caricamento della foto non riuscito')
-    }
-    return firma.chiave
-  },
-  avviaAnalisi: (chiaveFoto: string, segnale?: AbortSignal) =>
-    chiama<AnalisiAvviata>('/capi/analisi', {
+  analizza: (chiaveFoto: string, segnale?: AbortSignal) =>
+    chiama<EsitoAnalisi>('/capi/analisi', {
       metodo: 'POST',
       corpo: { chiave_foto: chiaveFoto },
       segnale,
     }),
-  statoAnalisi: (esecuzioneId: string, segnale?: AbortSignal) =>
-    chiama<EsitoAnalisi>(`/capi/analisi/${encodeURIComponent(esecuzioneId)}`, { segnale }),
 
-  // ── suggerimenti e outfit ───────────────────────────────────────────────
   suggerimenti: (richiesta: RichiestaSuggerimenti) =>
     chiama<RispostaSuggerimenti>('/suggerimenti', { metodo: 'POST', corpo: richiesta }),
 
-  // ── chat: conversazioni ──────────────────────────────────────────────────
-  chat: {
-    /** L'ultima conversazione, con i suoi messaggi. Vuota se non ce n'è ancora nessuna. */
-    elenca: () => chiama<ElencoMessaggiChat>('/chat'),
-    invia: (richiesta: RichiestaMessaggioChat) =>
-      chiama<RispostaChat>('/chat', { metodo: 'POST', corpo: richiesta }),
-    /** Le conversazioni passate, dalla più recente. */
-    conversazioni: () => chiama<ElencoConversazioniChat>('/chat/conversazioni'),
-    /** I messaggi di una conversazione specifica. */
-    messaggi: (conversazioneId: string) =>
-      chiama<ElencoMessaggiChat>(`/chat/conversazioni/${encodeURIComponent(conversazioneId)}`),
-    elimina: (conversazioneId: string) =>
-      chiama<void>(`/chat/conversazioni/${encodeURIComponent(conversazioneId)}`, {
-        metodo: 'DELETE',
-      }),
-  },
+  /** Un messaggio allo stilista. Lo storico lo si legge da Supabase (`supabase.ts`). */
+  inviaChat: (richiesta: RichiestaMessaggioChat) =>
+    chiama<RispostaChat>('/chat', { metodo: 'POST', corpo: richiesta }),
 
-  elencaOutfit: () => chiama<{ outfit: Outfit[] }>('/outfit'),
-  salvaOutfit: (nuovo: NuovoOutfit) => chiama<Outfit>('/outfit', { metodo: 'POST', corpo: nuovo }),
-
-  // ── profilo ─────────────────────────────────────────────────────────────
-  profilo: () => chiama<Profilo>('/profilo'),
-  salvaProfilo: (profilo: Profilo) => chiama<Profilo>('/profilo', { metodo: 'PUT', corpo: profilo }),
-
-  // ── i tuoi dati ─────────────────────────────────────────────────────────
   /**
    * Chiede un indirizzo firmato da cui scaricare l'archivio, **non i dati**.
    *
@@ -285,33 +148,4 @@ export const api = {
    * operativo a occuparsene.
    */
   esportazione: () => chiama<EsportazionePronta>('/esportazione', { metodo: 'POST' }),
-
-  /**
-   * **Cancella il contenuto dell'armadio, e non torna indietro.**
-   *
-   * La parola di conferma non è una ridondanza della schermata: quella difende
-   * dal tocco distratto e sparisce con un deep-link, un `curl` ricopiato o una
-   * richiesta rimandata due volte dalla libreria di rete. Questa vive nel
-   * contratto (`RichiestaSvuotamento`), e il tipo è il letterale `'SVUOTA'` —
-   * generato dal backend, non ridigitato qui.
-   */
-  svuotaArmadio: () =>
-    chiama<ContoSvuotamento>('/armadio/svuota', {
-      metodo: 'POST',
-      corpo: { conferma: 'SVUOTA' } satisfies RichiestaSvuotamento,
-    }),
-
-  // ── segnalazioni ────────────────────────────────────────────────────────
-  segnalazioni: {
-    /** La copia che il backend tiene di quanto `apriSegnalazione()` ha già
-     * inviato a Sentry — vedi `dati/segnalazioni.ts`. */
-    crea: (nuova: NuovaSegnalazione) =>
-      chiama<Segnalazione>('/segnalazioni', { metodo: 'POST', corpo: nuova }),
-    /** Le proprie, o tutte con `amministratore: true` se l'email di chi
-     * chiama è nell'allowlist del backend (EMAIL_AMMINISTRATORI). */
-    elenca: () => chiama<ElencoSegnalazioni>('/segnalazioni'),
-    /** Riservata all'amministratore: chiunque altro riceve un 403. */
-    aggiorna: (id: string, modifica: AggiornamentoSegnalazione) =>
-      chiama<Segnalazione>(`/segnalazioni/${id}`, { metodo: 'PATCH', corpo: modifica }),
-  },
 }
