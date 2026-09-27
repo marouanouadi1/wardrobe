@@ -866,8 +866,20 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       - l'unico invito è `ouadimarouan@gmail.com`, l'account con cui l'utente ha creato il
         progetto Supabase.
 
+      **Provato sul telefono dall'utente** (2026-09-27, APK 0.10.1):
+      - **la registrazione con il codice via email** funziona. Il codice è arrivato nello spam:
+        il dominio è nuovo, e manca il record DMARC;
+      - **«Continua con Google» funziona**, dopo aver aggiunto su Google Cloud il client Android
+        (`com.wardrobe.armadio` con lo SHA-1 della chiave EAS) nello stesso progetto del client
+        Web. Senza quel client la libreria rifiutava l'accesso sul telefono, e a Supabase non
+        arrivava niente. L'ID del client Android non va scritto da nessuna parte: basta che esista.
+
       **Cosa manca:**
-      - la prova sul telefono: registrazione, recupero, Google, una foto;
+      - la prova sul telefono del recupero della password e di una foto analizzata;
+      - il record DMARC di `ilmioarmadio.xyz` (TXT `_dmarc`, `v=DMARC1; p=none;`) su Hostinger;
+      - `cherragui.ismail63@gmail.com` non si è potuto aggiungere fra i tester Google. Per lui
+        Google non serve (entra con la sua password), e pubblicare l'app OAuth toglierebbe la
+        lista dei tester senza aprire le registrazioni, che restano dietro gli inviti;
       - la **fase 4**, perché i tre account non ritrovano ancora il loro armadio;
       - la **fase 5**, perché README e `docs/deploy.md` descrivono ancora il backend di prima;
       - ~~l'account di prova non è uno dei tre account veri~~: **falso**, lo era. È stato scritto
