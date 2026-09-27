@@ -875,7 +875,8 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
         arrivava niente. L'ID del client Android non va scritto da nessuna parte: basta che esista.
 
       **Cosa manca:**
-      - la prova sul telefono del recupero della password e di una foto analizzata;
+      - **il recupero della password** funziona anche lui, sul telefono;
+      - la prova sul telefono di una foto analizzata;
       - il record DMARC di `ilmioarmadio.xyz` (TXT `_dmarc`, `v=DMARC1; p=none;`) su Hostinger;
       - `cherragui.ismail63@gmail.com` non si è potuto aggiungere fra i tester Google. Per lui
         Google non serve (entra con la sua password), e pubblicare l'app OAuth toglierebbe la
@@ -887,7 +888,8 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
         l'ha chiusa l'utente, qui sotto.
 
 - [x] **Fase 4: l'import, solo per Ismail** (2026-09-27, per scelta dell'utente).
-      `services/api/scripts/migra_a_supabase.py`, lanciato dal computer locale:
+      `services/api/scripts/migra_a_supabase.py`, lanciato dal computer locale. Tolto dal repo a
+      lavoro verificato, su richiesta dell'utente: resta nella storia di git (`ddc5afc`).
       - legge il VPS **in sola lettura**, con una query via `ssh` e le foto con un `tar` dal
         volume;
       - crea l'account con l'API admin, **stesso id e stesso hash bcrypt**;
