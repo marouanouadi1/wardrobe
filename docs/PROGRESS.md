@@ -847,6 +847,32 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
         dall'API admin con `password_hash` bcrypt ed email confermata entra con la sua
         password, ha il ruolo in sessione e il suo profilo. Il trigger non lo tocca.
 
+- [~] **Il passaggio, il 2026-09-27** (anticipato su richiesta dell'utente, senza la fase 4):
+      - lo schema è sul progetto vero (`supabase db push`, senza il seed). *Verificato* con l'MCP:
+        la migrazione registrata, le 8 tabelle con l'RLS, i due trigger su `auth.users`, i due
+        bucket. Gli advisor di sicurezza sono vuoti, dopo che l'utente ha tolto `rls_auto_enable()`
+        (`Q-14`);
+      - il merge di `feat/supabase` su `main` (#47) ha rilasciato l'API **0.6.0**. *Verificato*:
+        `/salute` in produzione risponde `0.6.0`, e senza token si riceve 401. Sul VPS
+        `wardrobe-postgres` è ancora acceso, con i volumi `postgres_data` e `foto_dati`;
+      - l'app **0.10.1** è costruita in locale dal suo tag e pubblicata come Release. La build in
+        cloud si è fermata per la quota, come previsto. *Verificato* sull'APK: la firma ha lo
+        stesso SHA-1 registrato su Google Cloud, e il bundle contiene l'indirizzo di Supabase e
+        l'ID del client Google. google-signin 16.1.5 si compila con React Native 0.86;
+      - nel pannello, dall'utente: l'hook degli inviti, lo SMTP con Resend, i quattro template con
+        il codice, gli accessi anonimi spenti e il provider Google. **L'hook è verificato dal
+        vivo**: un'email non invitata riceve 403 con il nostro messaggio, e nessun utente nasce.
+        Il resto l'ha impostato l'utente, e lo prova la prima registrazione vera;
+      - l'unico invito è `ouadimarouan@gmail.com`, l'account con cui l'utente ha creato il
+        progetto Supabase.
+
+      **Cosa manca:**
+      - la prova sul telefono: registrazione, recupero, Google, una foto;
+      - la **fase 4**, perché i tre account non ritrovano ancora il loro armadio;
+      - la **fase 5**, perché README e `docs/deploy.md` descrivono ancora il backend di prima;
+      - l'account di prova `ouadimarouan@gmail.com` non è uno dei tre account veri: la fase 4
+        non se lo troverà davanti.
+
 ## Infrastruttura e rilascio
 
 - [x] VPS Hetzner, Caddy, Let's Encrypt emesso al primo avvio, dominio reale. Deploy
