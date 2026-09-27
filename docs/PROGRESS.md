@@ -478,6 +478,14 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       strade con `?onboarding=1` (occhiello diverso, nessun «indietro», «Le
       inserisco dopo» al posto di «Cancella»); il segnale resta uno solo
       (`preferenzeViste`), perché è l'ultimo passo a chiuderli tutti.
+      *2026-09-27:* i passi si scorrono anche col dito (`Gesture.Pan` di
+      gesture-handler attorno all'intera schermata): sinistra avanti, destra
+      indietro, ferma ai due capi — sull'ultimo passo la scorsa **non** porta a
+      `registrati`. *Verificato:* `typecheck` e `lint` exit 0, `mobile:test`
+      74 verdi, e sulla build web con Chrome headless, tocchi veri via CDP:
+      avanti fino al terzo, fermo lì, indietro fino al primo, fermo lì, e un
+      gesto verticale non cambia passo. Col mouse sul web il gesto non parte
+      se comincia su un'immagine (`T-57`). **Nessuna prova su un telefono.**
       *Verificato:* `typecheck` exit 0, `lint` 0 errori, `mobile:test` 69,
       `build:web`. **E soprattutto guardandole**: `dist/` servita in locale e
       cinque screenshot a 390×844 con Chrome headless, confrontati col

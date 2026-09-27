@@ -18,6 +18,9 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **Le tre schede dell'intro si scorrono anche col dito**: verso sinistra la
+  successiva, verso destra la precedente. Il bottone resta; sull'ultima scheda
+  la scorsa non porta alla creazione dell'account, lo fa solo il bottone.
 - **In chat la tastiera non copre più quello che scrivi**: il contenuto sale
   sopra la tastiera e la conversazione resta ancorata in fondo, col campo
   appena sopra. Vale per ogni schermata, non solo la chat; e il bottone

@@ -24,6 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { Animated, BackHandler, Easing, View, useWindowDimensions } from 'react-native'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { segnaIntroVista } from '../src/dati/intro'
 import { colori, linee, raggi, spazi, testoSu, velo } from '../src/tema/tokens'
 import {
@@ -303,6 +304,11 @@ const PASSI = [
   },
 ] as const
 
+/** Quanto deve scorrere il dito in orizzontale perché una scorsa lenta cambi
+ *  passo, e la velocità oltre cui basta anche uno scatto corto. */
+const SOGLIA_SCORSA = 60
+const SOGLIA_VELOCITA = 500
+
 export default function Intro() {
   const [passo, setPasso] = useState(0)
   const { height } = useWindowDimensions()
@@ -322,6 +328,25 @@ export default function Intro() {
     return () => sottoscrizione.remove()
   }, [passo])
 
+  // La scorsa col dito, oltre al bottone: verso sinistra il passo dopo, verso
+  // destra quello prima. **Sull'ultimo passo verso sinistra non fa nulla**: lì
+  // il bottone crea un account, e una scorsa distratta non deve portarci.
+  // `activeOffsetX` e `failOffsetY` la tengono orizzontale: un dito che va in
+  // verticale non la accende. `runOnJS` perché chiama `setPasso`, non anima.
+  // I limiti stanno dentro gli aggiornamenti, così il callback non legge
+  // `passo` e non dipende da quale render l'ha creato.
+  const scorsa = Gesture.Pan()
+    .runOnJS(true)
+    .activeOffsetX([-15, 15])
+    .failOffsetY([-20, 20])
+    .onEnd(({ translationX, velocityX }) => {
+      if (translationX < -SOGLIA_SCORSA || velocityX < -SOGLIA_VELOCITA) {
+        setPasso((precedente) => Math.min(PASSI.length - 1, precedente + 1))
+      } else if (translationX > SOGLIA_SCORSA || velocityX > SOGLIA_VELOCITA) {
+        setPasso((precedente) => Math.max(0, precedente - 1))
+      }
+    })
+
   function vai(dove: '/accedi' | '/registrati') {
     // Segna l'intro come vista prima di uscire, da qualunque porta: senza,
     // `index.tsx` la rimostra a ogni apertura finché non c'è un token.
@@ -330,71 +355,73 @@ export default function Intro() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colori.sfondo }}>
-      <SfondoAura tavolozza="oro" />
+    <GestureDetector gesture={scorsa}>
+      <View style={{ flex: 1, backgroundColor: colori.sfondo }}>
+        <SfondoAura tavolozza="oro" />
 
-      <View style={{ flex: 1, paddingTop: Math.max(height * 0.06, 44) }}>
-        <View style={{ flexDirection: 'row', paddingHorizontal: 26, minHeight: 34 }}>
-          {passo > 0 ? <BottoneIndietro onPress={() => setPasso(passo - 1)} /> : null}
-        </View>
-
-        <corrente.Scena />
-
-        {/* La sfumatura sotto la scena: il testo deve restare leggibile anche
-            quando una tessera della giostra ci arriva vicino. */}
-        <LinearGradient
-          colors={[velo(colori.sfondo, 0), velo(colori.sfondo, 0.9)]}
-          style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 320 }}
-          pointerEvents="none"
-        />
-
-        <View style={{ paddingHorizontal: 26, paddingBottom: 34, gap: spazi.s }}>
-          <View style={{ flexDirection: 'row', gap: 5, marginBottom: 11 }}>
-            {PASSI.map((_, indice) => (
-              <Toccabile
-                key={indice}
-                scala={0}
-                haptic={false}
-                hitSlop={8}
-                onPress={indice < passo ? () => setPasso(indice) : undefined}
-                style={{
-                  height: 3,
-                  borderRadius: raggi.pillola,
-                  width: indice === passo ? 22 : 9,
-                  backgroundColor: indice === passo ? colori.inchiostro : linee.chiara,
-                }}
-              >
-                <View />
-              </Toccabile>
-            ))}
+        <View style={{ flex: 1, paddingTop: Math.max(height * 0.06, 44) }}>
+          <View style={{ flexDirection: 'row', paddingHorizontal: 26, minHeight: 34 }}>
+            {passo > 0 ? <BottoneIndietro onPress={() => setPasso(passo - 1)} /> : null}
           </View>
 
-          <Etichetta taglia={12}>{corrente.occhiello}</Etichetta>
+          <corrente.Scena />
 
-          <Titolo taglia="eroe" style={{ letterSpacing: -1.3, lineHeight: 36 }}>
-            {corrente.titolo}
-          </Titolo>
-
-          <Corpo taglia="guida" tono="medio" style={{ maxWidth: 330 }}>
-            {corrente.corpo}
-          </Corpo>
-
-          <BottonePrimario
-            testo={corrente.azione}
-            style={{ marginTop: spazi.m }}
-            onPress={() => (ultimo ? vai('/registrati') : setPasso(passo + 1))}
+          {/* La sfumatura sotto la scena: il testo deve restare leggibile anche
+              quando una tessera della giostra ci arriva vicino. */}
+          <LinearGradient
+            colors={[velo(colori.sfondo, 0), velo(colori.sfondo, 0.9)]}
+            style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 320 }}
+            pointerEvents="none"
           />
 
-          <LinkTesto onPress={() => vai('/accedi')}>
-            <Corpo taglia={14} tono="tenue">
-              {'Hai già un account? '}
-              <Forte taglia={14} colore={colori.primario}>
-                Accedi
-              </Forte>
+          <View style={{ paddingHorizontal: 26, paddingBottom: 34, gap: spazi.s }}>
+            <View style={{ flexDirection: 'row', gap: 5, marginBottom: 11 }}>
+              {PASSI.map((_, indice) => (
+                <Toccabile
+                  key={indice}
+                  scala={0}
+                  haptic={false}
+                  hitSlop={8}
+                  onPress={indice < passo ? () => setPasso(indice) : undefined}
+                  style={{
+                    height: 3,
+                    borderRadius: raggi.pillola,
+                    width: indice === passo ? 22 : 9,
+                    backgroundColor: indice === passo ? colori.inchiostro : linee.chiara,
+                  }}
+                >
+                  <View />
+                </Toccabile>
+              ))}
+            </View>
+
+            <Etichetta taglia={12}>{corrente.occhiello}</Etichetta>
+
+            <Titolo taglia="eroe" style={{ letterSpacing: -1.3, lineHeight: 36 }}>
+              {corrente.titolo}
+            </Titolo>
+
+            <Corpo taglia="guida" tono="medio" style={{ maxWidth: 330 }}>
+              {corrente.corpo}
             </Corpo>
-          </LinkTesto>
+
+            <BottonePrimario
+              testo={corrente.azione}
+              style={{ marginTop: spazi.m }}
+              onPress={() => (ultimo ? vai('/registrati') : setPasso(passo + 1))}
+            />
+
+            <LinkTesto onPress={() => vai('/accedi')}>
+              <Corpo taglia={14} tono="tenue">
+                {'Hai già un account? '}
+                <Forte taglia={14} colore={colori.primario}>
+                  Accedi
+                </Forte>
+              </Corpo>
+            </LinkTesto>
+          </View>
         </View>
       </View>
-    </View>
+    </GestureDetector>
   )
 }
