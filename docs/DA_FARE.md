@@ -935,6 +935,23 @@ provate; ripristinato, verdi.
 **nessuno l'ha ancora guardato su un telefono** — il conto dice che entra, non
 come si vede.
 
+### T-66 — Sul web, col mouse, un trascinamento che parte da un'immagine non arriva ai gesti
+**Trovato il:** 2026-09-27 · **Dove:** `apps/mobile/app/intro.tsx` (la scorsa fra i passi), e ogni `Image` di `expo-image` sotto un `GestureDetector` · **Gravità:** bassa · **Chi:** `mobile`
+
+Provato sulla build web con Chrome headless: la scorsa orizzontale dell'intro
+funziona col **tocco** su tutti e tre i passi, e col **mouse** solo se il
+trascinamento parte fuori da un'immagine. Partendo dall'omino del passo 2 il
+passo non cambia; partendo dal testo sì. È il trascinamento nativo del browser
+sugli `<img>`, che si prende gli eventi prima di gesture-handler.
+
+Su un telefono non succede — lì non c'è un mouse — ed è il motivo per cui non è
+stato corretto nella stessa modifica.
+
+**Cosa serve:** togliere il trascinamento nativo delle immagini sul web **in un
+punto solo** (una regola CSS globale sul web, o una primitiva immagine), non un
+`pointerEvents="none"` sparso sulle singole foto: quello sarebbe un tampone per
+immagine.
+
 ---
 
 ## Fatte

@@ -18,6 +18,9 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **Le tre schede dell'intro si scorrono anche col dito**: verso sinistra la
+  successiva, verso destra la precedente. Il bottone resta; sull'ultima scheda
+  la scorsa non porta alla creazione dell'account, lo fa solo il bottone.
 - **In «Tutti» l'armadio mostra i capi divisi per categoria**: prima tutti i
   top, poi tutti i pantaloni e così via, ciascun gruppo col suo titoletto e il
   numero di capi, così si vede dove finisce un tipo e comincia l'altro.
