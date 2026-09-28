@@ -108,7 +108,9 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       griglia sola, e resta un gruppo senza titolo anche quando in «Tutti» i
       filtri non lasciano passare niente: è lui che porta la `CasellaAggiungi`
       (senza, unita alla scelta qui sotto, in «Tutti» spariva).
-      *Verificato:* `typecheck`, `lint`, `mobile:test` e `build:web` verdi.
+      *Verificato:* `typecheck`, `lint`, `mobile:test` e `build:web` verdi, e
+      provato dall'utente su un telefono vero, con Expo Go e i dati di
+      produzione, il 2026-09-28.
 - [~] **L'armadio sulla disposizione del deck** — `(tabs)/armadio.tsx` con
       griglia a tre colonne quadrate, due righe di filtri (categoria + qualità,
       un filtro per dimensione), `CasellaAggiungi` dentro la griglia, conteggio
