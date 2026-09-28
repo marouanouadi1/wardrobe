@@ -51,43 +51,24 @@ RISPOSTE = (
     models.ContestoSuggerimento,
     models.Profilo,
     models.EsportazionePronta,
-    models.ContoSvuotamento,
-    models.ElencoCapi,
-    models.RiepilogoArmadio,
-    models.UploadFirmato,
-    models.AnalisiAvviata,
     models.EsitoAnalisi,
-    models.TokenAccesso,
     models.RispostaSuggerimenti,
     models.ModelloDisponibile,
     models.UsoToken,
     models.MessaggioChat,
     models.RispostaChat,
-    models.ElencoMessaggiChat,
-    models.ElencoConversazioniChat,
     models.Segnalazione,
-    models.ElencoSegnalazioni,
 )
 
 RICHIESTE = (
-    models.Credenziali,
-    models.Registrazione,
     models.Vestizione,
-    models.NuovoOutfit,
     models.Meteo,
     models.ImpegnoAgenda,
     models.PreferenzeStile,
     models.Misure,
-    models.RichiestaSvuotamento,
-    models.FiltroArmadio,
-    models.RichiestaUpload,
     models.RichiestaAnalisi,
-    models.CorrezioniCapo,
-    models.AggiornamentoCapo,
     models.RichiestaSuggerimenti,
     models.RichiestaMessaggioChat,
-    models.NuovaSegnalazione,
-    models.AggiornamentoSegnalazione,
 )
 
 ENUM = (
@@ -109,7 +90,7 @@ ENUM = (
 COSTANTI = {
     "SOGLIA_INCERTEZZA": models.SOGLIA_INCERTEZZA,
     "SOGLIA_SCARTO": models.SOGLIA_SCARTO,
-    "MESI_PER_DORMIENTE": 6,
+    "MESI_PER_DORMIENTE": models.MESI_PER_DORMIENTE,
     "LIMITI_MISURE_CM": models.LIMITI_MISURE_CM,
 }
 

@@ -21,6 +21,18 @@ travestita da registro.
 - **In «Tutti» l'armadio mostra i capi divisi per categoria**: prima tutti i
   top, poi tutti i pantaloni e così via, ciascun gruppo col suo titoletto e il
   numero di capi, così si vede dove finisce un tipo e comincia l'altro.
+- **Nell'armadio il quadratino «+» c'è sempre**, anche in una categoria
+  ancora senza capi: al posto della card «Niente in accessorio» (e simili) resta
+  la griglia con la sola casella per aggiungerne uno.
+- **Password dimenticata? Adesso si recupera da soli**: arriva un codice per email, e con
+  quello si sceglie una password nuova. La password si cambia anche da Impostazioni.
+- **Si entra anche con Google**, su Android. La lista degli inviti vale anche lì.
+- **Registrarsi è email, codice, password**: prima il codice che arriva per email
+  dimostra che l'indirizzo è tuo, poi scegli la password.
+- L'app legge e scrive l'armadio direttamente su Supabase (ADR 0010); al server resta
+  l'IA. Svuotare l'armadio toglie anche le foto.
+- «Fermo da sei mesi» si conta sui giorni di qui, e a fine mese non scivola più di tre
+  giorni; «l'ho messo oggi» dopo mezzanotte finisce su oggi, non su ieri.
 - **In chat la tastiera non copre più quello che scrivi**: il contenuto sale
   sopra la tastiera e la conversazione resta ancorata in fondo, col campo
   appena sopra. Vale per ogni schermata, non solo la chat; e il bottone
@@ -190,6 +202,12 @@ travestita da registro.
   a versione esatta, alle ultime versioni compatibili con i loro range.
 
 ### api
+- **Il backend fa solo l'IA, e la fa come te** (ADR 0010). Restano la lettura delle foto, i
+  suggerimenti, la chat, l'esportazione e `/salute`. Tutto il resto (accesso,
+  armadio, outfit, profilo, segnalazioni) l'app lo farà direttamente con
+  Supabase. Il backend riconosce chi chiama dal token di Supabase, e legge e
+  scrive con quello: vede solo quello che vedi tu. Un'analisi chiesta su una
+  foto che non è nella tua cartella viene rifiutata.
 - **Il profilo porta le misure del corpo** (`Profilo.misure`): sistema di
   taglie, taglia, altezza, corporatura, spalle e lunghezza gamba — tutte
   facoltative, e l'intero blocco può non esserci. Gli estremi accettati

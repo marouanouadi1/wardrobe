@@ -239,12 +239,10 @@ export default function Armadio() {
             </Corpo>
           </View>
         </>
-      ) : mostrati.length === 0 ? (
-        <Vuoto
-          titolo={categoria === 'tutti' ? 'Niente con questi filtri' : `Niente in ${ETICHETTE.tipo[categoria].toLowerCase()}`}
-          spiegazione="Il filtro c'è, i capi no. Toglilo per rivedere tutto, oppure fotografane uno."
-        />
       ) : (
+        // Anche quando i filtri non lasciano passare nessun capo la griglia
+        // resta, con la sola `CasellaAggiungi`: una card «Niente in …» al suo
+        // posto toglieva proprio il bersaglio che serve a riempire la categoria.
         <>
           {gruppi.map((gruppo, posizione) => (
             <View key={gruppo.tipo ?? 'tutti'} style={{ gap: spazi.s }}>

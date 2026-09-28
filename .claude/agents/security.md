@@ -49,12 +49,12 @@ succede**, mai il valore.
 
 | Area | Dove guardare | Cosa cercare |
 |---|---|---|
-| Autenticazione | `src/handlers/_http.py` (`utente_id`), `src/domain/autenticazione.py` | un percorso che ottiene un'identità senza passare da `verifica_token`; il 401 distinto dal 422 |
-| Registrazione | `src/handlers/auth.py`, `EMAIL_AMMESSE` | che l'allowlist sia **fail-closed**: vuota = nessuno entra |
-| Amministratori | `src/handlers/segnalazioni.py`, `EMAIL_AMMINISTRATORI` | stesso pattern; chi può cambiare lo stato di una segnalazione altrui |
-| Isolamento fra utenti | `src/adapters/postgres.py`, `src/adapters/memory.py` | **ogni query filtra per `utente_id`?** È il punto dove un IDOR entra senza farsi notare |
-| SQL | idem | parametri, mai f-string o concatenazione |
-| Firma delle foto | `src/domain/firma_foto.py`, `src/handlers/foto.py`, `_foto_capo.py` | scadenza, dominio, cosa la firma copre davvero |
+| Autenticazione | `src/handlers/_http.py` (`sessione`), `src/domain/accesso.py`, `ChiaviAuthSupabase` in `src/adapters/supabase.py` | un percorso che ottiene un'identità senza passare da `verifica_token`; l'algoritmo deciso dal backend e non dall'intestazione del token; `aud`, `iss` e `role` controllati; il JWKS irraggiungibile che chiude (503) invece di aprire; il 401 distinto dal 422 |
+| Registrazione | l'hook `privato.accetta_solo_invitati` in `supabase/migrations/` | che la lista degli inviti sia **fail-closed**: vuota = nessuno entra, anche con Google |
+| Amministratori | `privato.e_amministratore()`, le policy di `segnalazioni` | che il ruolo venga da `app_metadata` e **mai** da `user_metadata`, che l'utente scrive da sé; chi può cambiare lo stato di una segnalazione altrui |
+| Isolamento fra utenti | le policy RLS in `supabase/migrations/`, e `src/adapters/supabase.py` | **ogni tabella ha l'RLS, e ogni policy confronta `(select auth.uid())`?** Nel backend: il repository e l'archivio nascono per sessione e **non stanno in cache**, e il backend non ha nessuna credenziale che scavalchi l'RLS (chiave di servizio, password del database, chiavi S3) |
+| Percorsi dello Storage | `domain/accesso.percorso_dell_utente`, `privato.percorso_di` | il primo segmento è l'utente; `..` e `//` rifiutati, in Python **e** nel database |
+| Indirizzi firmati | `ArchivioSupabase.firma_lettura`, `handlers/esportazione.py` | la scadenza, e che un indirizzo firmato non esca dalla risposta a chi l'ha chiesto: niente log, niente zip |
 | Fuga di dettagli | `@endpoint` in `_http.py` | il 500 non deve esporre niente; e il log della «risposta grezza del modello» (troncata a 2000) può contenere dati dell'utente |
 | Prompt injection | `src/adapters/llm/` (5 provider) | il testo dell'utente arriva al modello e torna come struttura: cosa succede se contiene istruzioni |
 | Esposizione | `Caddyfile`, `docker-compose.yml`, `.github/deploy/` | porte pubblicate, Postgres raggiungibile da fuori, chiavi di deploy |

@@ -70,9 +70,9 @@ jobs:
       #
       # `--cov-fail-under=0` disarma qui la soglia aggregata: pytest-cov
       # scopre da solo `[tool.coverage.report]` di pyproject.toml, quindi
-      # `fail_under = 73` si applicava **dentro questo step**. Una soglia
-      # aggregata è il gate più debole che esista (73% è la media fra domain/
-      # al 97% e adapters/ al 40%) ed era quello che scattava per primo: i due
+      # `fail_under` si applicava **dentro questo step**. Una soglia
+      # aggregata è il gate più debole che esista (86% è la media fra domain/
+      # al 99% e adapters/ al 70%) ed era quello che scattava per primo: i due
       # step sotto, senza `if:`, si saltano quando questo fallisce. Il gate più
       # debole nascondeva i due che contano. Ora la soglia totale sta in fondo,
       # dopo di loro, e resta scritta in un posto solo — pyproject.toml.
@@ -87,17 +87,17 @@ jobs:
       # Questi due step non rieseguono i test: leggono il .coverage appena
       # scritto.
       - name: Coverage del dominio
-        run: uv run coverage report --include="src/domain/*" --fail-under=97
+        run: uv run coverage report --include="src/domain/*" --fail-under=99
 
       # local_server.py è escluso: è a 0% e resta a 0% finché non esiste un
       # test che parla HTTP. Sta scritto fra i debiti in docs/TEST_COVERAGE.md,
       # non nascosto qui dentro.
       #
-      # Nessuna soglia su adapters/ (40%), ed è deliberato: imporla spingerebbe
+      # Nessuna soglia su adapters/ (70%), ed è deliberato: imporla spingerebbe
       # verso mock della SDK, cioè verso il contrario di quello che dice il
       # commento allo step Pytest qui sopra.
       - name: Coverage degli handler
-        run: uv run coverage report --include="src/handlers/*" --omit="src/handlers/local_server.py" --fail-under=92
+        run: uv run coverage report --include="src/handlers/*" --omit="src/handlers/local_server.py" --fail-under=97
 
       # Ultima, e senza numero scritto qui: `coverage report` legge
       # `fail_under` da pyproject.toml. Due copie della stessa soglia
@@ -216,8 +216,8 @@ jobs:
         working-directory: .
 
       # `--wait` e non solo `-d`: senza, il comando torna appena i container
-      # sono *creati*, e il `docker compose exec` dello step dopo può trovare
-      # l'api ancora a metà avvio e fallire per un motivo che non è suo.
+      # sono *creati*, e la verifica di /salute qui sotto può trovare l'api
+      # ancora a metà avvio e fallire per un motivo che non è suo.
       #
       # `--wait-timeout` è obbligatorio quanto `--wait`: il default è «aspetta
       # per sempre», e `api` ha `restart: unless-stopped`. Un container che
@@ -228,36 +228,16 @@ jobs:
         run: ssh marouan@89.167.15.22 'cd ~/wardrobe && docker compose up -d --build --wait --wait-timeout 120'
         working-directory: .
 
-      # Le migrazioni non le applica nessun altro: docker-entrypoint-initdb.d
-      # gira solo su un volume vuoto (il primissimo avvio), e da lì in poi
-      # nessuno le tocca. Va *dopo* il rebuild perché i .sql stanno
-      # nell'immagine (Dockerfile: `COPY migrations ./migrations`), non sul
-      # filesystem del server: lanciarlo prima eseguirebbe quelli del rilascio
-      # precedente.
-      #
-      # Senza questo step lo schema resta indietro in silenzio, ed è il modo
-      # più subdolo di rompere la produzione: il container nuovo parte, GET
-      # /salute risponde — non tocca il database — e il rilascio passa verde
-      # con le tabelle mancanti. È successo davvero: la produzione è rimasta a
-      # `0006` per tre rilasci, e `/chat/*` e `/segnalazioni` rispondevano 500
-      # `errore_interno` sull'app dei tester.
-      #
-      # `-T` perché sul runner non c'è un TTY. Rieseguire *tutti* i file a ogni
-      # rilascio è il funzionamento previsto, non uno spreco: ognuno è
-      # idempotente per costruzione (.claude/rules/migrazioni.md).
-      - name: Applica migrazioni
-        run: ssh marouan@89.167.15.22 'cd ~/wardrobe && docker compose exec -T api python scripts/applica_migrazioni.py'
-        working-directory: .
-
       # Non più solo "risponde": GET /salute riporta la versione dai metadati
       # del pacchetto, quindi qui si verifica che il container ricostruito stia
       # servendo *questo* rilascio. Prima di questo confronto un rsync andato a
       # metà, o un `docker compose up` che riusava l'immagine vecchia, passavano
       # inosservati: l'endpoint rispondeva comunque.
       #
-      # Quello che questo step *non* verifica, e va saputo: /salute non
-      # interroga il database, quindi non dice niente sullo schema. A garantire
-      # quello è lo step qui sopra, che fallisce se una migrazione non passa.
+      # Quello che questo step *non* verifica, e va saputo: /salute non parla
+      # con Supabase, quindi non dice niente sullo schema. Lo schema non lo
+      # porta questo workflow: lo porta `supabase db push`, a mano, e lo prova
+      # il job `database` (ADR 0010).
       - name: Verifica salute e versione servita
         env:
           ATTESA: ${{ steps.bump.outputs.version }}

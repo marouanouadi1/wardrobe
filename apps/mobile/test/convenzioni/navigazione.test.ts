@@ -58,7 +58,7 @@ describe('la barra delle schede sa dove va', () => {
     expect(schedaDi('/segnalazioni')).toBe('profilo')
   })
 
-  test.each(['/accedi', '/registrati', '/intro', '/preferenze', '/', ''])(
+  test.each(['/accedi', '/registrati', '/recupero', '/intro', '/preferenze', '/', ''])(
     'prima del login la barra non esiste: %s',
     (percorso) => {
       // Il caso che questo file esiste per impedire. Se qualcuno passa la
@@ -74,7 +74,7 @@ describe('la barra delle schede sa dove va', () => {
     // viva. `schedaDi` non può accorgersene da sola — restituisce `null` e
     // basta, che è indistinguibile da «non l'ho mai avuta».
     const esistenti = new Set(segmentiDiRotta())
-    const mappate = ['capo', 'outfit', 'suggeritore', 'chat', 'calendario', 'segnalazioni', 'darivedere', 'impostazioni', 'misure', 'unita', 'svuota']
+    const mappate = ['capo', 'outfit', 'suggeritore', 'chat', 'calendario', 'segnalazioni', 'darivedere', 'impostazioni', 'misure', 'unita', 'svuota', 'password']
     for (const segmento of mappate) {
       expect({ segmento, esiste: esistenti.has(segmento) }).toEqual({ segmento, esiste: true })
     }
@@ -85,7 +85,7 @@ describe('la barra delle schede sa dove va', () => {
     // una scheda, o è dichiarata qui sotto fra quelle che la barra non la
     // vogliono. Una rotta nuova rende questo test rosso — ed è lo scopo: la
     // decisione si prende una volta, quando la rotta nasce.
-    const senzaBarra = ['accedi', 'registrati', 'intro', 'preferenze', 'dev', 'guidafoto']
+    const senzaBarra = ['accedi', 'registrati', 'recupero', 'intro', 'preferenze', 'dev', 'guidafoto']
     for (const segmento of segmentiDiRotta()) {
       const scheda = schedaDi(`/${segmento}`)
       const deciso = scheda !== null || senzaBarra.includes(segmento)

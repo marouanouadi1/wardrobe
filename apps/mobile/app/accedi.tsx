@@ -1,16 +1,18 @@
 /**
- * Il login: email e password, niente altro.
+ * L'accesso: email e password, o Google.
  *
- * Chi non ha ancora un account passa da «Registrati» — l'allowlist del
- * server (`EMAIL_AMMESSE`) decide chi può crearne uno, non questa schermata.
+ * Chi non ha ancora un account passa da «Registrati». Chi può crearne uno lo
+ * decide la lista degli inviti sul database (l'hook di Supabase Auth), non
+ * questa schermata. Un account che c'è ma non è stato confermato torna al passo
+ * del codice della registrazione, con un codice nuovo: la password la sceglie
+ * lì, dopo il codice (`registrati.tsx` spiega perché).
  */
 
-import type { TokenAccesso } from '@wardrobe/contracts'
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { api } from '../src/dati/api'
+import { accedi, accediConGoogle, chiediCodiceDiIngresso, motivoGoogleSpento } from '../src/dati/accesso'
+import { ErroreDati, messaggioDiErrore } from '../src/dati/errori'
 import { useAzione } from '../src/dati/risorsa'
-import { useSessione } from '../src/dati/sessione'
 import { BottonePrimario, Campo } from '../src/ui/base'
 import { Forte } from '../src/ui/testo'
 import { GuscioAutenticazione, PiedeAccesso } from '../src/ui/guscio'
@@ -18,29 +20,56 @@ import { GuscioAutenticazione, PiedeAccesso } from '../src/ui/guscio'
 export default function Accedi() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const { caricamento, errore, esegui } = useAzione<TokenAccesso>()
-  const { entra } = useSessione()
+  const conPassword = useAzione<true>()
+  const conGoogle = useAzione<boolean>()
 
-  const pronto = email.trim().length > 0 && password.length > 0 && !caricamento
+  const pronto = email.trim().length > 0 && password.length > 0 && !conPassword.caricamento
 
-  async function accedi() {
-    const risposta = await esegui(() => api.auth.accedi({ email: email.trim(), password }))
-    if (risposta) {
-      // `ArchivioProvider` osserva il token e ricarica da solo quando cambia:
-      // non serve chiamarlo qui, e farlo ora chiamerebbe comunque la sua
-      // closure di questo render, con il token ancora quello di prima.
-      entra(risposta.token)
-      router.replace('/')
+  async function entra() {
+    let daConfermare = false
+    const dentro = await conPassword.esegui(
+      async () => {
+        await accedi(email, password)
+        return true
+      },
+      (errore) => {
+        daConfermare = errore instanceof ErroreDati && errore.codice === 'email_da_confermare'
+        return messaggioDiErrore(errore, 'Non riesco a raggiungere il server.')
+      },
+    )
+    if (daConfermare) {
+      // Il codice della registrazione può essere scaduto: se ne manda uno
+      // nuovo, e lo si aspetta dove si aspetta sempre.
+      void chiediCodiceDiIngresso(email).catch(() => undefined)
+      router.push({ pathname: '/registrati', params: { conferma: email.trim() } })
+      return
     }
+    // Chi è dentro lo annuncia `sessione.tsx`, e `ArchivioProvider` carica da
+    // solo: qui basta tornare all'ingresso, che sa dove mandare.
+    if (dentro) router.replace('/')
+  }
+
+  async function entraConGoogle() {
+    const dentro = await conGoogle.esegui(() => accediConGoogle())
+    if (dentro) router.replace('/')
   }
 
   return (
     <GuscioAutenticazione
       occhiello="IL TUO ARMADIO TI ASPETTA"
       titolo="Accedi"
-      sottotitolo="Con le credenziali che ti sono state date."
-      errore={errore}
-      piede={<PiedeAccesso conRecupero />}
+      sottotitolo="Con la tua email, o con Google."
+      errore={conPassword.errore ?? conGoogle.errore}
+      piede={
+        <PiedeAccesso
+          onRecupero={() => router.push({ pathname: '/recupero', params: { email: email.trim() } })}
+          google={{
+            onPress: () => void entraConGoogle(),
+            caricando: conGoogle.caricamento,
+            motivo: motivoGoogleSpento,
+          }}
+        />
+      }
       onLinkFantasma={() => router.push('/registrati')}
       testoLinkFantasma={
         <>
@@ -50,8 +79,8 @@ export default function Accedi() {
       azione={
         <BottonePrimario
           testo="Entra"
-          caricando={caricamento}
-          onPress={() => void accedi()}
+          caricando={conPassword.caricamento}
+          onPress={() => void entra()}
           disabilitato={!pronto}
         />
       }
@@ -75,7 +104,7 @@ export default function Accedi() {
         textContentType="password"
         placeholder="••••••••"
         onSubmitEditing={() => {
-          if (pronto) void accedi()
+          if (pronto) void entra()
         }}
       />
     </GuscioAutenticazione>

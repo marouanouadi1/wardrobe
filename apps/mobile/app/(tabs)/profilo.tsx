@@ -27,7 +27,7 @@ export default function Profilo() {
 
   function uscire() {
     setConfermaUscita(false)
-    esci()
+    void esci()
     router.replace('/accedi')
   }
 
@@ -163,8 +163,8 @@ export default function Profilo() {
         />
       ) : null}
 
-      {/* Indipendente da `segnalazioniAttive`: legge dal nostro backend,
-          non da Sentry, quindi resta utile anche in una build senza DSN —
+      {/* Indipendente da `segnalazioniAttive`: legge la tabella delle
+          segnalazioni su Supabase, non Sentry, quindi resta utile anche in una build senza DSN —
           mostra quello che è già stato segnalato in passato. È la risposta
           a chi segnala e non ha, come noi, accesso a Sentry per vedere se
           e come la segnalazione è stata presa in carico. */}

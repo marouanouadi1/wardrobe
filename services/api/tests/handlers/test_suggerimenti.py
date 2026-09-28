@@ -13,18 +13,15 @@ import json
 import pytest
 
 from adapters.llm import registry
-from conftest import costruisci_capo, intestazioni_utente
+from conftest import Supabase, costruisci_capo, intestazioni_utente
 from domain.models import TipoCapo
 from fakes import ProviderFinto
 from handlers import suggerimenti
-from handlers._container import repository
 
 
 def _evento(*, corpo: dict[str, object] | None = None, utente: str = "demo") -> dict[str, object]:
     return {
         "headers": intestazioni_utente(utente),
-        "pathParameters": {},
-        "queryStringParameters": {},
         "body": json.dumps(corpo) if corpo is not None else "",
     }
 
@@ -55,13 +52,14 @@ def _monkeypatch_provider(monkeypatch: pytest.MonkeyPatch, testo: str) -> Provid
 
 
 class TestProponi:
-    def test_il_percorso_felice_torna_le_proposte(self, monkeypatch: pytest.MonkeyPatch):
-        for capo in (
+    def test_il_percorso_felice_torna_le_proposte(
+        self, monkeypatch: pytest.MonkeyPatch, supabase: Supabase
+    ):
+        supabase.deposito.capi["demo"] = [
             costruisci_capo("t1", TipoCapo.TOP),
             costruisci_capo("b1", TipoCapo.PANTALONI),
             costruisci_capo("s1", TipoCapo.SCARPE),
-        ):
-            repository().salva_capo("demo", capo)
+        ]
         _monkeypatch_provider(monkeypatch, _risposta_modello())
 
         risposta = suggerimenti.proponi(_evento(corpo={"numero_proposte": 3}), None)
@@ -86,3 +84,24 @@ class TestProponi:
         dati = _corpo(risposta)
         assert dati["errore"] == "suggerimento_non_valido"
         assert "capo disponibile" in dati["messaggio"]
+
+    def test_propone_solo_con_i_capi_di_chi_chiede(
+        self, monkeypatch: pytest.MonkeyPatch, supabase: Supabase
+    ):
+        """I capi di un altro non entrano nel contesto: il repository nasce per
+        la sessione di chi chiama, e per lui l'armadio altrui non esiste."""
+        supabase.deposito.capi["altro"] = [
+            costruisci_capo("t1", TipoCapo.TOP),
+            costruisci_capo("b1", TipoCapo.PANTALONI),
+        ]
+        finto = _monkeypatch_provider(monkeypatch, _risposta_modello())
+
+        risposta = suggerimenti.proponi(_evento(corpo={"numero_proposte": 3}), None)
+
+        assert risposta["statusCode"] == 502
+        (richiesta,) = finto.richieste
+        assert '"t1"' not in richiesta.prompt and '"b1"' not in richiesta.prompt
+
+    def test_senza_token_e_un_401(self):
+        risposta = suggerimenti.proponi({"headers": {}, "body": "{}"}, None)
+        assert risposta["statusCode"] == 401
