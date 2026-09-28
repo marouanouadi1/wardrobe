@@ -760,6 +760,10 @@ const TRACCIATI = {
    *  punto è un segmento di lunghezza zero: lo disegna `strokeLinecap`
    *  «round» qui sopra, e senza quello sparirebbe. */
   info: 'M12 7.5v5.5M12 16.6v.01M21 12a9 9 0 1 1-18 0 9 9 0 1 1 18 0',
+  /** La chat con lo stilista: il fumetto del bottone in testata di «Oggi». */
+  fumetto: 'M21 12a8.5 8.5 0 0 1-12.4 7.6L3.5 21l1.4-4.8A8.5 8.5 0 1 1 21 12z',
+  /** Lo storico delle chat. */
+  orologio: 'M12 7v5l3.2 2M21 12a9 9 0 1 1-18 0 9 9 0 1 1 18 0',
 } as const
 
 export type NomeIcona = keyof typeof TRACCIATI

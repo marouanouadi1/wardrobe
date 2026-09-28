@@ -483,7 +483,8 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       74 verdi, e sulla build web con Chrome headless, tocchi veri via CDP:
       avanti fino al terzo, fermo lì, indietro fino al primo, fermo lì, e un
       gesto verticale non cambia passo. Col mouse sul web il gesto non parte
-      se comincia su un'immagine (`T-66`). **Nessuna prova su un telefono.**
+      se comincia su un'immagine (`T-66`). Provato poi dall'utente su un telefono
+      vero (Expo Go) il 2026-09-28: avanti, indietro, i due capi, il verticale.
       *Verificato:* `typecheck` exit 0, `lint` 0 errori, `mobile:test` 69,
       `build:web`. **E soprattutto guardandole**: `dist/` servita in locale e
       cinque screenshot a 390×844 con Chrome headless, confrontati col
@@ -499,6 +500,25 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       peggio di una spunta assente. SSO e recupero password invece ci sono,
       spenti.
       **Cosa manca:** ancora nessuna prova su un telefono.
+- [x] **La chat attaccata al fondo** (`suggeritore.tsx`) — chiesto
+      dall'utente: «come su WhatsApp». `Schermata` ha una prop `piede`, fuori
+      dallo `ScrollView`: lì stanno gli spunti e `BarraChiedi`, fermi sopra la
+      barra delle schede; con `ancoraInFondo` i messaggi si posano sul campo
+      (`flexGrow` + `justifyContent: 'flex-end'`). Tolta la nota «Le proposte
+      usano solo i capi che hai…». *Verificato:* `typecheck` exit 0, `lint` 0
+      errori, `mobile:test` 74 verdi, `build:web` ok. Riallineata a `main` dopo
+      il passaggio a Supabase (2026-09-28): le quattro verifiche di nuovo verdi,
+      e provata dall'utente su un telefono vero (Expo Go, dati di produzione):
+      campo fermo in fondo, tastiera, invio, risposta ancorata.
+- [x] **Chat e storico più facili da aprire** — chiesto dall'utente. «Oggi»
+      ha un `BottoneTondo` col fumetto nella testata (slot `azioni`, accanto
+      all'avatar: `Testata` e la rule aggiornate); in `suggeritore.tsx`
+      «Storico» e «Nuova» sono bottoni in testata (icone `orologio`, `piu`);
+      `chat.tsx` ha un «+» che apre `/suggeritore?nuova=1`. Due icone nuove in
+      `TRACCIATI`: `fumetto`, `orologio`. *Verificato:* `typecheck` exit 0,
+      `lint` 0 errori, `mobile:test` 74 verdi, `build:web` ok. Le due icone
+      viste disegnate a parte (SVG in Chromium). Le schermate intere le ha
+      provate l'utente su un telefono vero il 2026-09-28, insieme alla riga sopra.
 - [~] La tastiera non copre più il contenuto di `Schermata` — segnalato
       dall'utente su Android, in chat: il campo in cui scriveva finiva sotto la
       tastiera. Causa: con l'edge-to-edge Android non ridimensiona più la

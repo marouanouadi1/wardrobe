@@ -281,10 +281,11 @@ export function Testata({
   onIndietro?: () => void
   fotoProfilo?: string | null
   /** I bersagli a destra del titolo — il cuore e il «···» del dettaglio di un
-   * capo. Occupano lo stesso posto di `fotoProfilo` e non si mettono insieme:
-   * una schermata di scheda porta l'avatar dell'utente, una spinta sopra porta
-   * le azioni di ciò che mostra. Se un giorno servissero entrambi, il posto
-   * dove decidere è qui, non nella schermata. */
+   * capo, lo storico e «nuova» della chat. Una spinta sopra porta le azioni di
+   * ciò che mostra; una schermata di scheda porta l'avatar dell'utente, e
+   * **può** portarle entrambe: «Oggi» mette il fumetto della chat prima
+   * dell'avatar (2026-09-27, per aprire la chat con un tocco). Le azioni
+   * stanno a sinistra, l'avatar resta sul bordo, dove lo si cerca. */
   azioni?: ReactNode
   su?: Su
 }) {
@@ -361,6 +362,7 @@ export function Schermata({
   su,
   tavolozza,
   ancoraInFondo,
+  piede,
   children,
   contentStyle,
 }: {
@@ -385,6 +387,10 @@ export function Schermata({
   /** Ancora la vista in fondo quando il contenuto cresce: la chat, dove
    * l'ultimo messaggio deve restare visibile senza uno scroll manuale. */
   ancoraInFondo?: boolean
+  /** Ciò che sta **fuori** dallo scroll, fisso in fondo: la barra di scrittura
+   * della chat, come su WhatsApp. Lo spazio per la barra delle schede passa
+   * allora dal contenuto al piede, perché è il piede a doverci stare sopra. */
+  piede?: ReactNode
   children: ReactNode
   contentStyle?: ViewStyle
 }) {
@@ -433,8 +439,12 @@ export function Schermata({
         />
         <ScrollView
           ref={scrollRef}
+          style={piede ? { flex: 1 } : undefined}
           contentContainerStyle={[
-            { paddingHorizontal: spazi.xl, paddingBottom, gap: spazi.l },
+            { paddingHorizontal: spazi.xl, paddingBottom: piede ? spazi.m : paddingBottom, gap: spazi.l },
+            // Con un piede e l'ancora, i pochi messaggi di una chat appena
+            // aperta si posano sul campo, non sotto la testata.
+            piede && ancoraInFondo ? { flexGrow: 1, justifyContent: 'flex-end' } : null,
             contentStyle,
           ]}
           showsVerticalScrollIndicator={false}
@@ -449,6 +459,11 @@ export function Schermata({
         >
           {children}
         </ScrollView>
+        {piede ? (
+          <View style={{ paddingHorizontal: spazi.xl, paddingTop: spazi.s, paddingBottom, gap: spazi.s }}>
+            {piede}
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </Fondo>
   )

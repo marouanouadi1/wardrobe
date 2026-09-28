@@ -24,13 +24,13 @@ import { useEffect, useState } from 'react'
 import { ScrollView, View } from 'react-native'
 import { useArmadio, useVestiEVai } from '../src/dati/archivio'
 import { type SceltaConversazione, useChat } from '../src/dati/chat'
-import { linee, spazi } from '../src/tema/tokens'
+import { colori, spazi, superfici } from '../src/tema/tokens'
 import {
   BarraChiedi,
   BollaChat,
   BottonePrimario,
   BottoneSecondario,
-  LinkTesto,
+  BottoneTondo,
   Pillola,
   PuntiniAttesa,
 } from '../src/ui/base'
@@ -63,17 +63,22 @@ function AzioniProposta({
 }
 
 export default function Suggeritore() {
-  const parametri = useLocalSearchParams<{ chiedi?: string; conversazione?: string }>()
+  const parametri = useLocalSearchParams<{ chiedi?: string; conversazione?: string; nuova?: string }>()
   const { salvaOutfit, avvisa } = useArmadio()
   const vestiEVai = useVestiEVai()
   const [salvati, setSalvati] = useState<string[]>([])
 
   // Quale conversazione aprire: quella passata dall'elenco (`chat.tsx`, il
-  // parametro `conversazione`), o l'ultima di default — lo stesso
-  // comportamento di sempre. «Nuova», sotto, la sposta su `{ tipo: 'nuova' }`
-  // senza una nuova navigazione.
+  // parametro `conversazione`), una nuova («Nuova chat» dell'elenco, il
+  // parametro `nuova`), o l'ultima di default — lo stesso comportamento di
+  // sempre. Il «+» in testata la sposta su `{ tipo: 'nuova' }` senza una nuova
+  // navigazione.
   const [sceltaChat, setSceltaChat] = useState<SceltaConversazione>(
-    parametri.conversazione ? { tipo: 'id', id: parametri.conversazione } : { tipo: 'ultima' },
+    parametri.conversazione
+      ? { tipo: 'id', id: parametri.conversazione }
+      : parametri.nuova
+        ? { tipo: 'nuova' }
+        : { tipo: 'ultima' },
   )
   const {
     messaggi: conversazione,
@@ -112,24 +117,57 @@ export default function Suggeritore() {
   }
 
   return (
-    <Schermata occhiello="Il tuo stilista" titolo="Chiedi ad Aura" tavolozza="caldo" indietro ancoraInFondo>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.s }}>
-        <Etichetta taglia={11} tono="tenue" style={{ flex: 1 }} numberOfLines={1}>
-          {conversazioneAttuale?.titolo ?? 'Nuova conversazione'}
-        </Etichetta>
-        <LinkTesto centrato={false} sottolineato taglia={12.5} tono="medio" onPress={() => router.push('/chat')}>
-          Storico
-        </LinkTesto>
-        <LinkTesto
-          centrato={false}
-          sottolineato
-          taglia={12.5}
-          tono="medio"
-          onPress={() => setSceltaChat({ tipo: 'nuova' })}
-        >
-          Nuova
-        </LinkTesto>
-      </View>
+    <Schermata
+      occhiello="Il tuo stilista"
+      titolo="Chiedi ad Aura"
+      tavolozza="caldo"
+      indietro
+      ancoraInFondo
+      // Storico e «nuova» in testata, a portata di pollice: erano due link
+      // sottolineati da 12pt sopra i messaggi, che scorrevano via con loro.
+      azioni={
+        <>
+          <BottoneTondo
+            nome="orologio"
+            onPress={() => router.push('/chat')}
+            misura={38}
+            misuraIcona={18}
+            sfondo={superfici.vetroAlto}
+            colore={colori.inchiostro}
+          />
+          <BottoneTondo
+            nome="piu"
+            onPress={() => setSceltaChat({ tipo: 'nuova' })}
+            misura={38}
+            misuraIcona={18}
+            sfondo={superfici.vetroAlto}
+            colore={colori.inchiostro}
+          />
+        </>
+      }
+      // Il campo sta fermo in fondo, come su WhatsApp: scorrono solo i
+      // messaggi, sopra di lui.
+      piede={
+        <>
+          {/* Gli spunti: la scorciatoia per chi non ha voglia di scrivere. Erano
+              già qui, e adesso portano da soli il peso che era del modo «Guidato». */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
+            {SPUNTI.map((spunto) => (
+              <Pillola key={spunto} testo={spunto} onPress={() => void invia(spunto)} />
+            ))}
+          </ScrollView>
+          <BarraChiedi
+            valore={bozza}
+            onCambia={setBozza}
+            onInvia={() => void invia()}
+            placeholder="Cena fuori, e fa freddo…"
+          />
+        </>
+      }
+    >
+      <Etichetta taglia={11} tono="tenue" numberOfLines={1}>
+        {conversazioneAttuale?.titolo ?? 'Nuova conversazione'}
+      </Etichetta>
 
       {storiaInCaricamento ? (
         // Prima non c'era nulla qui: uno schermo vuoto indistinguibile da
@@ -187,28 +225,6 @@ export default function Suggeritore() {
         ) : null}
       </View>
 
-      {/* Gli spunti: la scorciatoia per chi non ha voglia di scrivere. Erano
-          già qui, e adesso portano da soli il peso che era del modo «Guidato». */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-        {SPUNTI.map((spunto) => (
-          <Pillola key={spunto} testo={spunto} onPress={() => void invia(spunto)} />
-        ))}
-      </ScrollView>
-
-      <BarraChiedi
-        valore={bozza}
-        onCambia={setBozza}
-        onInvia={() => void invia()}
-        placeholder="Cena fuori, e fa freddo…"
-      />
-
-      <Corpo
-        taglia={11.5}
-        tono="debole"
-        style={{ textAlign: 'center', borderTopWidth: 1, borderTopColor: linee.tenue, paddingTop: spazi.m }}
-      >
-        Le proposte usano solo i capi che hai, e mai quelli in lavatrice.
-      </Corpo>
     </Schermata>
   )
 }
