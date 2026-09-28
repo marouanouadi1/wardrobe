@@ -483,7 +483,8 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       74 verdi, e sulla build web con Chrome headless, tocchi veri via CDP:
       avanti fino al terzo, fermo lì, indietro fino al primo, fermo lì, e un
       gesto verticale non cambia passo. Col mouse sul web il gesto non parte
-      se comincia su un'immagine (`T-66`). **Nessuna prova su un telefono.**
+      se comincia su un'immagine (`T-66`). Provato poi dall'utente su un telefono
+      vero (Expo Go) il 2026-09-28: avanti, indietro, i due capi, il verticale.
       *Verificato:* `typecheck` exit 0, `lint` 0 errori, `mobile:test` 69,
       `build:web`. **E soprattutto guardandole**: `dist/` servita in locale e
       cinque screenshot a 390×844 con Chrome headless, confrontati col
