@@ -698,7 +698,11 @@ si prende senza rileggere `docs/PROGRESS.md` su questa fetta.
 **Cosa non fare intanto:** alzare `write_timeout` nel `Caddyfile`. È un
 tampone, e quel file porta modifiche non committate dell'utente.
 
-### T-56 — `GuscioAutenticazione` non alza il contenuto sopra la tastiera su Android
+### T-67 — `GuscioAutenticazione` non alza il contenuto sopra la tastiera su Android
+
+*Fino al 2026-09-28 si chiamava anche lei `T-56`*, come la voce sulla
+configurazione dell'Auth: due rami l'avevano aperta lo stesso giorno. Il
+commit che la cita con il numero vecchio è `8c742c4`.
 
 **Trovata** il 2026-09-25 correggendo la stessa cosa in `Schermata` (la chat:
 la tastiera copriva il campo in cui si scriveva). `GuscioAutenticazione`
