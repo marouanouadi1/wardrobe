@@ -92,17 +92,22 @@ export default function Armadio() {
     })
   }, [capi, categoria, stato, soloPreferiti, soloDormienti, ricerca])
 
-  /** I gruppi da disegnare: uno per categoria in `Tutti`, uno solo senza titolo altrimenti. */
-  const gruppi = useMemo(
-    () =>
+  /**
+   * I gruppi da disegnare: uno per categoria in `Tutti`, uno solo senza titolo
+   * altrimenti — e anche quando in `Tutti` i filtri non lasciano passare niente.
+   * Quel gruppo vuoto non è un ripiego: è lui che porta la `CasellaAggiungi`,
+   * che deve esserci sempre, e senza di lui in `Tutti` sparirebbe.
+   */
+  const gruppi = useMemo(() => {
+    const perCategoria =
       categoria === 'tutti'
         ? TIPI_CAPO.map((tipo) => ({
             tipo: tipo as TipoCapo | null,
             capi: mostrati.filter((capo) => capo.tipo === tipo),
           })).filter((gruppo) => gruppo.capi.length > 0)
-        : [{ tipo: null, capi: mostrati }],
-    [categoria, mostrati],
-  )
+        : []
+    return perCategoria.length > 0 ? perCategoria : [{ tipo: null, capi: mostrati }]
+  }, [categoria, mostrati])
 
   const inLavatrice = capi.filter((capo) => capo.stato !== 'pulito').length
   /** Quanti capi hanno un attributo sotto la soglia di incertezza del dominio. */
