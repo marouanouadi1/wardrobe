@@ -16,6 +16,53 @@ prima del codice**.
 
 ## Aperte
 
+### Q-17 — «Esci» chiude la sessione solo qui, o su tutti i telefoni?
+**Aperta il:** 2026-09-27 (review della fase 3) · **Tocca:** `apps/mobile/src/dati/accesso.ts` (`esci`)
+
+Oggi `esci()` chiama `signOut()` di Supabase, che per default revoca le sessioni
+**ovunque**: chi esce dal telefono di casa esce anche da quello del lavoro. È il default
+della libreria, non una scelta fatta.
+
+*Cosa cambia a seconda della risposta:*
+- **Solo qui** (`signOut({ scope: 'local' })`, consigliato): è quello che ci si aspetta
+  da «Esci» in un'app. Per chiudere ovunque — un telefono perso — resta il cambio di
+  password, o un «Esci da tutti i dispositivi» a parte.
+- **Ovunque** (com'è): più prudente per un telefono perso, più scomodo per chi ne usa due.
+
+### Q-16 — Per cambiare la password, chiedere anche quella attuale?
+**Aperta il:** 2026-09-27 (fase 3 di ADR 0010) · **Tocca:** il pannello di Supabase (Authentication → Sign In / Providers → Email), `supabase/config.toml`, `apps/mobile/app/password.tsx`
+
+Con `secure_password_change` acceso, Supabase chiede un codice via email solo se
+l'accesso ha più di 24 ore. **Nelle prime 24 ore basta la sessione**: chi ha il token di
+qualcuno — il backend dell'IA lo riceve a ogni richiesta — ne cambia la password, e la
+vecchia non la chiede nessuno. Il commento in `config.toml` prometteva di più, ed è stato
+corretto.
+
+*Cosa cambia a seconda della risposta:*
+- **Chiedere anche la password attuale** (l'opzione «Require current password» del
+  pannello): il buco si chiude. Ma chi è entrato solo con Google una password non ce
+  l'ha, e per sceglierne una passerebbe dal recupero via email. `password.tsx` avrebbe un
+  campo in più.
+- **Lasciare com'è**: il rischio è un token rubato nelle prime 24 ore, e il furto del
+  token è già il danno grosso — con quello si legge tutto l'armadio.
+
+### Q-15 — Lo zip di «Scarica i tuoi dati» resta nello Storage: lo svuotamento lo toglie?
+**Aperta il:** 2026-09-27 (review della fase 2 di ADR 0010) · **Tocca:** `handlers/esportazione.py`, `public.svuota_armadio`, il modulo dati dell'app (fase 3)
+
+Prima lo zip si componeva e si scaricava nella stessa risposta, e non restava da nessuna
+parte: era la ragione per cui «Elimina l'armadio» poteva dire di togliere tutto. Dalla fase
+2 il backend lo carica in `esportazioni/{utente}/aura-i-tuoi-dati.zip` e risponde con un
+indirizzo firmato di 15 minuti; lo zip resta lì, sovrascritto alla richiesta successiva. È
+una **copia completa**, foto comprese, e dopo «Svuota» sopravvive: `svuota_armadio` toglie
+le righe, e `T-59` dice che le foto le toglierà l'app, ma dello zip non parla nessuno.
+
+*Cosa cambia a seconda della risposta:*
+- **Lo svuotamento toglie anche lo zip** (consigliato): una riga nel modulo dati dell'app,
+  accanto a quella che toglie le foto (`T-59`), e «Svuota» resta onesto.
+- **Lo zip si cancella da sé dopo il download**: niente copia in giacenza, ma serve un
+  lavoro programmato, e sul piano Free non c'è.
+- **Resta com'è**: la schermata dello svuotamento deve dirlo.
+
 ### Q-08 — Il «+» della barra delle schede è l'unica azione tinta d'accento
 **Aperta il:** 2026-09-22 · **Tocca:** `apps/mobile/app/(tabs)/_layout.tsx`
 
@@ -86,6 +133,56 @@ Le migrazioni saltano `0003` e `0004` (playground rimosso); gli ADR partono da
 sarebbe **pericoloso**, perché l'ordine di esecuzione è lessicografico.
 
 ## Chiuse
+
+### Q-14 — L'opzione «RLS automatico» del progetto Supabase: la si tiene? (**chiusa**)
+**Aperta il:** 2026-09-27 · **Tocca:** il pannello di Supabase, `supabase/migrations/`
+
+Accesa alla creazione del progetto, l'opzione ha messo in `public` una funzione
+`rls_auto_enable()` e un event trigger (`ensure_rls`) che attiva l'RLS su ogni tabella
+nuova. La funzione è `security definer` ed eseguibile da `anon` e `authenticated`: gli
+advisor del progetto la segnalano con due avvisi. Chiamarla dall'API non serve a niente
+(una funzione di event trigger non si esegue direttamente), ma rompe due invarianti che i
+test pgTAP fanno rispettare — nessuna `security definer` in `public`, nessuna funzione di
+`public` eseguibile da `anon` — e sul progetto vero, a differenza dello stack locale,
+diventerebbero falsi.
+
+*Cosa cambia a seconda della risposta:*
+- **Spegnerla** (consigliato): sparisce la funzione, e il progetto vero coincide con lo
+  stack locale. L'RLS su ogni tabella la attiva già la migrazione, e il job `database` la
+  pretende. Il prezzo: una tabella creata a mano dal pannello nascerebbe senza RLS, ma le
+  tabelle nascono dalle migrazioni, non dal pannello.
+- **Tenerla**: la migrazione le toglie l'esecuzione (`revoke execute … from public, anon,
+  authenticated`), dentro un blocco che la cerca, perché in locale non esiste. Righe in più,
+  valide su un solo ambiente.
+
+**Chiusa il 2026-09-27.** L'utente ha tolto dal pannello la funzione `rls_auto_enable()` e il suo
+event trigger. L'RLS resta nella migrazione e nel controllo della CI, che valgono per ogni
+ambiente. *Verificato* con l'MCP: la funzione non c'è più, e gli advisor di sicurezza del
+progetto vero sono vuoti.
+
+
+### Q-13 — Inviti con l'hook, o registrazioni chiuse sul progetto Supabase?
+**Chiusa il:** 2026-09-26 · **Risposta:** *la lista degli inviti resta, per ora* ·
+**Motivo dato:** è temporanea. Oggi l'app la provano solo l'utente e il suo socio, e non ci
+sono ancora un sistema di monitoraggio, un limite di spesa per persona né un metodo di
+pagamento: finché mancano, chi entra spende a carico del progetto.
+
+**La domanda era.** Chi può creare un account lo decide l'hook
+`privato.accetta_solo_invitati`, che guarda la tabella `privato.inviti`: è `EMAIL_AMMESSE`
+portato nel database, e vale anche per chi entra con Google. Ma vale solo se l'hook è acceso
+sul progetto vero: `config.toml` accende quello locale, e un progetto nuovo nasce con le
+registrazioni aperte. L'alternativa era chiudere le registrazioni (`enable_signup = false`)
+e creare gli account dal pannello, togliendo l'hook con la sua tabella.
+
+**Cosa comporta la risposta.** L'hook resta com'è, e il giorno del passaggio va acceso nel
+pannello: è la prima voce della lista in `docs/PROGRESS.md`, e il controllo che lo verifichi
+da sé è `T-56`. Gli inviti si aggiungono da SQL o dal pannello.
+
+**Quando si riapre**, e il segnale è preciso: **quando ci sono il metodo di pagamento, il
+limite di spesa per persona e le protezioni dai costi.** Da lì la lista si toglie — e con
+lei l'interruttore da cui dipendono `T-46`, `T-47` e `Q-12`, che il giorno in cui chiunque
+può registrarsi smettono di essere dettagli. Anche `T-58` (nessun limite di lunghezza sui
+testi, che finiscono nei prompt a pagamento) diventa da fare allora.
 
 ### Q-12 — «Scarica i tuoi dati» passa da una credenziale al portatore
 **Chiusa il:** 2026-09-23 · **Risposta:** *va bene così, niente `expo-sharing`*

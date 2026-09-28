@@ -1,7 +1,7 @@
-# Standard migrazioni — `services/api/migrations/`
+# Standard migrazioni — `supabase/migrations/`
 
-Lo legge: `api` **ogni volta che tocca `migrations/`**, e `reviewer`.
-Queste regole hanno conseguenze **irreversibili**. Leggile per intero.
+Lo legge: `api` **ogni volta che tocca `supabase/migrations/`**, e `reviewer`.
+Una migrazione arrivata sul progetto vero non si ritira. Leggile per intero.
 
 
 ## Prima di aggirare un problema, chiedi se puoi toglierlo
@@ -18,72 +18,45 @@ aggiunge.**
 
 Per esteso, con l'esempio, in `CLAUDE.md` e in `docs/adr/0008`.
 
-## Il meccanismo, che spiega tutte le regole
+## Una cartella sola
 
-`services/api/scripts/applica_migrazioni.py` fa una cosa sola:
+Dal 2026-09-25 (ADR 0010) lo schema sta in **`supabase/migrations/`**, e dal passaggio
+(2026-09-27) è l'unico: `services/api/migrations/` e il suo runner, che rieseguiva ogni
+file a ogni avvio, non esistono più. Il Postgres di prima resta sul VPS, fermo, come copia
+di riserva: nessuno ci applica più niente.
 
-```python
-for file in sorted((RADICE / "migrations").glob("*.sql")):
-    # esegue
-```
+Il meccanismo è quello della CLI di Supabase: una tabella di storico, ogni file
+applicato **una volta sola**, in ordine di timestamp, e mai rieseguito. L'idempotenza
+non regge più niente; regge lo storico.
 
-**Tutti i file. In ordine lessicografico. A ogni avvio.** Lo chiama
-`scripts/dev.sh` da solo, e in produzione `docker compose exec api python
-scripts/applica_migrazioni.py`.
+## Le regole
 
-Non c'è una tabella di versione: il runner **non sa** quali migrazioni ha già
-applicato, perché non gli serve saperlo — l'idempotenza sostituisce il tracking.
-Non c'è un file `down`: la cartella contiene solo SQL in avanti.
+- **Un file nuovo** si crea con `supabase migration new <nome> < /dev/null`. Senza
+  `< /dev/null` il comando resta appeso ad aspettare SQL da stdin.
+- **Si può riscrivere finché non è arrivato sul progetto vero** (`supabase db push`).
+  Da lì è storia: si aggiunge un file nuovo, e quello vecchio non si tocca più.
+- **Una colonna nuova su una tabella che ha righe è nullable**, o ha un default.
+  `add column … not null` senza default fallisce sul progetto vero, e il `db push` si
+  ferma a metà. Se il campo deve diventare obbligatorio servono tre passi: aggiungi
+  nullable, riempi, poi vincola.
+- **Si verifica da zero**: `npm run supabase:reset && npm run supabase:test`, più
+  `supabase:verifica` e `supabase:tipi`. È quello che fa il job `database` della CI.
+- **Ogni tabella di `public` ha l'RLS attiva e le sue policy**, con i test pgTAP in
+  `supabase/tests/database/` che provano A contro B. Una policy che nessun test prova
+  non esiste.
+- **Un permesso si prova con il ruolo che lo usa.** L'hook degli inviti gira come
+  `supabase_auth_admin`, non come `postgres`: provato da `postgres` passava, mentre ogni
+  registrazione vera veniva rifiutata. Da allora la CI fa due registrazioni vere.
+- **`supabase/seed.sql` è solo per lo stack locale.** Mai `supabase db push
+  --include-seed` verso il progetto vero: il seed inserisce un invito di sviluppo.
+- **La CLI è la stessa della CI** (`database.yml`, oggi 2.109.1): un'altra versione
+  genera tipi diversi e il confronto fallisce per quello. `supabase --version`.
+- **Un enum o un limite che esiste anche in Python** si cambia nei due posti nella
+  stessa modifica: `verifica_database.py` lo confronta, e il job `database` diventa
+  rosso. La regola completa sta in `.claude/rules/contratti.md`.
 
-Conseguenza da avere chiara prima di scrivere una riga: **una migrazione non
-idempotente non rompe un deploy — rompe ogni avvio successivo, per sempre**,
-finché qualcuno non entra sul server a sistemare.
+## `drop` è distruttivo
 
-## Le sette regole
-
-1. **Prefisso a quattro cifre, zero-padded.** Il prossimo libero è `0010_`.
-   L'ordine è lessicografico: un file `10_qualcosa.sql` ordinerebbe **prima** di
-   `0001` e riordinerebbe l'intero schema a ogni boot.
-   I buchi nella numerazione sono normali e non si compattano: mancano `0003` e
-   `0004` perché due migrazioni del playground sono state rimosse.
-
-2. **Ogni istruzione ripetibile.**
-   `create table if not exists` · `create index if not exists` ·
-   `alter table … add column if not exists` · `drop … if exists` ·
-   `insert … on conflict do nothing`.
-
-3. **Una colonna nuova è sempre nullable.** `add column … not null` **senza
-   default** fallisce su una tabella che ha già righe — e senza tabella di
-   versione quel fallimento si ripete a ogni avvio. Se il campo deve diventare
-   obbligatorio, servono tre migrazioni distinte nel tempo: aggiungi nullable,
-   backfilla, poi vincola.
-
-4. **Il backfill è idempotente per costruzione, non per fortuna.** L'esempio
-   canonico è `0009_conversazioni_chat.sql`: `conversazione_id` è nullable
-   *proprio per* rendere ripetibile il backfill, e la `where … is null` lo rende
-   un no-op dal secondo giro in poi.
-
-5. **Mai modificare un file già applicato in produzione.** Si aggiunge un file
-   nuovo. Un file già eseguito è storia, non codice. Il segnale operativo è
-   `main`: in questo repo un merge su main è un rilascio, quindi un `.sql` che
-   esiste già lì è già girato in produzione.
-
-6. **`drop` e `drop column` sono distruttivi e irreversibili — e verrebbero
-   rieseguiti all'infinito.** Ci si ferma e si chiede all'utente, dicendo cosa si
-   perde. L'unico precedente è `0008_rimuovi_playground.sql`, che porta quattro
-   righe di commento a giustificare ogni `drop`. Attenzione al caso che sembra
-   innocuo: `drop table if exists` **è** idempotente, quindi non è l'idempotenza
-   a fermarlo — è questa regola, e va contrattata con l'utente lo stesso.
-
-7. **Verifica obbligatoria prima di chiudere:**
-   ```bash
-   npm run db:up && npm run db:migrate && npm run db:migrate
-   ```
-   **Due volte di fila.** Se il secondo giro non è pulito, la migrazione è
-   sbagliata — e lo sarebbe rimasta fino al prossimo riavvio in produzione.
-
-## Sul primo avvio in produzione
-
-Su un volume vuoto le migrazioni le applica Postgres da sé via
-`docker-entrypoint-initdb.d`. Una migrazione arrivata **dopo** va lanciata a
-mano: è documentato in `docs/deploy.md`, sezione «Avvio e aggiornamento».
+`drop table`, `drop column`, e ogni `delete` o `truncate` massivo si **chiedono
+prima** all'utente, dicendo cosa si perde, anche con `if exists`. Sul piano Free
+non ci sono backup (ADR 0010): una colonna tolta sul progetto vero non torna.

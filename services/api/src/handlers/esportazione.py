@@ -1,110 +1,80 @@
-"""«Scarica i tuoi dati»: chi raccoglie, e chi mette insieme l'URL.
+"""POST /esportazione — «Scarica i tuoi dati».
 
-Il giro è in due tempi, e il motivo è che **un'app React Native non ha un
-«scarica»**:
+L'app chiede col suo token; qui si raccoglie tutto quello che è di quella
+persona, **con lo stesso token** (ADR 0010), si compone lo zip, lo si carica
+nella sua cartella dello Storage e si restituisce un indirizzo firmato dallo
+Storage, che l'app apre nel browser di sistema — un'app React Native non ha un
+«scarica», il browser sì.
 
-1. `POST /esportazione` — l'app chiede, col suo token. Qui si firma un URL a
-   vita breve legato a *quell'* utente e lo si restituisce.
-2. `GET /esportazione?utente=…&scade=…&firma=…` — l'apre il **browser di
-   sistema**, che di scaricare sa. Non ha il token, e per questo l'URL è
-   firmato: la firma è l'autorizzazione, e `local_server` la verifica prima di
-   comporre alcunché.
-
-**Detto con precisione**, perché la versione corta di questa frase è falsa e
-qualcuno la userebbe per decidere: `expo-file-system` è già una dipendenza e
-`src/dati/api.ts` ne importa già `File`, che sa fare
-`downloadFileAsync(url, destinazione, { headers })` — cioè scaricare **col
-bearer token**, senza una seconda credenziale e senza `utente` in una query.
-Non lo facciamo per un motivo diverso: quel file atterra nella sandbox
-dell'app, dove la persona non lo raggiunge, e portarcelo vuole un foglio di
-condivisione, cioè `expo-sharing`. Quella sì è una dipendenza in più, su un
-lock che qui ha già fatto male tre volte (`T-03`, `T-23`, `T-31`) — la stessa
-risposta data a `expo-blur` nel piano del redesign.
-
-Il prezzo lo paghiamo in chiaro: l'indirizzo firmato è **una credenziale al
-portatore**, rigiocabile per tutta la sua vita, non revocabile se non ruotando
-`JWT_SECRET`, e finisce nella cronologia del browser di sistema. La scelta è
-stata presa sapendolo (`Q-12`, chiusa il 2026-09-23) perché **quel costo
-cresce col numero di account**, e oggi sono le persone che lavorano al
-progetto. **Si riapre quando `EMAIL_AMMESSE` smette di essere una lista di
-persone che si conoscono** — la stessa condizione di `T-46` e `T-47`.
+L'indirizzo è una credenziale al portatore per un quarto d'ora, e finisce nella
+cronologia del browser. La scelta è stata presa sapendolo (`Q-12`), e vale
+finché la registrazione resta su invito (`Q-13`). Rispetto a prima non si
+rigioca più una firma nostra: la firma è dello Storage, e l'indirizzo apre
+**solo** quello zip.
 """
 
 from __future__ import annotations
 
 import json
-import os
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
-from domain.errors import ErroreDominio
-from domain.esportazione import (
-    componi_esportazione,
-    firma_esportazione,
-    senza_campi_interni,
-)
+from domain.accesso import Sessione
+from domain.errors import FotoNonTrovata
+from domain.esportazione import componi_esportazione, senza_campi_interni
 from domain.models import (
     ContenutoEsportazione,
     ConversazioneEsportata,
     EsportazionePronta,
 )
-from handlers._container import archivio_foto, orologio, repository
-from handlers._http import Evento, Risposta, endpoint, ok, utente_id
+from handlers._container import BUCKET_ESPORTAZIONI, BUCKET_FOTO, archivio, orologio, repository
+from handlers._http import Evento, Risposta, endpoint, ok, sessione
 
-#: Quindici minuti. `url_lettura` delle foto vive **sette giorni**, e lì è una
-#: scelta ragionata (`adapters/filesystem.py`: le miniature restano in memoria
-#: per tutta la sessione). Qui no: `Linking.openURL` lascia l'indirizzo nella
-#: cronologia del browser di sistema, e questo indirizzo vale l'armadio intero
-#: più le conversazioni. Il tempo che serve è quello fra il tocco e il
-#: download, non una settimana.
+#: Quindici minuti: il tempo fra il tocco e il download, non una settimana.
+#: `Linking.openURL` lascia l'indirizzo nella cronologia del browser di sistema,
+#: e questo indirizzo vale l'armadio intero più le conversazioni.
 SCADENZA_S = 900
 
-
-def _scadenza(adesso: datetime) -> datetime:
-    return adesso + timedelta(seconds=SCADENZA_S)
+#: Sempre lo stesso nome: ogni esportazione sovrascrive la precedente, e di una
+#: persona c'è al più una copia (docstring di domain/esportazione.py).
+NOME_NELLO_STORAGE = "aura-i-tuoi-dati.zip"
 
 
 @endpoint
 def crea(evento: Evento) -> Risposta:
-    """Firma l'indirizzo, non prepara niente.
+    chi = sessione(evento)
+    adesso = orologio().adesso()
 
-    Non si costruisce lo zip qui e non lo si salva da nessuna parte: una copia
-    completa dei dati di una persona in giacenza avrebbe bisogno di una
-    scadenza e di qualcosa che la ripulisca, e la prossima voce delle
-    impostazioni è «Elimina l'armadio» — una cancellazione che non trovasse
-    quelle copie starebbe mentendo. L'archivio si compone quando lo si chiede.
-    """
-    utente = utente_id(evento)
-    scade = _scadenza(orologio().adesso())
-    scade_epoch = int(scade.timestamp())
-    firma = firma_esportazione(utente, scade_epoch, os.environ["JWT_SECRET"])
-    from adapters.filesystem import base_url
-
-    indirizzo = f"{base_url()}/esportazione?utente={utente}&scade={scade_epoch}&firma={firma}"
-    return ok(EsportazionePronta(url=indirizzo, scade_il=scade))
+    percorso = f"{chi.utente_id}/{NOME_NELLO_STORAGE}"
+    zip_ = archivio(chi, BUCKET_ESPORTAZIONI)
+    zip_.salva(percorso, archivio_per(chi), "application/zip")
+    # `download=` fa scegliere al browser il nome del file: con la data, perché
+    # due esportazioni nella stessa cartella non si sovrascrivano in silenzio.
+    url = f"{zip_.firma_lettura(percorso, SCADENZA_S)}&download={nome_file(adesso)}"
+    return ok(EsportazionePronta(url=url, scade_il=adesso + timedelta(seconds=SCADENZA_S)))
 
 
-def contenuto(utente: str) -> ContenutoEsportazione:
+def contenuto(chi: Sessione) -> ContenutoEsportazione:
     """Tutto quello che è di questa persona, letto adesso.
 
     Sta in un handler e non nel dominio perché **legge**: repository e archivio
-    sono I/O. Ciò che resta puro — comporre lo zip, firmare — è in
-    `domain/esportazione.py`, e si prova con i finti.
+    sono I/O. Ciò che resta puro — comporre lo zip — è in `domain/esportazione.py`,
+    e si prova con i finti.
     """
-    deposito = repository()
+    deposito = repository(chi)
     conversazioni = [
         ConversazioneEsportata(
-            conversazione=voce.conversazione,
-            messaggi=deposito.elenca_messaggi_chat(utente, voce.conversazione.id, limite=10_000),
+            conversazione=conversazione,
+            messaggi=deposito.elenca_messaggi_chat(conversazione.id, limite=10_000),
         )
-        for voce in deposito.elenca_conversazioni_chat(utente)
+        for conversazione in deposito.elenca_conversazioni_chat()
     ]
     return ContenutoEsportazione(
         esportato_il=orologio().adesso(),
-        profilo=deposito.leggi_profilo(utente),
-        capi=deposito.elenca_capi(utente),
-        outfit=deposito.elenca_outfit(utente),
+        profilo=deposito.leggi_profilo(),
+        capi=deposito.elenca_capi(),
+        outfit=deposito.elenca_outfit(),
         conversazioni=conversazioni,
-        segnalazioni=deposito.elenca_segnalazioni(utente),
+        segnalazioni=deposito.elenca_segnalazioni(),
     )
 
 
@@ -114,21 +84,18 @@ def _estensione(chiave: str, ripiego: str) -> str:
 
 
 def da_portare(dati: ContenutoEsportazione) -> list[tuple[str, str]]:
-    """Le coppie `(chiave d'archivio, nome dentro lo zip)`.
+    """Le coppie `(percorso nello Storage, nome dentro lo zip)`.
 
-    **Il nome viene dall'id del capo, non dalla chiave.** Una chiave è un
-    percorso (`capi/abc123.jpg`, e in produzione può portare l'id
-    dell'utente): usarla tale e quale ricostruirebbe quell'albero dentro
+    **Il nome viene dall'id del capo, non dal percorso.** Il percorso porta l'id
+    dell'utente: usarlo tale e quale ricostruirebbe quell'albero dentro
     l'archivio, scrivendo un identificatore interno in ogni cartella di un file
     che la persona apre e magari gira a qualcun altro. L'id del capo invece
     **è già in `dati.json`**, quindi il LEGGIMI può dire una regola vera — «il
-    capo `abc123` è `foto/abc123.jpg`» — e non c'è niente da deduplicare,
-    perché due capi non hanno lo stesso id.
+    capo `abc123` è `foto/abc123.jpg`» — e non c'è niente da deduplicare.
 
-    Ci vanno **tre** cose, non una. La foto scontornata è un secondo file vero
-    sull'archivio, non una vista della prima; e `avatar_foto_chiave` è la foto
-    a figura intera della persona, cioè il file più personale che ci sia — era
-    quello che un'esportazione non può permettersi di dimenticare.
+    Ci vanno **tre** cose, non una: la foto, la sua versione scontornata, che è
+    un secondo file vero, e la foto a figura intera dell'avatar, cioè il file
+    più personale che ci sia.
     """
     coppie: list[tuple[str, str]] = []
     for capo in dati.capi:
@@ -142,37 +109,29 @@ def da_portare(dati: ContenutoEsportazione) -> list[tuple[str, str]]:
     return coppie
 
 
-def archivio_per(utente: str) -> bytes:
+def archivio_per(chi: Sessione) -> bytes:
     """Lo zip completo: i dati, e le foto vere.
 
-    **Le foto ci vanno dentro, non come link.** Un archivio che contenesse gli
-    URL firmati delle foto smetterebbe di essere una copia nel momento in cui
-    quegli URL scadono — sarebbe una copia che si svuota da sola. Il deck
-    promette «puoi scaricare tutto» e «le foto dei capi restano tue»: un elenco
-    di indirizzi morti non mantiene nessuna delle due. Per la stessa ragione,
-    al contrario, dal JSON gli URL firmati **si tolgono**: non sono un dato, e
-    in questo backend un URL firmato di lettura vale anche come scrittura
-    (`T-46`).
+    **Le foto ci vanno dentro, non come link**: un archivio con gli indirizzi
+    delle foto smetterebbe di essere una copia quando quegli indirizzi scadono.
+    Per la stessa ragione, dal JSON i percorsi e gli indirizzi **si tolgono**.
 
-    Una foto che non si riesce a leggere **non fa cadere l'esportazione**: si
-    salta. Un archivio in meno di una foto è ancora l'armadio di qualcuno; un
-    500 perché un file è sparito dal disco non è niente.
+    Una foto che **non c'è più** non fa cadere l'esportazione: si salta. Un
+    archivio in meno di una foto sparita è ancora l'armadio di qualcuno. Uno
+    Storage che non risponde invece la fa cadere: 502, e nessuno zip.
     """
-    dati = contenuto(utente)
-    deposito_foto = archivio_foto()
+    dati = contenuto(chi)
+    foto = archivio(chi, BUCKET_FOTO)
 
     def leggi_tutte() -> list[tuple[str, bytes]]:
         raccolte: list[tuple[str, bytes]] = []
-        for chiave, nome in da_portare(dati):
+        for percorso, nome in da_portare(dati):
             try:
-                contenuto_foto, _ = deposito_foto.leggi(chiave)
-            except (ErroreDominio, OSError):
-                # Stretto di proposito, non un `except Exception`: una foto
-                # che non c'è più sul disco si salta, ma un difetto vero
-                # nell'archivio deve ancora arrivare fino in cima. Le due che
-                # si catturano sono quelle che `_foto_get` tratta già come
-                # «questa foto non c'è» (`ErroreDominio`) e il disco che non
-                # risponde.
+                contenuto_foto, _ = foto.leggi(percorso)
+            except FotoNonTrovata:
+                # Stretto di proposito: una foto che non c'è più si salta. Uno
+                # Storage che non risponde no — lo zip uscirebbe con dei buchi
+                # e un 200, e chi lo scarica crederebbe di avere tutto.
                 continue
             raccolte.append((nome, contenuto_foto))
         return raccolte
@@ -183,8 +142,6 @@ def archivio_per(utente: str) -> bytes:
     )
 
 
-def nome_file(adesso: datetime | None = None) -> str:
-    """`aura-i-tuoi-dati-2026-09-23.zip` — una data nel nome, perché due
-    esportazioni nella stessa cartella non si sovrascrivano in silenzio."""
-    giorno = (adesso or datetime.now(UTC)).date().isoformat()
-    return f"aura-i-tuoi-dati-{giorno}.zip"
+def nome_file(adesso: datetime) -> str:
+    """`aura-i-tuoi-dati-2026-09-23.zip` — il nome con cui il browser lo salva."""
+    return f"aura-i-tuoi-dati-{adesso.date().isoformat()}.zip"

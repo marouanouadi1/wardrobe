@@ -13,7 +13,9 @@
 
 import type { ConversazioneChat, MessaggioChat } from '@wardrobe/contracts'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api, messaggioDiErrore } from './api'
+import { api } from './api'
+import { messaggioDiErrore } from './errori'
+import { apriConversazione, ultimaConversazione } from './supabase'
 
 /**
  * Chi chiama `useChat` deve tenere `scelta` in `useState`, non passare un
@@ -69,14 +71,15 @@ export function useChat(scelta: SceltaConversazione, avvisa: (testo: string | nu
       }
 
       setCaricamento(true)
-      const richiesta = scelta.tipo === 'ultima' ? api.chat.elenca() : api.chat.messaggi(scelta.id)
+      // Lo storico lo si legge da Supabase, come l'elenco: al backend si
+      // parla solo per un messaggio nuovo, che ha bisogno del modello.
+      const richiesta = scelta.tipo === 'ultima' ? ultimaConversazione() : apriConversazione(scelta.id)
       void richiesta
         .then((risposta) => {
           if (!attivo) return
           setMessaggi(risposta.messaggi)
-          const trovata = risposta.conversazione ?? null
-          setConversazione(trovata)
-          conversazioneRef.current = trovata
+          setConversazione(risposta.conversazione)
+          conversazioneRef.current = risposta.conversazione
         })
         .catch((errore) => {
           if (!attivo) return
@@ -121,7 +124,7 @@ export function useChat(scelta: SceltaConversazione, avvisa: (testo: string | nu
       setMessaggi((precedenti) => [...precedenti, temporaneo])
       setInAttesa(true)
       try {
-        const risposta = await api.chat.invia({
+        const risposta = await api.inviaChat({
           testo,
           conversazione_id: conversazioneRef.current?.id,
         })

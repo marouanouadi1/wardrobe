@@ -25,7 +25,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colori, fondi, linee, ombre, raggi, spazi, testoSu, velo, type NomeFondo } from '../tema/tokens'
-import { BottoneIndietro, Icona, LinkTesto, Toccabile, type NomeIcona } from './base'
+import { BottoneIndietro, BottoneSecondario, Icona, LinkTesto, Toccabile, type NomeIcona } from './base'
 import { Fondo, useFondo, type Su } from './fondo'
 import { Corpo, Etichetta, TestoErrore, Titolo } from './testo'
 
@@ -79,6 +79,7 @@ const SCHEDA_DI: Record<string, string> = {
   'misure': 'profilo',
   'unita': 'profilo',
   'svuota': 'profilo',
+  'password': 'profilo',
   // `guidafoto` **non** è qui di proposito: è una deviazione dentro il gesto
   // di caricare — si apre, si legge, si torna. La barra offrirebbe cinque vie
   // di fuga proprio mentre si sta facendo una cosa sola.
@@ -474,23 +475,35 @@ export function Schermata({
  * fondo. `accedi.tsx` e `registrati.tsx` erano ~19 righe byte-identiche.
  */
 /**
- * Quello che il deck mette sotto il bottone d'accesso, e che il backend non
- * sa ancora fare: «oppure / Continua con Apple · Google», e il recupero della
- * password.
+ * Quello che il deck mette sotto il bottone d'accesso: il recupero della
+ * password, e «oppure / Continua con Apple · Google».
  *
- * **Si mostrano spente col motivo, non si tolgono.** È la stessa scelta di
- * `Foglio` e di `RigaImpostazione`, e la stessa ragione: una voce nascosta
- * insegna che quella cosa non esiste, una spenta che dice cosa manca insegna
- * che non esiste *ancora*. Qui pesa più che altrove — chi non riesce a
- * entrare e non vede «password dimenticata» pensa di aver sbagliato lui.
+ * **Una voce che non c'è si mostra spenta col motivo, non si toglie.** È la
+ * stessa scelta di `Foglio` e di `RigaImpostazione`, e la stessa ragione: una
+ * voce nascosta insegna che quella cosa non esiste, una spenta che dice cosa
+ * manca insegna che non esiste *ancora*. Dal passaggio a Supabase (ADR 0010)
+ * il recupero e Google ci sono; Apple no, finché l'app non arriva su iPhone.
+ * Google può essere spento anche lui — sul web, o in una versione senza il suo
+ * client — e allora porta il suo `motivo`.
  */
-export function PiedeAccesso({ conRecupero }: { conRecupero?: boolean }) {
+export function PiedeAccesso({
+  onRecupero,
+  google,
+}: {
+  /** Il link «Password dimenticata?»: solo sulla schermata di accesso. */
+  onRecupero?: () => void
+  google: { onPress: () => void; caricando?: boolean; motivo?: string | null }
+}) {
+  const motivi = [
+    google.motivo,
+    'Con Apple si entrerà quando Aura sarà anche su iPhone.',
+  ].filter(Boolean)
   return (
     <View style={{ gap: spazi.m, alignItems: 'center' }}>
-      {conRecupero ? (
-        <Corpo taglia="micro" tono="debole">
-          Password dimenticata? Non c’è ancora un modo di recuperarla da soli.
-        </Corpo>
+      {onRecupero ? (
+        <LinkTesto taglia="micro" onPress={onRecupero}>
+          Password dimenticata?
+        </LinkTesto>
       ) : null}
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spazi.m, width: '100%' }}>
@@ -502,24 +515,42 @@ export function PiedeAccesso({ conRecupero }: { conRecupero?: boolean }) {
       </View>
 
       <View style={{ flexDirection: 'row', gap: spazi.s, width: '100%' }}>
-        {['Apple', 'Google'].map((chi) => (
-          <View
-            key={chi}
-            style={{
-              flex: 1,
-              paddingVertical: 13,
-              borderRadius: raggi.pillola,
-              borderWidth: 1,
-              borderColor: linee.tenue,
-              alignItems: 'center',
-            }}
-          >
-            <Corpo taglia={13.5} tono="debole">{`Continua con ${chi}`}</Corpo>
-          </View>
-        ))}
+        <VoceSpenta testo="Continua con Apple" />
+        {google.motivo ? (
+          <VoceSpenta testo="Continua con Google" />
+        ) : (
+          <BottoneSecondario
+            testo="Continua con Google"
+            onPress={google.onPress}
+            caricando={google.caricando}
+            style={{ flex: 1, paddingVertical: 13 }}
+          />
+        )}
       </View>
-      <Corpo taglia="micro" tono="debole" style={{ textAlign: 'center' }}>
-        Per ora si entra solo con email e password.
+      {motivi.map((motivo) => (
+        <Corpo key={motivo} taglia="micro" tono="debole" style={{ textAlign: 'center' }}>
+          {motivo}
+        </Corpo>
+      ))}
+    </View>
+  )
+}
+
+/** Una pillola d'accesso che non si può toccare: il contorno tenue, il testo debole. */
+function VoceSpenta({ testo }: { testo: string }) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        paddingVertical: 13,
+        borderRadius: raggi.pillola,
+        borderWidth: 1,
+        borderColor: linee.tenue,
+        alignItems: 'center',
+      }}
+    >
+      <Corpo taglia={13.5} tono="debole">
+        {testo}
       </Corpo>
     </View>
   )
@@ -544,9 +575,8 @@ export function GuscioAutenticazione({
   errore?: string | null
   azione: ReactNode
   /** Quello che nel deck sta **sotto** l'azione: l'accesso con Apple o
-   *  Google, il recupero della password. Sono cose che il backend non sa
-   *  ancora fare, e si mostrano spente col motivo invece di sparire — la
-   *  stessa scelta di `Foglio` e di `RigaImpostazione`. */
+   *  Google, il recupero della password (`PiedeAccesso`), o un link come
+   *  «mandamene un altro» sul passo del codice. */
   piede?: ReactNode
   onLinkFantasma: () => void
   testoLinkFantasma: ReactNode

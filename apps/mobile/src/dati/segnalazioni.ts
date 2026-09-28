@@ -18,7 +18,7 @@
 
 import * as Sentry from '@sentry/react-native'
 import * as SelettoreImmagini from 'expo-image-picker'
-import { api } from './api'
+import { creaSegnalazione } from './supabase'
 import { colori, linee } from '../tema/tokens'
 
 const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN
@@ -95,14 +95,14 @@ export function avviaSegnalazioni() {
         // Sentry resta il canale che ci avvisa; questa chiamata è la sola
         // ragione per cui chi ha segnalato — che a Sentry non ha accesso —
         // può poi vedere la propria segnalazione e il suo stato da
-        // «Profilo → Le mie segnalazioni» (vedi `handlers/segnalazioni.py`).
+        // «Profilo → Le mie segnalazioni» (la tabella `segnalazioni` su Supabase).
         // Silenziosa di proposito: l'invio a Sentry è già andato a buon fine,
         // e un secondo popup su questa copia sarebbe un attrito senza senso
         // per chi ha appena letto «Ricevuto. Grazie.».
         onSubmitSuccess: (dati) => {
           if (!dati.message) return
-          api.segnalazioni.crea({ testo: dati.message }).catch((errore: unknown) => {
-            console.warn('Segnalazione non copiata nel backend', errore)
+          creaSegnalazione(dati.message).catch((errore: unknown) => {
+            console.warn('Segnalazione non copiata su Supabase', errore)
           })
         },
 

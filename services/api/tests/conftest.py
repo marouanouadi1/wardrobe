@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 import os
-from datetime import UTC, datetime
+from collections.abc import Iterator
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
-# Prima di qualsiasi import degli handler: in modalità sviluppo il container
-# monta il repository in memoria, e nessun test tocca la rete.
-os.environ["DEV_MODE"] = "1"
-# Non più un bypass (AUTH_APERTA è sparita): ogni test che chiama un handler
-# autenticato passa da un JWT vero, firmato con questo segreto — vedi
-# `intestazioni_utente()` sotto.
-os.environ["JWT_SECRET"] = "segreto-di-test-lungo-abbastanza-per-hmac-sha256"
+# Prima di qualsiasi import degli handler: leggono l'indirizzo del progetto al
+# momento della verifica di un token. Un progetto che non esiste: nessun test
+# parla con Supabase, le porte sono i finti di `tests/fakes.py`.
+os.environ["SUPABASE_URL"] = "https://progetto-di-prova.supabase.co"
+os.environ["SUPABASE_CHIAVE_PUBBLICA"] = "sb_publishable_di_prova"
 
-from domain.autenticazione import emetti_token
+from domain.accesso import emittente_di
 from domain.models import (
     AnalisiVisione,
     AttributoCapo,
@@ -25,6 +25,7 @@ from domain.models import (
     TipoCapo,
 )
 from domain.wardrobe import slot_da_tipo
+from fakes import ArchivioFinto, ChiaviFinte, DepositoFinto, RepositoryFinto
 
 ADESSO = datetime(2026, 7, 24, 9, 30, tzinfo=UTC)
 OGGI = ADESSO.date()
@@ -53,16 +54,23 @@ LETTURA_BUONA: dict[str, object] = {
 }
 
 
-def intestazioni_utente(utente: str = "demo") -> dict[str, str]:
-    """Le intestazioni HTTP che identificano `utente` in un evento di test: un
-    JWT vero, firmato con `JWT_SECRET`, non più un header non verificato.
+EMITTENTE = emittente_di(os.environ["SUPABASE_URL"])
 
-    Emesso con l'ora reale, non `ADESSO`: `ADESSO` è fissa nel passato per
-    rendere deterministica la logica di dominio (capi dormienti, ecc.), ma un
-    token con `iat`/`exp` calcolati su quella data scade per davvero quando
-    l'orologio reale la supera di 30 giorni — è già successo una volta."""
-    token = emetti_token(utente, os.environ["JWT_SECRET"], datetime.now(UTC))
-    return {"authorization": f"Bearer {token}"}
+#: Le chiavi con cui i test firmano i token: una coppia per tutta la sessione di
+#: pytest, generata qui, che nessun progetto vero conosce.
+CHIAVI = ChiaviFinte()
+
+
+def token_di(utente: str, *, scade_tra: timedelta = timedelta(hours=1)) -> str:
+    """Un token come quelli di Supabase Auth: ES256, `aud` e `iss` del progetto
+    di prova, firmato con `CHIAVI`. Scade rispetto all'ora vera, non ad
+    `ADESSO`: `pyjwt` controlla la scadenza sull'orologio reale."""
+    return CHIAVI.token(utente, EMITTENTE, scade_tra=scade_tra)
+
+
+def intestazioni_utente(utente: str = "utente-a", **opzioni: timedelta) -> dict[str, str]:
+    """Le intestazioni HTTP di una richiesta dell'app per `utente`."""
+    return {"authorization": f"Bearer {token_di(utente, **opzioni)}"}
 
 
 def costruisci_capo(
@@ -100,30 +108,57 @@ def costruisci_capo(
     )
 
 
-@pytest.fixture(autouse=True)
-def _container_pulito():
-    """Ogni test parte da un armadio nuovo.
+@dataclass
+class Supabase:
+    """Quello che la fixture `supabase` mette al posto del progetto vero: i dati
+    in memoria, per utente, e le chiavi che firmano i token."""
 
-    Il container usa `functools.cache` perché in produzione l'istanza deve
-    vivere quanto il processo, per riusare la stessa connessione. In pytest
-    quello stesso comportamento farebbe condividere il repository in memoria
-    fra i test: uno che segna un capo come «da lavare» falserebbe i conteggi
-    di quello dopo.
+    deposito: DepositoFinto
+    chiavi: ChiaviFinte
+
+
+@pytest.fixture(autouse=True)
+def supabase(monkeypatch: pytest.MonkeyPatch) -> Iterator[Supabase]:
+    """Ogni test parte da un Supabase vuoto, e nessuno parla con quello vero.
+
+    Si sostituiscono le fabbriche del container **dove gli handler le hanno
+    importate**: `from handlers._container import repository` copia il nome nel
+    modulo dell'handler, e cambiarlo solo in `_container` non basterebbe. Le
+    cache del container si azzerano prima e dopo: in produzione un'istanza vive
+    quanto il processo, qui farebbe condividere lo stato fra un test e l'altro.
     """
-    from handlers import _container
+    from handlers import _container, analisi, chat, esportazione, suggerimenti
+
+    deposito = DepositoFinto()
+
+    def repository(sessione: object) -> RepositoryFinto:
+        return RepositoryFinto(sessione, deposito)  # type: ignore[arg-type]
+
+    def archivio(sessione: object, bucket: str) -> ArchivioFinto:
+        return ArchivioFinto(sessione, bucket, deposito)  # type: ignore[arg-type]
+
+    # Presi prima di sostituirne uno: a fine test la fixture si chiude prima che
+    # `monkeypatch` rimetta gli originali, e al posto di `chiavi_auth` ci sarebbe
+    # ancora il finto, che una cache non ce l'ha.
+    in_cache = (
+        _container.orologio,
+        _container.generatore_id,
+        _container.chiavi_auth,
+        _container.servizio_scontorno,
+    )
 
     def svuota() -> None:
-        for cache in (
-            _container.repository,
-            _container.repository_utenti,
-            _container.archivio_foto,
-            _container.orologio,
-            _container.generatore_id,
-        ):
+        for cache in in_cache:
             cache.cache_clear()
 
     svuota()
-    yield
+    monkeypatch.setattr(_container, "chiavi_auth", lambda: CHIAVI)
+    for modulo in (analisi, chat, esportazione, suggerimenti):
+        if hasattr(modulo, "repository"):
+            monkeypatch.setattr(modulo, "repository", repository)
+        if hasattr(modulo, "archivio"):
+            monkeypatch.setattr(modulo, "archivio", archivio)
+    yield Supabase(deposito=deposito, chiavi=CHIAVI)
     svuota()
 
 

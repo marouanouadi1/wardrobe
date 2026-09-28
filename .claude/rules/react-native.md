@@ -33,7 +33,7 @@ qualcosa che fa il 90%.
 | `src/ui/base.tsx` | il grosso: `Toccabile`, `Campo` (con `rivelabile` per il «Mostra» sulla password), `Scheda`, `Pillola`, `Segmenti`, `BottonePrimario`, `BottoneSecondario`, `Badge`, `BollaChat`, `Icona`, `BottoneTondo`, `LinkTesto`, `Comparsa`… |
 | `src/ui/testo.tsx` | `Titolo`, `Numero`, `Corpo`, `Forte`, `TestoErrore`, `Etichetta`, e il tipo `Taglia` |
 | `src/ui/stati.tsx` | `Caricamento`, **`PistaIndeterminata`**, `AttesaLunga`, `Vuoto`, `Errore`, **`SenzaRete`**, `StatoRisorsa` |
-| `src/ui/guscio.tsx` | `Testata` (con lo slot **`azioni`** a destra del titolo, che può stare accanto a `fotoProfilo`: «Oggi» ci mette il fumetto della chat), `Schermata`, `GuscioAutenticazione` (con `occhiello` sopra il titolo e `piede` sotto l'azione), **`PiedeAccesso`** (l'SSO e il recupero password del deck, **spenti col motivo**: non esistono), **`BarraSchede`** + `schedaDi()`, **`SfondoAura`** (il gradiente + i due aloni radiali del deck; i colori stanno in `fondi`, la geometria qui) |
+| `src/ui/guscio.tsx` | `Testata` (con lo slot **`azioni`** a destra del titolo, che può stare accanto a `fotoProfilo`: «Oggi» ci mette il fumetto della chat), `Schermata`, `GuscioAutenticazione` (con `occhiello` sopra il titolo e `piede` sotto l'azione), **`PiedeAccesso`** (il recupero della password e «Continua con Google», veri dalla fase 3; Apple **spento col motivo**, e Google anche lui quando non c'è il suo client o si è sul web), **`BarraSchede`** + `schedaDi()`, **`SfondoAura`** (il gradiente + i due aloni radiali del deck; i colori stanno in `fondi`, la geometria qui) |
 | `src/ui/righe.tsx` | `RigaNavigabile`, `RigaStatistiche`, **`RigaImpostazione`** |
 | `src/ui/capi.tsx` | `SchedaFoto`, `PiedeFoto`, `CapoInGriglia`, **`CasellaAggiungi`**, **`SchedaOutfit`**, **`ElencoOutfit`**, **`RigaFotoInCoda`**, **`SlotMancanti`** (la lista che `(tabs)/armadio.tsx` e `app/outfit.tsx` mostrano **entrambe**), `Miniatura`, `MiniaturaFoto`, `MotiviProposta`, `Attributo` |
 | `src/ui/avviso.tsx` | `Avviso` (coriandolo globale), `Conferma`, **`Foglio`** (il menu che sale dal basso: una voce **senza `onPress` è spenta e mostra il suo `perche`**, non viene omessa) |
@@ -147,15 +147,24 @@ parlargli. Si dice quello.
 ## La foto: la sequenza sta in `src/dati/foto.ts`, non nelle schermate
 
 `caricaUnaFoto(uri)` e `analizzaFoto(uri, segnale?)` — più `analizzaCaricata(chiave)`,
-che è quello che serve per **riprovare senza rimandare i byte**. Le quattro
-chiamate erano scritte a mano in tre punti (`T-21`, chiusa).
+che è quello che serve per **riprovare senza rimandare i byte**. Le chiamate
+erano scritte a mano in tre punti (`T-21`, chiusa). Dalla fase 3 la foto sale
+**dritta nello Storage di Supabase**, nella cartella dell'utente, e il backend la
+legge da lì con il token di chi chiama.
 
-Due cose da non rompere:
+Tre cose da non rompere:
 
-- **Il segnale copre solo la seconda metà.** `api.caricaFoto` passa da
+- **Il segnale copre solo la seconda metà.** `caricaFoto` (`supabase.ts`) passa da
   `expo-file-system`, non da `fetch`, e non accetta un `AbortSignal`: chi
   annulla mentre la foto sale vede la schermata cambiare, ma l'upload prosegue.
   Il docblock lo dice; nasconderlo sarebbe un regresso, non una semplificazione.
+  E **non si passa a `fetch(uri)`**: su Android restituisce in silenzio un corpo
+  «File not found» al posto dei byte.
+- **Il capo che torna dall'analisi arriva senza indirizzi**: le foto le firma
+  l'app con la propria sessione (`firmaCapo`). E ogni foto si mostra con
+  `fotoDaMostrare(capo)`, che porta anche la **chiave di cache** (il percorso):
+  l'indirizzo firmato cambia a ogni caricamento, e senza chiave `expo-image`
+  riscaricherebbe tutto.
 - **`EsitoAnalisi.errore` è testo, non un codice.** Si mostra, non si
   interpreta — `.claude/rules/python.md` dice che l'app discrimina sul campo
   `errore`, mai sul messaggio. È il motivo per cui le **due** schermate
@@ -197,6 +206,41 @@ sé, e `altezzaBarra()` è il conto, scritto una volta.
 
 `su` è `'chiaro' | 'scuro'`, **mai** un booleano `scuro`/`scura`: il booleano
 costringerebbe all'accordo di genere e quindi a scrivere il nome due volte.
+
+## I dati: Supabase da un modulo solo, il backend per l'IA
+
+Dalla fase 3 di ADR 0010 l'app legge e scrive da sé capi, outfit, profilo, chat e
+segnalazioni. **`src/dati/supabase.ts` è l'unico modulo che importa
+`@supabase/supabase-js`** per i dati, e `src/dati/accesso.ts` per l'accesso:
+una schermata chiama le loro funzioni e riceve i modelli di `@wardrobe/contracts`,
+mai il client. Le traduzioni fra righe e modelli stanno in `src/dati/righe.ts`,
+funzioni pure con i tipi delle righe presi da `database.ts`.
+
+`src/dati/api.ts` resta per il **backend dell'IA** (analisi, suggerimenti, invio in
+chat, esportazione), con il token della sessione di Supabase. Un 401 non vuol dire
+«esci»: si rinnova la sessione e si riprova una volta.
+
+Quattro regole che non si vedono dai tipi:
+
+- **Prima si dimostra l'email, poi si sceglie la password.** Registrazione e recupero
+  sono email → codice → password, e l'app non manda mai una password prima del
+  codice (`accesso.ts`). Con la registrazione aperta a chi è negli inviti, una
+  password accettata prima della prova la sceglierebbe chi arriva per primo su
+  un'email invitata, al posto del titolare (audit della fase 3). Il database fa
+  l'altra metà: alla prima conferma dopo un codice la password si toglie
+  (`privato.password_solo_dopo_la_prova`). Non «semplificare» tornando a `signUp`
+  con la password.
+- **Chi è dentro lo dice `sessione.tsx`**, che ascolta `onAuthStateChange`. Dentro
+  quella callback solo `setState`: un'altra chiamata a Supabase lì dentro può
+  bloccare il client. E ciò che dipende dall'utente dipende da **`utente.id`**, mai
+  dal token, che cambia a ogni rinnovo orario.
+- **Gli errori si riconoscono dal codice** (`ErroreDati.codice`), mai dal testo: i
+  codici di Supabase Auth sono quelli osservati sullo stack locale, elencati in
+  `accesso.ts`.
+- **Un modulo nativo che il web non ha sta in un file per piattaforma**
+  (`google.ts` / `google.web.ts`, `sessione-archivio.ts` / `.web.ts`), e uno che
+  serve solo a un tocco si carica con `import()` quando serve: altrimenti i test
+  delle primitive, che arrivano fin lì passando dall'armadio, lo caricano.
 
 ## Lo stato di una risorsa
 

@@ -1,11 +1,16 @@
-"""L'analisi di una foto: due fasi, due endpoint HTTP.
+"""POST /capi/analisi — la foto è già nello Storage, qui parte la lettura.
 
-La divisione non è estetica. `analizza` chiama un provider su Internet;
-`salva` scrive su Postgres. Girano in linea, nello stesso processo: la
-risposta a `POST /capi/analisi` arriva solo dopo che entrambe sono finite, ma
-mantiene comunque la forma di un avvio asincrono (202 + id, poi polling) per
-permettere il caricamento in blocco di più foto senza tenere aperte
-richieste HTTP per decine di secondi ciascuna.
+Due fasi nello stesso processo: `analizza` legge la foto e interroga il
+modello, `salva` crea il capo. La risposta arriva quando sono finite entrambe,
+ed è l'esito intero — lo stato, il capo nato dalla lettura o il motivo per cui
+non è nato: l'app non ha niente da rileggere. L'esito resta anche in
+`analisi_esiti`, per chi lo cerca dopo. Si scrive **una volta sola**,
+a lavoro finito: «completata» con il suo capo, o «fallita» con il motivo. Un esito
+aperto prima e chiuso dopo resterebbe «in corso» per sempre a ogni analisi
+interrotta — da un deploy, da una seconda scrittura che non arriva.
+
+Tutto come l'utente (ADR 0010): la foto si legge con il suo token, e una foto
+che non è sua per lo Storage non esiste. È quello che chiude `T-47`.
 """
 
 from __future__ import annotations
@@ -15,86 +20,70 @@ import logging
 import os
 from typing import Any
 
-from domain.errors import AnalisiNonTrovata, ErroreDominio
+from domain.accesso import Sessione, basta_per_un_lavoro_lungo, percorso_dell_utente
+from domain.errors import ErroreDominio, NonAutenticato, RichiestaNonValida
 from domain.models import (
-    AnalisiAvviata,
     Capo,
     EsitoAnalisi,
+    LetturaCapo,
     RichiestaAnalisi,
     StatoAnalisi,
 )
 from domain.ports import ImmagineLlm
 from domain.vision import crea_capo, interpreta_lettura, richiesta_analisi
 from handlers._container import (
-    archivio_foto,
+    BUCKET_FOTO,
+    archivio,
     generatore_id,
     orologio,
     repository,
+    servizio_scontorno,
 )
-from handlers._foto_capo import con_url
-from handlers._http import Evento, Risposta, corpo, endpoint, ok, parametro, utente_id
+from handlers._http import Evento, Risposta, corpo, endpoint, ok, sessione
 
 PROVIDER_DEFAULT = os.environ.get("PROVIDER_VISIONE", "anthropic")
 MODELLO_DEFAULT = os.environ.get("MODELLO_VISIONE", "")
 
+logger = logging.getLogger("wardrobe")
+
 
 @endpoint
 def avvia(evento: Evento) -> Risposta:
-    """POST /capi/analisi — la foto è già caricata, qui parte la pipeline."""
+    chi = sessione(evento)
     richiesta = corpo(evento, RichiestaAnalisi)
-    ingresso = {
-        "utente_id": utente_id(evento),
-        "chiave_foto": richiesta.chiave_foto,
-        "provider": richiesta.provider or PROVIDER_DEFAULT,
-        "modello": richiesta.modello or MODELLO_DEFAULT,
-    }
+    if not percorso_dell_utente(chi.utente_id, richiesta.chiave_foto):
+        raise RichiestaNonValida("la foto non è nella tua cartella")
+    # Un token che scade a metà lascerebbe il capo e l'esito impossibili da scrivere.
+    if not basta_per_un_lavoro_lungo(chi, orologio().adesso()):
+        raise NonAutenticato("la sessione sta per scadere: rinnovala e riprova")
 
+    deposito = repository(chi)
     esecuzione = generatore_id().nuovo()
     try:
-        salvato = salva(analizza(ingresso))
-        repository().salva_esito_analisi(
-            EsitoAnalisi(
-                esecuzione_id=esecuzione,
-                stato=StatoAnalisi.COMPLETATA,
-                capo=con_url(Capo.model_validate(salvato["capo"])),
-            )
-        )
+        capo = salva(chi, analizza(chi, richiesta))
+        esito = EsitoAnalisi(esecuzione_id=esecuzione, stato=StatoAnalisi.COMPLETATA, capo=capo)
     except ErroreDominio as exc:
-        repository().salva_esito_analisi(
-            EsitoAnalisi(esecuzione_id=esecuzione, stato=StatoAnalisi.FALLITA, errore=str(exc))
-        )
+        esito = EsitoAnalisi(esecuzione_id=esecuzione, stato=StatoAnalisi.FALLITA, errore=str(exc))
     except Exception:
         # Qualunque altra eccezione (SDK del provider, rete, risposta non
         # parsabile) non deve uscire come un 500 anonimo: il dettaglio resta
         # nei log, non arriva al client.
-        logging.getLogger("wardrobe").exception("analisi fallita per %s", richiesta.chiave_foto)
-        repository().salva_esito_analisi(
-            EsitoAnalisi(
-                esecuzione_id=esecuzione,
-                stato=StatoAnalisi.FALLITA,
-                errore="L'analisi non è riuscita: riprova con più luce.",
-            )
+        logger.exception("analisi fallita per %s", richiesta.chiave_foto)
+        esito = EsitoAnalisi(
+            esecuzione_id=esecuzione,
+            stato=StatoAnalisi.FALLITA,
+            errore="L'analisi non è riuscita: riprova con più luce.",
         )
-    return ok(AnalisiAvviata(esecuzione_id=esecuzione), 202)
-
-
-@endpoint
-def stato(evento: Evento) -> Risposta:
-    """GET /capi/analisi/{esecuzioneId} — l'app fa polling mentre mostra i passi."""
-    esecuzione_id = parametro(evento, "esecuzioneId")
-
-    esito = repository().leggi_esito_analisi(esecuzione_id)
-    if esito is None:
-        raise AnalisiNonTrovata(esecuzione_id)
+    deposito.registra_esito_analisi(esito)
     return ok(esito)
 
 
-def analizza(evento: dict[str, Any], _contesto: Any = None) -> dict[str, Any]:
+def analizza(chi: Sessione, richiesta: RichiestaAnalisi) -> dict[str, Any]:
     """Prima fase — scontorna (se configurato), legge la foto, interroga il modello."""
     from adapters.llm.registry import provider_per_nome
-    from handlers._container import servizio_scontorno
 
-    contenuto, media_type = archivio_foto().leggi(evento["chiave_foto"])
+    foto = archivio(chi, BUCKET_FOTO)
+    contenuto, media_type = foto.leggi(richiesta.chiave_foto)
 
     # Lo scontorno è un miglioramento, non un requisito: vedi docs/adr/0004,
     # è il passo naturale prima della lettura — un capo già isolato dallo
@@ -107,42 +96,40 @@ def analizza(evento: dict[str, Any], _contesto: Any = None) -> dict[str, Any]:
     if scontorno is not None:
         try:
             scontornata = scontorno.scontorna(contenuto, media_type)
-            chiave_scontornata = f"{evento['chiave_foto']}-scontornata"
-            archivio_foto().salva(chiave_scontornata, scontornata, "image/png")
+            chiave_scontornata = f"{richiesta.chiave_foto}-scontornata"
+            foto.salva(chiave_scontornata, scontornata, "image/png")
             contenuto, media_type = scontornata, "image/png"
         except ErroreDominio as exc:
-            logging.getLogger("wardrobe").warning("scontorno non riuscito: %s", exc)
+            logger.warning("scontorno non riuscito: %s", exc)
+            chiave_scontornata = None
 
     immagine = ImmagineLlm(
         media_type=media_type, base64=base64.b64encode(contenuto).decode("ascii")
     )
 
-    provider = provider_per_nome(evento["provider"])
-    modello = evento.get("modello") or provider.modelli()[0].id
+    provider = provider_per_nome(richiesta.provider or PROVIDER_DEFAULT)
+    modello = richiesta.modello or MODELLO_DEFAULT or provider.modelli()[0].id
     risposta = provider.completa(richiesta_analisi(immagine, modello))
     lettura = interpreta_lettura(risposta.testo)
 
     return {
-        **evento,
+        "chiave_foto": richiesta.chiave_foto,
+        "chiave_scontornata": chiave_scontornata,
+        "provider": provider.nome,
         "modello": modello,
         "lettura": lettura.model_dump(mode="json"),
-        "latenza_ms": risposta.latenza_ms,
-        "chiave_scontornata": chiave_scontornata,
     }
 
 
-def salva(evento: dict[str, Any], _contesto: Any = None) -> dict[str, Any]:
-    """Seconda fase — trasforma la lettura in capo e lo scrive."""
-    from domain.models import LetturaCapo
-
+def salva(chi: Sessione, letto: dict[str, Any]) -> Capo:
+    """Seconda fase — trasforma la lettura in capo e lo crea."""
     capo = crea_capo(
-        LetturaCapo.model_validate(evento["lettura"]),
+        LetturaCapo.model_validate(letto["lettura"]),
         capo_id=generatore_id().nuovo(),
-        chiave_foto=evento["chiave_foto"],
-        chiave_scontornata=evento.get("chiave_scontornata"),
-        provider=evento["provider"],
-        modello=evento["modello"],
+        chiave_foto=letto["chiave_foto"],
+        chiave_scontornata=letto["chiave_scontornata"],
+        provider=letto["provider"],
+        modello=letto["modello"],
         adesso=orologio().adesso(),
     )
-    salvato = repository().salva_capo(evento["utente_id"], capo)
-    return {"capo": salvato.model_dump(mode="json")}
+    return repository(chi).crea_capo(capo)

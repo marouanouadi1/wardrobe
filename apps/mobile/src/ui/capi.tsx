@@ -215,7 +215,7 @@ export function CapoInGriglia({ capo, onPress }: { capo: Capo; onPress: () => vo
         }}
       >
         <Image
-          source={{ uri: fotoDaMostrare(capo) }}
+          source={fotoDaMostrare(capo)}
           style={{ width: '82%', height: '82%' }}
           contentFit="contain"
           transition={durate.breve}
@@ -291,7 +291,7 @@ export function SchedaOutfit({
             }}
           >
             <Image
-              source={{ uri: fotoDaMostrare(capo) }}
+              source={fotoDaMostrare(capo)}
               style={{ width: '84%', height: '84%' }}
               contentFit="contain"
               transition={durate.breve}
@@ -538,7 +538,7 @@ export function Miniatura({
   return (
     <Toccabile onPress={onPress} scala={0.96} style={{ width: larghezza }}>
       <Image
-        source={{ uri: fotoDaMostrare(capo) }}
+        source={fotoDaMostrare(capo)}
         style={{
           width: larghezza,
           height: altezza,
