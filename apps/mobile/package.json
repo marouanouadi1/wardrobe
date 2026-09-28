@@ -1,6 +1,6 @@
 {
   "name": "@wardrobe/mobile",
-  "version": "0.9.7",
+  "version": "0.10.1",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -18,7 +18,9 @@
     "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
     "@expo-google-fonts/manrope": "^0.4.2",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-google-signin/google-signin": "^16.1.5",
     "@sentry/react-native": "~7.11.0",
+    "@supabase/supabase-js": "^2.117.2",
     "@testing-library/react-native": "^14.0.1",
     "@types/jest": "29.5.14",
     "@wardrobe/contracts": "*",
@@ -60,6 +62,7 @@
     "testMatch": [
       "<rootDir>/test/**/*.test.ts",
       "<rootDir>/test/**/*.test.tsx"
-    ]
+    ],
+    "globalSetup": "<rootDir>/test/fuso-orario.js"
   }
 }

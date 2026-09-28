@@ -111,6 +111,24 @@ jobs:
       #
       # Esclusi docs/adr/ e CHANGELOG.md: sono registri storici e datati, e un
       # numero lì è una misura di allora, non un'affermazione su adesso.
+      # Le asserzioni pgTAP non le raccoglie né pytest né jest: il numero vero è
+      # il `plan()` del file, che pgTAP stesso fa rispettare nel job `database`.
+      # Qui si controlla che TEST_COVERAGE.md dica lo stesso numero, senza stack.
+      - name: Le asserzioni pgTAP dichiarate coincidono
+        run: |
+          FILE=supabase/tests/database/regole.test.sql
+          if [ ! -f "$FILE" ]; then
+            echo "nessun test pgTAP su questo branch"
+            exit 0
+          fi
+          PIANO=$(grep -oP '^select plan\(\K[0-9]+' "$FILE" || echo assente)
+          DICH=$(grep -oP '^\- \*\*Asserzioni pgTAP sul database:\*\* \K[0-9]+' docs/TEST_COVERAGE.md || echo assente)
+          if [ "$PIANO" != "$DICH" ]; then
+            echo "::error file=docs/TEST_COVERAGE.md::asserzioni pgTAP: dichiarate $DICH, plan() dice $PIANO"
+            exit 1
+          fi
+          echo "ok: $PIANO asserzioni pgTAP"
+
       - name: Nessun conteggio di test fuori da TEST_COVERAGE.md
         run: |
           FUORI=$(git ls-files '*.md' ':!docs/adr/**' ':!CHANGELOG.md' ':!docs/TEST_COVERAGE.md' \

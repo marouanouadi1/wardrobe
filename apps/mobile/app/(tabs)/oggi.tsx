@@ -191,7 +191,7 @@ export default function Oggi() {
         // «Vedila addosso» deve restare sopra la piega senza scorrere.
         <SchedaFoto raggio={raggi.grande} ombra="alta">
           <Image
-            source={{ uri: copertina ? fotoDaMostrare(copertina) : undefined }}
+            source={copertina ? fotoDaMostrare(copertina) : undefined}
             style={{ width: '100%', height: 260, backgroundColor: colori.fondoFoto }}
             contentFit="contain"
             transition={durate.breve}
@@ -286,7 +286,7 @@ export default function Oggi() {
                     {capi.slice(0, 3).map((capo) => (
                       <Image
                         key={capo.id}
-                        source={{ uri: fotoDaMostrare(capo) }}
+                        source={fotoDaMostrare(capo)}
                         style={{
                           width: 34,
                           height: 52,

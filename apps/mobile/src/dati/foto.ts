@@ -1,5 +1,5 @@
 /**
- * Le due sequenze che portano una foto dal telefono al backend.
+ * Le due sequenze che portano una foto dal telefono allo Storage, e al modello.
  *
  * Erano scritte a mano in **tre** punti (`T-21`): due volte per intero in
  * `app/(tabs)/carica.tsx` — il percorso della foto singola e quello della coda,
@@ -18,48 +18,48 @@
 
 import type { EsitoAnalisi } from '@wardrobe/contracts'
 import { api } from './api'
+import { caricaFoto, firmaCapo } from './supabase'
 
 /**
- * Carica una foto e restituisce la sua chiave. È la metà di sequenza che serve
- * anche a chi non deve analizzare niente — la foto dell'avatar.
+ * Carica una foto e restituisce il suo percorso nello Storage. È la metà di
+ * sequenza che serve anche a chi non deve analizzare niente — la foto
+ * dell'avatar.
  */
-export async function caricaUnaFoto(uri: string): Promise<string> {
-  const firma = await api.firmaUpload('image/jpeg')
-  await api.caricaFoto(firma, uri)
-  return firma.chiave
+export async function caricaUnaFoto(uri: string, cosa: 'capi' | 'avatar' = 'capi'): Promise<string> {
+  return caricaFoto(uri, cosa)
 }
 
 /**
- * Avvia l'analisi di una foto **già caricata** e restituisce l'esito.
+ * Analizza una foto **già caricata** e restituisce l'esito, con il capo pronto
+ * da mostrare.
  *
  * Sta a sé perché è ciò che serve per **riprovare**: quando la lettura non
- * riesce, la foto è già sul server — è salita per URL firmato prima che il
- * modello la guardasse. Rimandarla sarebbe far pagare all'utente, in tempo e
- * in dati, un errore che non è suo.
+ * riesce, la foto è già nello Storage — è salita prima che il modello la
+ * guardasse. Rimandarla sarebbe far pagare all'utente, in tempo e in dati, un
+ * errore che non è suo.
+ *
+ * Il capo arriva dal backend senza gli indirizzi delle sue foto: quelli li
+ * firma l'app con la propria sessione, prima di restituirlo.
  */
 export async function analizzaCaricata(chiave: string, segnale?: AbortSignal): Promise<EsitoAnalisi> {
-  const avviata = await api.avviaAnalisi(chiave, segnale)
-  return api.statoAnalisi(avviata.esecuzione_id, segnale)
+  const esito = await api.analizza(chiave, segnale)
+  return esito.capo ? { ...esito, capo: await firmaCapo(esito.capo) } : esito
 }
 
 /**
- * La sequenza intera: carica, avvia l'analisi, leggi l'esito.
+ * La sequenza intera: carica, analizza.
  *
  * Restituisce **anche la chiave**, non solo l'esito: senza, chi vuole
  * riprovare dopo un fallimento non ha modo di sapere che la foto è già là, e
  * la ricaricherebbe da capo.
  *
  * **Il segnale copre solo la seconda metà, e questo non va nascosto.**
- * `api.caricaFoto` passa da `expo-file-system`, non da `fetch`, e non accetta
+ * `caricaFoto` passa da `expo-file-system`, non da `fetch`, e non accetta
  * un `AbortSignal`: chi annulla mentre la foto sta salendo vede la schermata
  * cambiare subito, ma l'upload prosegue finché non finisce da solo. Solo
- * `avviaAnalisi` e `statoAnalisi` si fermano davvero. Un'estrazione che
- * facesse sembrare abortibile tutta la sequenza sarebbe un regresso, non una
- * semplificazione — è il vincolo scritto in `T-21`.
- *
- * Nessun polling: il backend esegue la pipeline in linea
- * (`services/api/src/handlers/analisi.py`) e `statoAnalisi` risponde già
- * terminale alla prima chiamata.
+ * l'analisi si ferma davvero. Un'estrazione che facesse sembrare abortibile
+ * tutta la sequenza sarebbe un regresso, non una semplificazione — è il
+ * vincolo scritto in `T-21`.
  */
 export async function analizzaFoto(
   uri: string,

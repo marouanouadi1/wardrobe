@@ -17,7 +17,7 @@ import { Image } from 'expo-image'
 import { router } from 'expo-router'
 import { useRef, useState } from 'react'
 import { View } from 'react-native'
-import { messaggioDiErrore } from '../../src/dati/api'
+import { messaggioDiErrore } from '../../src/dati/errori'
 import { useArmadio } from '../../src/dati/archivio'
 import { analizzaCaricata, analizzaFoto } from '../../src/dati/foto'
 import { attributiIncerti } from '../../src/dati/dominio'
@@ -43,9 +43,9 @@ const MESSAGGI_ATTESA = [
   { dopoMs: 35_000, testo: 'Ci sta mettendo più del solito. Resto qui finché non finisce.' },
 ]
 
-/** Oltre questo tempo l'analisi di una singola foto viene abortita: un
- * `avviaAnalisi` che si impianta non deve lasciare l'utente bloccato per
- * sempre sulla schermata di attesa. */
+/** Oltre questo tempo l'analisi di una singola foto viene abortita: un'analisi
+ * che si impianta non deve lasciare l'utente bloccato per sempre sulla
+ * schermata di attesa. */
 const TIMEOUT_ANALISI_MS = 120_000
 
 type Fase = 'scatta' | 'permessi' | 'analisi' | 'errore'
@@ -235,7 +235,7 @@ export default function Carica() {
 
   /** «Annulla» durante l'attesa: aborta la richiesta in corso e torna subito
    * alla schermata di scatto, senza l'avviso di timeout — è un abort voluto,
-   * non un'analisi impantanata. L'upload della foto (`api.caricaFoto`, via
+   * non un'analisi impantanata. L'upload della foto (`caricaFoto`, via
    * `expo-file-system`) non prende un segnale di abort: se si annulla mentre
    * carica, l'upload prosegue in background finché non finisce da solo (o
    * scade il suo stesso timeout), ma l'utente è già tornato alla schermata
@@ -559,9 +559,9 @@ export default function Carica() {
           </View>
 
           {guasto.chiave ? (
-            // Vero, e verificabile: la foto sale per URL firmato **prima** che
-            // il modello la guardi, quindi a questo punto è già sul server.
-            // Riprovare chiama solo `avviaAnalisi` — non rimanda i byte.
+            // Vero, e verificabile: la foto sale nello Storage **prima** che il
+            // modello la guardi, quindi a questo punto è già lì. Riprovare
+            // chiama solo `analizzaCaricata` — non rimanda i byte.
             <Scheda su="chiaro" sfondo={velature.primario} imbottitura={spazi.m}>
               <Corpo taglia="minuto" tono="medio">
                 {"La foto ce l'ho già: riprovare non la ricarica."}

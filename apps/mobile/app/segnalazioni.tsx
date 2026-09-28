@@ -4,18 +4,20 @@
  * sola. Qui invece ognuno vede quello che ha scritto da «Segnala un
  * problema» (Profilo), e a che punto è.
  *
- * Chi è nell'allowlist EMAIL_AMMINISTRATORI del backend vede le segnalazioni
- * di tutti — non solo le proprie — e può cambiarne lo stato con le pillole
+ * L'amministratore (`app_metadata.ruolo` del suo account, che l'utente non può
+ * scriversi da sé) vede le segnalazioni di tutti — non solo le proprie — e può
+ * cambiarne lo stato con le pillole
  * sotto ogni scheda: senza, lo stato resterebbe fermo su «Ricevuta» per
  * sempre, perché nessuno avrebbe un modo di cambiarlo.
  */
 
-import type { Segnalazione, StatoSegnalazione } from '@wardrobe/contracts'
+import { type Segnalazione, type StatoSegnalazione, VALORI_STATO_SEGNALAZIONE } from '@wardrobe/contracts'
 import { useState } from 'react'
 import { View } from 'react-native'
-import { api } from '../src/dati/api'
 import { formattaData } from '../src/dati/formato'
 import { useRisorsa } from '../src/dati/risorsa'
+import { useSessione } from '../src/dati/sessione'
+import { aggiornaSegnalazione, elencaSegnalazioni } from '../src/dati/supabase'
 import { colori, linee, raggi, spazi, velature } from '../src/tema/tokens'
 import { Badge, Pillola } from '../src/ui/base'
 import { Schermata } from '../src/ui/guscio'
@@ -28,21 +30,23 @@ const STILE_STATO: Record<StatoSegnalazione, { sfondo: string; testo: string; et
   risolta: { sfondo: colori.inchiostro, testo: colori.scheda, etichetta: 'Risolta' },
 }
 
-const STATI: StatoSegnalazione[] = ['ricevuta', 'in_lavorazione', 'risolta']
+const STATI: readonly StatoSegnalazione[] = VALORI_STATO_SEGNALAZIONE
 
 export default function Segnalazioni() {
-  const { dati, caricamento, errore, ricarica } = useRisorsa(() => api.segnalazioni.elenca())
+  const { dati, caricamento, errore, ricarica } = useRisorsa(() => elencaSegnalazioni())
   const [locali, setLocali] = useState<Segnalazione[] | null>(null)
+  // Deciderlo dal ruolo, non dalle righe: un amministratore senza
+  // segnalazioni altrui resta un amministratore.
+  const amministratore = useSessione().utente?.amministratore ?? false
 
-  const segnalazioni = locali ?? dati?.segnalazioni ?? []
-  const amministratore = dati?.amministratore ?? false
+  const segnalazioni = locali ?? dati ?? []
 
   async function cambiaStato(id: string, stato: StatoSegnalazione) {
     // Ottimista: la lista è corta e il tocco deve sembrare immediato. Se il
-    // backend rifiuta la modifica, `ricarica()` la riporta allo stato vero.
+    // database rifiuta la modifica, `ricarica()` la riporta allo stato vero.
     setLocali(segnalazioni.map((s) => (s.id === id ? { ...s, stato } : s)))
     try {
-      await api.segnalazioni.aggiorna(id, { stato })
+      await aggiornaSegnalazione(id, stato)
     } catch {
       setLocali(null)
       void ricarica()
