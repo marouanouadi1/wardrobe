@@ -92,19 +92,26 @@ sono né segreti né token scrivibile.
 un domani questo workflow dovesse servire un secret, `pull_request_target`
 sarebbe la strada sbagliata.
 
-### T-18 — Il percorso dati che gira in produzione non ha nessun test
-**Dove:** `services/api/src/adapters/postgres.py`, `filesystem.py`, `handlers/local_server.py` · **Gravità:** alta · **Chi:** `test`
+### T-18 — Gli adapter di Supabase non li prova nessun job contro un Supabase vero
+**Dove:** `services/api/src/adapters/supabase.py`, `handlers/local_server.py` · **Gravità:** media · **Chi:** `test`, `ci-cd`
 
-Tutti i test del backend girano su `ArchivioInMemoria` (97%). `postgres.py` (123
-istruzioni), `local_server.py` (120), `filesystem.py` (57) e
-`scontorno/fal_provider.py` (25) sono a **0%**. Il 74% totale è una media che lo
-nasconde.
+*Riscritta il 2026-09-27 (fase 2 di ADR 0010).* Prima diceva che `postgres.py`,
+`filesystem.py` e `local_server.py` erano a 0% e che tutti i test giravano su un
+archivio in memoria. I primi due non esistono più; il percorso dati è
+`adapters/supabase.py`, e i suoi test (`tests/adapters/test_supabase.py`, con
+`httpx.MockTransport`) guardano **cosa chiede e come traduce**, non cosa risponde
+il Supabase vero. I test pgTAP guardano il database, non l'adapter.
 
-Non è un incidente: è la stessa separazione che il linter impone, e coprirli
-richiede un container. Ma il punto è saperlo, non alzare la media con dei mock.
+In mezzo resta un buco preciso: che una riga scritta da `riga_da_capo` passi i
+CHECK della tabella vera, che `leggi` riconosca il «non trovato» che lo Storage
+manda davvero (un 400 con dentro un 404), che l'emittente dei token locali sia
+quello che l'API si aspetta. L'ha provato **un E2E a mano** sullo stack locale
+(`docs/PROGRESS.md`, fase 2), non un job. `local_server.py` resta a 0%.
 
-**Cosa serve:** una decisione su quale container far girare in CI, oppure
-l'accettazione esplicita che quel codice si prova solo a mano. Numeri in
+**Il rimedio:** lo stesso E2E dentro il job `database` di `database.yml`, che lo
+stack locale lo accende già: due utenti creati con l'API admin **locale**, il
+modello finto, e le verifiche di A contro B. Senza chiavi vere e senza rete verso
+fuori, quindi senza violare la regola dello step Pytest. Numeri in
 `docs/TEST_COVERAGE.md`.
 
 ### T-33 — `Attributo` dipinge un fondo opaco senza asserirlo
@@ -383,8 +390,71 @@ react-dom` con `--all` che esce diverso da zero se ci sono `invalid`/duplicati
 — e in tal caso in quale workflow (`mobile.yml` ha già `paths:` su
 `apps/mobile/**`, ma la causa può tornare anche toccando solo la root).
 
-### T-51 — Un corpo di richiesta non UTF-8 uccide il thread invece di dare 400
-**Trovato il:** 2026-09-16 · **Dove:** `services/api/src/handlers/local_server.py:104` · **Gravità:** bassa · **Chi:** `api`
+### T-56 — Niente controlla la configurazione dell'Auth sul progetto Supabase vero
+**Trovato il:** 2026-09-25 (audit di `security`, fase 1 di ADR 0010) · **Dove:** il pannello di Supabase, `supabase/config.toml` · **Gravità:** alta il giorno del passaggio · **Chi:** `ci-cd`
+
+`config.toml` vale per lo stack locale. Sul progetto vero le stesse scelte si fanno nel
+pannello, e niente verifica che ci siano:
+- l'hook degli inviti acceso (`Q-13`, chiusa: la lista resta finché non ci sono limiti di spesa);
+- la conferma dell'email accesa;
+- `secure_password_change` acceso;
+- la password di almeno 8 caratteri (il default è 6);
+- esposti solo gli schemi `public` e `graphql_public`, e lo stato di `pg_graphql`;
+- i JWT firmati con chiavi asimmetriche (JWKS), non col segreto condiviso.
+- gli accessi anonimi **spenti**: un token anonimo ha `role` e `aud` `authenticated`
+  come tutti, e il backend lo rifiuta solo perché lo controlla (`is_anonymous`, fase 2);
+- il codice via email **di 8 cifre** e la sua scadenza, che i template dicono di un'ora
+  (`otp_length`, `otp_expiry`): è il solo freno ai tentativi, oltre al limite per IP
+  (audit della fase 3);
+- i **quattro template** con il codice (`supabase/templates/`): conferma, codice
+  d'accesso (`magic_link`), recupero, riautenticazione. Senza, arriva un link che l'app
+  non sa aprire;
+- un **SMTP proprio**: dalla fase 3 serve a **ogni registrazione**, non solo al recupero.
+  Senza, il codice arriva solo ai membri del team, due volte all'ora;
+- il provider **Google** acceso, con il client Web primo in «Client IDs», e su Google
+  Cloud un client Android con lo SHA-1 della chiave EAS (`src/dati/google.ts`);
+- l'intervallo minimo fra due email allo stesso indirizzo (`max_frequency`, 60 s di
+  default nel pannello, 1 s in locale): ogni richiesta nuova invalida il codice di prima, e
+  con un intervallo corto un terzo può tenere scaduto il codice di un invitato.
+
+**Il rimedio:** un job che legga la configurazione Auth del progetto collegato con la
+Management API, in sola lettura, e diventi rosso se una di queste non vale. Serve un token
+nei segreti della CI, e lo crea l'utente. Fino ad allora, la lista sta nella voce di fase 1
+di `docs/PROGRESS.md` e si controlla a mano il giorno del passaggio.
+
+### T-57 — `database.ts` sta dentro i filtri che rilasciano backend e app
+**Trovato il:** 2026-09-25 (review della fase 1) · **Dove:** `.github/workflows/api.yml` e `mobile.yml`, filtro `packages/contracts/**` · **Gravità:** bassa · **Chi:** `ci-cd`
+
+Dal passaggio, ogni cambio di schema rigenera `packages/contracts/src/generated/database.ts`,
+che sta sotto `packages/contracts/**`: fa scattare il rilascio di `api.yml`, che quel file
+non lo legge, e di `mobile.yml`. E lo schema sul progetto vero lo porta `supabase db push`,
+fatto a mano, non il merge. **Da decidere nella fase 5**, quando l'app lo userà davvero:
+togliere `database.ts` dal filtro di `api.yml`, e legare il `db push` al merge.
+
+### T-58 — Nessun limite di lunghezza sui testi liberi
+**Trovato il:** 2026-09-25 (audit di `security`, fase 1) · **Dove:** `supabase/migrations/`, colonne `testo`, `appunti`, `suggerimenti`, `etichette` · **Gravità:** bassa · **Chi:** `api`
+
+Con l'app che scrive da sé, niente limita la lunghezza di un messaggio di chat, degli
+appunti di un capo o dei suggerimenti salvati. Sono dati di chi li scrive, ma finiscono nei
+prompt dell'IA — che costano per token — e nelle quote del piano Free. **Il rimedio:** un
+CHECK di lunghezza per colonna, con i valori che l'app già non supera.
+
+### T-59 — Cancellare un account o svuotare l'armadio non toglie le foto dallo Storage
+**Trovato il:** 2026-09-25 (audit di `security`, fase 1) · **Dove:** `public.svuota_armadio`, `on delete cascade` su `auth.users` · **Gravità:** bassa · **Chi:** `mobile` (svuotamento), `api` (account)
+
+Le righe spariscono nel database; i file nello Storage no, perché sono un altro servizio.
+**Lo svuotamento è sistemato nella fase 3**: `svuotaArmadio` (`apps/mobile/src/dati/supabase.ts`)
+chiama la RPC e poi toglie **tutta la cartella** `{utente}/capi/`, comprese le foto di
+analisi fallite che nessuna riga ricorda. In quest'ordine, così a metà strada restano al
+più dei file che nessuno vede, mai dei capi senza foto; e se una foto non si toglie la
+schermata lo dice, e rilanciare lo svuotamento finisce il lavoro. Resta la foto
+dell'avatar, perché il profilo resta. Per la cancellazione dell'account non c'è
+ancora niente: oggi l'app non la offre,
+e il giorno che la offrirà deve togliere anche la cartella `{utente_id}/` dei due bucket.
+Lo zip dell'esportazione, che dalla fase 2 resta nel bucket `esportazioni`, è `Q-15`.
+
+### T-51 — Il corpo di una richiesta si legge senza limiti e senza guardia, prima del token
+**Trovato il:** 2026-09-16 · **Dove:** `services/api/src/handlers/local_server.py:55` · **Gravità:** bassa · **Chi:** `api`
 
 ```python
 corpo = self.rfile.read(lunghezza).decode("utf-8") if lunghezza else ""
@@ -403,12 +473,122 @@ utente vero l'ha incontrato — l'app manda solo JSON — ma il traceback nei lo
 somiglia a un guasto del backend e ruba attenzione quando si cerca un guasto
 vero, che è esattamente com'è stato trovato.
 
-**Cosa serve:** decodificare con una guardia e alzare `RichiestaNonValida`
+**Allargata il 2026-09-27** dall'audit di `security` sulla fase 2 (F1), **e vale già su
+`main`**: la stessa riga legge il corpo **senza nessun limite**, e prima di sapere chi
+chiama. Senza token, un `POST /chat` con `Content-Length: -1` e 40 MB di dati fa leggere al
+server fino alla chiusura della connessione, e solo dopo risponde 401: provato in locale,
+il processo è salito a 121 MB. Dietro Caddy un `-1` probabilmente lo rifiuta Go (non
+verificato), ma un valore positivo grande passa: il `Caddyfile` non ha `request_body`. E né
+i thread né i socket hanno un tetto o un timeout: poche connessioni bastano a finire la
+memoria del container, e l'IA si ferma per tutti.
+
+**Cosa serve, per le due metà:** leggere `Content-Length` **prima** del corpo — non intero
+o negativo è 400, sopra qualche KB è 413 (la misura la sceglie `api` dal corpo di `/chat`
+più grande), perché il limite fa parte del contratto dell'endpoint e non è un tampone; un
+`timeout` sull'handler; e `request_body max_size` in Caddy come secondo livello, non al
+posto del primo. Il test è il primo che parli HTTP con `Ponte` — oggi `local_server.py` è
+escluso dalla coverage proprio perché non c'è: `-1` → 400, 10 MB → 413 prima che il client
+mandi il corpo, tutti e due senza token.
+
+**Per la parte UTF-8:** decodificare con una guardia e alzare `RichiestaNonValida`
 (esiste già in `domain/errors.py`, 422) invece di lasciar passare
 l'eccezione — oppure `errors="replace"`, lasciando che sia la validazione
 Pydantic di `corpo()` a rifiutare. La prima è più onesta: il corpo *non* era
 leggibile, non era JSON sbagliato. Un test in
 `tests/handlers/` che manda un byte non UTF-8 chiude la voce.
+
+### T-60 — Il corpo di una richiesta sceglie il provider e il modello
+**Trovato il:** 2026-09-27 (audit di `security` sulla fase 2, F3) · **Vale già su `main`** · **Dove:** `domain/models.py` (`RichiestaAnalisi.provider`/`modello`, `RichiestaSuggerimenti.provider`/`modello`), `handlers/analisi.py`, `handlers/suggerimenti.py`, `adapters/llm/base.py:49-51` · **Gravità:** media-bassa · **Chi:** `api` → `contracts` → `mobile` → `test`
+
+L'app non li manda mai (`apps/mobile/src/dati/api.ts` manda solo `chiave_foto`): sono un
+pulsante nascosto che il server accetta. Due scenari, per un account invitato:
+- **i costi**: `{"provider":"anthropic","modello":"<il più caro>"}` e paga il backend;
+- **un deputato confuso**: con `{"provider":"google","modello":"../cachedContents?"}`,
+  `google_provider.py` costruisce `POST …/v1beta/cachedContents?:generateContent` (httpx
+  risolve il `..`) con la chiave del server in `x-goog-api-key`: qualunque metodo POST di
+  quell'host, e i primi 400 caratteri della risposta tornano al client, nel `messaggio` di
+  `errore_provider` o in `analisi_esiti.errore`. Solo se sul server c'è `GOOGLE_API_KEY`.
+
+**Il rimedio toglie righe:** via i due campi dai due modelli — con `extra="forbid"` diventano
+un 422 — e il testo della risposta del provider nel log, non nel `messaggio`. Test: i due
+endpoint con quei campi rispondono 422; un `ErroreProvider` con un marcatore nel corpo di
+risposta non lo mostra al client. **Non fatto nella fase 2 di proposito**: è su `main` oggi,
+e una correzione che arriva con il giorno X lo lascerebbe aperto fino ad allora. Va in una
+PR sua su `main`, quando l'utente lo decide (un merge su `main` è un rilascio).
+
+### T-61 — `access-control-allow-headers: *` non copre `Authorization`
+**Trovato il:** 2026-09-27 (review della fase 2) · **Dove:** `services/api/src/handlers/local_server.py`, `_rispondi` · **Gravità:** da verificare · **Chi:** `api`, con `mobile` nella fase 3
+
+Per la specifica Fetch il jolly di `access-control-allow-headers` **non** comprende
+`Authorization`: sul web una richiesta con il token può cadere al preflight. C'era già
+prima; conta dalla fase 3, quando l'app web manderà il token di Supabase al backend.
+**Il rimedio c'è dalla fase 3**: `authorization, content-type` scritti per nome in
+`_rispondi`. **Manca la verifica nel browser**, con l'app web che manda il token al backend:
+fatta quella, la voce si chiude.
+
+### T-62 — In sviluppo l'indirizzo firmato dell'esportazione nasce da `127.0.0.1`
+**Trovato il:** 2026-09-27 (review della fase 2) · **Dove:** `ArchivioSupabase.firma_lettura`, `scripts/dev.sh` · **Gravità:** bassa, solo sviluppo · **Chi:** `api`, `mobile` nella fase 3
+
+`firma_lettura` rende assoluto l'indirizzo con `SUPABASE_URL`, che in locale è
+`http://127.0.0.1:54321`: un telefono sulla rete di casa non lo apre. Prima lo risolveva
+`HOST_LOCALE`. Non basta cambiare `SUPABASE_URL` con l'IP della LAN: è anche l'emittente
+dei token, e lo stack locale li firma con `127.0.0.1`. Il rimedio va scelto nella fase 3,
+quando il telefono parlerà con lo stack locale.
+
+### T-63 — Il giorno che arriva iOS: tre cose che oggi valgono solo per Android
+**Trovato il:** 2026-09-27 (fase 3 di ADR 0010) · **Dove:** `apps/mobile/src/dati/sessione-archivio.ts`, `src/dati/google.ts`, `app.json`, `src/ui/guscio.tsx` (`PiedeAccesso`) · **Gravità:** bloccante per iOS, nulla oggi · **Chi:** `mobile`
+
+1. **La sessione nel portachiavi.** Sta in `expo-secure-store`, cifrata, per scelta. Su
+   iOS alcune versioni rifiutano valori sopra circa 2 KB, e una sessione con l'identità
+   Google li supera. Il rimedio indicato da auth-js è `userStorage` (i token nel
+   portachiavi, l'utente altrove), oggi sperimentale.
+2. **Il config plugin di google-signin** non c'è in `app.json`: senza opzioni configura
+   Firebase, e con le opzioni tocca solo iOS. Per iOS torna, con il suo `iosUrlScheme`
+   (`com.googleusercontent.apps.…`) e un client iOS su Google Cloud.
+3. **«Continua con Apple»** è spento col motivo in `PiedeAccesso`. Su iOS Apple lo
+   pretende, se c'è un accesso con Google (App Store Review Guidelines 4.8).
+
+E un rischio che vale anche per Android: la libreria gratuita di google-signin poggia
+sull'SDK di Google Sign-In che Google ha dichiarato superato. Il ripiego è una libreria
+su Credential Manager, e allora il nonce diventa obbligatorio (`src/dati/google.ts`).
+
+### T-65 — La password tolta alla conferma è un tampone su un ordine interno di GoTrue
+**Trovato il:** 2026-09-27 (audit di `security` sul rimedio della fase 3) · **Dove:** `supabase/migrations/20260925192322_schema.sql` (`privato.password_solo_dopo_la_prova`), `services/api/scripts/prova_accesso.py`, `.github/workflows/database.yml` · **Gravità:** bassa oggi, alta se regredisce · **Chi:** `api`, `ci-cd`
+
+La causa della presa di possesso è in GoTrue: accetta una password prima che l'email sia
+dimostrata, e a una seconda registrazione di un account non confermato tiene la prima. Il
+trigger toglie quella password alla prima conferma, ma regge su due ordini interni di
+GoTrue: la conferma scritta mentre il `confirmation_token` c'è ancora, e all'import la
+conferma prima della password. Il pgTAP simula l'aggiornamento in SQL e resterebbe verde
+se cambiassero; per questo la CI rifà l'attacco passando dall'Auth vera
+(`prova_accesso.py`: quattro casi, visti fallire togliendo il trigger). L'app, in più,
+sovrascrive la password dopo il codice, quindi chi arriva fino in fondo è coperto
+comunque: il rischio che resta è il titolare che si ferma prima di scegliere la password.
+
+**Il rimedio che toglie la causa** è quello scartato in `Q-13`: registrazioni chiuse, e
+account creati con gli inviti di Supabase, dove la password la sceglie solo chi ha
+ricevuto l'invito. Allora spariscono l'hook, `privato.inviti`, questo trigger e la sua
+prova. **Quando:** il giorno che la lista degli inviti smette di essere di persone che si
+conoscono, o se `prova_accesso.py` diventa rosso dopo un aggiornamento della CLI.
+
+### T-64 — Due giorni ancora in UTC, e tre cose trovate di passaggio nella review della fase 3
+**Trovato il:** 2026-09-27 (review della fase 3; tutte c'erano già prima) · **Gravità:** bassa · **Chi:** `mobile`
+
+- **`quandoUsato`** (`src/dati/dominio.ts`) conta i giorni fra un `AAAA-MM-GG` letto come
+  mezzanotte UTC e l'ora di adesso: dalle 14 in poi, con l'ora legale, un capo segnato
+  oggi risulta usato «ieri». E `app/calendario.tsx` fa `new Date(ultimo_uso)`, giusto solo
+  a est di Greenwich. Il rimedio è quello di `dormiente`: giorni locali come stringhe,
+  con `giornoLocale()`.
+- **`applica`** (`src/dati/archivio.tsx`) non torna indietro quando la chiamata fallisce,
+  mentre il docblock in cima al file dice che lo fa: mostra l'avviso e lascia il valore
+  ottimistico.
+- **`salvaProfilo`** riscrive la riga intera (`aggiornamentoDiProfilo`): due telefoni che
+  salvano cose diverse si cancellano a vicenda. Con Supabase un aggiornamento dei soli
+  campi cambiati è facile.
+- **La foto vecchia dell'avatar** resta nello Storage a ogni cambio.
+- **`app/calendario.tsx` e `app/capo/[id].tsx`** dicono che gli usi non si leggono e che un
+  capo non si cancella «perché non c'è un backend»: dalla fase 3 l'RLS lo permette all'app.
+  Non è un difetto: è una premessa caduta, da rileggere quando si toccano quelle schermate.
 
 ### T-50 — `rsync` senza `--delete`: sul VPS restano migrazioni che il repo non ha più
 **Trovato il:** 2026-09-16 · **Dove:** `.github/workflows/api.yml` (step «Rsync codice sul VPS»), `docs/deploy.md` · **Gravità:** media · **Chi:** `ci-cd`
@@ -441,6 +621,14 @@ sbagliato, o dimenticato, li cancella senza appello. La strada prudente è
 `--delete` con `--exclude` espliciti e una prima esecuzione con `--dry-run`
 letta a mano.
 
+**Dal giorno X il caso si allarga** (fase 2 di ADR 0010): il `Dockerfile` copia
+solo `src/`, quindi le migrazioni morte escono dall'immagine, ma entrano gli
+handler e gli adapter che la fase 2 ha tolto — `auth.py`, `capi.py`,
+`postgres.py`, … — perché su `~/wardrobe/services/api/src/` restano. Non si
+raggiungono (`ROTTE` ne elenca cinque) e nessuno li importa, ma sono codice
+morto dentro il container di produzione, con `bcrypt` e `psycopg` che
+l'immagine nuova non ha più: un import accidentale diventa un crash all'avvio.
+
 Nel frattempo i due file morti si possono togliere a mano dal VPS
 (`rm ~/wardrobe/services/api/migrations/000{3,4}_*.sql` + rebuild), ma da soli
 non chiudono la voce: la causa è il comando, non quei due file.
@@ -464,110 +652,36 @@ giacca e una borsa, nello stesso stile a colori pieni degli altri sei capi, bast
 Si sostituiscono i due PNG, si cancella la sezione «Eccezione» di `FONTI.md`, e
 questa voce passa fra le fatte.
 
-### T-47 — `POST /capi/analisi` non controlla di chi sia la `chiave_foto`
-
-**Gravità alta.** Trovata da `security` il 2026-09-23, sull'audit
-dell'esportazione. **Non nasce con l'esportazione**: nasce con
-`handlers/analisi.py`. La catena, verificata riga per riga:
-
-1. `avvia` (`handlers/analisi.py:44-49`) prende `chiave_foto` **dal corpo** e la
-   infila nella pipeline. Nessun controllo di proprietà.
-2. `analizza` (`:97`) la legge dall'archivio; `_percorso`
-   (`adapters/filesystem.py:81-85`) confina dentro `CARTELLA_FOTO`, **non**
-   dentro il sottoalbero di chi chiama.
-3. `salva` (`:138-142`) la persiste come `capo.foto.chiave` **del chiamante**:
-   A ottiene un capo nel proprio armadio che punta al file di B.
-4. `GET /capi` di A firma quella chiave con `url_lettura` → sette giorni di
-   lettura sulla foto di B, rinnovabili a ogni chiamata.
-5. E con `T-46` — la stessa firma vale per `PUT` — A **sovrascrive** la foto di
-   B. Con `FAL_KEY` configurata scrive anche `<chiave di B>-scontornata`
-   dentro l'albero di B.
-
-**Il prerequisito è conoscere una chiave**, e finché le chiavi stavano solo
-nelle risposte di `GET /capi` e nei log era difficile. Da qui il legame con
-l'esportazione: uno zip pensato per essere conservato e girato ad altri le
-avrebbe messe in chiaro. **Non succede**: `senza_campi_interni` toglie
-`chiave`, `chiave_scontornata` e `avatar_foto_chiave` dal `dati.json`, e un
-test pretende che non ci siano. Ma il difetto resta, e resta alto.
-
-**Il rimedio toglie**, e sono due righe di causa, non un filtro in più:
-- `avvia` **non deve accettare** una chiave dal client: o la ricalcola da chi
-  chiama, o rifiuta ciò che non comincia per il prefisso di quell'utente;
-- la firma delle foto deve portare **il verbo** nel messaggio (`T-46`), così
-  una capability di lettura smette di essere una di scrittura.
-
-**Quando diventa urgente, e il segnale è preciso.** L'attaccante di questa
-catena è **un account registrato**: senza, non c'è nessun passo 1. Al
-2026-09-23 `EMAIL_AMMESSE` contiene le persone che lavorano al progetto, e
-l'APK si distribuisce a mano da un link di GitHub — quindi la gravità resta
-alta ma la probabilità è quella di farsi male da soli. **Il giorno che
-`EMAIL_AMMESSE` smette di essere una lista di persone che si conoscono, questa
-voce è bloccante**: non «al lancio», non «quando saremo tanti» — quella
-variabile. È lo stesso interruttore di `T-46` e della scelta registrata in
-`Q-12`.
-
-**La catena di `CLAUDE.md`**: `security` ha trovato → tocca ad `api` correggere
-→ `test` per la regressione. I test che servono, già scritti nell'audit: A
-chiede l'analisi di una chiave di B → 4xx **e nessun capo creato** (si guarda il
-repository, non solo lo status); una firma emessa da `url_lettura` **non** è
-accettata da `_foto_put`.
-
-### T-46 — Un URL firmato di lettura di una foto vale anche come **scrittura**
-
-**Trovata** il 2026-09-23 costruendo l'esportazione, guardando se fosse sicuro
-metterne uno dentro un file che l'utente può girare a chiunque. Non lo è.
-
-`local_server._firma_valida(chiave, query)` è **la stessa funzione** per
-`_foto_get` (riga 174) e `_foto_put` (riga 160): entrambe chiamano
-`firma_foto.firma_valida` sullo stesso messaggio `f"{chiave}:{scade}"`. Non c'è
-niente, nel firmato, che dica se quell'indirizzo era per leggere o per
-scrivere.
-
-**Conseguenza.** `url_lettura` firma a **sette giorni** (`adapters/filesystem.py`),
-e quell'indirizzo sta dentro ogni `Capo` che l'app riceve. Chi lo intercetta —
-o chi legge la cronologia del browser, o un log di proxy — può fare `PUT` su
-quella chiave per una settimana, cioè **sostituire la foto di un capo**. Il
-docblock di `url_lettura` afferma il contrario: *«Il rischio che questo apre è
-indovinare una chiave firmata, non scriverla: la PUT anonima resta chiusa da
-`scade_in_s` corto»*. Vale per l'URL di upload, che è corto; **non** per quello
-di lettura, che è lungo e passa dalla stessa verifica.
-
-**Rimedio**, ed è lo stesso schema già applicato una volta in questo repo il
-giorno in cui la voce è stata scritta: una **separazione di contesto** nel
-messaggio firmato — `firma_foto(chiave, scade, segreto, verbo)`, con `verbo` in
-`{"GET", "PUT"}` dentro l'HMAC. Una firma di lettura smette di valere per la
-PUT senza cambiare niente di come si costruiscono gli URL.
-`domain/esportazione.py` lo fa già con `_CONTESTO`, e i suoi test mostrano cosa
-prova una separazione che funziona.
-
-**Precede questa voce**: non è nata con l'esportazione, è di quando le foto
-hanno avuto una firma. L'esportazione **non la allarga** — `senza_url_firmati`
-toglie gli indirizzi dal `dati.json`, e c'è un gate che pretende che in
-quell'archivio non compaia mai `firma=`.
-
-**Quando diventa urgente:** insieme a `T-47`, e per lo stesso motivo — chi
-sfrutta questa firma deve prima ottenerla, e oggi gli URL delle foto circolano
-solo fra gli account di `EMAIL_AMMESSE`, che sono le persone che lavorano al
-progetto. **Il segnale è quella variabile**, non una data (`Q-12`).
-
-**Va data a `security`** prima che a `api`: la catena di `CLAUDE.md` è
-finding → `security` (trova) → `api` (corregge) → `test` (regressione).
-
 ### T-45 — L'esportazione è sincrona, e ha un tetto che nessuno dichiara
 
 **Trovata** il 2026-09-23 costruendo «Scarica i tuoi dati».
 
-`GET /esportazione` compone lo zip **dentro la richiesta**: legge ogni foto
-dall'archivio, la comprime e la scrive. Su un armadio piccolo è istantaneo. Su
-uno grande ci sono due tetti, e nessuno dei due parla:
+*Aggiornata il 2026-09-27 (fase 2 di ADR 0010).* `POST /esportazione` compone lo
+zip **dentro la richiesta**: legge ogni foto dallo Storage, la comprime, carica lo
+zip nel bucket `esportazioni` e risponde con un indirizzo firmato. Il download non
+passa più dal VPS, ma la composizione sì. Su un armadio piccolo è istantaneo. Su
+uno grande ci sono tre tetti, e nessuno parla:
 
 1. **`write_timeout 150s`** nel `Caddyfile` — è lì per l'analisi di una foto, e
-   vale per tutte le risposte dell'host. Oltre quello il download si tronca: il
-   browser mostra uno zip corrotto, e l'utente non sa perché.
+   vale per tutte le risposte dell'host. Oltre quello la richiesta si tronca, e
+   l'app non riceve l'indirizzo.
 2. **La memoria.** `componi_esportazione` costruisce l'archivio in un
    `BytesIO`: tutte le foto di un utente stanno in RAM contemporaneamente, due
    volte (i byte letti e lo zip). Su un VPS piccolo è il vincolo che morde
    prima del tempo.
+3. **I 50 MB del bucket `esportazioni`** (`file_size_limit` nella migrazione).
+   Uno zip più grande lo Storage lo rifiuta, e l'adapter lo traduce in
+   `ArchivioNonDisponibile` (502): l'utente legge un errore generico, non «troppo
+   grande».
+   E arriva prima di quanto sembri: l'app non ridimensiona le foto (`carica.tsx`,
+   `quality: 0.8` a piena risoluzione), quindi il tetto è di qualche decina di capi,
+   non «un armadio grande». Ogni esportazione, in più, duplica le foto dentro il GB
+   di quota del piano Free (`Q-15`).
+4. **Le 1000 righe di PostgREST** (`max_rows` in `supabase/config.toml`, ed è anche
+   il default del progetto vero). `elenca_capi()` non ha limite ed
+   `elenca_messaggi_chat(limite=10_000)` lo chiede più alto: oltre le mille righe
+   PostgREST tronca **senza dirlo**, e lo zip esce incompleto con un 200. Una
+   conversazione lunga è il primo caso che ci arriva.
 
 **Perché va bene adesso e non per sempre.** `ThreadingHTTPServer` dà a ogni
 richiesta il suo thread, quindi un'esportazione lenta non blocca le altre —
@@ -660,8 +774,8 @@ disponibile»*.
 
 **Cosa è stato fatto, perché è vero.** La schermata dice «La foto ce l'ho già:
 riprovare non la ricarica», e il bottone «Riprova» chiama `analizzaCaricata`,
-che riparte da `avviaAnalisi` sulla chiave esistente. La foto **è** sul server:
-sale per URL firmato prima che il modello la guardi.
+che riparte dall'analisi sulla chiave esistente. La foto **è** nello Storage:
+sale lì prima che il modello la guardi (fase 3 di ADR 0010).
 
 **Cosa non è stato fatto, e perché non è stato scritto lo stesso.** Il tentativo
 *automatico* «appena il servizio torna» non ha niente dietro: non esiste una
@@ -821,7 +935,7 @@ provate; ripristinato, verdi.
 **nessuno l'ha ancora guardato su un telefono** — il conto dice che entra, non
 come si vede.
 
-### T-57 — Sul web, col mouse, un trascinamento che parte da un'immagine non arriva ai gesti
+### T-66 — Sul web, col mouse, un trascinamento che parte da un'immagine non arriva ai gesti
 **Trovato il:** 2026-09-27 · **Dove:** `apps/mobile/app/intro.tsx` (la scorsa fra i passi), e ogni `Image` di `expo-image` sotto un `GestureDetector` · **Gravità:** bassa · **Chi:** `mobile`
 
 Provato sulla build web con Chrome headless: la scorsa orizzontale dell'intro
@@ -841,6 +955,115 @@ immagine.
 ---
 
 ## Fatte
+
+Chiuse il **2026-09-27** dalla fase 2 di ADR 0010 (branch `feat/supabase-fase-2`,
+PR verso `feat/supabase`), arrivate su `main` con il passaggio lo stesso giorno.
+
+### T-47 — `POST /capi/analisi` non controlla di chi sia la `chiave_foto` (**chiusa**)
+
+**Gravità alta.** Trovata da `security` il 2026-09-23, sull'audit
+dell'esportazione. **Non nasce con l'esportazione**: nasce con
+`handlers/analisi.py`. La catena, verificata riga per riga:
+
+1. `avvia` (`handlers/analisi.py:44-49`) prende `chiave_foto` **dal corpo** e la
+   infila nella pipeline. Nessun controllo di proprietà.
+2. `analizza` (`:97`) la legge dall'archivio; `_percorso`
+   (`adapters/filesystem.py:81-85`) confina dentro `CARTELLA_FOTO`, **non**
+   dentro il sottoalbero di chi chiama.
+3. `salva` (`:138-142`) la persiste come `capo.foto.chiave` **del chiamante**:
+   A ottiene un capo nel proprio armadio che punta al file di B.
+4. `GET /capi` di A firma quella chiave con `url_lettura` → sette giorni di
+   lettura sulla foto di B, rinnovabili a ogni chiamata.
+5. E con `T-46` — la stessa firma vale per `PUT` — A **sovrascrive** la foto di
+   B. Con `FAL_KEY` configurata scrive anche `<chiave di B>-scontornata`
+   dentro l'albero di B.
+
+**Il prerequisito è conoscere una chiave**, e finché le chiavi stavano solo
+nelle risposte di `GET /capi` e nei log era difficile. Da qui il legame con
+l'esportazione: uno zip pensato per essere conservato e girato ad altri le
+avrebbe messe in chiaro. **Non succede**: `senza_campi_interni` toglie
+`chiave`, `chiave_scontornata` e `avatar_foto_chiave` dal `dati.json`, e un
+test pretende che non ci siano. Ma il difetto resta, e resta alto.
+
+**Il rimedio toglie**, e sono due righe di causa, non un filtro in più:
+- `avvia` **non deve accettare** una chiave dal client: o la ricalcola da chi
+  chiama, o rifiuta ciò che non comincia per il prefisso di quell'utente;
+- la firma delle foto deve portare **il verbo** nel messaggio (`T-46`), così
+  una capability di lettura smette di essere una di scrittura.
+
+**Quando diventa urgente, e il segnale è preciso.** L'attaccante di questa
+catena è **un account registrato**: senza, non c'è nessun passo 1. Al
+2026-09-23 `EMAIL_AMMESSE` contiene le persone che lavorano al progetto, e
+l'APK si distribuisce a mano da un link di GitHub — quindi la gravità resta
+alta ma la probabilità è quella di farsi male da soli. **Il giorno che
+`EMAIL_AMMESSE` smette di essere una lista di persone che si conoscono, questa
+voce è bloccante**: non «al lancio», non «quando saremo tanti» — quella
+variabile. È lo stesso interruttore di `T-46` e della scelta registrata in
+`Q-12`.
+
+**La catena di `CLAUDE.md`**: `security` ha trovato → tocca ad `api` correggere
+→ `test` per la regressione. I test che servono, già scritti nell'audit: A
+chiede l'analisi di una chiave di B → 4xx **e nessun capo creato** (si guarda il
+repository, non solo lo status); una firma emessa da `url_lettura` **non** è
+accettata da `_foto_put`.
+
+**Chiusa così**, e il rimedio ha tolto: `avvia` rifiuta con 422 una `chiave_foto`
+che non sta nella cartella di chi chiama (`domain/accesso.percorso_dell_utente`:
+il primo segmento è l'utente, niente `..`, niente `//`), **prima** di aprire un
+esito. E la foto la legge lo Storage con il token dell'utente: anche senza quel
+controllo, la policy su `storage.objects` non gli darebbe il file di un altro.
+`adapters/filesystem.py` e il suo confino, che era il punto 2 della catena, non
+esistono più. *Verificato* da `test_la_foto_di_un_altro_e_un_422_e_non_tocca_niente`
+(si guarda il deposito, non solo lo status) e `test_risalire_con_i_punti_e_lo_stesso_rifiuto`,
+e sullo stack locale con due utenti veri: 422, e nessun capo.
+
+### T-46 — Un URL firmato di lettura di una foto vale anche come **scrittura** (**superata**)
+
+**Trovata** il 2026-09-23 costruendo l'esportazione, guardando se fosse sicuro
+metterne uno dentro un file che l'utente può girare a chiunque. Non lo è.
+
+`local_server._firma_valida(chiave, query)` è **la stessa funzione** per
+`_foto_get` (riga 174) e `_foto_put` (riga 160): entrambe chiamano
+`firma_foto.firma_valida` sullo stesso messaggio `f"{chiave}:{scade}"`. Non c'è
+niente, nel firmato, che dica se quell'indirizzo era per leggere o per
+scrivere.
+
+**Conseguenza.** `url_lettura` firma a **sette giorni** (`adapters/filesystem.py`),
+e quell'indirizzo sta dentro ogni `Capo` che l'app riceve. Chi lo intercetta —
+o chi legge la cronologia del browser, o un log di proxy — può fare `PUT` su
+quella chiave per una settimana, cioè **sostituire la foto di un capo**. Il
+docblock di `url_lettura` afferma il contrario: *«Il rischio che questo apre è
+indovinare una chiave firmata, non scriverla: la PUT anonima resta chiusa da
+`scade_in_s` corto»*. Vale per l'URL di upload, che è corto; **non** per quello
+di lettura, che è lungo e passa dalla stessa verifica.
+
+**Rimedio**, ed è lo stesso schema già applicato una volta in questo repo il
+giorno in cui la voce è stata scritta: una **separazione di contesto** nel
+messaggio firmato — `firma_foto(chiave, scade, segreto, verbo)`, con `verbo` in
+`{"GET", "PUT"}` dentro l'HMAC. Una firma di lettura smette di valere per la
+PUT senza cambiare niente di come si costruiscono gli URL.
+`domain/esportazione.py` lo fa già con `_CONTESTO`, e i suoi test mostrano cosa
+prova una separazione che funziona.
+
+**Precede questa voce**: non è nata con l'esportazione, è di quando le foto
+hanno avuto una firma. L'esportazione **non la allarga** — `senza_url_firmati`
+toglie gli indirizzi dal `dati.json`, e c'è un gate che pretende che in
+quell'archivio non compaia mai `firma=`.
+
+**Quando diventa urgente:** insieme a `T-47`, e per lo stesso motivo — chi
+sfrutta questa firma deve prima ottenerla, e oggi gli URL delle foto circolano
+solo fra gli account di `EMAIL_AMMESSE`, che sono le persone che lavorano al
+progetto. **Il segnale è quella variabile**, non una data (`Q-12`).
+
+**Va data a `security`** prima che a `api`: la catena di `CLAUDE.md` è
+finding → `security` (trova) → `api` (corregge) → `test` (regressione).
+
+**Superata, non corretta**: `domain/firma_foto.py`, `_foto_get` e `_foto_put` non
+esistono più. Le foto le serve lo Storage di Supabase, e un indirizzo firmato di
+lettura (`/object/sign/…`) è un'altra cosa da uno di caricamento
+(`/object/upload/sign/…`): il verbo sta nell'endpoint che lo emette, non in un
+messaggio da tenere separato a mano.
+
 
 Chiuse il **2026-09-11**, commit `f08e2a7`, dall'agente `mobile` — verifiche
 eseguite a parte perché la sua sessione non aveva i permessi per `npm`.

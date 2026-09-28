@@ -4,15 +4,6 @@
   "description": "Generato da services/api/src/domain/models.py — non modificare a mano.",
   "type": "object",
   "properties": {
-    "AggiornamentoCapo": {
-      "$ref": "#/$defs/AggiornamentoCapo"
-    },
-    "AggiornamentoSegnalazione": {
-      "$ref": "#/$defs/AggiornamentoSegnalazione"
-    },
-    "AnalisiAvviata": {
-      "$ref": "#/$defs/AnalisiAvviata"
-    },
     "AnalisiVisione": {
       "$ref": "#/$defs/AnalisiVisione"
     },
@@ -31,41 +22,17 @@
     "ContestoSuggerimento": {
       "$ref": "#/$defs/ContestoSuggerimento"
     },
-    "ContoSvuotamento": {
-      "$ref": "#/$defs/ContoSvuotamento"
-    },
     "ConversazioneChat": {
       "$ref": "#/$defs/ConversazioneChat"
     },
     "Corporatura": {
       "$ref": "#/$defs/Corporatura"
     },
-    "CorrezioniCapo": {
-      "$ref": "#/$defs/CorrezioniCapo"
-    },
-    "Credenziali": {
-      "$ref": "#/$defs/Credenziali"
-    },
-    "ElencoCapi": {
-      "$ref": "#/$defs/ElencoCapi"
-    },
-    "ElencoConversazioniChat": {
-      "$ref": "#/$defs/ElencoConversazioniChat"
-    },
-    "ElencoMessaggiChat": {
-      "$ref": "#/$defs/ElencoMessaggiChat"
-    },
-    "ElencoSegnalazioni": {
-      "$ref": "#/$defs/ElencoSegnalazioni"
-    },
     "EsitoAnalisi": {
       "$ref": "#/$defs/EsitoAnalisi"
     },
     "EsportazionePronta": {
       "$ref": "#/$defs/EsportazionePronta"
-    },
-    "FiltroArmadio": {
-      "$ref": "#/$defs/FiltroArmadio"
     },
     "FotoCapo": {
       "$ref": "#/$defs/FotoCapo"
@@ -88,12 +55,6 @@
     "ModelloDisponibile": {
       "$ref": "#/$defs/ModelloDisponibile"
     },
-    "NuovaSegnalazione": {
-      "$ref": "#/$defs/NuovaSegnalazione"
-    },
-    "NuovoOutfit": {
-      "$ref": "#/$defs/NuovoOutfit"
-    },
     "OrigineOutfit": {
       "$ref": "#/$defs/OrigineOutfit"
     },
@@ -106,9 +67,6 @@
     "Profilo": {
       "$ref": "#/$defs/Profilo"
     },
-    "Registrazione": {
-      "$ref": "#/$defs/Registrazione"
-    },
     "RichiestaAnalisi": {
       "$ref": "#/$defs/RichiestaAnalisi"
     },
@@ -117,15 +75,6 @@
     },
     "RichiestaSuggerimenti": {
       "$ref": "#/$defs/RichiestaSuggerimenti"
-    },
-    "RichiestaSvuotamento": {
-      "$ref": "#/$defs/RichiestaSvuotamento"
-    },
-    "RichiestaUpload": {
-      "$ref": "#/$defs/RichiestaUpload"
-    },
-    "RiepilogoArmadio": {
-      "$ref": "#/$defs/RiepilogoArmadio"
     },
     "RispostaChat": {
       "$ref": "#/$defs/RispostaChat"
@@ -166,14 +115,8 @@
     "TipoCapo": {
       "$ref": "#/$defs/TipoCapo"
     },
-    "TokenAccesso": {
-      "$ref": "#/$defs/TokenAccesso"
-    },
     "UnitaLunghezza": {
       "$ref": "#/$defs/UnitaLunghezza"
-    },
-    "UploadFirmato": {
-      "$ref": "#/$defs/UploadFirmato"
     },
     "UsoToken": {
       "$ref": "#/$defs/UsoToken"
@@ -183,105 +126,9 @@
     },
     "VestizioneColori": {
       "$ref": "#/$defs/VestizioneColori"
-    },
-    "VoceElencoConversazioni": {
-      "$ref": "#/$defs/VoceElencoConversazioni"
     }
   },
   "$defs": {
-    "AggiornamentoCapo": {
-      "additionalProperties": false,
-      "properties": {
-        "correzioni": {
-          "$ref": "#/$defs/CorrezioniCapo"
-        },
-        "nome": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "preferito": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "stato": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/StatoCapo"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "etichette": {
-          "anyOf": [
-            {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "appunti": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "title": "AggiornamentoCapo",
-      "type": "object"
-    },
-    "AggiornamentoSegnalazione": {
-      "additionalProperties": false,
-      "properties": {
-        "stato": {
-          "$ref": "#/$defs/StatoSegnalazione"
-        }
-      },
-      "required": [
-        "stato"
-      ],
-      "title": "AggiornamentoSegnalazione",
-      "type": "object"
-    },
-    "AnalisiAvviata": {
-      "additionalProperties": false,
-      "description": "L'app riceve un identificativo e interroga lo stato: l'analisi è lenta.\n\nTenerla asincrona è ciò che permette il caricamento in blocco di venti foto\nsenza che l'app resti appesa a una richiesta HTTP di quaranta secondi.",
-      "properties": {
-        "esecuzione_id": {
-          "type": "string"
-        },
-        "stato": {
-          "$ref": "#/$defs/StatoAnalisi"
-        }
-      },
-      "required": [
-        "esecuzione_id"
-      ],
-      "title": "AnalisiAvviata",
-      "type": "object"
-    },
     "AnalisiVisione": {
       "additionalProperties": false,
       "description": "Traccia di chi ha letto la foto, quando, e con quanta sicurezza.",
@@ -653,39 +500,9 @@
       "title": "ContestoSuggerimento",
       "type": "object"
     },
-    "ContoSvuotamento": {
-      "additionalProperties": false,
-      "description": "Quanto è stato cancellato davvero.\n\nNon è telemetria: è l'unico modo che ha la persona di sapere che\nl'operazione ha fatto ciò che prometteva. Un `204 No Content` dopo\nun'azione irreversibile lascia solo da fidarsi.",
-      "properties": {
-        "capi": {
-          "type": "integer"
-        },
-        "outfit": {
-          "type": "integer"
-        },
-        "conversazioni": {
-          "type": "integer"
-        },
-        "usi_registrati": {
-          "type": "integer"
-        },
-        "foto": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "capi",
-        "outfit",
-        "conversazioni",
-        "usi_registrati",
-        "foto"
-      ],
-      "title": "ContoSvuotamento",
-      "type": "object"
-    },
     "ConversazioneChat": {
       "additionalProperties": false,
-      "description": "Un contenitore di turni: da quando la chat ha smesso di essere una\nsola sessione continua per utente (vedi docs/adr/0006).\n\nRispecchia esattamente le colonne di `conversazioni_chat` — niente qui\ndentro che l'adapter debba inventare per poterla salvare. `turni` e\n`anteprima`, che servono solo all'elenco, vivono in\n`VoceElencoConversazioni`, non qui.",
+      "description": "Un contenitore di turni: da quando la chat ha smesso di essere una\nsola sessione continua per utente (vedi docs/adr/0006).\n\nRispecchia esattamente le colonne di `conversazioni_chat` — niente qui\ndentro che l'adapter debba inventare per poterla salvare. `turni` e\n`anteprima`, che servono solo all'elenco, li calcola la vista\n`conversazioni_elenco` del database, che l'app legge da sé.",
       "properties": {
         "id": {
           "type": "string"
@@ -720,183 +537,6 @@
       ],
       "title": "Corporatura",
       "type": "string"
-    },
-    "CorrezioniCapo": {
-      "additionalProperties": false,
-      "description": "Le correzioni dell'utente, una per attributo, tutte tipizzate.\n\nVolutamente non è `dict[str, str]`: correggere il colore significa mandare\nnome più hex, e il tipo deve stare nell'enum. Un dizionario di stringhe\nfarebbe passare «maglietta» come tipo e lo scopriremmo sull'avatar.",
-      "properties": {
-        "tipo": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TipoCapo"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "colore": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Colore"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "materiale": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "fantasia": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "stagione": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Stagione"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "vestibilita": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "lavaggio": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "title": "CorrezioniCapo",
-      "type": "object"
-    },
-    "Credenziali": {
-      "additionalProperties": false,
-      "description": "Il corpo di POST /auth/accedi. Nessun requisito sulla password: qui\ndeve solo passare a `bcrypt.checkpw`, non essere accettabile — quello\nvincolo vive in `Registrazione`, non qui, altrimenti un account creato\nquando il minimo era più basso non potrebbe più accedere.",
-      "properties": {
-        "email": {
-          "type": "string"
-        },
-        "password": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "email",
-        "password"
-      ],
-      "title": "Credenziali",
-      "type": "object"
-    },
-    "ElencoCapi": {
-      "additionalProperties": false,
-      "properties": {
-        "capi": {
-          "items": {
-            "$ref": "#/$defs/Capo"
-          },
-          "type": "array"
-        },
-        "totale": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "capi",
-        "totale"
-      ],
-      "title": "ElencoCapi",
-      "type": "object"
-    },
-    "ElencoConversazioniChat": {
-      "additionalProperties": false,
-      "properties": {
-        "conversazioni": {
-          "items": {
-            "$ref": "#/$defs/VoceElencoConversazioni"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "conversazioni"
-      ],
-      "title": "ElencoConversazioniChat",
-      "type": "object"
-    },
-    "ElencoMessaggiChat": {
-      "additionalProperties": false,
-      "properties": {
-        "messaggi": {
-          "items": {
-            "$ref": "#/$defs/MessaggioChat"
-          },
-          "type": "array"
-        },
-        "conversazione": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ConversazioneChat"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "messaggi"
-      ],
-      "title": "ElencoMessaggiChat",
-      "type": "object"
-    },
-    "ElencoSegnalazioni": {
-      "additionalProperties": false,
-      "properties": {
-        "segnalazioni": {
-          "items": {
-            "$ref": "#/$defs/Segnalazione"
-          },
-          "type": "array"
-        },
-        "amministratore": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "segnalazioni"
-      ],
-      "title": "ElencoSegnalazioni",
-      "type": "object"
     },
     "EsitoAnalisi": {
       "additionalProperties": false,
@@ -952,46 +592,6 @@
         "scade_il"
       ],
       "title": "EsportazionePronta",
-      "type": "object"
-    },
-    "FiltroArmadio": {
-      "additionalProperties": false,
-      "properties": {
-        "tipo": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TipoCapo"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "stato": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/StatoCapo"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "solo_preferiti": {
-          "type": "boolean"
-        },
-        "testo": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "title": "FiltroArmadio",
       "type": "object"
     },
     "FotoCapo": {
@@ -1398,50 +998,6 @@
       "title": "ModelloDisponibile",
       "type": "object"
     },
-    "NuovaSegnalazione": {
-      "additionalProperties": false,
-      "properties": {
-        "testo": {
-          "minLength": 1,
-          "type": "string"
-        }
-      },
-      "required": [
-        "testo"
-      ],
-      "title": "NuovaSegnalazione",
-      "type": "object"
-    },
-    "NuovoOutfit": {
-      "additionalProperties": false,
-      "properties": {
-        "nome": {
-          "type": "string"
-        },
-        "vestizione": {
-          "$ref": "#/$defs/Vestizione"
-        },
-        "occasione": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "origine": {
-          "$ref": "#/$defs/OrigineOutfit"
-        }
-      },
-      "required": [
-        "nome",
-        "vestizione"
-      ],
-      "title": "NuovoOutfit",
-      "type": "object"
-    },
     "OrigineOutfit": {
       "enum": [
         "manuale",
@@ -1598,25 +1154,6 @@
       "title": "Profilo",
       "type": "object"
     },
-    "Registrazione": {
-      "additionalProperties": false,
-      "description": "Il corpo di POST /auth/registrati. L'allowlist (`EMAIL_AMMESSE`) e il\nhash della password li applica `handlers/auth.py`; qui c'è solo la forma\ndel dato, non la sua ammissibilità.",
-      "properties": {
-        "email": {
-          "type": "string"
-        },
-        "password": {
-          "minLength": 8,
-          "type": "string"
-        }
-      },
-      "required": [
-        "email",
-        "password"
-      ],
-      "title": "Registrazione",
-      "type": "object"
-    },
     "RichiestaAnalisi": {
       "additionalProperties": false,
       "properties": {
@@ -1746,75 +1283,6 @@
         }
       },
       "title": "RichiestaSuggerimenti",
-      "type": "object"
-    },
-    "RichiestaSvuotamento": {
-      "additionalProperties": false,
-      "description": "Il corpo di `POST /armadio/svuota`.\n\n**La parola esiste per rendere impossibile l'incidente.** Il tocco sullo\nschermo è già dietro un campo in cui scrivere «SVUOTA», ma quella è una\ndifesa dell'interfaccia: sparisce con un refresh, un deep-link, un `curl`\nricopiato, o una richiesta rimandata due volte dalla libreria di rete. Un\n`Literal` la porta nel contratto, quindi un `POST` senza intenzione\nesplicita prende un 422 e non cancella niente — e il tipo TypeScript\ngenerato contiene la parola, così non la si ridigita di là.",
-      "properties": {
-        "conferma": {
-          "const": "SVUOTA",
-          "type": "string"
-        }
-      },
-      "required": [
-        "conferma"
-      ],
-      "title": "RichiestaSvuotamento",
-      "type": "object"
-    },
-    "RichiestaUpload": {
-      "additionalProperties": false,
-      "properties": {
-        "content_type": {
-          "type": "string"
-        },
-        "nota": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "content_type"
-      ],
-      "title": "RichiestaUpload",
-      "type": "object"
-    },
-    "RiepilogoArmadio": {
-      "additionalProperties": false,
-      "properties": {
-        "totale": {
-          "type": "integer"
-        },
-        "da_lavare": {
-          "type": "integer"
-        },
-        "dormienti": {
-          "type": "integer"
-        },
-        "valore_dormiente_eur": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "totale",
-        "da_lavare",
-        "dormienti"
-      ],
-      "title": "RiepilogoArmadio",
       "type": "object"
     },
     "RispostaChat": {
@@ -2046,19 +1514,6 @@
       "title": "TipoCapo",
       "type": "string"
     },
-    "TokenAccesso": {
-      "additionalProperties": false,
-      "properties": {
-        "token": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "token"
-      ],
-      "title": "TokenAccesso",
-      "type": "object"
-    },
     "UnitaLunghezza": {
       "description": "In che unità si **mostrano** le lunghezze. Non in che unità si salvano.\n\n`Misure` le tiene in centimetri e basta — il nome dei campi lo dice\n(`altezza_cm`). Questa è una preferenza di lettura: cambiarla non riscrive\nnessun dato, e due dispositivi dello stesso utente vedono lo stesso numero\nperché la conversione avviene all'ultimo momento, non al salvataggio.\n\nIl deck ne governa tre — lunghezze, peso, temperatura. Le altre due non\nesistono qui: **non c'è nessun campo peso** in tutto il dominio (e il deck\nstesso scrive «non te lo chiedo»), e la temperatura richiede il meteo, che\nil backend riceve ma non è mai andato a prendere. Offrirle vorrebbe dire\ndue selettori che non comandano niente.",
       "enum": [
@@ -2067,37 +1522,6 @@
       ],
       "title": "UnitaLunghezza",
       "type": "string"
-    },
-    "UploadFirmato": {
-      "additionalProperties": false,
-      "description": "Risposta all'app prima che carichi la foto: l'upload va diretto\nall'archivio foto, senza passare dal backend.",
-      "properties": {
-        "chiave": {
-          "type": "string"
-        },
-        "url": {
-          "type": "string"
-        },
-        "metodo": {
-          "type": "string"
-        },
-        "intestazioni": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "type": "object"
-        },
-        "scade_in_s": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "chiave",
-        "url",
-        "scade_in_s"
-      ],
-      "title": "UploadFirmato",
-      "type": "object"
     },
     "UsoToken": {
       "additionalProperties": false,
@@ -2231,28 +1655,6 @@
         }
       },
       "title": "VestizioneColori",
-      "type": "object"
-    },
-    "VoceElencoConversazioni": {
-      "additionalProperties": false,
-      "description": "`ConversazioneChat` più ciò che solo l'elenco calcola — un aggregato\nsu `messaggi_chat`, non colonne proprie di `conversazioni_chat`.",
-      "properties": {
-        "conversazione": {
-          "$ref": "#/$defs/ConversazioneChat"
-        },
-        "turni": {
-          "type": "integer"
-        },
-        "anteprima": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "conversazione",
-        "turni",
-        "anteprima"
-      ],
-      "title": "VoceElencoConversazioni",
       "type": "object"
     }
   }

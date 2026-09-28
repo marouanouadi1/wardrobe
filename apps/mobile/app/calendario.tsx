@@ -81,7 +81,7 @@ export default function Calendario() {
               >
                 {fotoPrimo ? (
                   <Image
-                    source={{ uri: fotoPrimo }}
+                    source={fotoPrimo}
                     style={{ position: 'absolute', inset: 0 }}
                     contentFit="cover"
                     transition={durate.breve}

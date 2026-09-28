@@ -13,33 +13,6 @@ class ErroreDominio(Exception):
     stato_http = 500
 
 
-class CapoNonTrovato(ErroreDominio):
-    codice = "capo_non_trovato"
-    stato_http = 404
-
-    def __init__(self, capo_id: str) -> None:
-        super().__init__(f"Capo {capo_id} inesistente")
-        self.capo_id = capo_id
-
-
-class OutfitNonTrovato(ErroreDominio):
-    codice = "outfit_non_trovato"
-    stato_http = 404
-
-    def __init__(self, outfit_id: str) -> None:
-        super().__init__(f"Outfit {outfit_id} inesistente")
-        self.outfit_id = outfit_id
-
-
-class AnalisiNonTrovata(ErroreDominio):
-    codice = "analisi_non_trovata"
-    stato_http = 404
-
-    def __init__(self, esecuzione_id: str) -> None:
-        super().__init__(f"Analisi {esecuzione_id} inesistente")
-        self.esecuzione_id = esecuzione_id
-
-
 class RichiestaNonValida(ErroreDominio):
     codice = "richiesta_non_valida"
     stato_http = 422
@@ -54,13 +27,12 @@ class ConversazioneNonTrovata(ErroreDominio):
         self.conversazione_id = conversazione_id
 
 
-class SegnalazioneNonTrovata(ErroreDominio):
-    codice = "segnalazione_non_trovata"
-    stato_http = 404
+class FotoNonTrovata(ErroreDominio):
+    """La foto non c'è, o non è di chi la chiede: lo Storage, con il token di
+    quella persona, risponde allo stesso modo nei due casi, e va bene così."""
 
-    def __init__(self, segnalazione_id: str) -> None:
-        super().__init__(f"Segnalazione {segnalazione_id} inesistente")
-        self.segnalazione_id = segnalazione_id
+    codice = "foto_non_trovata"
+    stato_http = 404
 
 
 class AccessoNegato(ErroreDominio):
@@ -68,38 +40,30 @@ class AccessoNegato(ErroreDominio):
     stato_http = 403
 
 
-class CredenzialiNonValide(ErroreDominio):
-    """Email inesistente o password sbagliata — stesso messaggio per
-    entrambe, per non rivelare a un tentativo di accesso quali email esistono."""
-
-    codice = "credenziali_non_valide"
-    stato_http = 401
-
-
 class NonAutenticato(ErroreDominio):
-    """Nessun JWT valido nella richiesta. Distinto da `RichiestaNonValida`
-    (422): qui il corpo può essere perfetto, manca solo chi lo firma — è
-    il segnale su cui l'app decide se rimandare al login."""
+    """Nessun token valido nella richiesta, o un token che non basta a quello
+    che si chiede. Distinto da `RichiestaNonValida` (422): qui il corpo può
+    essere perfetto, manca solo chi lo firma — è il segnale su cui l'app
+    rinnova la sessione, o rimanda al login."""
 
     codice = "non_autenticato"
     stato_http = 401
 
 
-class EmailGiaRegistrata(ErroreDominio):
-    codice = "email_gia_registrata"
-    stato_http = 409
+class AccessoNonDisponibile(ErroreDominio):
+    """Le chiavi pubbliche di Supabase Auth non si raggiungono, e senza non si
+    verifica nessun token. Si chiude, non si apre: 503, non un passaggio libero."""
 
-    def __init__(self, email: str) -> None:
-        super().__init__(f"«{email}» ha già un account")
-        self.email = email
+    codice = "accesso_non_disponibile"
+    stato_http = 503
 
 
-class RegistrazioneNonAmmessa(ErroreDominio):
-    """L'email non è nell'allowlist (`EMAIL_AMMESSE`) — o l'allowlist è vuota,
-    che significa registrazione chiusa del tutto."""
+class ArchivioNonDisponibile(ErroreDominio):
+    """Supabase (database o Storage) non risponde, o risponde con un errore che
+    non è colpa di chi chiede. Il dettaglio va nei log, non al client."""
 
-    codice = "registrazione_non_ammessa"
-    stato_http = 403
+    codice = "archivio_non_disponibile"
+    stato_http = 502
 
 
 class LetturaNonValida(ErroreDominio):
@@ -149,18 +113,3 @@ class ProviderNonConfigurato(ErroreDominio):
 class ErroreProvider(ErroreDominio):
     codice = "errore_provider"
     stato_http = 502
-
-
-class SvuotamentoParziale(ErroreDominio):
-    """Le righe sono sparite, alcune foto no.
-
-    Ha un codice suo e non è un `errore_interno` generico **perché quello che
-    va detto è opposto a «non è successo niente»**: l'armadio è vuoto davvero e
-    non torna, ma sul disco restano dei file. Un 500 muto qui farebbe credere
-    che l'operazione sia fallita, e la persona la rifarebbe su un armadio già
-    vuoto chiedendosi perché non funziona. L'app discrimina sul campo `errore`,
-    e questo è il caso in cui deve dire due cose insieme.
-    """
-
-    codice = "svuotamento_parziale"
-    stato_http = 500

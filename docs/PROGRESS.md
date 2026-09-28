@@ -5,7 +5,7 @@
 > modulo citato da un ADR può non esistere più. Prima di dare per esistente — o per
 > inesistente — qualunque cosa, si apre questo file.
 
-**Ultimo aggiornamento:** 2026-09-23
+**Ultimo aggiornamento:** 2026-09-27
 
 > ### Sulla provenienza di questa prima versione
 >
@@ -28,35 +28,19 @@
 
 ## Backend (`services/api`)
 
-Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:51`.
+Dal passaggio a Supabase (ADR 0010, 2026-09-27) le rotte sono cinque, nella tabella `ROTTE`
+di `src/handlers/local_server.py:40`: `GET /salute`, `POST /capi/analisi`, `POST /suggerimenti`,
+`POST /chat`, `POST /esportazione`. Accesso, capi, storico della chat, outfit, profilo,
+segnalazioni e foto l'app li fa da sé su Supabase: la sezione «Supabase» qui sotto. Le 25 rotte
+di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
 
 - [x] `GET /salute` — riporta la versione dai metadati del pacchetto. *Verificato a ogni
       deploy da `api.yml`, step «Verifica salute e versione servita»: è l'unica riga di
       questo file che una macchina ricontrolla da sola.*
-- [x] `POST /auth/accedi`, `POST /auth/registrati` — JWT autofirmato, bcrypt, allowlist
-      `EMAIL_AMMESSE` fail-closed. *coperto da `tests/handlers/test_handlers.py`:
-      allowlist vuota, email fuori lista, 409, password corta, normalizzazione. In più
-      provato con richieste vere in locale e contro il server pubblico — dichiarato in
-      README al 2026-09-08, non rieseguito dopo.*
-- [x] `GET /capi`, `GET|PATCH /capi/{id}`, `POST /capi/{id}/indossato`,
-      `GET /armadio/riepilogo` — *coperto da `test_handlers.py`: filtro, ricerca
-      testuale, URL firmate, 404 e 422 compresi*
-- [x] `GET|POST /chat`, `GET /chat/conversazioni`, `GET|DELETE /chat/conversazioni/{id}`
-      — ADR 0006, migrazione `0009`. *coperto da `test_chat_handler.py`*
-- [x] `GET|POST /outfit`, `GET /outfit/{id}/colori` — *coperto da `test_handlers.py`,
-      compreso il rifiuto di un outfit non indossabile*
-- [x] `GET|PUT /profilo` — *coperto da `test_handlers.py`, creazione al primo accesso compresa*
-- [x] `POST|GET /segnalazioni`, `PATCH /segnalazioni/{id}` — amministratori da
-      `EMAIL_AMMINISTRATORI`, fail-closed. *coperto da `test_handlers.py`: chi vede cosa, il 403 di chi non è
-      amministratore, il 404*. Sul server la variabile **mancava** fino al 2026-09-25
-      (nessun amministratore, segnalazioni ferme su «Ricevuta»); ora ha un'email.
-      *Verificato con `printenv` nel container ricreato e `GET /salute` a 200;
-      **non** provato dall'app con l'account amministratore.*
-- [x] `POST /foto/upload` — URL firmata, la PUT la fa l'app. *coperto da `test_handlers.py`: la firma e il
-      rifiuto di un tipo non immagine*
-- [~] `POST /capi/analisi` + `GET /capi/analisi/{id}` — la pipeline a due fasi gira e
-      riporta il motivo del fallimento, ma **nessun modello è mai stato interrogato
-      davvero**: manca una chiave (vedi «Cosa manca dall'esterno»)
+- [~] `POST /capi/analisi` — legge la foto dallo Storage come l'utente e restituisce l'esito
+      intero. *Coperto da `tests/handlers/test_analisi.py`, e provato sullo stack locale con
+      due utenti (fase 2)*, ma **nessun modello è mai stato interrogato davvero**: manca una
+      chiave (vedi «Cosa manca dall'esterno»)
 - [~] `POST /suggerimenti` — risponde `503 provider_non_configurato` senza credenziali,
       non 500. Il prompt di `domain/stylist.py` non è mai stato visto all'opera
 - [~] Scontorno foto (`adapters/scontorno/fal_provider.py`) — passo facoltativo di
@@ -117,10 +101,22 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       riga riguarda i colori e il fondo, non le 43 schermate del deck. E
       **nessuna prova su un telefono**: il web dimostra che l'SVG renderizza,
       non come si vede il vetro su un pannello vero.
+- [x] **L'armadio in «Tutti» è diviso per categoria** — `(tabs)/armadio.tsx`
+      raggruppa i capi filtrati nell'ordine di `TIPI_CAPO`, con un'`Etichetta`
+      «Tipo · n» sopra ogni gruppo; i gruppi vuoti non compaiono, la
+      `CasellaAggiungi` chiude l'ultimo. Con una categoria scelta resta la
+      griglia sola, e resta un gruppo senza titolo anche quando in «Tutti» i
+      filtri non lasciano passare niente: è lui che porta la `CasellaAggiungi`
+      (senza, unita alla scelta qui sotto, in «Tutti» spariva).
+      *Verificato:* `typecheck`, `lint`, `mobile:test` e `build:web` verdi.
 - [~] **L'armadio sulla disposizione del deck** — `(tabs)/armadio.tsx` con
       griglia a tre colonne quadrate, due righe di filtri (categoria + qualità,
       un filtro per dimensione), `CasellaAggiungi` dentro la griglia, conteggio
-      sotto, due stati vuoti distinti, fondo `freddo`. Nuove in `ui/capi.tsx`:
+      sotto, fondo `freddo`. Lo stato vuoto è uno solo, ad armadio vuoto: se i
+      filtri non lasciano passare niente resta la griglia con la sola
+      `CasellaAggiungi` (scelta dell'utente del 2026-09-27; prima c'era una card
+      «Niente in …»; provato dall'utente su un telefono vero, con Expo Go e i
+      dati di produzione, il 2026-09-28). Nuove in `ui/capi.tsx`:
       `CapoInGriglia` riscritta (vetro, `contain`, cuore, nome sotto) e
       `CasellaAggiungi`; `Pillola` ha la variante `compatta`.
       *Verificato:* `typecheck`, `lint`, `mobile:test` e `build:web` verdi.
@@ -485,7 +481,7 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       74 verdi, e sulla build web con Chrome headless, tocchi veri via CDP:
       avanti fino al terzo, fermo lì, indietro fino al primo, fermo lì, e un
       gesto verticale non cambia passo. Col mouse sul web il gesto non parte
-      se comincia su un'immagine (`T-57`). **Nessuna prova su un telefono.**
+      se comincia su un'immagine (`T-66`). **Nessuna prova su un telefono.**
       *Verificato:* `typecheck` exit 0, `lint` 0 errori, `mobile:test` 69,
       `build:web`. **E soprattutto guardandole**: `dist/` servita in locale e
       cinque screenshot a 390×844 con Chrome headless, confrontati col
@@ -541,6 +537,412 @@ Le rotte reali sono 25, nella tabella `ROTTE` di `src/handlers/local_server.py:5
       *Verificato anche al contrario, rinominando un campo nel backend per vedere la CI
       cadere — dichiarato in README al 2026-09-08. Rieseguito il 2026-09-11:
       `npm run contracts:check` verde.*
+
+## Supabase (`supabase/`, ADR 0010) — su `main` dal 2026-09-27
+
+- [~] **Fase 1: schema, RLS e regole.** Una migrazione (`supabase/migrations/`) con le
+      tabelle a colonne vere, gli enum, le chiavi esterne composte (un riferimento resta
+      dentro lo stesso utente), la correzione di un attributo come trigger,
+      `segna_indossato` e `svuota_armadio` come funzioni `security invoker`, i due bucket
+      privati con una cartella per utente, e l'hook degli inviti al posto di
+      `EMAIL_AMMESSE`. RLS su ogni tabella.
+      *Verificato* sullo stack locale:
+      - i test pgTAP sono verdi (`supabase test db`), da zero e su un database con dati
+        di sviluppo;
+      - quattro difese **viste fallire per davvero** togliendole: RLS spenta, stato
+        delle segnalazioni aperto a tutti, trigger della correzione tolto, policy degli
+        inviti tolta;
+      - un `with check` aperto da solo **non** apre il passaggio di un capo a un altro,
+        perché lo ferma anche la policy di lettura, e il test lo dice;
+      - gli advisor di sicurezza sono puliti;
+      - `verifica_database.py` confronta database e Python, ed è stato visto fallire
+        con un valore aggiunto a un enum;
+      - una registrazione vera sull'Auth locale: l'invitato entra con il profilo
+        creato, l'estraneo riceve 403;
+      - via HTTP: `segna_indossato` su un capo che non c'è risponde 404, `anon` riceve
+        401 sulle tabelle e 404 su una funzione non esposta.
+
+      Poi un audit di `security` (nessun IDOR trovato) e una review di `reviewer`, e le
+      correzioni che ne sono uscite, tutte con il loro test:
+      - via i permessi di default: `authenticated` aveva TRUNCATE, che ignora l'RLS, e
+        ogni funzione nuova era eseguibile da `anon`;
+      - i percorsi delle foto rifiutano `..` e la doppia barra;
+      - un capo con un'analisi completata si cancella (prima il suo esito lo impediva);
+      - confermare un valore giusto porta la sua confidenza a 100, come faceva
+        `correggi_attributo`, e solo sui capi con un'analisi;
+      - togliere scarpe o capospalla non cancella più l'outfit;
+      - `verifica_database.py` confronta anche il formato del colore e l'intervallo
+        delle confidenze, e gira solo sullo stack locale.
+
+      I test pgTAP provano ogni policy, cancellazioni comprese, come A contro B, più il
+      catalogo: nessuna tabella senza RLS, nessun permesso ad `anon`, nessuna `security
+      definer` in `public`. Rivisti fallire dopo le correzioni cinque sabotaggi: TRUNCATE
+      concesso, una funzione aperta ad `anon`, una funzione `security definer`, RLS
+      spenta sugli esiti, il controllo dei `..` tolto.
+
+      **Trovato e chiuso strada facendo:** l'hook leggeva gli inviti come
+      `supabase_auth_admin`, che l'RLS non la scavalca, e rifiutava tutti. I test pgTAP
+      passavano lo stesso, perché giravano come `postgres`.
+
+      **Cosa manca:**
+      - il progetto Supabase vero (lo crea l'utente) e le fasi 2-5 del piano: il backend
+        e l'app di oggi non usano ancora niente di tutto questo;
+      - ~~gli script `npm run db:*` restano quelli del Postgres di `docker-compose`~~: tolti
+        nella fase 2, al loro posto ci sono i `supabase:*`;
+      - `Profilo.foto_url` non ha una colonna: non lo scriveva nessuno, ma quattro
+        schermate lo leggono, e nella fase 3 `tsc` le indicherà;
+      - per la fase 4 (i dati dal VPS): gli id `storica-{utente}` delle conversazioni
+        non sono uuid, i CHECK su nomi e testi sono più severi di Pydantic (spazi), e le
+        chiavi delle foto passano da `capi/{utente}/…` a `{utente}/…`.
+
+      **Da impostare nel pannello del progetto vero, il giorno del passaggio** (niente
+      lo verifica ancora: `T-56`):
+      - hook degli inviti acceso: la lista resta finché non ci sono limiti di spesa (`Q-13`);
+      - conferma dell'email accesa, e `secure_password_change` acceso;
+      - password di almeno 8 caratteri;
+      - solo `public` e `graphql_public` esposti; `pg_graphql` spento se non serve;
+      - JWT firmati con chiavi asimmetriche.
+
+      E sul VPS nessuna credenziale che scavalchi l'RLS: né la chiave di servizio, né la
+      password del database, né le chiavi S3 dello Storage.
+
+      **Il progetto vero esiste** (`lmjsrhwzjxubecgctrmd`, creato dall'utente il
+      2026-09-26). *Verificato il 2026-09-27 in sola lettura*, con l'MCP di Supabase e con la
+      chiave publishable:
+      - è vuoto: nessuna migrazione, nessuna tabella; `pg_graphql` non è installata;
+      - la conferma dell'email è accesa, e i token sono firmati con ES256;
+      - le registrazioni sono **aperte**, finché l'utente non le spegne;
+      - l'«esposizione automatica» spenta toglie ad `anon` e `authenticated` lettura e
+        scrittura sulle tabelle nuove, ma lascia TRUNCATE, TRIGGER, REFERENCES e MAINTAIN.
+        La migrazione li revoca (`alter default privileges`), e sul progetto vero serve
+        davvero;
+      - l'opzione «RLS automatico» ha creato `public.rls_auto_enable()`, `security definer`
+        ed eseguibile da `anon`: una funzione di event trigger, quindi non si chiama
+        dall'API, ma rompe due invarianti dei test pgTAP (`Q-14`).
+
+      Non si leggono né con l'MCP né con la chiave, e restano da controllare a occhio nel
+      pannello: il «Secure password change», la lunghezza minima della password e gli schemi
+      esposti.
+
+- [~] **Fase 2: il backend dell'IA su Supabase.** Branch `feat/supabase-fase-2`, PR verso
+      `feat/supabase`. Il backend verifica il token di Supabase Auth con le chiavi pubbliche
+      del progetto (JWKS: ES256, `aud`, `iss`, `role`, in `domain/accesso.py`) e fa ogni
+      lettura e scrittura su PostgREST e Storage **con quel token**
+      (`adapters/supabase.py`): sul VPS nessuna credenziale che scavalchi l'RLS. Il
+      repository e l'archivio nascono per ogni richiesta, e un test impedisce di metterli
+      in cache: darebbero al chiamante dopo il token di quello prima.
+
+      Restano cinque rotte: `GET /salute`, `POST /capi/analisi`, `POST /suggerimenti`,
+      `POST /chat`, `POST /esportazione`. Tolti:
+      - il login, il CRUD, le foto firmate con l'HMAC, `bcrypt`, `JWT_SECRET`,
+        `EMAIL_AMMESSE` ed `EMAIL_AMMINISTRATORI`, che diventa `app_metadata.ruolo`;
+      - gli adapter `postgres`, `filesystem` e `memory`;
+      - le migrazioni di `services/api/migrations/` e il loro runner;
+      - il Postgres di `docker-compose.yml` e gli script `db:*`.
+
+      Cosa cambia per chi resta:
+      - l'analisi legge la foto dallo Storage come l'utente, e rifiuta una foto fuori
+        dalla sua cartella: `T-47` chiusa, `T-46` superata. L'esito si scrive **una volta
+        sola**, a lavoro finito: aperto prima e chiuso dopo restava «in corso» per sempre
+        a ogni analisi interrotta;
+      - i due turni di una chat entrano in una scrittura sola, quindi insieme o per
+        niente;
+      - lo scontorno scrive `<foto>-scontornata` nella stessa cartella;
+      - l'esportazione carica lo zip in `esportazioni/{utente}/` e risponde con un
+        indirizzo firmato di 15 minuti.
+
+      I due valori di Supabase del server stanno in `docker-compose.yml`: sono pubblici, e
+      il giorno del passaggio non si tocca il `.env` del server. `dev.sh` li prende dallo
+      stack locale, estraendo solo quelle due righe.
+
+      *Verificato* il 2026-09-27, in locale:
+      - `npm run api:lint` verde (ruff, format, `mypy --strict`); `npm run api:cov` con il
+        totale all'86%, `domain/` al 99% e `handlers/` al 98%. Le tre soglie sono salite
+        (numeri in `docs/TEST_COVERAGE.md`);
+      - `npm run contracts:check` verde, e i file generati **non cambiano**: i modelli
+        che l'app legge ancora restano finché la fase 3 non li toglie;
+      - **E2E sullo stack locale con due utenti veri**: adapter veri, modello finto, utenti
+        creati con l'API admin **locale**. 27 verifiche su 27:
+        - il token vero è ES256, con il `kid` nel JWKS e l'`iss` atteso;
+        - A non scrive nella cartella di B;
+        - tre analisi creano i capi di A con lo slot calcolato dal database, e B non li
+          vede;
+        - l'analisi della foto di B dà 422, e una foto che manca chiude l'esito come
+          fallito con il motivo;
+        - i suggerimenti partono dai capi di A;
+        - la chat salva due turni, e B nella conversazione di A riceve 404;
+        - lo zip di A ha i suoi capi e le loro foto, B non lo scarica, e lo zip di B è
+          vuoto;
+        - sul server HTTP vero: `/salute`, 401 senza token, un token vero passa l'accesso,
+          `GET /capi` è 404.
+
+        Alla fine sono state cancellate le sole cose create dal test: nessun file rimasto.
+      - l'immagine Docker si costruisce, risponde a `/salute` e dà 401 senza token, e
+        senza i due valori di Supabase si rifiuta di partire.
+
+      Poi un audit di `security` e una review di `reviewer`. **Nessuna via per agire come un
+      altro utente né per uscire dall'RLS**. Le correzioni che ne sono uscite, ognuna con il
+      suo test, e ognuno **visto fallire** rimettendo il difetto nel codice:
+      - un token di un **accesso anonimo** passava: Supabase gli dà `role` e `aud` come a
+        tutti. Ora è 401, come `service_role`;
+      - un `iat` di pochi secondi nel futuro faceva rifiutare il token appena rinnovato, se
+        l'orologio del VPS è indietro: `iat` non si controlla più, `exp` resta rigido;
+      - il **client HTTP condiviso** portava i cookie di una risposta ad A nella richiesta di
+        B. Ora si condivide il pool, e il client è uno per sessione;
+      - il JWKS: un corpo malformato dava 500 invece di 503, una chiave di un altro tipo
+        faceva buttare anche quella buona, e un `kid` noto aspettava dietro il download
+        provocato da uno inventato;
+      - l'esportazione saltava in silenzio le foto anche con lo Storage giù, e rispondeva 200
+        con uno zip incompleto: ora salta solo una foto che non c'è, e il resto è 502;
+      - un `conversazione_id` che non è un uuid era un 502: ora 422;
+      - due test passavano anche con il codice sbagliato (l'ordine dei turni; un esito
+        chiuso senza essere aperto), e uno falliva su una macchina accesa da più di 2 ore e
+        36 minuti.
+
+      Rimessi fallire, uno per uno, sette difetti più quello dei cookie: tutti presi. Rifatto
+      l'E2E dopo le correzioni: 27 su 27.
+
+      **Cosa manca:**
+      - ~~l'app parla ancora con il backend vecchio~~: fatto nella fase 3, qui sotto;
+      - nessun job prova gli adapter contro un Supabase vero: l'E2E qui sopra è stato
+        fatto a mano (`T-18`);
+      - il modello vero non è stato interrogato: vale quello che dice la sezione
+        «Backend» su analisi e suggerimenti;
+      - ~~per la fase 3: `FiltroArmadio` e `RichiestaUpload` vanno tolti~~: tolti nella
+        fase 3, con gli altri modelli delle rotte che non ci sono più;
+      - due finding dell'audit **valgono già su `main`** e restano fuori di proposito
+        (`T-51`: il corpo letto senza limite; `T-60`: il client sceglie provider e
+        modello). Qui arriverebbero solo il giorno X: vanno in una PR loro su `main`;
+      - `README.md` («Partire», «Produzione») e `docs/deploy.md` descrivono ancora `main`:
+        `db:up`, `JWT_SECRET`, le migrazioni del VPS. Il piano li riscrive nella fase 5;
+        fino ad allora, per partire da zero su questo branch vale `services/api/.env.example`;
+
+      **Il giorno del passaggio, per questa fase** (sul server, con il via dell'utente):
+      - la copia di riserva sono i volumi `postgres_data` e `foto_dati`, non il container:
+        nessuno lancia `down -v`. Il container `wardrobe-postgres` il deploy non lo tocca
+        (niente `--remove-orphans`), e resterebbe acceso sulla stessa rete di `api` con i
+        dati di tutti, hash compresi. **Dopo lo script della fase 4 si ferma**, con
+        `docker stop wardrobe-postgres`: il volume resta. Prima, in sola lettura, `docker
+        ps -a --filter name=wardrobe-postgres` e `docker network inspect wardrobe_default`;
+      - l'orologio del VPS va controllato (`timedatectl`: NTP attivo). Il backend non
+        controlla più `iat`, ma `exp` resta rigido, e un orologio avanti accorcia le
+        sessioni;
+      - sul progetto vero, gli accessi anonimi spenti (`T-56`);
+      - nel `.env` del server restano `JWT_SECRET`, `EMAIL_AMMESSE`,
+        `EMAIL_AMMINISTRATORI` e `BASE_URL_PUBBLICA`, che non legge più nessuno. Sono
+        innocui, e toglierli tocca il `.env` del server: lo decide l'utente;
+      - `rsync` senza `--delete` lascia sul server gli handler e gli adapter tolti
+        (`T-50`).
+
+- [~] **Fase 3: l'app su Supabase.** Branch `feat/supabase-fase-3`, PR verso `feat/supabase`.
+      L'app legge e scrive da sé capi, outfit, profilo, chat e segnalazioni, e carica le
+      foto nello Storage. L'accesso passa da Supabase Auth. Il livello dati:
+      - `src/dati/supabase.ts` è l'unico modulo che importa supabase-js per i dati, e
+        `accesso.ts` per l'accesso;
+      - le traduzioni fra righe e modelli stanno in `righe.ts`, con i tipi di `database.ts`;
+      - `api.ts` resta per l'IA, con il token della sessione, e su un 401 rinnova e
+        riprova una volta;
+      - `sessione.tsx` ascolta `onAuthStateChange`, e l'armadio si ricarica quando cambia
+        l'utente, non il token.
+
+      Cosa c'è di nuovo per chi usa l'app:
+      - **registrazione su invito in tre passi**: email, codice via email, password;
+      - **«Password dimenticata?»** con la stessa forma: email, codice, password nuova;
+      - **cambio password** da Impostazioni, con un codice se l'accesso ha più di 24 ore;
+      - **«Continua con Google»**, su Android.
+
+      **Prima si dimostra l'email, poi si sceglie la password.** L'audit ha trovato che, con
+      la password chiesta alla registrazione, chi arrivava per primo su un'email invitata la
+      sceglieva al posto del titolare: il titolare confermava col suo codice, e l'account
+      restava con la password dell'altro. Riprodotto sullo stack locale, e chiuso in due metà:
+      l'app chiede la password solo dopo il codice, e nel database
+      `privato.password_solo_dopo_la_prova` toglie la password alla prima conferma che segue
+      un codice. Un account confermato dall'amministratore senza codice — l'import della
+      fase 4, con la password di Ismail — la tiene.
+
+      Le email portano un codice, non un link (`supabase/templates/`, otto cifre): niente
+      deep link.
+      La sessione sta nel portachiavi del sistema, come il token di prima, e non in chiaro
+      come propongono le guide: il prezzo su iOS è `T-63`.
+
+      E poi:
+      - **svuotamento**: toglie la cartella dei capi dallo Storage, comprese le foto di analisi
+        fallite, e dice se qualcosa è rimasto (`T-59`: resta l'account);
+      - **capi dormienti**: si contano su giorni locali, e a fine mese non scivolano più
+        di tre giorni;
+      - **date**: «l'ho messo oggi» scrive il giorno locale, non quello UTC;
+      - **backend**: `/capi/analisi` restituisce l'esito intero, capo compreso; gli header
+        CORS sono scritti per nome (`T-61`); i modelli delle rotte tolte escono dai
+        contratti; `svuota_armadio` restituisce colonne, non `jsonb`.
+
+      *Verificato* il 2026-09-27, in locale:
+      - `npm run typecheck`, `lint`, `mobile:test` e `build:web` verdi;
+      - `api:lint`, `api:cov`, `contracts:check`, `supabase:test` (100 asserzioni),
+        `supabase:verifica` e `supabase:tipi` verdi;
+      - **i flussi di Auth provocati sullo stack locale**, leggendo i codici da Mailpit:
+        - registrazione su invito e fuori lista;
+        - accesso con email non confermata;
+        - conferma con codice giusto e sbagliato;
+        - recupero con password nuova, stessa password, password corta;
+        - riautenticazione con codice.
+
+        I codici d'errore che `accesso.ts` riconosce sono quelli osservati lì;
+      - **l'attacco della presa di possesso, rifatto dopo il rimedio**: 17 verifiche su 17.
+        L'estraneo registra per primo con una password sua, il titolare passa da email,
+        codice e password, e l'estraneo non entra più; un invitato nuovo entra e sceglie la
+        password; un non invitato è rifiutato anche per codice; il recupero in due tempi
+        regge un primo tentativo fallito; un utente importato già confermato tiene la sua.
+        In pgTAP il trigger è **visto fallire** togliendolo. E un secondo audit sul rimedio:
+        il trigger non toglie la password a un account confermato, in nessuna sequenza
+        provata, e il login per codice non apre strade nuove. Ma regge su un ordine interno
+        di GoTrue, quindi è un **tampone dichiarato** (`T-65`), e la CI rifà l'attacco
+        passando dall'Auth vera (`services/api/scripts/prova_accesso.py`, visto fallire
+        togliendo il trigger);
+      - **E2E sullo stack locale con due utenti veri**: le operazioni di `supabase.ts` rifatte
+        con supabase-js, 34 verifiche su 34:
+        - caricamento della foto come lo fa l'app;
+        - firma in blocco;
+        - correzione e conferma di un attributo (slot ricalcolato, confidenza a 100, colonne
+          dell'analisi intoccabili);
+        - `segna_indossato`;
+        - outfit indossabile e no;
+        - profilo;
+        - vista delle conversazioni e cancellazione a cascata;
+        - segnalazioni da amministratore e no;
+        - svuotamento con le foto tolte.
+
+        B non vede né tocca niente di A. Pulito alla fine. Rifatto dopo le correzioni con lo
+        svuotamento per cartella: 36 su 36.
+
+      Poi un audit di `security` e una review di `reviewer`. Oltre alla presa di possesso, le
+      correzioni:
+      - un 401 dal backend chiamava `esci()`, che revoca le sessioni ovunque: con un APK
+        puntato al backend sbagliato si usciva un secondo dopo l'accesso. Ora il backend non
+        chiude mai una sessione di Supabase;
+      - chi entrava dopo un'uscita, sullo stesso telefono, vedeva le proposte di chi era
+        uscito: lo store si azzera al cambio d'utente, e un caricamento vecchio si scarta;
+      - il recupero riusava il codice già consumato al secondo tentativo della password;
+      - «oggi» nel dettaglio di un capo si leggeva in UTC;
+      - il limite d'invio del recupero rivelava chi è iscritto (tampone dichiarato in
+        `accesso.ts`);
+      - un outfit non indossabile riceveva un errore generico;
+      - dopo un riavvio «Esci» non usciva da Google;
+      - i test del giorno locale passavano anche col codice sbagliato: il fuso è fissato a
+        Roma, e i tre difetti rimessi nel codice ora li fanno fallire;
+      - la regola «solo `supabase.ts` e `accesso.ts` importano supabase-js» ha un gate in
+        ESLint, visto fallire.
+
+      **Cosa manca:**
+      - **nessuna prova su un telefono**: le schermate le ha viste solo `tsc`, e Google non è
+        mai stato provato. Serve l'ambiente di prova, qui sotto;
+      - il web non carica le foto: `File` di expo-file-system lì è vuoto. Era così anche
+        prima, e il web serve allo sviluppo;
+      - l'esportazione in sviluppo dà un indirizzo su `127.0.0.1` (`T-62`).
+
+      **L'ambiente di prova** (la «prima strada», scelta dall'utente il 2026-09-27):
+      - lo schema sul progetto vero, con `supabase db push`;
+      - il backend nuovo in un secondo container sul VPS;
+      - un APK con un profilo EAS suo. `preview` resta quello del rilascio, e porta già
+        l'indirizzo e la chiave del progetto vero.
+
+      Nel pannello vanno ancora fatti a mano:
+      - l'hook degli inviti, **dopo** il push;
+      - i tre template con il codice (`supabase/templates/`);
+      - il provider Google con il client Web per primo;
+      - gli accessi anonimi spenti.
+
+      Senza un SMTP proprio le email arrivano solo ai membri del team, due all'ora.
+
+      **Il giorno del passaggio, per questa fase:**
+      - gli utenti di prova creati sul progetto vero si tolgono **prima** dello script della
+        fase 4, con le loro cartelle nello Storage: cancellare l'utente non toglie i file
+        (`T-59`). E lo script deve **rifiutare** un'email che esiste già con un id diverso,
+        invece di passarci sopra: i tre account arrivano con il loro id;
+      - ~~`EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` va anche nel profilo `preview` di `eas.json`~~: c'è
+        dal 2026-09-27, con l'ID del client Web del progetto Google Cloud dell'utente. È
+        pubblico per costruzione; il secret sta solo nel pannello di Supabase;
+      - la rotta di prova nel `Caddyfile` del server sparisce al primo deploy da `main`, che lo
+        sovrascrive: vale anche per una PR su `main` prima del giorno X (`T-51`, `T-60`).
+      - *Verificato* il percorso esatto dell'import sullo stack locale: un utente creato
+        dall'API admin con `password_hash` bcrypt ed email confermata entra con la sua
+        password, ha il ruolo in sessione e il suo profilo. Il trigger non lo tocca.
+
+- [~] **Il passaggio, il 2026-09-27** (anticipato su richiesta dell'utente, senza la fase 4):
+      - lo schema è sul progetto vero (`supabase db push`, senza il seed). *Verificato* con l'MCP:
+        la migrazione registrata, le 8 tabelle con l'RLS, i due trigger su `auth.users`, i due
+        bucket. Gli advisor di sicurezza sono vuoti, dopo che l'utente ha tolto `rls_auto_enable()`
+        (`Q-14`);
+      - il merge di `feat/supabase` su `main` (#47) ha rilasciato l'API **0.6.0**. *Verificato*:
+        `/salute` in produzione risponde `0.6.0`, e senza token si riceve 401. Sul VPS
+        `wardrobe-postgres` è ancora acceso, con i volumi `postgres_data` e `foto_dati`;
+      - l'app **0.10.1** è costruita in locale dal suo tag e pubblicata come Release. La build in
+        cloud si è fermata per la quota, come previsto. *Verificato* sull'APK: la firma ha lo
+        stesso SHA-1 registrato su Google Cloud, e il bundle contiene l'indirizzo di Supabase e
+        l'ID del client Google. google-signin 16.1.5 si compila con React Native 0.86;
+      - nel pannello, dall'utente: l'hook degli inviti, lo SMTP con Resend, i quattro template con
+        il codice, gli accessi anonimi spenti e il provider Google. **L'hook è verificato dal
+        vivo**: un'email non invitata riceve 403 con il nostro messaggio, e nessun utente nasce.
+        Il resto l'ha impostato l'utente, e lo prova la prima registrazione vera;
+      - l'unico invito è `ouadimarouan@gmail.com`, l'account con cui l'utente ha creato il
+        progetto Supabase.
+
+      **Provato sul telefono dall'utente** (2026-09-27, APK 0.10.1):
+      - **la registrazione con il codice via email** funziona. Il codice è arrivato nello spam:
+        il dominio è nuovo, e manca il record DMARC;
+      - **«Continua con Google» funziona**, dopo aver aggiunto su Google Cloud il client Android
+        (`com.wardrobe.armadio` con lo SHA-1 della chiave EAS) nello stesso progetto del client
+        Web. Senza quel client la libreria rifiutava l'accesso sul telefono, e a Supabase non
+        arrivava niente. L'ID del client Android non va scritto da nessuna parte: basta che esista.
+
+      **Cosa manca:**
+      - **il recupero della password** funziona anche lui, sul telefono;
+      - la prova sul telefono di una foto analizzata;
+      - il record DMARC di `ilmioarmadio.xyz` (TXT `_dmarc`, `v=DMARC1; p=none;`) su Hostinger;
+      - `cherragui.ismail63@gmail.com` non si è potuto aggiungere fra i tester Google. Per lui
+        Google non serve (entra con la sua password), e pubblicare l'app OAuth toglierebbe la
+        lista dei tester senza aprire le registrazioni, che restano dietro gli inviti;
+      - la **fase 4**, perché i tre account non ritrovano ancora il loro armadio;
+      - la **fase 5**, perché README e `docs/deploy.md` descrivono ancora il backend di prima;
+      - ~~l'account di prova non è uno dei tre account veri~~: **falso**, lo era. È stato scritto
+        senza controllarlo: `ouadimarouan@gmail.com` era anche un account del VPS. La questione
+        l'ha chiusa l'utente, qui sotto.
+
+- [x] **Fase 4: l'import, solo per Ismail** (2026-09-27, per scelta dell'utente).
+      `services/api/scripts/migra_a_supabase.py`, lanciato dal computer locale. Tolto dal repo a
+      lavoro verificato, su richiesta dell'utente: resta nella storia di git (`ddc5afc`).
+      - legge il VPS **in sola lettura**, con una query via `ssh` e le foto con un `tar` dal
+        volume;
+      - crea l'account con l'API admin, **stesso id e stesso hash bcrypt**;
+      - carica le foto nello Storage da `capi/{utente}/…` a `{utente}/capi/…`;
+      - scrive le righe in SQL come `postgres`, dai modelli Pydantic e da `riga_da_capo`.
+
+      La chiave di servizio e il token della CLI li prende al momento e non li salva. Le
+      tabelle **non** si scrivono con la chiave di servizio: con l'esposizione automatica
+      spenta, `service_role` non ha permessi su `public`, ed è una difesa da tenere.
+
+      Gli id di 32 cifre esadecimali diventano uuid con gli stessi valori, e le conversazioni
+      `storica-…` un uuid derivato, stabile. Un'email che su Supabase esiste già con un altro
+      id ferma tutto. Rilanciarlo non duplica niente.
+
+      *Verificato*:
+      - prima sullo stack locale, poi sul progetto vero;
+      - conteggi uguali fra VPS e Supabase: 5 capi, 3 usi, 1 conversazione, 36 messaggi,
+        5 segnalazioni, 5 esiti, 10 foto. I file `.contenttype` del vecchio archivio su disco
+        non sono foto, e restano fuori;
+      - poi **dall'account di Ismail**, sul progetto vero: entra con la sua password di prima,
+        vede i suoi capi, le foto si firmano e si scaricano, la chat ha i suoi turni, le
+        proposte puntano a capi che esistono, le segnalazioni ci sono;
+      - una seconda esecuzione in locale non ha duplicato niente.
+
+      **Gli altri due account non si migrano: li ha fatti cancellare l'utente**, anche dal VPS
+      (2026-09-27). Erano `marouan@meltingbugs.com` (vuoto) e `ouadimarouan@gmail.com`: i suoi 3
+      capi, la chat, le segnalazioni e le 12 foto. Tolti in una transazione, con i conti di
+      Ismail controllati prima del commit. `ouadimarouan@gmail.com` ha un account nuovo su
+      Supabase, vuoto, creato dall'utente il giorno stesso.
+
+      **Cosa resta:** il Postgres e le foto sul VPS ora sono solo di Ismail, e sono la sua
+      copia di riserva. Fermare `wardrobe-postgres` (il volume resta) e poi togliere i volumi è
+      una decisione dell'utente.
 
 ## Infrastruttura e rilascio
 

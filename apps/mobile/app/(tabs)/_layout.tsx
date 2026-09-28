@@ -16,13 +16,13 @@ import { useSessione } from '../../src/dati/sessione'
 import { colori } from '../../src/tema/tokens'
 
 export default function DisposizioneSchede() {
-  const { token, pronto } = useSessione()
+  const { utente, pronto } = useSessione()
 
-  // `index.tsx` manda già al login chi non ha un token, ma questo layout
+  // `index.tsx` manda già al login chi non ha una sessione, ma questo layout
   // resta il vero cancello: uno schema `wardrobe://` (`app.json`) può portare
   // qui direttamente, scavalcando quel redirect. Non decide finché la
-  // sessione non ha letto il portachiavi almeno una volta.
-  if (pronto && !token) return <Redirect href="/accedi" />
+  // sessione salvata non è stata letta almeno una volta.
+  if (pronto && !utente) return <Redirect href="/accedi" />
 
   return (
     <Tabs

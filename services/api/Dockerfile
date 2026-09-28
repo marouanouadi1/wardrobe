@@ -10,13 +10,10 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 COPY pyproject.toml uv.lock ./
+# Solo `src`: gli script di `scripts/` (contratti, confronto col database)
+# girano in sviluppo e in CI, mai nel container. Lo schema non sta più qui:
+# lo porta `supabase db push` (ADR 0010).
 COPY src ./src
-# scripts/applica_migrazioni.py serve dopo il primo deploy, quando il volume
-# di Postgres non è più vuoto: docker-entrypoint-initdb.d (vedi
-# docker-compose.yml) gira solo su un volume nuovo, non su un aggiornamento.
-# Si lancia con `docker compose exec api python scripts/applica_migrazioni.py`.
-COPY scripts ./scripts
-COPY migrations ./migrations
 
 RUN uv sync --no-dev
 

@@ -93,8 +93,9 @@ export default function Impostazioni() {
       titolo: 'Account',
       voci: [
         {
-          etichetta: 'Accesso',
-          nota: 'Email e password non si possono ancora cambiare, e non c’è ancora l’accesso con Google o Apple.',
+          etichetta: 'Password',
+          onPress: () => router.push('/password'),
+          nota: 'L’email non si può ancora cambiare. Con Google si entra dalla schermata di accesso; Apple arriverà con l’app per iPhone.',
         },
         {
           etichetta: 'Misure e taglia',

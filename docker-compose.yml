@@ -1,70 +1,43 @@
-# Postgres serve sia in sviluppo locale sia su un VPS di produzione. `api` e
-# `caddy` servono SOLO sul VPS: `npm run dev`/`npm run db:up` avviano sempre e
-# solo il servizio `postgres` per nome (vedi scripts/dev.sh), quindi in
-# locale questi due restano fermi anche se restano definiti qui — l'API in
-# sviluppo gira direttamente con `uv run`, non in un container.
+# Solo VPS: `api` e `caddy`. In sviluppo l'API gira con `uv run` e il database
+# è lo stack locale di Supabase (`npm run supabase:start`), non un container di
+# questo file.
+#
+# Il Postgres e le foto di prima (ADR 0010) non sono più qui, ma sul VPS i loro
+# volumi restano: `postgres_data` e `foto_dati` sono la sola copia di riserva,
+# ferma al giorno del passaggio. Nessuno lancia `down -v`, e toglierli è una
+# decisione dell'utente.
+#
+# La copia sono i volumi, non il container. `wardrobe-postgres`, che il deploy
+# non tocca (niente `--remove-orphans`), resterebbe acceso sulla stessa rete di
+# `api` con i dati di tutti: il giorno del passaggio, dopo lo script di
+# migrazione, si ferma con `docker stop` — il volume resta — e lo decide
+# l'utente (`docs/PROGRESS.md`).
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: wardrobe-postgres
-    environment:
-      POSTGRES_USER: wardrobe
-      # "wardrobe" resta il default per npm run dev/db:up — Postgres in
-      # locale non è mai raggiungibile da fuori questa macchina, quindi non
-      # è un rischio. Su un VPS, dove la porta è raggiungibile da Internet,
-      # un .env nella radice del repo (mai versionato, vedi .env.example) con
-      # POSTGRES_PASSWORD=<qualcosa di lungo e casuale> sovrascrive questo
-      # default — vale sia qui sia nel DATABASE_URL del servizio api sotto.
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wardrobe}
-      POSTGRES_DB: wardrobe
-    ports:
-      # Solo loopback: su un VPS, "5432:5432" senza host resterebbe
-      # raggiungibile da Internet anche con ufw attivo — Docker scrive le sue
-      # regole iptables prima di quelle di ufw, che quindi non lo vedrebbe
-      # mai. Il client Postgres locale (npm run dev/db:up) si collega
-      # comunque a "localhost", quindi qui non cambia nulla in sviluppo.
-      - "127.0.0.1:5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./services/api/migrations:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U wardrobe -d wardrobe"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  # Solo VPS. Le chiavi dei provider, JWT_SECRET, EMAIL_AMMESSE e
-  # BASE_URL_PUBBLICA vengono da services/api/.env (copiato da .env.example)
-  # — mai da questo file, che è versionato. I flag qui sotto sono invece
-  # fissati apposta, non lasciati al .env: `environment:` vince sempre su
-  # `env_file:` in Compose, quindi anche un .env dimenticato con `DEV_MODE=1`
-  # non può far partire un backend in memoria su un server pubblico. Il login
-  # non ha più un bypass da tenere chiuso: senza un JWT valido,
-  # `handlers/_http.py` risponde sempre 401.
+  # Le chiavi dei provider (ANTHROPIC_API_KEY, FAL_KEY, …) vengono da
+  # services/api/.env — mai da questo file, che è versionato. I due valori di
+  # Supabase invece stanno qui apposta: sono **pubblici** per costruzione
+  # (l'indirizzo del progetto e la chiave che finisce anche nell'app), e chi
+  # è l'utente lo dice il suo token, non loro. `environment:` vince su
+  # `env_file:` in Compose, quindi un .env vecchio non può puntare l'API a un
+  # altro progetto.
   api:
     build:
       context: ./services/api
     container_name: wardrobe-api
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     env_file:
       - ./services/api/.env
     environment:
-      DEV_MODE: "0"
-      DATABASE_URL: "host=postgres port=5432 dbname=wardrobe user=wardrobe password=${POSTGRES_PASSWORD:-wardrobe}"
-      CARTELLA_FOTO: /dati/foto
+      SUPABASE_URL: "https://lmjsrhwzjxubecgctrmd.supabase.co"
+      SUPABASE_CHIAVE_PUBBLICA: "sb_publishable_f0lDKgDE9tkbqmgeVXT3Sw_kQn7CxFD"
       PORTA: "8787"
-    volumes:
-      - foto_dati:/dati/foto
     # Niente `ports:` qui: l'unico ingresso pubblico è Caddy, in HTTPS.
     # Pubblicare anche questa porta permetterebbe di bypassare TLS parlando
     # in chiaro direttamente alla porta 8787.
     expose:
       - "8787"
 
-  # Solo VPS. Il dominio vero va scritto in ./Caddyfile prima del primo avvio.
+  # Il dominio vero va scritto in ./Caddyfile prima del primo avvio.
   caddy:
     image: caddy:2-alpine
     container_name: wardrobe-caddy
@@ -80,7 +53,5 @@ services:
       - caddy_config:/config
 
 volumes:
-  postgres_data:
-  foto_dati:
   caddy_data:
   caddy_config:

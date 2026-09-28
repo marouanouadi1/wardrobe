@@ -67,7 +67,7 @@ quella regola è peggio di nessuna copia.
 | App React Native: schermate, primitive, token | `.claude/rules/react-native.md` | `mobile` |
 | La catena dei contratti generati | `.claude/rules/contratti.md` | `contracts`, e chi attraversa il confine |
 | CI, rilascio, versioni | `.claude/rules/ci-release.md` | `ci-cd` |
-| Migrazioni SQL (**irreversibili**) | `.claude/rules/migrazioni.md` | `api`, quando tocca `migrations/` |
+| Migrazioni SQL (**irreversibili**) | `.claude/rules/migrazioni.md` | `api`, quando tocca `supabase/migrations/` |
 
 **Dove una regola di progetto e un docblock nel codice divergono, vince il codice** — e questo
 file va corretto nella stessa modifica. È già successo una volta, con la regola di `su`.
@@ -111,6 +111,10 @@ e lo store `useArmadio()` (`src/dati/archivio.tsx`), che espone già
 strada: una nuova coppia `useState<boolean>` per caricamento ed errore, o una sequenza di
 chiamate API scritta a mano. Un `catch {}` vuoto — che ingoia l'errore perché la schermata non
 ha dove metterlo — è il segnale che serviva uno dei due fin dall'inizio.
+
+I dati salvati l'app li legge e li scrive su Supabase da **un modulo solo**,
+`src/dati/supabase.ts` (e `accesso.ts` per l'accesso): nessuna schermata importa
+supabase-js. `src/dati/api.ts` resta per il backend dell'IA.
 
 Dettaglio in `.claude/rules/react-native.md`.
 
@@ -162,12 +166,12 @@ rilancia (rifarebbe il bump) e non si «corregge» il workflow. Si costruisce l'
 `eas build --local` e lo si pubblica come Release: procedura in `docs/deploy.md`, «Build locale
 dell'APK». Vale finché l'utente non decide un rimedio automatico (issue #26) — fino ad allora è così.
 
-## Migrazioni: irreversibili, e rieseguite a ogni avvio
+## Migrazioni: una volta sola, e sul progetto vero non si ritirano
 
-`applica_migrazioni.py` esegue **tutti** i file `.sql` in ordine lessicografico **a ogni
-avvio**, senza tabella di versione e senza rollback. Regge solo perché ogni file è idempotente
-per costruzione. Una migrazione non idempotente non rompe un deploy: **rompe ogni avvio
-successivo**.
+Lo schema sta in `supabase/migrations/` (ADR 0010). La CLI di Supabase applica ogni file
+**una volta sola** e ne tiene lo storico; sul progetto vero lo porta `supabase db push`, a
+mano, e da lì quel file è storia: si corregge con un file nuovo. Sul piano Free non ci sono
+backup, quindi un `drop` arrivato lassù non torna.
 
 Prima di scriverne una, leggi `.claude/rules/migrazioni.md` per intero.
 
@@ -193,7 +197,8 @@ distruttiva, chiedere — *prima* di eseguire. Se il disordine viene da una prop
 (righe di prova), si puliscono *quelle* righe, non la tabella.
 
 È invece **reversibile**, e non va trattato come distruttivo per paura: rigenerare
-`packages/contracts/src/generated/` e rilanciare le migrazioni su un database sano.
+`packages/contracts/src/generated/` e rifare da zero lo stack **locale** di Supabase
+(`npm run supabase:reset`).
 
 ## `apps/web` è vuoto apposta
 
@@ -281,5 +286,8 @@ altre. Se i test falliscono, si dice, con l'output. Se un passaggio è stato sal
 - `npm run api:lint` — ruff check + format + `mypy --strict`
 - `npm run mobile:test` — i test dell'app (leggibilità e convenzioni delle primitive)
 - `npm run contracts:check` — da rilanciare dopo ogni modifica a `domain/models.py`
-- `npm run dev:app` — stack locale completo (Postgres + API + Expo) per provare un flusso a
+- `npm run supabase:start`, poi `supabase:reset`, `supabase:test` (policy e regole, pgTAP),
+  `supabase:verifica` (enum e limiti uguali fra database e Python) e `supabase:tipi` — dopo
+  ogni migrazione in `supabase/migrations/`
+- `npm run dev:app` — stack locale completo (Supabase + API + Expo) per provare un flusso a
   mano prima di considerarlo finito

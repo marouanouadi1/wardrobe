@@ -39,10 +39,12 @@ solo di aggiunte, guardala ancora una volta prima di consegnarla.
 ## Letture obbligatorie
 
 1. `.claude/rules/python.md`, sezione test
-2. `services/api/tests/conftest.py` — `DEV_MODE=1`, l'ora fissa,
-   `intestazioni_utente()` che emette un **JWT vero**: non esiste un bypass
+2. `services/api/tests/conftest.py` — un progetto Supabase finto, l'ora fissa,
+   `intestazioni_utente()` che firma un **token vero** ES256: non esiste un bypass
 3. `services/api/tests/fakes.py` — `OrologioFermo`, `IdPrevedibili`,
-   `ProviderFinto`: implementazioni finte dei `Protocol`, non mock generati
+   `ProviderFinto`, `ChiaviFinte`, `RepositoryFinto`, `ArchivioFinto`:
+   implementazioni finte dei `Protocol`, non mock generati. I dati stanno **per
+   utente**, come li tiene l'RLS
 4. `docs/TEST_COVERAGE.md` — **lo aggiorni tu**, ed è l'unico file del repo che
    può dichiarare un conteggio di test
 
@@ -88,9 +90,9 @@ prossimo refactor.
 </example>
 
 <example>
-Contesto: coprire il repository Postgres.
-utente: "postgres.py è a zero per cento"
-tu: "Serve un container, quindi non è un test del dominio. Lo dico invece di mockare psycopg."
+Contesto: coprire l'adapter contro il Supabase vero.
+utente: "l'adapter di Supabase lo proviamo solo con MockTransport"
+tu: "Contro il Supabase vero serve lo stack locale, quindi non è un test del dominio: sta nel job `database` (T-18), non in pytest. Non mocko la risposta di PostgREST per far salire la percentuale."
 <commentary>
 Coprirlo con dei mock alzerebbe la percentuale e verificherebbe che il mock si
 comporta come il mock. La coverage degli adapter è dichiarata fra i debiti in

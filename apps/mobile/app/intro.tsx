@@ -349,7 +349,7 @@ export default function Intro() {
 
   function vai(dove: '/accedi' | '/registrati') {
     // Segna l'intro come vista prima di uscire, da qualunque porta: senza,
-    // `index.tsx` la rimostra a ogni apertura finché non c'è un token.
+    // `index.tsx` la rimostra a ogni apertura finché non c’è una sessione.
     void segnaIntroVista()
     router.push(dove)
   }

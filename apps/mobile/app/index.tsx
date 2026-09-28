@@ -1,10 +1,10 @@
 /**
  * La porta d'ingresso.
  *
- * Senza un token si va all'intro (prima volta) o al login (le successive) —
+ * Senza una sessione si va all'intro (prima volta) o al login (le successive) —
  * l'intro è marketing puro, nessuna chiamata di rete, quindi può stare prima
- * dell'autenticazione. Con un token, alla prima apertura si passa dalle
- * preferenze di stile (salvano sul backend, serve un utente); dalla seconda
+ * dell'autenticazione. Con una sessione, alla prima apertura si passa dalle
+ * preferenze di stile (salvano il profilo, serve un utente); dalla seconda
  * si entra direttamente nell'armadio — la differenza sta in una riga su
  * disco, perché la seconda apertura non deve chiedere niente a nessuno.
  */
@@ -17,16 +17,17 @@ import { useSessione } from '../src/dati/sessione'
 import { colori } from '../src/tema/tokens'
 
 export default function Ingresso() {
-  const { token, pronto: sessionePronta } = useSessione()
+  const { utente, pronto: sessionePronta } = useSessione()
+  const dentro = utente !== null
   // `null` = non ancora letta: solo lo stato che dipende davvero da una
   // lettura asincrona vive in uno state — il resto della rotta (sessione
-  // pronta o no, token presente o no) si decide direttamente al render.
+  // pronta o no, qualcuno dentro o no) si decide direttamente al render.
   const [introVista, setIntroVista] = useState<boolean | null>(null)
   const [preferenzeViste, setPreferenzeViste] = useState<boolean | null>(null)
 
   useEffect(() => {
     if (!sessionePronta) return
-    if (!token) {
+    if (!dentro) {
       // Se lo storage non risponde, l'intro è la scelta più sicura: al più
       // si rivede un'intro già vista, non si perde l'accesso.
       introGiaVista()
@@ -37,13 +38,13 @@ export default function Ingresso() {
         .then(setPreferenzeViste)
         .catch(() => setPreferenzeViste(false))
     }
-  }, [sessionePronta, token])
+  }, [sessionePronta, dentro])
 
   if (!sessionePronta) return <View style={{ flex: 1, backgroundColor: colori.sfondo }} />
-  // Aspetta che la sessione abbia letto il portachiavi prima di decidere: fin
-  // lì `token` è sempre `null`, e manderebbe all'intro anche chi ha già una
+  // Aspetta che la sessione salvata sia stata letta prima di decidere: fin
+  // lì `utente` è sempre `null`, e manderebbe all'intro anche chi ha già una
   // sessione salvata.
-  if (!token) {
+  if (!dentro) {
     if (introVista === null) return <View style={{ flex: 1, backgroundColor: colori.sfondo }} />
     return <Redirect href={introVista ? '/accedi' : '/intro'} />
   }
