@@ -101,13 +101,22 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       riga riguarda i colori e il fondo, non le 43 schermate del deck. E
       **nessuna prova su un telefono**: il web dimostra che l'SVG renderizza,
       non come si vede il vetro su un pannello vero.
+- [x] **L'armadio in «Tutti» è diviso per categoria** — `(tabs)/armadio.tsx`
+      raggruppa i capi filtrati nell'ordine di `TIPI_CAPO`, con un'`Etichetta`
+      «Tipo · n» sopra ogni gruppo; i gruppi vuoti non compaiono, la
+      `CasellaAggiungi` chiude l'ultimo. Con una categoria scelta resta la
+      griglia sola, e resta un gruppo senza titolo anche quando in «Tutti» i
+      filtri non lasciano passare niente: è lui che porta la `CasellaAggiungi`
+      (senza, unita alla scelta qui sotto, in «Tutti» spariva).
+      *Verificato:* `typecheck`, `lint`, `mobile:test` e `build:web` verdi.
 - [~] **L'armadio sulla disposizione del deck** — `(tabs)/armadio.tsx` con
       griglia a tre colonne quadrate, due righe di filtri (categoria + qualità,
       un filtro per dimensione), `CasellaAggiungi` dentro la griglia, conteggio
       sotto, fondo `freddo`. Lo stato vuoto è uno solo, ad armadio vuoto: se i
       filtri non lasciano passare niente resta la griglia con la sola
       `CasellaAggiungi` (scelta dell'utente del 2026-09-27; prima c'era una card
-      «Niente in …»). Nuove in `ui/capi.tsx`:
+      «Niente in …»; provato dall'utente su un telefono vero, con Expo Go e i
+      dati di produzione, il 2026-09-28). Nuove in `ui/capi.tsx`:
       `CapoInGriglia` riscritta (vetro, `contain`, cuore, nome sotto) e
       `CasellaAggiungi`; `Pillola` ha la variante `compatta`.
       *Verificato:* `typecheck`, `lint`, `mobile:test` e `build:web` verdi.

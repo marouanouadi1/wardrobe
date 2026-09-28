@@ -18,6 +18,12 @@
  * due risposte alla stessa domanda, e insieme darebbero sempre zero), i
  * **preferiti** e i capi **usati di rado**. Senza questa regola un utente può
  * comporre a mano una selezione vuota per costruzione e leggerla come un bug.
+ *
+ * **In `Tutti` i capi restano divisi per categoria**: prima tutti i top, poi
+ * tutti i pantaloni, ciascun gruppo con il suo titoletto — si vede dove finisce
+ * un tipo e comincia l'altro. L'ordine è quello di `TIPI_CAPO`, lo stesso delle
+ * pillole, e una categoria senza capi (dopo i filtri) non mostra il titolo.
+ * Con una categoria scelta il titoletto sarebbe la pillola ripetuta: griglia sola.
  */
 
 import type { StatoCapo, TipoCapo } from '@wardrobe/contracts'
@@ -34,7 +40,7 @@ import { Schermata } from '../../src/ui/guscio'
 import { RigaNavigabile } from '../../src/ui/righe'
 import { ScheletroGrigliaCapi, ScheletroSchedaOutfit } from '../../src/ui/scheletri'
 import { Vuoto } from '../../src/ui/stati'
-import { Corpo, Forte } from '../../src/ui/testo'
+import { Corpo, Etichetta, Forte } from '../../src/ui/testo'
 
 /** Le due viste dell'armadio. Il deck le chiama «Capi» e «Outfit». */
 type Vista = 'capi' | 'outfit'
@@ -85,6 +91,23 @@ export default function Armadio() {
         .includes(testo)
     })
   }, [capi, categoria, stato, soloPreferiti, soloDormienti, ricerca])
+
+  /**
+   * I gruppi da disegnare: uno per categoria in `Tutti`, uno solo senza titolo
+   * altrimenti — e anche quando in `Tutti` i filtri non lasciano passare niente.
+   * Quel gruppo vuoto non è un ripiego: è lui che porta la `CasellaAggiungi`,
+   * che deve esserci sempre, e senza di lui in `Tutti` sparirebbe.
+   */
+  const gruppi = useMemo(() => {
+    const perCategoria =
+      categoria === 'tutti'
+        ? TIPI_CAPO.map((tipo) => ({
+            tipo: tipo as TipoCapo | null,
+            capi: mostrati.filter((capo) => capo.tipo === tipo),
+          })).filter((gruppo) => gruppo.capi.length > 0)
+        : []
+    return perCategoria.length > 0 ? perCategoria : [{ tipo: null, capi: mostrati }]
+  }, [categoria, mostrati])
 
   const inLavatrice = capi.filter((capo) => capo.stato !== 'pulito').length
   /** Quanti capi hanno un attributo sotto la soglia di incertezza del dominio. */
@@ -226,16 +249,29 @@ export default function Armadio() {
         // resta, con la sola `CasellaAggiungi`: una card «Niente in …» al suo
         // posto toglieva proprio il bersaglio che serve a riempire la categoria.
         <>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: griglie.armadio.distanza }}>
-            {mostrati.map((capo) => (
-              <View key={capo.id} style={{ width: griglie.armadio.colonna }}>
-                <CapoInGriglia capo={capo} onPress={() => router.push(`/capo/${capo.id}`)} />
+          {gruppi.map((gruppo, posizione) => (
+            <View key={gruppo.tipo ?? 'tutti'} style={{ gap: spazi.s }}>
+              {gruppo.tipo ? (
+                <Etichetta taglia={11} tono="debole">
+                  {`${ETICHETTE.tipo[gruppo.tipo]} · ${gruppo.capi.length}`}
+                </Etichetta>
+              ) : null}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: griglie.armadio.distanza }}>
+                {gruppo.capi.map((capo) => (
+                  <View key={capo.id} style={{ width: griglie.armadio.colonna }}>
+                    <CapoInGriglia capo={capo} onPress={() => router.push(`/capo/${capo.id}`)} />
+                  </View>
+                ))}
+                {/* La casella per aggiungere chiude l'ultimo gruppo: una sola,
+                    non una per categoria. */}
+                {posizione === gruppi.length - 1 ? (
+                  <View style={{ width: griglie.armadio.colonna }}>
+                    <CasellaAggiungi onPress={vaiACaricare} />
+                  </View>
+                ) : null}
               </View>
-            ))}
-            <View style={{ width: griglie.armadio.colonna }}>
-              <CasellaAggiungi onPress={vaiACaricare} />
             </View>
-          </View>
+          ))}
           {/* Il conteggio sta **sotto** la griglia, come nel deck: sopra
               sarebbe una riga da leggere prima di vedere i capi. */}
           <Forte taglia="minuto" tono="tenue">

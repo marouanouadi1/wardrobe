@@ -18,6 +18,9 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **In «Tutti» l'armadio mostra i capi divisi per categoria**: prima tutti i
+  top, poi tutti i pantaloni e così via, ciascun gruppo col suo titoletto e il
+  numero di capi, così si vede dove finisce un tipo e comincia l'altro.
 - **Nell'armadio il quadratino «+» c'è sempre**, anche in una categoria
   ancora senza capi: al posto della card «Niente in accessorio» (e simili) resta
   la griglia con la sola casella per aggiungerne uno.
