@@ -18,6 +18,9 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **Nell'armadio il quadratino «+» c'è sempre**, anche in una categoria
+  ancora senza capi: al posto della card «Niente in accessorio» (e simili) resta
+  la griglia con la sola casella per aggiungerne uno.
 - **Password dimenticata? Adesso si recupera da soli**: arriva un codice per email, e con
   quello si sceglie una password nuova. La password si cambia anche da Impostazioni.
 - **Si entra anche con Google**, su Android. La lista degli inviti vale anche lì.
