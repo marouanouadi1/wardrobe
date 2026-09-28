@@ -529,7 +529,7 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       il tocco al bottone d'invio. *Verificato:* `typecheck` exit 0, `lint` 0
       errori, `mobile:test` 68 verdi, `build:web`. **Non verificato:** su un
       telefono — nessun dispositivo in questa sessione. Lo stesso difetto,
-      probabile, sulle schermate d'accesso: `T-56`
+      probabile, sulle schermate d'accesso: `T-67`
 - [x] **Il vetro non porta ombra.** La `Scheda vetro` e `CapoInGriglia`
       avevano un fondo bianco al 60% e l'ombra nativa (`ombre.scheda`): su
       Android l'`elevation` si disegna anche sotto la vista e traspare, e le
