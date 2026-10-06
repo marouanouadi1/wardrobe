@@ -1055,7 +1055,7 @@ Le cose che **non dipendono da noi**. Si aggiornano appena se ne conosce una.
 | Una sessione con un telefono vero (`npm run mobile`) | utente | l'intero blocco `[!]` qui sopra: registrazione e login non sono mai stati provati su un dispositivo |
 | `EXPO_PUBLIC_SENTRY_DSN` | utente | il pulsante «Segnala un problema» resta nascosto, di proposito |
 | Conferma degli id `gpt-5.1` e `gemini-2.5-pro` | utente | niente oggi: sono sovrascrivibili da ambiente — vedi `docs/QUESTIONI.md` Q-03 |
-| Con che strumento si costruisce il corpo dell'avatar | utente | la direzione dell'ADR 0004 oltre il ripiego 2D — vedi `docs/DOMANDE_APERTE.md` D-04 |
+| Quale corpo base per l'avatar, e se avrà la faccia della persona | utente | l'avatar 3D oltre il ripiego 2D, e i template dei capi che si modellano su quel corpo (ADR 0011) — vedi `docs/DOMANDE_APERTE.md` D-04, D-10, D-11, D-12 |
 
 ## Debiti dichiarati
 
