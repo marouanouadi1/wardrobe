@@ -1,6 +1,9 @@
 # 0004 — L'avatar veste le foto, non i colori
 
-**Stato:** accettata · **Data:** 2026-07-25
+**Stato:** accettata, superata in parte da
+[0011](0011-il-corpo-a-manopole-e-i-capi-da-template-tornano-possibili.md) il
+2026-10-06 — il corpo a manopole e i capi da template non sono più esclusi; il
+resto vale · **Data:** 2026-07-25
 
 Questa è una **direzione di prodotto**: dice dove va l'avatar e cosa smette di
 essere vero. *Come* integrarla non è ancora deciso, e questo ADR non lo decide.

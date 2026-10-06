@@ -16,13 +16,30 @@ capi, sulle chiamate al modello o sulle funzioni: le tre cose si misurano in
 posti diversi.
 
 ### D-04 — Con quale strumento si costruisce il corpo dell'avatar?
-Ricostruzione dalla foto a figura intera, oppure un servizio esterno.
+**Riaperta il:** 2026-10-06, con l'ADR 0011.
 
-**Che debba essere *fedele alla persona* e non un manichino neutro non è più una
-domanda: lo decide l'ADR 0004.** Resta aperto il mezzo, ed è la scelta che pesa
-di più su quanto dovrà allungarsi l'astrazione dell'avatar.
+Fino a quella data questa voce diceva che il corpo doveva essere *fedele alla
+persona* e non un manichino neutro, per decisione dell'ADR 0004. **Non è più
+così**: l'ADR 0011 ammette un corpo parametrico regolato su livelli scelti da noi.
+La fedeltà alla persona resta il traguardo ideale, non un requisito.
 
-Oggi quello che l'utente vede è il ripiego 2D dichiarato dall'ADR: una sagoma SVG
+Le strade sul tavolo:
+
+- **un corpo parametrico nostro**, a manopole: MPFB2 (MakeHuman per Blender,
+  output CC0), Anny (NAVER LABS Europe, Apache 2.0), MHR (Meta, Apache 2.0);
+- **lo stesso corpo, con le manopole regolate da una foto a figura intera**
+  (SAM 3D Body di Meta, o simili). È un flusso di dati verso un servizio
+  esterno, e va approvato a parte;
+- **un servizio «selfie → avatar»** (Avaturn, MetaPerson): porta la faccia vera,
+  ma ogni utente arriva con una mesh sua, su cui i template dei capi non si
+  adattano. E un fornitore può sparire: Ready Player Me ha spento le API il
+  2026-01-31.
+
+**Se i capi saranno template, va scelta prima di loro:** i template si modellano
+sul corpo base, con le sue stesse shape key. Ne discendono `D-10`, `D-11` e
+`D-12`.
+
+Oggi quello che l'utente vede è ancora il ripiego 2D dello 0004: una sagoma SVG
 tinta dai colori dominanti.
 
 ### D-06 — Com'è fatto l'avvio dell'app: ante, nome, home
@@ -132,8 +149,6 @@ succede niente, smette di credere anche al resto.
 **Serve dall'utente:** i quattro documenti veri (o la decisione di scriverli), e
 la risposta su `D-03`.
 
-## Risposte
-
 ### D-09 — Quali corporature, e quali sistemi di taglie oltre alle lettere
 
 **Aperta il:** 2026-09-23 · **Tocca:** `services/api/src/domain/models.py`
@@ -159,6 +174,46 @@ può essere assente. Chi non si riconosce nelle tre parole le lascia vuote, e
 l'unica cosa che perde è un avatar più fedele. Cambiare i valori dopo costa un
 cambio di contratto, non una migrazione: le righe già scritte in `profili.dati`
 restano leggibili.
+
+### D-10 — L'avatar ha la faccia della persona, o una testa neutra?
+**Aperta il:** 2026-10-06 · **Tocca:** la scelta del corpo base (`D-04`)
+
+L'utente la vorrebbe *idealmente*. Una faccia realistica da un selfie oggi la
+danno solo servizi esterni a pagamento, che consegnano anche il corpo come mesh
+loro; montare la loro testa su un corpo nostro è lavoro su misura (il collo, lo
+scheletro). Una testa neutra e stilizzata costa zero, e si può sostituire dopo
+senza rifare il corpo.
+
+Il rischio da pesare: una faccia quasi vera ma sbagliata disturba più di una
+neutra.
+
+### D-11 — I livelli dell'avatar sostituiscono i centimetri di `Misure`, o li arrotondano?
+**Aperta il:** 2026-10-06 · **Tocca:** `services/api/src/domain/models.py`
+(`Misure`), `apps/mobile/app/misure.tsx`
+
+`Misure` chiede oggi `altezza_cm`, `spalle_cm` e `lunghezza_gamba_cm` in
+centimetri, più `corporatura` su tre parole (`D-09`). Un avatar a livelli usa solo
+il livello.
+
+O si chiede il livello e i centimetri spariscono, o i centimetri restano — possono
+servire a consigliare una taglia — e l'avatar li arrotonda al livello più vicino.
+Nel secondo caso dove finisce un livello e comincia il successivo diventa una
+scelta nostra, da scrivere una volta sola. In entrambi i casi conviene far
+scegliere **guardando**, una sagoma fra poche, più che con un numero o un
+aggettivo: pochi sanno quanto sono larghe le proprie spalle.
+
+### D-12 — Da quale corpo base parte l'avatar di ciascuno?
+**Aperta il:** 2026-10-06 · **Tocca:** `Misure`, il corpo base (`D-04`)
+
+Un modello parametrico parte da un corpo base, e in `Misure` non c'è un campo che
+dica quale. `sistema_taglie` (donna/uomo/unisex) dice come si chiamano le
+taglie, non com'è fatto un corpo: dedurlo da lì è comodo, ma confonde due cose.
+
+Le strade: chiederlo esplicitamente — e con quali parole, perché è una domanda
+su un corpo e chi la legge la legge su di sé —, dedurlo dal sistema di taglie, o
+un cursore continuo come quello di Anny.
+
+## Risposte
 
 ### D-01 — L'armadio è personale o condiviso?
 **Risposta (2026-09-11):** personale. La condivisione non è esclusa per il

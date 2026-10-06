@@ -12,16 +12,19 @@ Due funzioni portano il prodotto:
 - **l'avatar** — il tuo corpo in 3D che indossa i tuoi capi, girabile col dito.
 
 Dove va l'avatar, e non è dove è oggi: **la foto del capo viene scontornata da un
-modello, dal ritaglio nasce una geometria, e la foto stessa diventa la texture del
-capo in 3D.** Nessun vestito prefabbricato a cui si cambia la tinta. E il corpo
-che lo indossa è fedele alla persona, non un manichino anonimo — con quale
-strumento si ottenga è ancora aperto.
+modello e diventa la texture del capo in 3D, pixel per pixel.** La forma può
+nascere dal ritaglio o da un template della sua famiglia; la stoffa, le stampe e
+le scritte vengono sempre dalla foto. Nessun vestito a cui si cambia la tinta. Il
+corpo che lo indossa può regolarsi su livelli scelti da noi — altezza, spalle,
+proporzioni — o somigliare alla persona partendo da una sua foto: quale corpo
+base, e se avrà la sua faccia, è ancora aperto.
 
-Quello che gira adesso è il primo passo: un manichino a primitive tinte con il
-**colore dominante** letto dalla foto, con un ripiego 2D che funziona su qualunque
-telefono. È anche il motivo per cui `domain/vision.py` pretende `colore.hex` e
-rifiuta il capo se non lo riconosce — un vincolo che vale per ora, non per scelta.
-Il perché sta in [`docs/adr/0004`](docs/adr/0004-l-avatar-veste-le-foto-non-i-colori.md).
+Quello che gira adesso è il ripiego: una sagoma 2D tinta con il **colore
+dominante** letto dalla foto, che funziona su qualunque telefono. È anche il
+motivo per cui `domain/vision.py` pretende `colore.hex` e rifiuta il capo se non
+lo riconosce — un vincolo che vale per ora, non per scelta. Il perché sta in
+[`docs/adr/0004`](docs/adr/0004-l-avatar-veste-le-foto-non-i-colori.md) e in
+[`docs/adr/0011`](docs/adr/0011-il-corpo-a-manopole-e-i-capi-da-template-tornano-possibili.md).
 
 ## Struttura
 
