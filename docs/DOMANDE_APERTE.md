@@ -128,12 +128,14 @@ Il deck ha una schermata `legale` con un riassunto in quattro punti più quattro
 documenti. **Non è stata fatta**, e non per pigrizia: transcriverla metterebbe
 in bocca al prodotto cose che il codice non fa.
 
+Le righe sono state rilette contro il codice il 2026-10-06 (`T-68`).
+
 | Riga del deck | Verificata contro il codice |
 |---|---|
-| «Per riconoscere un capo la foto viene letta in automatico, sui nostri server o su quelli del servizio che ci aiuta» | **Vera.** Lo scontorno passa da un servizio esterno (`ServizioScontorno`), la lettura da un provider LLM. Si può scrivere |
-| «Puoi scaricare tutto, o cancellare tutto, senza scrivere a nessuno» | **Falsa in entrambe le metà.** Non esiste nessun endpoint di export in `ROTTE`, non esiste `DELETE /capi/{id}`, non esiste la cancellazione dell'account. Non è un'imprecisione di copy: è un diritto dichiarato che non c'è |
+| «Per riconoscere un capo la foto viene letta in automatico, sui nostri server o su quelli del servizio che ci aiuta» | **Vera, ma i servizi sono più d'uno.** La foto sta nello Storage di Supabase; il backend la legge e la passa al provider LLM che fa l'analisi e, con `FAL_KEY` configurata, a fal.ai per lo scontorno (`ServizioScontorno`). Si può scrivere, al plurale |
+| «Puoi scaricare tutto, o cancellare tutto, senza scrivere a nessuno» | **Vera la prima metà, falsa la seconda.** «Scarica i tuoi dati» (`POST /esportazione`, in `ROTTE`) dà uno zip con capi, outfit, profilo e misure, conversazioni, segnalazioni e foto; resta fuori il diario degli usi, e il `LEGGIMI.txt` dello zip lo dice. Cancellare si può solo in parte: «Svuota l'armadio» toglie capi, outfit, conversazioni e diario, ma restano account, profilo, foto a figura intera e segnalazioni; un capo da solo non si elimina dall'app, e l'account non si elimina affatto (in `impostazioni.tsx` la voce è spenta: «prima va deciso cosa comporta davvero»). «Cancellare tutto» resta un diritto dichiarato che non c'è |
 | «Aura è gratis. Se un giorno qualcosa diventerà a pagamento, lo saprai prima» | **Da decidere, non da trascrivere.** `D-03` («Nel freemium, cosa si paga?») è aperta: l'esistenza stessa di quella domanda dice che il freemium è previsto. Impegnarsi su «gratis» in una pagina legale è una scelta dell'utente |
-| «Le foto e le misure restano tue: non le vendiamo, e non servono a insegnare niente a nessuno» | **Non verificabile dal codice**: è un impegno sul trattamento dei dati, che vale quanto vale chi lo prende. (E «le misure» non esistono: `Profilo` non ha taglia né corporatura) |
+| «Le foto e le misure restano tue: non le vendiamo, e non servono a insegnare niente a nessuno» | **Non verificabile dal codice**: è un impegno sul trattamento dei dati, che vale quanto vale chi lo prende — e per le foto anche quanto valgono le condizioni dei servizi della prima riga, che le ricevono. Le misure invece ora esistono (`Profilo.misure`): la frase ha un oggetto |
 
 E i quattro documenti collegati — termini, informativa, «chi legge le tue foto»,
 licenze open source — **non esistono**.
@@ -142,12 +144,13 @@ licenze open source — **non esistono**.
 verificabile; promettere diritti o prezzi è un impegno.* I testi di
 `impprivacy` stanno dal lato buono; il riassunto di `legale` quasi tutto no.
 
-Una pagina legale con un punto vero e quattro collegamenti morti è peggio di
-nessuna pagina: la prima volta che qualcuno tocca «Termini di servizio» e non
-succede niente, smette di credere anche al resto.
+Una pagina legale con metà delle affermazioni vere e quattro collegamenti morti
+è peggio di nessuna pagina: la prima volta che qualcuno tocca «Termini di
+servizio» e non succede niente, smette di credere anche al resto.
 
-**Serve dall'utente:** i quattro documenti veri (o la decisione di scriverli), e
-la risposta su `D-03`.
+**Serve dall'utente:** i quattro documenti veri (o la decisione di scriverli), la
+risposta su `D-03` e, perché «cancellare tutto» diventi vero, la decisione su
+cosa comporta eliminare l'account.
 
 ### D-09 — Quali corporature, e quali sistemi di taglie oltre alle lettere
 

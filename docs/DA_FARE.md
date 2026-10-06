@@ -698,20 +698,6 @@ si prende senza rileggere `docs/PROGRESS.md` su questa fetta.
 **Cosa non fare intanto:** alzare `write_timeout` nel `Caddyfile`. È un
 tampone, e quel file porta modifiche non committate dell'utente.
 
-### T-68 — La tabella di `D-08` dice false due cose che nel frattempo esistono
-**Trovata il:** 2026-10-06, scrivendo l'ADR 0011 · **Dove:** `docs/DOMANDE_APERTE.md`, `D-08` · **Gravità:** bassa · **Chi:** `doc-writer`
-
-La tabella confronta le righe della pagina legale del deck con il codice, e due
-verdetti sono rimasti a prima della fase 4: «non esiste nessun endpoint di
-export» (oggi c'è `POST /esportazione`, registrata in `ROTTE`) e «le misure non
-esistono: `Profilo` non ha taglia né corporatura» (oggi c'è `Profilo.misure`).
-Chi scrive la pagina legale partendo da lì scarterebbe come falsa una promessa
-che il codice mantiene in parte.
-
-**Il rimedio** è rileggere le quattro righe contro il codice di oggi, non
-correggere solo queste due: «cancellare tutto» va verificato con lo svuotamento
-dell'armadio e con la cancellazione dell'account, che non c'è.
-
 ### T-67 — `GuscioAutenticazione` non alza il contenuto sopra la tastiera su Android
 
 *Fino al 2026-09-28 si chiamava anche lei `T-56`*, come la voce sulla
@@ -973,6 +959,29 @@ immagine.
 ---
 
 ## Fatte
+
+Chiusa il **2026-10-06**, nella stessa PR che l'ha trovata (#54).
+
+### T-68 — La tabella di `D-08` dice false due cose che nel frattempo esistono (**chiusa**)
+**Trovata il:** 2026-10-06, scrivendo l'ADR 0011 · **Dove:** `docs/DOMANDE_APERTE.md`, `D-08` · **Gravità:** bassa · **Chi:** `doc-writer`
+
+La tabella confronta le righe della pagina legale del deck con il codice, e due
+verdetti sono rimasti a prima della fase 4: «non esiste nessun endpoint di
+export» (oggi c'è `POST /esportazione`, registrata in `ROTTE`) e «le misure non
+esistono: `Profilo` non ha taglia né corporatura» (oggi c'è `Profilo.misure`).
+Chi scrive la pagina legale partendo da lì scarterebbe come falsa una promessa
+che il codice mantiene in parte.
+
+**Il rimedio** è rileggere le quattro righe contro il codice di oggi, non
+correggere solo queste due: «cancellare tutto» va verificato con lo svuotamento
+dell'armadio e con la cancellazione dell'account, che non c'è.
+
+**Come è stata chiusa.** Le quattro righe di `D-08` rilette contro il codice:
+la prima resta vera ma al plurale (Supabase, il provider LLM, fal); la seconda è
+vera per lo scaricare e falsa per il cancellare; la terza aspetta ancora `D-03`;
+la quarta resta non verificabile, ma le misure ora ci sono. Verificato su
+`handlers/local_server.py` (`ROTTE`), `domain/esportazione.py` (il `LEGGIMI`),
+`app/impostazioni.tsx`, `app/capo/[id].tsx` e `_container.py` (`FAL_KEY`).
 
 Chiuse il **2026-09-27** dalla fase 2 di ADR 0010 (branch `feat/supabase-fase-2`,
 PR verso `feat/supabase`), arrivate su `main` con il passaggio lo stesso giorno.
