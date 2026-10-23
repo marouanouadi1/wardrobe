@@ -187,7 +187,8 @@ taglie, non com'è fatto un corpo: dedurlo da lì è comodo, ma confonde due cos
 
 Le strade: chiederlo esplicitamente — e con quali parole, perché è una domanda
 su un corpo e chi la legge la legge su di sé —, dedurlo dal sistema di taglie, o
-un cursore continuo come quello di Anny.
+un cursore come quello macro del genere di MakeHuman, che è uno dei sei cursori
+principali del corpo base scelto (`D-04`).
 
 ## Risposte
 
@@ -218,13 +219,13 @@ definitivo che i due id coincidano.
 > **Non blocca** lo scaffold.
 
 ### D-04 — Con quale strumento si costruisce il corpo dell'avatar?
-**Risposta (2026-10-23):** con **MPFB2**, il MakeHuman per Blender. Il perché e il
-come stanno nell'ADR
-[0012](adr/0012-il-corpo-dell-avatar-nasce-in-mpfb2.md): non è una dipendenza
-dell'app né del backend, è lo strumento con cui si costruisce il corpo base in
-Blender; nell'app entra solo il glTF esportato, con una shape key per livello, e
-i pesi si regolano da `Profilo.misure`. I template dei capi si modellano sulla
-stessa mesh. `D-10`, `D-11` e `D-12` restano aperte, su quel corpo.
+**Risposta (2026-10-23):** con **MPFB2**, il MakeHuman per Blender. Il come sta
+nell'ADR [0012](adr/0012-il-corpo-dell-avatar-nasce-in-mpfb2.md): non è una
+dipendenza dell'app né del backend, è lo strumento con cui si costruisce il corpo
+base in Blender. Del progetto entra solo il glTF esportato, con una shape key per
+livello, e i template dei capi si modellano sulla stessa mesh. Come l'app lo
+disegna e da dove legge i pesi resta aperto. `D-10`, `D-11` e `D-12` restano
+aperte, su quel corpo.
 
 *La domanda, com'era posta:*
 
