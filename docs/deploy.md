@@ -37,10 +37,12 @@ commit.
 
 ## Come arriva il codice sul server
 
-**Il repo è privato**: niente `git clone` sul server (richiederebbe una
-chiave di deploy da gestire per un solo aggiornamento occasionale). Si manda
-la copia di lavoro via `rsync`, dal proprio computer o, dal deploy automatico
-descritto sotto, da un runner di GitHub Actions:
+**Niente `git clone` sul server**: si manda la copia di lavoro via `rsync`, dal
+proprio computer o, dal deploy automatico descritto sotto, da un runner di
+GitHub Actions. Così il server riceve anche la versione nuova, che il job scrive
+prima del deploy e committa solo a deploy verificato. (Fino al 2026-10-23 questa
+riga diceva che il repo è privato, e che un clone avrebbe voluto una chiave di
+deploy: il repo è pubblico.)
 
 ```bash
 rsync -avz --exclude node_modules --exclude .venv --exclude .git --exclude .env -e ssh ./ marouan@89.167.15.22:~/wardrobe/

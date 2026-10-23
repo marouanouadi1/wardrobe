@@ -741,8 +741,11 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       - ~~`docs/deploy.md` descrive ancora `main`: tre container, `JWT_SECRET`, le migrazioni
         del VPS~~: riscritto il 2026-10-23, confrontato con `docker-compose.yml`, il job
         `deploy` di `api.yml`, i filtri di `mobile.yml`, le variabili che `services/api/src/`
-        legge davvero e le rotte di `local_server.py`. Lo stato del VPS (i `.env`, i file
-        morti di `T-50`) non è stato riguardato sul server: viene da qui e da `T-50`;
+        legge davvero e le rotte di `local_server.py`. *Verificato* anche sul server, in sola
+        lettura, il 2026-10-23. In `services/api/.env` ci sono `ANTHROPIC_API_KEY` e `FAL_KEY`,
+        più le quattro variabili che il backend non legge più, e nessuna chiave di Supabase.
+        In `~/wardrobe/.env` c'è solo `POSTGRES_PASSWORD`. I file morti di `T-50` ci sono tutti,
+        e ci sono i volumi `wardrobe_postgres_data` e `wardrobe_foto_dati`;
 
       **Il giorno del passaggio, per questa fase** (sul server, con il via dell'utente):
       - la copia di riserva sono i volumi `postgres_data` e `foto_dati`, non il container:
@@ -971,19 +974,24 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
 
       **Cosa resta:** il Postgres e le foto sul VPS ora sono solo di Ismail, e sono la sua
       copia di riserva. Fermare `wardrobe-postgres` (il volume resta) e poi togliere i volumi è
-      una decisione dell'utente.
+      una decisione dell'utente. *Al 2026-10-23* il container è fermo da sé, `Exited (255)` dallo
+      spegnimento del server del 2026-10-18, e al riavvio non è ripartito; i due volumi ci sono.
 
 ## Infrastruttura e rilascio
 
-- [!] **Il VPS non risponde** (2026-10-23). Il deploy dell'API partito dal merge di #58
-      (certifi e pyjwt) è caduto allo step «Rsync codice sul VPS» alle 20:29 UTC:
-      `ssh: connect to host 89.167.15.22 port 22: Connection timed out`. Alle 21:00 UTC, dal
-      computer di sviluppo, andavano in timeout anche le porte 80 e 443 e il ping, con il DNS
-      giusto. Il deploy non ha toccato niente: bump e tag non sono su `main`, che resta ad
-      `api-v0.6.2`, l'ultimo deploy riuscito (2026-09-27). **Bloccato da** lo stato del server
-      nel pannello di Hetzner (acceso? IPv4 ancora assegnato?), che vede solo l'utente. Quando
-      risponde: `gh workflow run api.yml --ref main`. Il job committa e tagga per ultimo, quindi
-      riparte dallo stesso numero
+- [x] **Il VPS è rimasto spento dal 2026-10-18 al 2026-10-23**, e nessuno se n'è accorto
+      fino a un deploy. Quello partito dal merge di #58 (certifi e pyjwt) è caduto alle 20:29
+      UTC allo step «Rsync codice sul VPS» (`port 22: Connection timed out`), senza toccare
+      niente: bump e tag non sono arrivati su `main`. Dal computer di sviluppo andavano in
+      timeout anche le porte 80 e 443 e il ping. L'utente l'ha riacceso il 2026-10-23 alle
+      23:40 UTC, e `api` e `caddy` sono ripartiti da soli. Il journal del server elenca un
+      solo avvio fra il 2026-09-27 e il riavvio: il 2026-10-18, dalle 16:34 alle 16:56 UTC.
+      Il perché dello spegnimento non è stato cercato.
+      *Verificato* dopo il riavvio: `gh workflow run api.yml --ref main` ha rilasciato
+      l'API **0.6.3** (`api-v0.6.3`). `/salute` risponde `0.6.3`, senza token si riceve 401,
+      e dentro il container ci sono certifi 2026.10.19 e pyjwt 2.15.0.
+      **`/salute` non lo sorveglia nessuno fuori dal deploy**: un server spento si scopre solo
+      al rilascio successivo (`T-69`)
 - [x] VPS Hetzner, Caddy, Let's Encrypt emesso al primo avvio, dominio reale. Deploy
       automatico da `api.yml` con verifica della versione servita — *dichiarato in
       README al 2026-09-08; il deploy si riverifica da solo a ogni merge sul backend*.
