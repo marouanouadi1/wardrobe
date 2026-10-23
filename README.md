@@ -16,8 +16,10 @@ modello e diventa la texture del capo in 3D, pixel per pixel.** La forma può
 nascere dal ritaglio o da un template della sua famiglia; la stoffa, le stampe e
 le scritte vengono sempre dalla foto. Nessun vestito a cui si cambia la tinta. Il
 corpo che lo indossa può regolarsi su livelli scelti da noi — altezza, spalle,
-proporzioni — o somigliare alla persona partendo da una sua foto: quale corpo
-base, e se avrà la sua faccia, è ancora aperto.
+proporzioni — o somigliare alla persona partendo da una sua foto. Il corpo base
+è quello di MakeHuman, costruito con MPFB2 in Blender ed esportato in glTF
+([`docs/adr/0012`](docs/adr/0012-il-corpo-dell-avatar-nasce-in-mpfb2.md)); se
+avrà la sua faccia è ancora aperto.
 
 Quello che gira adesso è il ripiego: una sagoma 2D tinta con il **colore
 dominante** letto dalla foto, che funziona su qualunque telefono. È anche il
