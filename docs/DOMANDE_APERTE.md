@@ -15,33 +15,6 @@ perché una risposta senza la sua domanda non si capisce.
 capi, sulle chiamate al modello o sulle funzioni: le tre cose si misurano in
 posti diversi.
 
-### D-04 — Con quale strumento si costruisce il corpo dell'avatar?
-**Riaperta il:** 2026-10-06, con l'ADR 0011.
-
-Fino a quella data questa voce diceva che il corpo doveva essere *fedele alla
-persona* e non un manichino neutro, per decisione dell'ADR 0004. **Non è più
-così**: l'ADR 0011 ammette un corpo parametrico regolato su livelli scelti da noi.
-La fedeltà alla persona resta il traguardo ideale, non un requisito.
-
-Le strade sul tavolo:
-
-- **un corpo parametrico nostro**, a manopole: MPFB2 (MakeHuman per Blender,
-  output CC0), Anny (NAVER LABS Europe, Apache 2.0), MHR (Meta, Apache 2.0);
-- **lo stesso corpo, con le manopole regolate da una foto a figura intera**
-  (SAM 3D Body di Meta, o simili). È un flusso di dati verso un servizio
-  esterno, e va approvato a parte;
-- **un servizio «selfie → avatar»** (Avaturn, MetaPerson): porta la faccia vera,
-  ma ogni utente arriva con una mesh sua, su cui i template dei capi non si
-  adattano. E un fornitore può sparire: Ready Player Me ha spento le API il
-  2026-01-31.
-
-**Se i capi saranno template, va scelta prima di loro:** i template si modellano
-sul corpo base, con le sue stesse shape key. Ne discendono `D-10`, `D-11` e
-`D-12`.
-
-Oggi quello che l'utente vede è ancora il ripiego 2D dello 0004: una sagoma SVG
-tinta dai colori dominanti.
-
 ### D-06 — Com'è fatto l'avvio dell'app: ante, nome, home
 **Dove sta l'effetto è deciso, e non è dove si era capito prima:** le ante si
 aprono **all'avvio dell'app**, non entrando nella scheda Armadio (utente,
@@ -179,7 +152,7 @@ cambio di contratto, non una migrazione: le righe già scritte in `profili.dati`
 restano leggibili.
 
 ### D-10 — L'avatar ha la faccia della persona, o una testa neutra?
-**Aperta il:** 2026-10-06 · **Tocca:** la scelta del corpo base (`D-04`)
+**Aperta il:** 2026-10-06 · **Tocca:** il corpo base, che dal 2026-10-23 è MPFB2 (`D-04`, ADR 0012)
 
 L'utente la vorrebbe *idealmente*. Una faccia realistica da un selfie oggi la
 danno solo servizi esterni a pagamento, che consegnano anche il corpo come mesh
@@ -206,7 +179,7 @@ scegliere **guardando**, una sagoma fra poche, più che con un numero o un
 aggettivo: pochi sanno quanto sono larghe le proprie spalle.
 
 ### D-12 — Da quale corpo base parte l'avatar di ciascuno?
-**Aperta il:** 2026-10-06 · **Tocca:** `Misure`, il corpo base (`D-04`)
+**Aperta il:** 2026-10-06 · **Tocca:** `Misure`, il corpo base MPFB2 (`D-04`, ADR 0012)
 
 Un modello parametrico parte da un corpo base, e in `Misure` non c'è un campo che
 dica quale. `sistema_taglie` (donna/uomo/unisex) dice come si chiamano le
@@ -214,7 +187,8 @@ taglie, non com'è fatto un corpo: dedurlo da lì è comodo, ma confonde due cos
 
 Le strade: chiederlo esplicitamente — e con quali parole, perché è una domanda
 su un corpo e chi la legge la legge su di sé —, dedurlo dal sistema di taglie, o
-un cursore continuo come quello di Anny.
+un cursore come quello macro del genere di MakeHuman, che è uno dei sei cursori
+principali del corpo base scelto (`D-04`).
 
 ## Risposte
 
@@ -243,6 +217,43 @@ definitivo che i due id coincidano.
 *La domanda, com'era posta:*
 
 > **Non blocca** lo scaffold.
+
+### D-04 — Con quale strumento si costruisce il corpo dell'avatar?
+**Risposta (2026-10-23):** con **MPFB2**, il MakeHuman per Blender. Il come sta
+nell'ADR [0012](adr/0012-il-corpo-dell-avatar-nasce-in-mpfb2.md): non è una
+dipendenza dell'app né del backend, è lo strumento con cui si costruisce il corpo
+base in Blender. Del progetto entra solo il glTF esportato, con una shape key per
+livello, e i template dei capi si modellano sulla stessa mesh. Come l'app lo
+disegna e da dove legge i pesi resta aperto. `D-10`, `D-11` e `D-12` restano
+aperte, su quel corpo.
+
+*La domanda, com'era posta:*
+
+> **Riaperta il:** 2026-10-06, con l'ADR 0011.
+>
+> Fino a quella data questa voce diceva che il corpo doveva essere *fedele alla
+> persona* e non un manichino neutro, per decisione dell'ADR 0004. **Non è più
+> così**: l'ADR 0011 ammette un corpo parametrico regolato su livelli scelti da noi.
+> La fedeltà alla persona resta il traguardo ideale, non un requisito.
+>
+> Le strade sul tavolo:
+>
+> - **un corpo parametrico nostro**, a manopole: MPFB2 (MakeHuman per Blender,
+>   output CC0), Anny (NAVER LABS Europe, Apache 2.0), MHR (Meta, Apache 2.0);
+> - **lo stesso corpo, con le manopole regolate da una foto a figura intera**
+>   (SAM 3D Body di Meta, o simili). È un flusso di dati verso un servizio
+>   esterno, e va approvato a parte;
+> - **un servizio «selfie → avatar»** (Avaturn, MetaPerson): porta la faccia vera,
+>   ma ogni utente arriva con una mesh sua, su cui i template dei capi non si
+>   adattano. E un fornitore può sparire: Ready Player Me ha spento le API il
+>   2026-01-31.
+>
+> **Se i capi saranno template, va scelta prima di loro:** i template si modellano
+> sul corpo base, con le sue stesse shape key. Ne discendono `D-10`, `D-11` e
+> `D-12`.
+>
+> Oggi quello che l'utente vede è ancora il ripiego 2D dello 0004: una sagoma SVG
+> tinta dai colori dominanti.
 
 ### D-05 — Fin dove arriva l'app senza rete?
 **Risposta (2026-09-11):** l'app funziona solo online. Non c'è un percorso

@@ -1,6 +1,6 @@
 # 0011 — Il corpo a manopole e i capi da template tornano possibili
 
-**Stato:** accettata · **Data:** 2026-10-06 · **Supera in parte:** [0004](0004-l-avatar-veste-le-foto-non-i-colori.md)
+**Stato:** accettata · **Data:** 2026-10-06 · **Supera in parte:** [0004](0004-l-avatar-veste-le-foto-non-i-colori.md) · **Il corpo base l'ha poi scelto** [0012](0012-il-corpo-dell-avatar-nasce-in-mpfb2.md) (2026-10-23)
 
 Questo ADR **toglie due esclusioni e non sceglie niente al loro posto**. Dice
 cosa smette di essere vietato; quale strada si prende resta una decisione
@@ -67,7 +67,8 @@ della stessa strada.
 
 ### Cosa questo ADR non decide
 
-- quale corpo base: MPFB2, Anny, MHR, o un servizio esterno (`D-04`);
+- quale corpo base: MPFB2, Anny, MHR, o un servizio esterno (`D-04` — chiusa il
+  2026-10-23 dallo 0012: MPFB2);
 - la faccia: quella della persona, o una testa neutra (`D-10`);
 - se i livelli sostituiscono i centimetri di `Misure` o li arrotondano (`D-11`);
 - da quale corpo base parte l'avatar di ciascuno (`D-12`);
