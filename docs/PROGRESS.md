@@ -738,8 +738,11 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       - ~~`README.md` («Partire», «Produzione») descrive ancora `main`~~: riscritto il
         2026-10-23, con ogni comando e ogni variabile confrontati con `package.json`,
         `scripts/dev.sh`, i due `.env.example`, `supabase/seed.sql` e `supabase/config.toml`;
-      - `docs/deploy.md` descrive ancora `main`: tre container, `JWT_SECRET`, le migrazioni
-        del VPS. Il piano lo riscrive nella fase 5;
+      - ~~`docs/deploy.md` descrive ancora `main`: tre container, `JWT_SECRET`, le migrazioni
+        del VPS~~: riscritto il 2026-10-23, confrontato con `docker-compose.yml`, il job
+        `deploy` di `api.yml`, i filtri di `mobile.yml`, le variabili che `services/api/src/`
+        legge davvero e le rotte di `local_server.py`. Lo stato del VPS (i `.env`, i file
+        morti di `T-50`) non è stato riguardato sul server: viene da qui e da `T-50`;
 
       **Il giorno del passaggio, per questa fase** (sul server, con il via dell'utente):
       - la copia di riserva sono i volumi `postgres_data` e `foto_dati`, non il container:
@@ -926,8 +929,9 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
         Google non serve (entra con la sua password), e pubblicare l'app OAuth toglierebbe la
         lista dei tester senza aprire le registrazioni, che restano dietro gli inviti;
       - la **fase 4**, perché i tre account non ritrovano ancora il loro armadio;
-      - la **fase 5**, perché `docs/deploy.md` descrive ancora il backend di prima (il README
-        è riscritto dal 2026-10-23);
+      - ~~la **fase 5**, perché README e `docs/deploy.md` descrivono ancora il backend di
+        prima~~: riscritti entrambi il 2026-10-23. Della fase 5 restano le due decisioni
+        rimandate a lei, `T-57` e `T-42` in `docs/DA_FARE.md`;
       - ~~l'account di prova non è uno dei tre account veri~~: **falso**, lo era. È stato scritto
         senza controllarlo: `ouadimarouan@gmail.com` era anche un account del VPS. La questione
         l'ha chiusa l'utente, qui sotto.
