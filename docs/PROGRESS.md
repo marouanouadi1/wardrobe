@@ -975,6 +975,15 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
 
 ## Infrastruttura e rilascio
 
+- [!] **Il VPS non risponde** (2026-10-23). Il deploy dell'API partito dal merge di #58
+      (certifi e pyjwt) è caduto allo step «Rsync codice sul VPS» alle 20:29 UTC:
+      `ssh: connect to host 89.167.15.22 port 22: Connection timed out`. Alle 21:00 UTC, dal
+      computer di sviluppo, andavano in timeout anche le porte 80 e 443 e il ping, con il DNS
+      giusto. Il deploy non ha toccato niente: bump e tag non sono su `main`, che resta ad
+      `api-v0.6.2`, l'ultimo deploy riuscito (2026-09-27). **Bloccato da** lo stato del server
+      nel pannello di Hetzner (acceso? IPv4 ancora assegnato?), che vede solo l'utente. Quando
+      risponde: `gh workflow run api.yml --ref main`. Il job committa e tagga per ultimo, quindi
+      riparte dallo stesso numero
 - [x] VPS Hetzner, Caddy, Let's Encrypt emesso al primo avvio, dominio reale. Deploy
       automatico da `api.yml` con verifica della versione servita — *dichiarato in
       README al 2026-09-08; il deploy si riverifica da solo a ogni merge sul backend*.
