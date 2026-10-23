@@ -735,9 +735,11 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       - due finding dell'audit **valgono già su `main`** e restano fuori di proposito
         (`T-51`: il corpo letto senza limite; `T-60`: il client sceglie provider e
         modello). Qui arriverebbero solo il giorno X: vanno in una PR loro su `main`;
-      - `README.md` («Partire», «Produzione») e `docs/deploy.md` descrivono ancora `main`:
-        `db:up`, `JWT_SECRET`, le migrazioni del VPS. Il piano li riscrive nella fase 5;
-        fino ad allora, per partire da zero su questo branch vale `services/api/.env.example`;
+      - ~~`README.md` («Partire», «Produzione») descrive ancora `main`~~: riscritto il
+        2026-10-23, con ogni comando e ogni variabile confrontati con `package.json`,
+        `scripts/dev.sh`, i due `.env.example`, `supabase/seed.sql` e `supabase/config.toml`;
+      - `docs/deploy.md` descrive ancora `main`: tre container, `JWT_SECRET`, le migrazioni
+        del VPS. Il piano lo riscrive nella fase 5;
 
       **Il giorno del passaggio, per questa fase** (sul server, con il via dell'utente):
       - la copia di riserva sono i volumi `postgres_data` e `foto_dati`, non il container:
@@ -924,7 +926,8 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
         Google non serve (entra con la sua password), e pubblicare l'app OAuth toglierebbe la
         lista dei tester senza aprire le registrazioni, che restano dietro gli inviti;
       - la **fase 4**, perché i tre account non ritrovano ancora il loro armadio;
-      - la **fase 5**, perché README e `docs/deploy.md` descrivono ancora il backend di prima;
+      - la **fase 5**, perché `docs/deploy.md` descrive ancora il backend di prima (il README
+        è riscritto dal 2026-10-23);
       - ~~l'account di prova non è uno dei tre account veri~~: **falso**, lo era. È stato scritto
         senza controllarlo: `ouadimarouan@gmail.com` era anche un account del VPS. La questione
         l'ha chiusa l'utente, qui sotto.

@@ -256,6 +256,11 @@ travestita da registro.
   Ora è l'ultima.)
 
 ### progetto
+- **Il README descrive il progetto dopo il passaggio a Supabase**: come si parte
+  (la CLI di Supabase, `npm run dev:app`, l'invito del seed, le email su
+  Mailpit), i comandi `supabase:*` al posto di `db:*`, i due container di
+  produzione, e chi è amministratore (`app_metadata`, non più
+  `EMAIL_AMMINISTRATORI`). `docs/deploy.md` resta da riscrivere.
 - Il rilascio dell'app aggiorna anche la versione registrata in
   `package-lock.json`: un `npm install` in locale non sporca più il lockfile
   con una riga che nessuno ha toccato. Chiusa `T-52`.

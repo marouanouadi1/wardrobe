@@ -32,95 +32,122 @@ lo riconosce — un vincolo che vale per ora, non per scelta. Il perché sta in
 
 ```txt
 apps/
-  mobile/            app Expo (iOS, Android, web)
+  mobile/            app Expo (iOS, Android, web): legge e scrive i dati su Supabase
   web/               vuoto, ma il posto c'è
-services/api/
+services/api/        il backend dell'IA: analisi delle foto, suggerimenti, chat, esportazione
   src/domain/        logica pura: zero SDK, testabile con pytest
   src/handlers/      adapter sottili: evento -> domain -> risposta
-  src/adapters/      postgres, filesystem, provider LLM
-packages/contracts/  tipi TypeScript generati dai modelli Pydantic
+  src/adapters/      Supabase, provider LLM, scontorno
+supabase/            schema e policy (migrations/), test pgTAP, configurazione dello stack locale
+packages/contracts/  tipi TypeScript generati: dai modelli Pydantic e dallo schema SQL
 docs/adr/            le decisioni che valeva la pena scrivere
 ```
 
+Database, login e foto stanno su **Supabase**
+([`docs/adr/0010`](docs/adr/0010-supabase-database-login-e-foto.md)). L'app ci
+legge e scrive da sé, e chi vede cosa lo decidono le policy RLS del database, non
+il codice di un client. Il backend Python resta per l'IA e **agisce come
+l'utente**, con il suo token: sul server non c'è nessuna chiave che scavalchi
+l'RLS.
+
 ### Le quattro scelte che tengono su tutto
 
-**1. `handlers/` separato da `domain/`.** Un handler fa tre righe: legge
-l'evento, chiama una funzione pura, formatta la risposta. Tutta la logica sta in
-`domain`, che gira con pytest senza rete, senza container e senza mock della SDK.
-Il vincolo non è una convenzione scritta in un README:
-`pyproject.toml` vieta gli import di `psycopg` e `httpx` fuori da
-`adapters/`, e il lint fallisce se qualcuno prova.
+**1. `handlers/` separato da `domain/`.** Vale per il backend dell'IA. Un handler
+fa tre righe: legge l'evento, chiama una funzione pura, formatta la risposta.
+Tutta la logica sta in `domain`, che gira con pytest senza rete, senza container
+e senza mock della SDK. Il vincolo non è una convenzione scritta in un README:
+`pyproject.toml` vieta gli import di `psycopg` e `httpx` fuori da `adapters/`, e
+il lint fallisce se qualcuno prova.
 
-**2. I contratti sono generati, non copiati.** I modelli Pydantic in
-`services/api/src/domain/models.py` sono la fonte di verità. Uno script esporta
-il JSON Schema, da quello nascono i tipi TypeScript in `packages/contracts`.
-Rinominare un campo nel backend senza rigenerare fa fallire la CI; rigenerarlo fa
-fallire `tsc` dell'app esattamente nei punti da aggiornare. Anche le **soglie**
-sono generate: `SOGLIA_INCERTEZZA` vive nel dominio Python e l'app la importa,
-invece di riscrivere `86` in TypeScript.
+**2. I contratti sono generati, non copiati.** Le fonti sono due, ognuna col suo
+confine. Per ciò che attraversa il backend dell'IA la fonte sono i modelli
+Pydantic in `services/api/src/domain/models.py`: uno script esporta il JSON
+Schema, e da quello nascono i tipi TypeScript in `packages/contracts`. Per i dati
+salvati la fonte è lo schema SQL di `supabase/migrations/`, e i tipi li genera
+`supabase gen types`. Rinominare un campo senza rigenerare fa fallire la CI;
+rigenerarlo fa fallire `tsc` dell'app esattamente nei punti da aggiornare. Anche
+le **soglie** sono generate: `SOGLIA_INCERTEZZA` vive nel dominio Python e l'app
+la importa, invece di riscrivere `86` in TypeScript. Le enum e i limiti che
+esistono in entrambe le fonti li confronta un job della CI.
 
-**3. CI con filtri sui path.** Ogni workflow ha `on: push: paths:`, così un
-commit su `apps/mobile` non fa girare lint e test del backend. È anche il
-motivo per cui questo monorepo non ha bisogno di Nx o Turborepo: due workflow
-indipendenti e due gestori di pacchetti (npm per TypeScript, uv per Python)
-che convivono senza mediatori.
+**3. CI con filtri sui path.** `api.yml`, `mobile.yml` e `database.yml` hanno
+`on: push: paths:`, così un commit su `apps/mobile` non fa girare lint e test del
+backend. I gate che valgono per tutto il repo — il titolo delle PR
+(`pr-title.yml`) e i numeri dichiarati nelle docs (`docs.yml`) — non hanno
+filtri, di proposito: una PR di sole docs non farebbe partire gli altri. È anche
+il motivo per cui questo monorepo non ha bisogno di Nx o Turborepo: workflow
+indipendenti e due gestori di pacchetti (npm per TypeScript, uv per Python) che
+convivono senza mediatori.
 
 **4. `docs/adr/`.** Le decisioni scritte in breve — contesto, decisione,
-alternative scartate — quando valeva la pena farlo. Oggi: l'avatar che veste le
-foto e non i colori (0004), le versioni che vengono dai commit (0005), lo storico
-della chat (0006).
+alternative scartate — quando valeva la pena farlo. L'elenco è la cartella
+stessa: [`docs/adr/`](docs/adr/).
 
 ## Partire
 
-Serve sempre il backend: non esiste più una modalità demo con dati finti.
+Servono lo stack locale di Supabase e il backend dell'IA: non esiste una
+modalità demo con dati finti. Sul computer vanno installati Node (la versione di
+`.nvmrc`), [uv](https://docs.astral.sh/uv/), la
+[CLI di Supabase](https://supabase.com/docs/guides/local-development/cli/getting-started)
+alla stessa versione della CI (`.github/workflows/database.yml`: un'altra
+versione genera tipi diversi) e Docker, perché lo stack gira in container.
 
 ```bash
 npm install
 npm run api:sync     # dipendenze Python (uv) — una volta sola
-npm run dev          # Postgres + API su http://localhost:8787
-npm run mobile       # in un secondo terminale: l'app Expo
+npm run dev:app      # Supabase locale + API su http://localhost:8787 + l'app Expo
 ```
 
-`npm run dev` aspetta che Postgres risponda davvero (l'healthcheck di
-`docker-compose.yml`) prima di avviare l'API, e si ferma con un messaggio
-chiaro se Docker Desktop è spento o se la porta 8787 è già occupata. Con
-**`npm run dev:app`** parte anche l'app nello stesso terminale: le righe
-dell'API sono marcate `[api]` e i tasti di Expo continuano a funzionare,
-perché il terminale resta suo. Ctrl-C ferma API e app; **Postgres resta
-acceso** — `npm run db:down` per spegnerlo. I pezzi restano usabili da soli:
-`npm run db:up` + `npm run api:local`.
+`npm run dev:app` accende lo stack di Supabase (il primo avvio scarica le
+immagini e può metterci minuti), passa all'API l'indirizzo e la chiave pubblica
+letti da `supabase status` (all'app solo la chiave: l'indirizzo lo ricava da
+sé, come si dice qui sotto), e lascia Expo in primo piano: le righe dell'API
+sono marcate `[api]` e i tasti di Expo continuano a funzionare, perché il
+terminale resta suo. Si ferma con un messaggio chiaro se manca `uv`, la CLI o
+Docker, o se la porta 8787 è già occupata. Ctrl-C ferma API e app; **Supabase
+resta acceso** — `npm run supabase:stop` per spegnerlo. `npm run dev` fa lo
+stesso senza l'app. I pezzi restano usabili da soli, ma allora le chiavi vanno
+scritte a mano: `npm run api:local` le legge dal `.env` di `services/api`,
+`npm run mobile` da `apps/mobile/.env.local`.
 
-Nel `.env` di `services/api` (copiato da `.env.example`) servono
-`ANTHROPIC_API_KEY`, `JWT_SECRET` (firma i JWT di login — una stringa lunga e
-casuale, es. `openssl rand -hex 32`) ed `EMAIL_AMMESSE` (le email a cui è
-permesso registrarsi: senza, la registrazione è chiusa a chiunque, di
-proposito). `DATABASE_URL` e `CARTELLA_FOTO` sono già impostate nel `.env`
-d'esempio del progetto: sono la modalità normale, con i capi in Postgres e le
-foto su disco. Commentandole si torna alla memoria volatile, che non
-sopravvive al riavvio — e parte vuota: non c'è più un armadio finto a
-riempirla.
+Nel `.env` di `services/api` (copiato da
+[`.env.example`](services/api/.env.example)) l'unica chiave da scrivere per
+partire è `ANTHROPIC_API_KEY`; le altre sono facoltative, e il file dice cosa fa
+ognuna. Lo schema viene da `supabase/migrations/`: `npm run supabase:reset` rifà
+il database locale da zero, con le migrazioni e `supabase/seed.sql`. Lo Studio
+dello stack è su http://127.0.0.1:54323.
 
-Il primo account si crea dall'app stessa: **Registrati**, con un'email nella
-lista di `EMAIL_AMMESSE`.
+Il primo account si crea dall'app stessa, con **Registrati**. La registrazione è
+aperta solo a chi è invitato, anche in locale: il seed invita
+`sviluppo@esempio.invalid`, e un'altra email si aggiunge alla tabella
+`privato.inviti` dallo Studio. L'app chiede prima un codice mandato per email e
+solo dopo la password; in locale le email arrivano a Mailpit, su
+http://127.0.0.1:54324.
 
-L'app trova da sola l'indirizzo dell'API: su Expo Go o dev client usa lo
-stesso host a cui si è già collegata per il bundle JS (lo stesso IP del QR
-code); su `mobile:web` usa l'host con cui il browser ha raggiunto la pagina
-(`window.location.hostname`). In entrambi i casi assume che l'API giri sulla
-stessa macchina — il caso comune in sviluppo. `EXPO_PUBLIC_API_URL` resta per
-sovrascriverlo esplicitamente (un server remoto, tipico di una build EAS
-puntata sul VPS di produzione, o quando l'euristica indovina l'host sbagliato).
+L'app trova da sola l'indirizzo dell'API e quello di Supabase: su Expo Go o dev
+client usa lo stesso host a cui si è già collegata per il bundle JS (lo stesso
+IP del QR code), sulla porta 8787 per l'API e 54321 per Supabase; su
+`mobile:web` usa l'host con cui il browser ha raggiunto la pagina
+(`window.location.hostname`). In entrambi i casi assume che tutto giri sulla
+stessa macchina — il caso comune in sviluppo. `EXPO_PUBLIC_API_URL` ed
+`EXPO_PUBLIC_SUPABASE_URL` restano per sovrascriverlo esplicitamente: è quello
+che fanno le build EAS, che li ricevono da `apps/mobile/eas.json`, o quando
+l'euristica indovina l'host sbagliato.
 
-Il pulsante «Segnala un problema» nel Profilo (modulo di feedback di Sentry)
-compare solo se `EXPO_PUBLIC_SENTRY_DSN` è impostata: copia
-[`apps/mobile/.env.example`](apps/mobile/.env.example) in `.env.local` per
-provarlo con `npm run mobile`. Senza, l'app funziona lo stesso e il pulsante
-resta nascosto. Chi segnala non ha accesso a Sentry per vedere che fine ha
-fatto: ogni invio riuscito lascia anche una copia nel backend, visibile da
-«Profilo → Le mie segnalazioni» con il suo stato (Ricevuta/In
-lavorazione/Risolta). Chi è nell'allowlist `EMAIL_AMMINISTRATORI` (email
-separate da virgole, vuota di default — nessun amministratore) vede lì le
-segnalazioni di tutti, non solo le proprie, e può cambiarne lo stato.
+Due pulsanti dell'app dipendono da una variabile di
+[`apps/mobile/.env.example`](apps/mobile/.env.example), da copiare in
+`.env.local`. Senza, l'app funziona lo stesso:
+
+- **«Continua con Google»** vuole `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`; senza resta
+  spento, e dice perché.
+- **«Segnala un problema»** nel Profilo (il modulo di feedback di Sentry) vuole
+  `EXPO_PUBLIC_SENTRY_DSN`; senza resta nascosto. Chi segnala non ha accesso a
+  Sentry per vedere che fine ha fatto: ogni invio riuscito lascia anche una copia
+  nel database, visibile da «Profilo → Le mie segnalazioni» con il suo stato
+  (Ricevuta/In lavorazione/Risolta). Un account con `ruolo: "amministratore"` in
+  `app_metadata` vede lì le segnalazioni di tutti, e può cambiarne lo stato. È un
+  campo che l'utente non può scriversi da sé: lo assegna chi gestisce il progetto
+  Supabase.
 
 `api:local` (`services/api/src/handlers/local_server.py`) è lo stesso
 processo che gira in produzione dentro il container `api` su un VPS: nessuna
@@ -145,29 +172,36 @@ un file in `adapters/llm/` più una riga nel registro, e nessuna schermata cambi
 
 | Comando | Cosa fa |
 | --- | --- |
-| `npm run dev` | Postgres + API, con un comando solo |
+| `npm run dev` | Supabase locale + API, con un comando solo |
 | `npm run dev:app` | come sopra, più l'app Expo |
 | `npm run mobile` | avvia l'app Expo |
 | `npm run mobile:web` | l'app nel browser |
-| `npm run api:local` | solo l'API (Postgres già acceso) |
+| `npm run mobile:android` | l'app su Android |
+| `npm run mobile:ios` | l'app su iOS |
+| `npm run mobile:test` | i test dell'app |
+| `npm run api:sync` | installa le dipendenze Python |
+| `npm run api:local` | solo l'API (Supabase già acceso, chiavi nel `.env`) |
 | `npm run api:test` | i test del dominio e degli handler |
 | `npm run api:cov` | gli stessi, con la coverage e le soglie della CI |
 | `npm run api:lint` | ruff + ruff format + mypy strict |
-| `npm run contracts:generate` | rigenera i tipi TypeScript dal backend |
+| `npm run contracts:generate` | rigenera i tipi TypeScript dai modelli Pydantic |
 | `npm run contracts:check` | verifica che siano allineati (gira in CI) |
-| `npm run mobile:test` | i test dell'app |
+| `npm run supabase:start` | solo lo stack locale di Supabase |
+| `npm run supabase:stop` | lo spegne |
+| `npm run supabase:reset` | rifà il database locale da zero: migrazioni e seed |
+| `npm run supabase:test` | i test pgTAP di policy e regole |
+| `npm run supabase:verifica` | enum e limiti uguali fra database e Python |
+| `npm run supabase:tipi` | rigenera i tipi TypeScript dallo schema |
 | `npm run typecheck` | tsc su app e contratti |
-| `npm run db:up` | solo Postgres in Docker |
-| `npm run db:down` | spegne Postgres |
-| `npm run db:migrate` | riapplica lo schema (serve solo su un volume vecchio) |
+| `npm run lint` | il lint dell'app |
 
 ## Produzione
 
-Un VPS, un dominio, tre container Docker (`postgres`, `api`, `caddy` per
-l'HTTPS). Il runbook completo — come ci arriva il codice (il repo è privato,
-niente `git clone` sul server), i due `.env` da scrivere a mano, avvio,
-migrazioni e le scelte deliberate (Postgres non raggiungibile da Internet) — è in
-[`docs/deploy.md`](docs/deploy.md).
+Un VPS, un dominio, due container Docker (`api` e `caddy` per l'HTTPS), più il
+progetto Supabase per database, login e foto. Il Postgres di prima resta sul VPS
+solo come copia di riserva, ferma al giorno del passaggio: i commenti in testa a
+`docker-compose.yml` dicono perché nessuno ne cancella i volumi. Il runbook del
+server è in [`docs/deploy.md`](docs/deploy.md).
 
 Ogni merge su `main` fa partire da sola la parte di rilascio che tocca: un
 merge sul backend rideploya l'API sul VPS e verifica che `/salute` risponda con
@@ -175,6 +209,8 @@ la versione appena rilasciata, un merge sull'app ne alza versione e tag e prova
 a buildare l'APK con EAS. **Per ora l'APK si costruisce in locale** e si
 pubblica a mano come GitHub Release: la build in cloud ha una quota mensile che
 finisce ([`docs/adr/0009`](docs/adr/0009-l-apk-si-costruisce-in-locale.md)).
+**Lo schema invece non lo porta un merge**: sul progetto vero arriva con
+`supabase db push`, a mano, e da lì una migrazione non si ritira più.
 
 Il numero di versione **non conta i merge**: il livello (major, minor, patch)
 viene dedotto dai conventional commit dall'ultimo tag, e il titolo delle PR è
