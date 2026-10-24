@@ -293,6 +293,36 @@ class TestPostgrest:
         profilo = repository.leggi_profilo()
 
         assert profilo is not None and profilo.misure is None and profilo.nome == ""
+        assert profilo.avatar is None
+
+    def test_l_avatar_viene_dalle_sue_quattro_colonne(self):
+        riga = {
+            "id": A,
+            "creato_il": "2026-09-01T10:00:00+00:00",
+            "avatar_corpo_base": "uomo",
+            "avatar_cursori": {"weight": 0.75, "measure-shoulder-dist-decr-incr": -0.5},
+            "avatar_pelle": "olivastra",
+            "avatar_capelli": None,
+        }
+        repository, _ = _repository(lambda r: httpx.Response(200, json=[riga]))
+
+        profilo = repository.leggi_profilo()
+
+        assert profilo is not None and profilo.avatar is not None
+        assert profilo.avatar.corpo_base.value == "uomo"
+        assert profilo.avatar.cursori == {"weight": 0.75, "measure-shoulder-dist-decr-incr": -0.5}
+        assert profilo.avatar.pelle is not None and profilo.avatar.pelle.value == "olivastra"
+        assert profilo.avatar.capelli is None
+
+    def test_i_cursori_senza_un_corpo_di_partenza_non_sono_un_avatar(self):
+        # I cursori da soli non dicono da quale corpo partono: leggerli come un avatar vorrebbe
+        # dire inventarne il corpo.
+        riga = {"id": A, "creato_il": "2026-09-01T10:00:00+00:00", "avatar_cursori": {"weight": 1}}
+        repository, _ = _repository(lambda r: httpx.Response(200, json=[riga]))
+
+        profilo = repository.leggi_profilo()
+
+        assert profilo is not None and profilo.avatar is None
 
     @pytest.mark.parametrize(
         ("stato", "corpo", "errore"),

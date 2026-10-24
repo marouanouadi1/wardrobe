@@ -37,15 +37,24 @@ export function useRisorsa<T>(carica: () => Promise<T>, deps: readonly unknown[]
     caricaRef.current = carica
   })
 
+  // Quale giro di caricamento è l'ultimo, come `giro` in `archivio.tsx`: quando
+  // `deps` cambiano prima che il giro precedente finisca, la sua risposta
+  // arriva dopo quella nuova e non deve sovrascriverla. Il primo a usare `deps`
+  // che cambiano davvero è l'avatar (`(tabs)/avatar.tsx`): cambiando corpo due
+  // volte di fila, il corpo vecchio arrivava per ultimo e restava a schermo.
+  const giro = useRef(0)
+
   const esegui = useCallback(async () => {
+    const questo = (giro.current += 1)
     setCaricamento(true)
     setErrore(null)
     try {
-      setDati(await caricaRef.current())
+      const nuovi = await caricaRef.current()
+      if (questo === giro.current) setDati(nuovi)
     } catch (e) {
-      setErrore(messaggioDiErrore(e, 'Non riesco a contattare il server.'))
+      if (questo === giro.current) setErrore(messaggioDiErrore(e, 'Non riesco a contattare il server.'))
     } finally {
-      setCaricamento(false)
+      if (questo === giro.current) setCaricamento(false)
     }
   }, [])
 

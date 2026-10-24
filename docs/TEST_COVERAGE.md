@@ -16,12 +16,12 @@ Due tipi di numero, e si comportano diversamente:
 
 ## Numeri correnti
 
-- **Test backend:** 188
-- **Test app:** 93
+- **Test backend:** 190
+- **Test app:** 113
 - **Soglia coverage totale:** 85% — `services/api/pyproject.toml`
 - **Soglia coverage `src/domain/`:** 99% — `.github/workflows/api.yml`
 - **Soglia coverage `src/handlers/`:** 97% — idem, escluso `local_server.py`
-- **Asserzioni pgTAP sul database:** 103 — `supabase/tests/database/regole.test.sql`.
+- **Asserzioni pgTAP sul database:** 107 — `supabase/tests/database/regole.test.sql`.
   Il numero vero è il `plan()` del file, che pgTAP fa
   rispettare nel job `database`; `docs.yml` confronta questa riga con quel `plan()`
 
@@ -48,9 +48,9 @@ stesse regole ora le provano le asserzioni pgTAP sul database.
 | `tests/handlers/test_analisi.py` | 13 | 250 |
 | `tests/handlers/test_chat_handler.py` | 10 | 229 |
 | `tests/handlers/test_suggerimenti.py` | 4 | 107 |
-| `tests/adapters/test_supabase.py` | 37 | 502 |
+| `tests/adapters/test_supabase.py` | 39 | 532 |
 | `tests/adapters/test_google_provider.py` | 6 | 63 |
-| **Totale** | **188** | **2.243** |
+| **Totale** | **190** | **2.273** |
 
 Più `conftest.py` (174) e `fakes.py` (235), che non contengono test.
 
@@ -122,12 +122,20 @@ onboarding light button»).
 | `test/ui/fondo.test.tsx` | 5 | il meccanismo: `useFondo()` senza provider, ereditarietà, annidamento a tre livelli |
 | `test/convenzioni/primitive.test.ts` | 4 | che nessuno ridipinga il fondo di una primitiva dal di fuori: né con `style={{ backgroundColor }}` — la forma esatta della regressione di PR #4 — né passando `sfondo` senza dire con `su` su che fondo ci si posa |
 | `test/convenzioni/griglie.test.ts` | 15 | che una riga di griglia **ci stia**: tre tessere d'armadio e sette celle di mese, dalla larghezza di 320pt a quella di 480, dentro la larghezza utile di `Schermata`. In React Native `flexShrink` vale 0, quindi una cella che non entra non si stringe: va a capo, senza errori né avvisi. `griglie.mese` chiedeva `7 × 13.1% + 6 × 6px`, che entra solo in uno schermo da 478pt — il calendario mostrava sei giorni per riga su ogni telefono |
-| `test/dati/righe.test.ts` | 13 | le traduzioni fra righe del database e modelli dell'app (`src/dati/righe.ts`, fase 3 di ADR 0010): niente si perde andando e tornando, un aggiornamento non manda lo `slot` che il database calcola da sé, una correzione aggiunge l'attributo a quelli visti a mano senza doppioni, togliere le misure azzera le sei colonne, il giorno è quello locale e non quello di Greenwich |
+| `test/dati/righe.test.ts` | 17 | le traduzioni fra righe del database e modelli dell'app (`src/dati/righe.ts`, fase 3 di ADR 0010): niente si perde andando e tornando, un aggiornamento non manda lo `slot` che il database calcola da sé, una correzione aggiunge l'attributo a quelli visti a mano senza doppioni, togliere le misure azzera le sei colonne, il giorno è quello locale e non quello di Greenwich. E l'avatar: va e torna dalle sue quattro colonne, un profilo senza avatar non le manda (così si salva anche dove la migrazione non è arrivata), i cursori senza un corpo di partenza non diventano un avatar, e di un `jsonb` dei cursori resta solo ciò che è un numero |
+| `test/dati/risorsa.test.tsx` | 1 | che con `deps` che cambiano vinca il caricamento chiesto per ultimo, non quello arrivato per ultimo. Trovato dalla review dell'avatar: cambiando corpo due volte di fila, il corpo lento arrivava dopo quello in cache e la scheda restava su «Preparo il corpo…» per sempre. **Visto rosso** sul codice di prima |
+| `test/avatar/motore.test.ts` | 15 | il motore dell'avatar (`src/avatar/motore.ts`, ADR 0013) contro **MPFB vero**: sei corpi calcolati in Blender da `tools/avatar/riferimento.py` con i soli cursori dell'app, e i vertici del corpo e dello strato neutro devono coincidere entro 0,05 mm. Poi: che i pacchetti bastino a ogni cursore a ogni estremo (un target mancante solleva, non diventa uno zero), che l'altezza delle misure si raggiunga al millimetro e si fermi agli estremi del corpo, che la posa abbassi le braccia uguali dai due lati, distese (braccio dritto, polso entro 15° dalla verticale: **visto rosso** lasciando l'avambraccio piegato come nella posa di riposo) e con i piedi a terra, e che una macro fuori dai suoi livelli (un `weight` negativo scritto a mano) si fermi all'estremo invece di svuotare la pila — **visto rosso** senza la correzione. **Visto rosso per un difetto vero**: con peso e muscolatura mai toccati il motore perdeva tutta la pila delle macro — due corpi su sei sbagliati di decimetri — finché le macro non sono partite dal loro centro |
 | `test/dati/dominio.test.ts` | 5 | i capi dormienti, che da quando l'app legge l'armadio da sé calcola solo lei: `mesiFa` resta su un giorno che esiste (dal 31 agosto, il 28 febbraio, non il 3 marzo di `Date.setMonth`), e il giorno di partenza è quello di Roma anche quando a Greenwich è ancora ieri. Visti fallire tutti e due i difetti rimessi nel codice |
 | `test/dati/misure.test.ts` | 10 | l'aritmetica fra centimetri e pollici. Due difetti che `tsc` non vede: un giro che non torna (digiti `66″`, riapri e leggi `65″`), e un campo che accetta ciò che il server rifiuta — il minimo di 120 cm è 47,24″, e arrotondarlo per difetto farebbe passare `47` che diventa 119 cm. `limitiIn` arrotonda il minimo per eccesso e il massimo per difetto, e il test lo verifica in entrambi i versi: nessun valore ammesso esce dai limiti veri, e subito fuori si esce davvero |
 | `test/convenzioni/navigazione.test.ts` | 15 | dove la barra delle schede si vede e quale scheda accende. Da quando vive fuori dal navigatore (`ui/guscio.tsx`) è disegnata sopra qualunque schermata, quindi l'errore peggiore non è cosmetico: la pillola comparirebbe **sulla schermata di accesso**, cinque scorciatoie verso rotte protette da un `Redirect`. Il test tiene fermo che `schedaDi()` resti un elenco di ciò che c'è e non di ciò che si esclude, e che nessuna rotta nuova resti senza una decisione |
 | `test/ui/barra.test.tsx` | 3 | che lo spazio che `Schermata` riserva in fondo (`altezzaBarra()`) contenga **la barra delle schede disegnata davvero** — misurata dagli stili che `BarraSchede` rende, non da una seconda copia delle sue misure — con un bordo inferiore di 0, 24 e 34pt. Il conto a mano perdeva un'imbottitura, e sul profilo «Esci» finiva mezzo sotto la pillola |
-| `test/convenzioni/colori.test.ts` | 2 | che nessun `rgba()`/esadecimale sia scritto a mano in `app/` o `src/` — i valori vengono da `tema/tokens.ts` o si compongono con `velo()`. `src/tema/tokens.ts` (la fonte) e `src/dati/dominio.ts` (`PALETTE_COLORI`, dati di dominio) sono le due esenzioni dichiarate |
+| `test/convenzioni/colori.test.ts` | 2 | che nessun `rgba()`/esadecimale sia scritto a mano in `app/` o `src/` — i valori vengono da `tema/tokens.ts` o si compongono con `velo()`. `src/tema/tokens.ts` (la fonte) e `src/dati/dominio.ts` (`PALETTE_COLORI`, `PELLI_AVATAR`, `CAPELLI_AVATAR`: dati di dominio) sono le due esenzioni dichiarate |
+
+**Fuori dai conteggi, il riferimento del motore dell'avatar non si rigenera in CI**: lo
+scrive MPFB dentro Blender (`tools/avatar/riferimento.py`), che sulla macchina della CI non
+c'è. Il file sta nel repo accanto al test, e si rigenera insieme ai pacchetti
+(`tools/avatar/estrai.py`) ogni volta che cambia l'elenco dei cursori: i due script leggono
+lo stesso `src/avatar/cursori.ts`.
 
 **Fuori dai conteggi, un gate che non è un test**: `services/api/scripts/prova_accesso.py`,
 nel job `database`, rifà contro l'Auth vera dello stack locale la presa di possesso di

@@ -30,7 +30,7 @@ import {
 } from '../../src/dati/dominio'
 import { giornoLocale } from '../../src/dati/righe'
 import { ETICHETTE, colori, durate, linee, raggi, spazi, superfici, velo } from '../../src/tema/tokens'
-import { BadgeIa, BottonePrimario, BottoneTondo, Campo, Pillola, Scheda, Toccabile } from '../../src/ui/base'
+import { BadgeIa, BottonePrimario, BottoneTondo, Campione, Campo, Pillola, Scheda } from '../../src/ui/base'
 import { Attributo, Miniatura, SchedaFoto } from '../../src/ui/capi'
 import { Foglio } from '../../src/ui/avviso'
 import { Schermata, Testata } from '../../src/ui/guscio'
@@ -284,28 +284,16 @@ export default function DettaglioCapo() {
               ) : attributoInModifica === 'colore' ? (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
                   {PALETTE_COLORI.map((voce) => (
-                    <Toccabile
+                    <Campione
                       key={voce.nome}
+                      sfondo={voce.hex}
+                      scelto={voce.hex === capo.colore.hex}
+                      etichetta={voce.nome}
                       onPress={() => {
                         void correggi(capo.id, 'colore', voce)
                         setAttributoInModifica(null)
                       }}
-                      scala={0.94}
-                      style={{
-                        width: 38,
-                        height: 38,
-                        borderRadius: raggi.pillola,
-                        backgroundColor: voce.hex,
-                        borderWidth: voce.hex === capo.colore.hex ? 3 : 1,
-                        // Non il primario: questo segna la scelta dell'utente,
-                        // non un valore letto dal modello — la stessa regola
-                        // di `Pillola` (`ui/base.tsx`), che per lo stesso
-                        // stato usa `colori.inchiostro`.
-                        borderColor: voce.hex === capo.colore.hex ? colori.inchiostro : linee.chiara,
-                      }}
-                    >
-                      <View />
-                    </Toccabile>
+                    />
                   ))}
                 </View>
               ) : (

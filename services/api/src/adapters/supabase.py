@@ -41,6 +41,7 @@ from domain.errors import (
 )
 from domain.models import (
     AnalisiVisione,
+    Avatar,
     Capo,
     Colore,
     ConversazioneChat,
@@ -209,6 +210,19 @@ def profilo_da_riga(riga: dict[str, Any]) -> Profilo:
         "lunghezza_gamba_cm",
     )
     misure = {campo: riga.get(campo) for campo in campi_misure}
+    # L'avatar c'è quando c'è un corpo di partenza: i cursori da soli, senza, non dicono
+    # da dove partono.
+    corpo_base = riga.get("avatar_corpo_base")
+    avatar = (
+        Avatar(
+            corpo_base=corpo_base,
+            cursori=riga.get("avatar_cursori") or {},
+            pelle=riga.get("avatar_pelle"),
+            capelli=riga.get("avatar_capelli"),
+        )
+        if corpo_base
+        else None
+    )
     return Profilo(
         id=riga["id"],
         nome=riga.get("nome") or "",
@@ -219,6 +233,7 @@ def profilo_da_riga(riga: dict[str, Any]) -> Profilo:
             evita=riga.get("evita") or [],
         ),
         misure=Misure(**misure) if any(v is not None for v in misure.values()) else None,
+        avatar=avatar,
         unita_lunghezza=riga.get("unita_lunghezza") or "cm",
         avatar_foto_chiave=riga.get("avatar_foto_percorso"),
         creato_il=riga["creato_il"],

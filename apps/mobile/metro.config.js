@@ -6,4 +6,11 @@
 // lo dichiara (`T-23`), non il resolver.
 const { getDefaultConfig } = require('expo/metro-config')
 
-module.exports = getDefaultConfig(__dirname)
+const config = getDefaultConfig(__dirname)
+
+// I pacchetti del corpo dell'avatar (`assets/avatar/*.bin`, da `tools/avatar/estrai.py`) non
+// sono nella lista di default di Metro: senza questa riga l'import di `comune.bin` non
+// risolve. Dichiararli asset è anche ciò che li fa leggere come byte, non come moduli.
+config.resolver.assetExts = [...config.resolver.assetExts, 'bin']
+
+module.exports = config

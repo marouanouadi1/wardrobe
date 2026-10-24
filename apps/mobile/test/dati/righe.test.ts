@@ -134,6 +134,10 @@ describe('profilo', () => {
     lunghezza_gamba_cm: null,
     unita_lunghezza: 'cm',
     avatar_foto_percorso: null,
+    avatar_corpo_base: null,
+    avatar_cursori: {},
+    avatar_pelle: null,
+    avatar_capelli: null,
     creato_il: '2026-09-01T10:00:00+00:00',
   }
 
@@ -166,6 +170,50 @@ describe('profilo', () => {
       spalle_cm: null,
       lunghezza_gamba_cm: null,
     })
+  })
+
+  test('un profilo senza avatar non manda le colonne dell’avatar', () => {
+    // Così misure, unità e onboarding si salvano anche su un database dove la
+    // migrazione dell'avatar non è ancora arrivata.
+    const senza = aggiornamentoDiProfilo(profiloDaRiga(riga))
+    expect(Object.keys(senza).filter((k) => k.startsWith('avatar_') && k !== 'avatar_foto_percorso')).toEqual([])
+  })
+
+  test('senza un corpo di partenza non c’è avatar, anche se i cursori ci sono', () => {
+    // I cursori da soli non dicono da quale corpo partono: leggerli come un
+    // avatar vorrebbe dire inventarne il corpo.
+    expect(profiloDaRiga({ ...riga, avatar_cursori: { weight: 0.75 } }).avatar).toBeNull()
+  })
+
+  test('l’avatar va e torna dalle quattro colonne', () => {
+    const conAvatar = profiloDaRiga({
+      ...riga,
+      avatar_corpo_base: 'uomo',
+      avatar_cursori: { weight: 0.75, 'measure-shoulder-dist-decr-incr': -0.5 },
+      avatar_pelle: 'olivastra',
+      avatar_capelli: null,
+    })
+
+    expect(conAvatar.avatar).toEqual({
+      corpo_base: 'uomo',
+      cursori: { weight: 0.75, 'measure-shoulder-dist-decr-incr': -0.5 },
+      pelle: 'olivastra',
+      capelli: null,
+    })
+    expect(aggiornamentoDiProfilo(conAvatar)).toMatchObject({
+      avatar_corpo_base: 'uomo',
+      avatar_cursori: { weight: 0.75, 'measure-shoulder-dist-decr-incr': -0.5 },
+      avatar_pelle: 'olivastra',
+      avatar_capelli: null,
+    })
+    // L'altezza dell'avatar non ha una colonna sua: è quella delle misure.
+    expect(aggiornamentoDiProfilo(conAvatar).altezza_cm).toBe(170)
+  })
+
+  test('di un jsonb dei cursori si tiene solo ciò che è un numero', () => {
+    const strano = profiloDaRiga({ ...riga, avatar_corpo_base: 'donna', avatar_cursori: { weight: '0.5', muscle: 0.25 } })
+    expect(strano.avatar?.cursori).toEqual({ muscle: 0.25 })
+    expect(profiloDaRiga({ ...riga, avatar_corpo_base: 'donna', avatar_cursori: [0.5] }).avatar?.cursori).toEqual({})
   })
 })
 

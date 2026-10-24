@@ -18,6 +18,14 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **L'avatar è il corpo di MakeHuman, in 3D**: nella scheda «Come mi sta» si
+  sceglie da che corpo partire, poi lo si regola — peso, muscolatura, spalle,
+  torace, vita, lunghezza del busto, fianchi, glutei, gambe, cosce, braccia, e il
+  seno o i pettorali — su cinque livelli ciascuno, con pelle e colore dei capelli.
+  L'altezza è quella delle tue misure: cambiarla qui la cambia anche lì. Il corpo
+  si gira col dito, e sta in piedi con le braccia distese lungo i fianchi. Non
+  indossa ancora i tuoi capi: porta uno strato neutro grigio,
+  e l'outfit scelto resta nella sua scheda. Al posto della sagoma colorata di prima.
 - **L'app passa a Expo SDK 58**: React Native 0.88, React 19.3, Sentry 8.
   Non porta funzioni nuove. Nello sviluppo serve Expo Go per l'SDK 58. Si chiudono le vulnerabilità di `decode-uri-component`,
   `query-string` e `image-size`; restano `node-forge` e `zod`, che arrivano da
@@ -217,6 +225,9 @@ travestita da registro.
   a versione esatta, alle ultime versioni compatibili con i loro range.
 
 ### api
+- Il profilo porta l'avatar (`Profilo.avatar`: corpo di partenza, cursori per nome,
+  pelle, capelli), con le sue enum nei contratti. Richiede la migrazione
+  `20261023235648_avatar_makehuman.sql` sul progetto vero.
 - **Il backend fa solo l'IA, e la fa come te** (ADR 0010). Restano la lettura delle foto, i
   suggerimenti, la chat, l'esportazione e `/salute`. Tutto il resto (accesso,
   armadio, outfit, profilo, segnalazioni) l'app lo farà direttamente con

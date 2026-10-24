@@ -17,14 +17,16 @@ nascere dal ritaglio o da un template della sua famiglia; la stoffa, le stampe e
 le scritte vengono sempre dalla foto. Nessun vestito a cui si cambia la tinta. Il
 corpo che lo indossa può regolarsi su livelli scelti da noi — altezza, spalle,
 proporzioni — o somigliare alla persona partendo da una sua foto. Il corpo base
-è quello di MakeHuman, costruito con MPFB2 in Blender ed esportato in glTF
-([`docs/adr/0012`](docs/adr/0012-il-corpo-dell-avatar-nasce-in-mpfb2.md)); se
-avrà la sua faccia è ancora aperto.
+è quello di MakeHuman ([`docs/adr/0012`](docs/adr/0012-il-corpo-dell-avatar-nasce-in-mpfb2.md)):
+l'app lo calcola da sé, dai dati grezzi di MPFB2, e lo disegna con `three`
+([`docs/adr/0013`](docs/adr/0013-il-corpo-si-calcola-nell-app.md)); se avrà la sua
+faccia è ancora aperto.
 
-Quello che gira adesso è il ripiego: una sagoma 2D tinta con il **colore
-dominante** letto dalla foto, che funziona su qualunque telefono. È anche il
-motivo per cui `domain/vision.py` pretende `colore.hex` e rifiuta il capo se non
-lo riconosce — un vincolo che vale per ora, non per scelta. Il perché sta in
+Quello che gira adesso è **il corpo, non ancora vestito**: nella scheda «Come mi
+sta» l'avatar di MakeHuman si regola su una dozzina di cursori a cinque livelli,
+prende l'altezza dalle misure, e porta uno strato neutro grigio al posto dei capi;
+l'outfit scelto si legge accanto. La sagoma 2D tinta con il colore dominante che
+c'era prima non c'è più. Il perché di questa strada sta in
 [`docs/adr/0004`](docs/adr/0004-l-avatar-veste-le-foto-non-i-colori.md) e in
 [`docs/adr/0011`](docs/adr/0011-il-corpo-a-manopole-e-i-capi-da-template-tornano-possibili.md).
 
@@ -40,6 +42,7 @@ services/api/        il backend dell'IA: analisi delle foto, suggerimenti, chat,
   src/adapters/      Supabase, provider LLM, scontorno
 supabase/            schema e policy (migrations/), test pgTAP, configurazione dello stack locale
 packages/contracts/  tipi TypeScript generati: dai modelli Pydantic e dallo schema SQL
+tools/avatar/        i pacchetti del corpo dell'avatar, presi dai dati di MakeHuman (MPFB2)
 docs/adr/            le decisioni che valeva la pena scrivere
 ```
 

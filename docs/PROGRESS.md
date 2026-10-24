@@ -5,7 +5,7 @@
 > modulo citato da un ADR può non esistere più. Prima di dare per esistente — o per
 > inesistente — qualunque cosa, si apre questo file.
 
-**Ultimo aggiornamento:** 2026-09-27
+**Ultimo aggiornamento:** 2026-10-24
 
 > ### Sulla provenienza di questa prima versione
 >
@@ -62,9 +62,82 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       `intro.tsx`, `segnalazioni.tsx` — **manca una prova su un dispositivo**: esistono
       e passano `tsc` ed `expo lint`, ma nessuno le ha mai aperte. `[x]` significa
       «verificato», e non lo sono
-- [~] `(tabs)/avatar.tsx` — sagoma SVG tinta dai colori dominanti. È il **ripiego
-      dichiarato dall'ADR 0004**, non il 3D che l'ADR descrive: il manichino che vestiva
-      foto vere è stato rimosso col playground e non ne resta codice
+- [~] **L'avatar di MakeHuman in «Come mi sta»** (`(tabs)/avatar.tsx`, ADR 0013,
+      2026-10-24) — al posto della sagoma SVG tinta dai colori dominanti, che non c'è più
+      (con lei `coloriDiVestizione` e `colori.pelle`). Il corpo si calcola nell'app con lo
+      stesso conto di MPFB (`src/avatar/motore.ts`, il motore dell'esploratore portato in
+      TypeScript) e si disegna con `three` su `expo-gl`, **senza** `@react-three/fiber`. I
+      dati sono i target grezzi di MakeHuman, ridotti a quelli che i cursori dell'app
+      possono chiedere: tre pacchetti in `assets/avatar/` (12,4 MB), generati da
+      `tools/avatar/estrai.py`. Un corpo di partenza da scegliere («Da che corpo
+      parti?»), l'altezza che **è** `Misure.altezza_cm` (cercata per bisezione sulla
+      macro), dodici cursori a cinque livelli per corpo (`src/avatar/cursori.ts`, l'elenco
+      unico), pelle e colore dei capelli; uno strato neutro grigio (un abito di sistema di
+      MakeHuman) al posto di un corpo nudo; il corpo si gira col dito, solo in orizzontale.
+      Salvataggio con «Salva il corpo» in fondo, su quattro colonne nuove di `profili`
+      (migrazione `20261023235648_avatar_makehuman.sql`). L'outfit resta nella sua scheda:
+      pillole con la ‹×›, «Mescola», «Salva outfit» — l'avatar non lo indossa ancora.
+      Due primitive nuove in `ui/base.tsx`: `Livelli` e `Campione` (che ora usa anche il
+      colore del capo in `capo/[id].tsx`, prima scritto a mano), e l'icona `meno`.
+      *Verificato:* `typecheck` exit 0, `lint` 0 errori, `mobile:test` verdi,
+      `build:web` esportato (`three` sta in un pezzo a parte, caricato solo dalla scheda);
+      `api:lint`, `api:test`, `api:cov` (dominio 99%, handler 98%), `contracts:check`,
+      `supabase:reset` + `supabase:test` + `supabase:verifica` verdi.
+      **Il motore contro MPFB vero**: `test/avatar/motore.test.ts` rifà sei corpi calcolati
+      da MPFB in Blender (`tools/avatar/riferimento.py`) e i vertici di corpo e strato
+      coincidono entro 0,05 mm; il test è stato **visto rosso per un difetto vero** (peso e
+      muscolatura mai toccati facevano sparire la pila delle macro: due corpi su sei
+      sbagliati di decimetri). **`T-35` non si ripresenta**: la source map di un export
+      Android contiene `three.module.js` + `three.core.js` e nessun `three.cjs`.
+      **Visto disegnato**: motore e scena dell'app compilati così come sono, in Chromium
+      senza finestra — corpo femminile e maschile, strato, capelli, occhi, tema chiaro e
+      scuro, ricalcolo medio 14 ms.
+      **Provata la schermata vera, sul web, contro lo stack locale** (export web con
+      `EXPO_NO_DOTENV=1` e `--clear`, così il DSN di Sentry di `.env.local` non entra nel
+      bundle; in più ogni richiesta verso Sentry bloccata in rete: zero richieste
+      esterne). Un utente di prova entra, sceglie «Corpo femminile», mette Peso al
+      massimo e Spalle al minimo, salva: la riga torna `donna | {"weight": 1,
+      "measure-shoulder-dist-decr-incr": -1}`, con il controllo `cursori_validi` di
+      mezzo. Ricaricando torna il corpo salvato, e la scheda si apre su «L'outfit». Il
+      «+» dell'altezza, tre volte, porta da 159 a 162 cm, scritti in `altezza_cm`. La
+      prova ha trovato un difetto, corretto: − e + erano dipinti di primario, e
+      un'azione è inchiostro. Utente di prova cancellato alla fine.
+      **Cosa manca:** **nessuna prova su un telefono** — né che `expo-gl` regga `three`
+      0.186 (texture, indici a 32 bit), né quanto ci mette Hermes a ricalcolare, né che il
+      dito giri il corpo senza rubare lo scorrimento. **La migrazione non è sul progetto
+      vero**: va portata con `supabase db push` **prima del merge**, perché un merge è già
+      un rilascio. Senza, salvare il corpo fallisce; il resto del profilo no, perché
+      `aggiornamentoDiProfilo` manda le colonne dell'avatar solo quando c'è un avatar.
+      L'elenco dei cursori è **in revisione** (`Q-19`), e le misure diverse dall'altezza
+      non sono collegate all'avatar (`Q-18`).
+      **Corretto dopo la review di `reviewer`**, ciascuno col suo test dove serviva:
+      `useRisorsa` lasciava vincere la risposta arrivata per ultima invece di quella
+      chiesta per ultima (cambiando corpo due volte di fila restava «Preparo il corpo…»
+      per sempre: `test/dati/risorsa.test.tsx`, **visto rosso** sul codice di prima); una
+      macro negativa scritta a mano svuotava la pila (`statoDi` ora ferma i valori nei
+      livelli, test **visto rosso**); la scheda chiedeva «Da che corpo parti?» anche a
+      profilo non ancora arrivato o a server irraggiungibile (ora `Caricamento` e
+      `SenzaRete`); in pollici il «+» arrivava a 91″, oltre i limiti di `misure.tsx`;
+      sul web il mouse non girava il corpo (ora gira: provato col mouse sulla schermata
+      vera, stesso giro di prova contro lo stack locale); l'errore di caricamento mostrava il testo
+      dell'eccezione e non si poteva riprovare; pelle e capelli ricalcolavano il corpo;
+      `comune.bin` si leggeva una volta per corpo; un errore di `three` dentro
+      `onContextCreate` sarebbe stato fatale sul nativo, ora è una scheda d'errore.
+      **Le braccia distese** (richiesta dell'utente, 2026-10-24): la posa dell'esploratore
+      — 12°, gomito piegato, mani in avanti — sembrava a braccia alzate. Ora le braccia
+      scendono a 4° dalla verticale con l'avambraccio allineato al braccio (`POSA` in
+      `motore.ts`): ruotare solo il braccio non bastava, perché nella posa di riposo di
+      MakeHuman il gomito è già piegato e l'avambraccio restava a 40-47° in avanti. Su un
+      corpo largo si scostano da sole (22° sul più largo). *Verificato:* scatti di fronte e
+      di lato sui due corpi e sul corpo più largo, e due controlli nuovi in
+      `motore.test.ts` (braccio dritto, polso entro 15° dalla verticale), **visti rossi**
+      lasciando l'avambraccio piegato.
+      **Riverificato sull'SDK 58** (merge di #63 nel branch): `expo-gl` passa a 58.0.3
+      (`expo install --check` pulito), una sola copia di React, React Native e `three`, e
+      ancora nessun `three.cjs` nella source map Android anche senza
+      `disableHierarchicalLookup`; `typecheck`, `lint`, `mobile:test`, `build:web` verdi, e
+      la stessa prova della schermata sul web contro lo stack locale (scelta, cursori,
+      salvataggio arrivato nel database)
 - [x] Test automatici dell'app — leggibilità del testo sul fondo dipinto,
       convenzioni delle primitive (`style` e prop `sfondo`), e nessun colore
       composto a mano (`rgba()`/esadecimale) fuori da `tema/tokens.ts` e
@@ -1106,7 +1179,9 @@ Le cose che **non dipendono da noi**. Si aggiornano appena se ne conosce una.
 | Una sessione con un telefono vero (`npm run mobile`) | utente | l'intero blocco `[!]` qui sopra: registrazione e login non sono mai stati provati su un dispositivo |
 | `EXPO_PUBLIC_SENTRY_DSN` | utente | il pulsante «Segnala un problema» resta nascosto, di proposito |
 | Conferma degli id `gpt-5.1` e `gemini-2.5-pro` | utente | niente oggi: sono sovrascrivibili da ambiente — vedi `docs/QUESTIONI.md` Q-03 |
-| Se l'avatar avrà la faccia della persona, e come i livelli si legano a `Misure` | utente | i template dei capi e l'avatar 3D oltre il ripiego 2D: il corpo base è deciso (MPFB2, ADR 0012), restano `docs/DOMANDE_APERTE.md` D-10, D-11, D-12 |
+| Se l'avatar avrà la faccia della persona, e come i livelli si legano a `Misure` | utente | i template dei capi; il corpo è nell'app (ADR 0012, 0013), restano `docs/DOMANDE_APERTE.md` D-10, D-11, D-12 e `docs/QUESTIONI.md` Q-18 |
+| La revisione dei cursori dell'avatar | utente | l'elenco definitivo: la pagina «Cursori dell'avatar» raccoglie le scelte (`Q-19`) |
+| `supabase db push` della migrazione dell'avatar | utente | il merge del branch dell'avatar, che è già un rilascio: senza, salvare il corpo fallisce (il resto del profilo no) |
 
 ## Debiti dichiarati
 

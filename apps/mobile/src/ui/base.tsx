@@ -371,6 +371,120 @@ export function Segmenti<T extends string>({
   )
 }
 
+/**
+ * Una scala a pochi passi, uno per livello: il controllo dei cursori del corpo
+ * dell'avatar. Pochi livelli, non un cursore continuo, perché così li vogliono
+ * gli ADR 0011 e 0012 — e un passo si tocca, mentre un cursore si trascina e
+ * dentro una pagina che scorre il dito non sa mai chi dei due sta muovendo.
+ *
+ * Il passo scelto si dipinge come una pillola attiva (inchiostro, o primario
+ * su un fondo scuro), e il fondo resta quello di chi la contiene: la scala non
+ * ne dipinge uno suo, quindi **inoltra** il fondo a testi e passi.
+ */
+export function Livelli<T extends number>({
+  etichetta,
+  livelli,
+  valore,
+  estremi,
+  onCambia,
+}: {
+  etichetta: string
+  livelli: readonly T[]
+  valore: T
+  /** Le parole ai due capi, da sinistra a destra. */
+  estremi: readonly [string, string]
+  onCambia: (valore: T) => void
+}) {
+  const scura = useFondo() === 'scuro'
+  const acceso = scura ? colori.primario : colori.inchiostro
+  const spento = scura ? linee.scura : linee.media
+  return (
+    <View style={{ gap: spazi.xs }}>
+      <Forte taglia="minuto">{etichetta}</Forte>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* La riga dietro ai passi: sta in un livello suo, sotto, così il tocco
+            resta tutto ai passi. */}
+        <View
+          pointerEvents="none"
+          style={{ position: 'absolute', left: 22, right: 22, height: 2, borderRadius: 1, backgroundColor: spento }}
+        />
+        {livelli.map((livello, i) => {
+          const scelto = livello === valore
+          return (
+            <Toccabile
+              key={livello}
+              onPress={() => onCambia(livello)}
+              scala={0.85}
+              accessibilityRole="button"
+              accessibilityState={{ selected: scelto }}
+              accessibilityLabel={`${etichetta}: passo ${i + 1} di ${livelli.length}`}
+              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <View
+                style={{
+                  width: scelto ? 22 : 14,
+                  height: scelto ? 22 : 14,
+                  borderRadius: raggi.pillola,
+                  borderWidth: scelto ? 0 : 2,
+                  borderColor: spento,
+                  backgroundColor: scelto ? acceso : colori.scheda,
+                }}
+              />
+            </Toccabile>
+          )
+        })}
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spazi.xs }}>
+        <Corpo taglia="micro" tono="tenue">
+          {estremi[0]}
+        </Corpo>
+        <Corpo taglia="micro" tono="tenue">
+          {estremi[1]}
+        </Corpo>
+      </View>
+    </View>
+  )
+}
+
+/**
+ * Un campione di colore da scegliere: la pelle e i capelli dell'avatar, il
+ * colore di un capo letto male. `sfondo` è la tinta del campione stesso, e la
+ * scelta si segna d'inchiostro — non di primario: è una scelta della persona,
+ * non un valore letto dal modello (la stessa regola di `Pillola`).
+ */
+export function Campione({
+  sfondo,
+  scelto,
+  etichetta,
+  onPress,
+}: {
+  sfondo: string
+  scelto?: boolean
+  /** Il nome del colore, per chi non lo vede. */
+  etichetta: string
+  onPress: () => void
+}) {
+  return (
+    <Toccabile
+      onPress={onPress}
+      scala={0.94}
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!scelto }}
+      accessibilityLabel={etichetta}
+      style={{
+        width: 38,
+        height: 38,
+        borderRadius: raggi.pillola,
+        backgroundColor: sfondo,
+        borderWidth: scelto ? 3 : 1,
+        borderColor: scelto ? colori.inchiostro : linee.chiara,
+      }}
+    >
+      <View />
+    </Toccabile>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────
 // Pulsanti
 // ─────────────────────────────────────────────────────────────
@@ -724,6 +838,7 @@ const TRACCIATI = {
   scintilla: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z',
   griglia: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   piu: 'M12 5v14M5 12h14',
+  meno: 'M5 12h14',
   maglietta: 'M8 3l4 2 4-2 4.2 1.7-1 4.3H17v10H7V9H4.8l-1-4.3z',
   utente: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20.5c1.4-3.2 4.2-5 7.5-5s6.1 1.8 7.5 5',
   freccia: 'M5 12h14M12 5l7 7-7 7',

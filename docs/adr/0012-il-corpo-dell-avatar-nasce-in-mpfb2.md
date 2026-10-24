@@ -1,6 +1,6 @@
 # 0012 — Il corpo dell'avatar nasce in MPFB2, e nell'app arriva solo il suo output
 
-**Stato:** accettata · **Data:** 2026-10-23 · **Chiude:** `D-04` di
+**Stato:** accettata · **Data:** 2026-10-23 · **Come si disegna nell'app l'ha deciso** [0013](0013-il-corpo-si-calcola-nell-app.md) · **Chiude:** `D-04` di
 `docs/DOMANDE_APERTE.md` · **Discende da:** [0011](0011-il-corpo-a-manopole-e-i-capi-da-template-tornano-possibili.md)
 
 ## Contesto

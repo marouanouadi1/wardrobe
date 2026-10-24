@@ -190,6 +190,12 @@ su un corpo e chi la legge la legge su di sé —, dedurlo dal sistema di taglie
 un cursore come quello macro del genere di MakeHuman, che è uno dei sei cursori
 principali del corpo base scelto (`D-04`).
 
+*Com'è oggi (2026-10-24, ADR 0013):* l'app lo **chiede**, come prima cosa della
+scheda dell'avatar — «Da che corpo parti?», con «Corpo femminile» e «Corpo
+maschile», e una riga che dice che è il punto da cui partono i cursori, non una
+domanda su chi sei. È una proposta, in revisione con gli altri cursori (`Q-19`):
+la domanda resta aperta sulle parole.
+
 ## Risposte
 
 ### D-01 — L'armadio è personale o condiviso?

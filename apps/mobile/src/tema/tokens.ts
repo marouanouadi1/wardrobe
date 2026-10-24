@@ -79,8 +79,35 @@ export const colori = {
    * illeggibile. Chi sta su una schermata chiara usa la velatura, non questo.
    */
   pericoloTenue: '#F9EEEC',
-  /** La pelle del manichino a primitive tinte (`docs/adr/0004`). */
-  pelle: '#E7DFD2',
+} as const
+
+/**
+ * La scena dell'avatar 3D (`src/avatar/scena.ts`): le quattro luci, la tela
+ * dello strato neutro, e le tinte che pelle e capelli prendono finché la
+ * persona non ne sceglie una. Le tinte scelte stanno in `dati/dominio.ts`.
+ *
+ * Le luci vengono dall'esploratore di MakeHuman: un cielo caldo e una terra
+ * fredda, una luce chiave da destra, un taglio azzurro da dietro e un
+ * riempimento caldo da sinistra.
+ */
+export const scena3d = {
+  cielo: '#FFF4EA',
+  terra: '#B4BAD2',
+  chiave: '#FFFFFF',
+  taglio: '#C9D0FF',
+  riempimento: '#FFE2C8',
+  /**
+   * Lo strato neutro che l'avatar indossa al posto di un corpo nudo: un
+   * grigio caldo da tessuto di prova. Non è un capo e non deve sembrarlo —
+   * per questo è una tinta sola, senza stampa — ma deve leggersi come
+   * stoffa: il color tela chiaro della prima prova era indistinguibile da
+   * `pelleNeutra`, e non si capiva dove finiva il corpo.
+   */
+  tela: '#B9B2A7',
+  /** La pelle prima che la persona ne scelga una: quella del manichino di prima. */
+  pelleNeutra: '#E7DFD2',
+  capelliNeutri: '#6F6A64',
+  ombra: colori.inchiostro,
 } as const
 
 /**
@@ -497,4 +524,23 @@ export const ETICHETTE = {
   // bottone di impostazioni, dove «cm» da solo non dice cosa si sta
   // scegliendo. Il simbolo accanto a un numero lo dà `simboloUnita()`.
   unitaLunghezza: { cm: 'Centimetri', pollici: 'Pollici' },
+  // Il corpo, non la persona: è il corpo di MakeHuman da cui si parte (`D-12`).
+  corpoBase: { donna: 'Femminile', uomo: 'Maschile' },
+  tonoPelle: {
+    chiarissima: 'Chiarissima',
+    chiara: 'Chiara',
+    dorata: 'Dorata',
+    olivastra: 'Olivastra',
+    scura: 'Scura',
+    molto_scura: 'Molto scura',
+  },
+  coloreCapelli: {
+    neri: 'Neri',
+    castano_scuro: 'Castano scuro',
+    castani: 'Castani',
+    biondo_scuro: 'Biondo scuro',
+    biondi: 'Biondi',
+    rossi: 'Rossi',
+    grigi: 'Grigi',
+  },
 } as const

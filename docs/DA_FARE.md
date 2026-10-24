@@ -59,6 +59,19 @@ sul commit `b5ba358`, eseguiti il 2026-09-11, e da una seconda review dello
 stesso giorno sull'intero branch — quella che ha **eseguito** i gate invece di
 leggerli, e da cui vengono `T-26`, `T-27` e `T-28`.
 
+### T-69 — `VestizioneColori` non ha più chi la legga
+**Trovato il:** 2026-10-24 · **Dove:** `services/api/src/domain/models.py` (`VestizioneColori`), `services/api/scripts/export_schema.py` · **Gravità:** bassa · **Chi:** `api`, poi `contracts`
+
+Il modello esisteva per il manichino SVG tinto dai colori dominanti: l'app lo
+riempiva con `coloriDiVestizione` (`src/dati/dominio.ts`). Con l'avatar di
+MakeHuman (ADR 0013) la sagoma e la funzione sono state tolte, e nel backend il
+modello non lo usa nessuno: resta solo nella tupla `RISPOSTE` dell'esportazione.
+
+Il suo docblock dice «questo modello resterà per il ripiego». Se il ripiego a
+colori non torna — e lo 0011 esclude di tingere un corpo 3D col colore dominante —
+il rimedio è toglierlo da `models.py` e da `RISPOSTE`, poi `contracts:generate`. Non
+fatto qui perché tocca il contratto del backend, che si rilascia a parte.
+
 ### T-16 — Gli strumenti di test sono in `dependencies`
 **Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/package.json:22-23,38-39` · **Gravità:** bassa · **Chi:** `mobile`
 

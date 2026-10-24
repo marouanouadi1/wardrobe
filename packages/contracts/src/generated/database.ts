@@ -336,7 +336,11 @@ export type Database = {
       profili: {
         Row: {
           altezza_cm: number | null
+          avatar_capelli: Database["public"]["Enums"]["colore_capelli"] | null
+          avatar_corpo_base: Database["public"]["Enums"]["corpo_base"] | null
+          avatar_cursori: Json
           avatar_foto_percorso: string | null
+          avatar_pelle: Database["public"]["Enums"]["tono_pelle"] | null
           citta: string | null
           corporatura: Database["public"]["Enums"]["corporatura"] | null
           creato_il: string
@@ -353,7 +357,11 @@ export type Database = {
         }
         Insert: {
           altezza_cm?: number | null
+          avatar_capelli?: Database["public"]["Enums"]["colore_capelli"] | null
+          avatar_corpo_base?: Database["public"]["Enums"]["corpo_base"] | null
+          avatar_cursori?: Json
           avatar_foto_percorso?: string | null
+          avatar_pelle?: Database["public"]["Enums"]["tono_pelle"] | null
           citta?: string | null
           corporatura?: Database["public"]["Enums"]["corporatura"] | null
           creato_il?: string
@@ -370,7 +378,11 @@ export type Database = {
         }
         Update: {
           altezza_cm?: number | null
+          avatar_capelli?: Database["public"]["Enums"]["colore_capelli"] | null
+          avatar_corpo_base?: Database["public"]["Enums"]["corpo_base"] | null
+          avatar_cursori?: Json
           avatar_foto_percorso?: string | null
+          avatar_pelle?: Database["public"]["Enums"]["tono_pelle"] | null
           citta?: string | null
           corporatura?: Database["public"]["Enums"]["corporatura"] | null
           creato_il?: string
@@ -518,6 +530,15 @@ export type Database = {
         | "stagione"
         | "vestibilita"
         | "lavaggio"
+      colore_capelli:
+        | "neri"
+        | "castano_scuro"
+        | "castani"
+        | "biondo_scuro"
+        | "biondi"
+        | "rossi"
+        | "grigi"
+      corpo_base: "donna" | "uomo"
       corporatura: "minuta" | "media" | "robusta"
       origine_outfit: "manuale" | "ia" | "suggerito_modificato"
       ruolo_chat: "utente" | "wardrobe"
@@ -541,6 +562,13 @@ export type Database = {
         | "capospalla"
         | "abito"
         | "accessorio"
+      tono_pelle:
+        | "chiarissima"
+        | "chiara"
+        | "dorata"
+        | "olivastra"
+        | "scura"
+        | "molto_scura"
       unita_lunghezza: "cm" | "pollici"
     }
     CompositeTypes: {
@@ -681,6 +709,16 @@ export const Constants = {
         "vestibilita",
         "lavaggio",
       ],
+      colore_capelli: [
+        "neri",
+        "castano_scuro",
+        "castani",
+        "biondo_scuro",
+        "biondi",
+        "rossi",
+        "grigi",
+      ],
+      corpo_base: ["donna", "uomo"],
       corporatura: ["minuta", "media", "robusta"],
       origine_outfit: ["manuale", "ia", "suggerito_modificato"],
       ruolo_chat: ["utente", "wardrobe"],
@@ -705,6 +743,14 @@ export const Constants = {
         "capospalla",
         "abito",
         "accessorio",
+      ],
+      tono_pelle: [
+        "chiarissima",
+        "chiara",
+        "dorata",
+        "olivastra",
+        "scura",
+        "molto_scura",
       ],
       unita_lunghezza: ["cm", "pollici"],
     },

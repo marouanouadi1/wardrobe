@@ -10,6 +10,9 @@
     "AttributoCapo": {
       "$ref": "#/$defs/AttributoCapo"
     },
+    "Avatar": {
+      "$ref": "#/$defs/Avatar"
+    },
     "Capo": {
       "$ref": "#/$defs/Capo"
     },
@@ -19,11 +22,17 @@
     "Colore": {
       "$ref": "#/$defs/Colore"
     },
+    "ColoreCapelli": {
+      "$ref": "#/$defs/ColoreCapelli"
+    },
     "ContestoSuggerimento": {
       "$ref": "#/$defs/ContestoSuggerimento"
     },
     "ConversazioneChat": {
       "$ref": "#/$defs/ConversazioneChat"
+    },
+    "CorpoBase": {
+      "$ref": "#/$defs/CorpoBase"
     },
     "Corporatura": {
       "$ref": "#/$defs/Corporatura"
@@ -115,6 +124,9 @@
     "TipoCapo": {
       "$ref": "#/$defs/TipoCapo"
     },
+    "TonoPelle": {
+      "$ref": "#/$defs/TonoPelle"
+    },
     "UnitaLunghezza": {
       "$ref": "#/$defs/UnitaLunghezza"
     },
@@ -192,6 +204,51 @@
       ],
       "title": "AttributoCapo",
       "type": "string"
+    },
+    "Avatar": {
+      "additionalProperties": false,
+      "description": "Il corpo dell'avatar: da quale corpo di MakeHuman parte, e quanto ha mosso ogni cursore.\n\n**I cursori sono un dizionario, non un campo ciascuno**: la chiave è il nome di MakeHuman\n(`weight`, `measure-shoulder-dist-decr-incr`) e il valore è nella sua scala. Quali cursori\nl'app offre lo decide `apps/mobile/src/avatar/cursori.ts`, ed è un elenco ancora in\nrevisione: un campo per cursore vorrebbe dire un cambio di contratto e una migrazione a\nogni cursore tolto o aggiunto. Un cursore assente è al suo valore neutro.\n\n**L'altezza non è qui**: è `Misure.altezza_cm`, che l'avatar legge (ADR 0011).",
+      "properties": {
+        "corpo_base": {
+          "$ref": "#/$defs/CorpoBase"
+        },
+        "cursori": {
+          "maxProperties": 64,
+          "patternProperties": {
+            "^[a-z0-9-]{1,64}$": {
+              "maximum": 1,
+              "minimum": -1,
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "pelle": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TonoPelle"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "capelli": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ColoreCapelli"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "corpo_base"
+      ],
+      "title": "Avatar",
+      "type": "object"
     },
     "Capo": {
       "additionalProperties": false,
@@ -437,6 +494,20 @@
       "title": "Colore",
       "type": "object"
     },
+    "ColoreCapelli": {
+      "description": "Il colore dei capelli dell'avatar; sopracciglia e ciglia lo seguono, più scure.",
+      "enum": [
+        "neri",
+        "castano_scuro",
+        "castani",
+        "biondo_scuro",
+        "biondi",
+        "rossi",
+        "grigi"
+      ],
+      "title": "ColoreCapelli",
+      "type": "string"
+    },
     "ContestoSuggerimento": {
       "additionalProperties": false,
       "description": "Tutto ciò che lo stilista può sapere, e nient'altro.\n\nSe un suggerimento esce strano, è questo il payload da guardare prima di\ndare la colpa al modello.",
@@ -527,6 +598,15 @@
       ],
       "title": "ConversazioneChat",
       "type": "object"
+    },
+    "CorpoBase": {
+      "description": "Il corpo di MakeHuman da cui parte l'avatar: i due estremi della sua macro «gender».\n\n**Si sceglie, non si deduce** — né da `SistemaTaglie`, che dice come si chiamano le taglie\ne promette di non indovinare il genere di nessuno, né da altro. Quali parole usare, e se\nchiederlo così, resta `D-12`: questo è il primo modo di chiederlo, non l'ultimo.",
+      "enum": [
+        "donna",
+        "uomo"
+      ],
+      "title": "CorpoBase",
+      "type": "string"
     },
     "Corporatura": {
       "description": "Tre corporature.\n\n**Il deck non dice quali sono**: mostra solo «Media» come valore corrente di\nun selettore di cui non elenca le voci. Queste tre le abbiamo scelte noi, ed\nè registrato in `docs/DOMANDE_APERTE.md` (`D-09`) perché è una lacuna di\nspecifica, non una decisione presa.",
@@ -1117,6 +1197,16 @@
             }
           ]
         },
+        "avatar": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Avatar"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "unita_lunghezza": {
           "$ref": "#/$defs/UnitaLunghezza"
         },
@@ -1512,6 +1602,19 @@
         "accessorio"
       ],
       "title": "TipoCapo",
+      "type": "string"
+    },
+    "TonoPelle": {
+      "description": "Il colore della pelle dell'avatar. I sei toni vengono dall'esploratore di MakeHuman.",
+      "enum": [
+        "chiarissima",
+        "chiara",
+        "dorata",
+        "olivastra",
+        "scura",
+        "molto_scura"
+      ],
+      "title": "TonoPelle",
       "type": "string"
     },
     "UnitaLunghezza": {
