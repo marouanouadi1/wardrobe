@@ -1,21 +1,9 @@
-// Metro in un monorepo: npm mette le dipendenze nella root, quindi il bundler
-// deve guardare anche lì. Senza queste tre righe l'app non trova né i pacchetti
-// hoistati né @wardrobe/contracts.
-const path = require('node:path')
+// Il monorepo lo configura `expo/metro-config` da sé (SDK 52+): `watchFolders` e
+// `nodeModulesPaths` sono quelli che qui si scrivevano a mano. Non si rimette
+// `disableHierarchicalLookup`: impedisce a Metro di trovare i pacchetti che npm
+// annida, e con l'SDK 58 faceva cadere il bundle (`semver` 7, annidato sotto
+// `react-native-reanimated`). Una copia sola di React la garantisce la radice che
+// lo dichiara (`T-23`), non il resolver.
 const { getDefaultConfig } = require('expo/metro-config')
 
-const radiceApp = __dirname
-const radiceMonorepo = path.resolve(radiceApp, '../..')
-
-const config = getDefaultConfig(radiceApp)
-
-config.watchFolders = [radiceMonorepo]
-config.resolver.nodeModulesPaths = [
-  path.resolve(radiceApp, 'node_modules'),
-  path.resolve(radiceMonorepo, 'node_modules'),
-]
-// Senza questo, un pacchetto risolto dalla root potrebbe caricare una seconda
-// copia di React: la classica schermata bianca senza errori.
-config.resolver.disableHierarchicalLookup = true
-
-module.exports = config
+module.exports = getDefaultConfig(__dirname)
