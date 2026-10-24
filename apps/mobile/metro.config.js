@@ -18,4 +18,9 @@ config.resolver.nodeModulesPaths = [
 // copia di React: la classica schermata bianca senza errori.
 config.resolver.disableHierarchicalLookup = true
 
+// I pacchetti del corpo dell'avatar (`assets/avatar/*.bin`, da `tools/avatar/estrai.py`) non
+// sono nella lista di default di Metro: senza questa riga `require('…/comune.bin')` non
+// risolve. Dichiararli asset è anche ciò che li fa leggere come byte, non come moduli.
+config.resolver.assetExts = [...config.resolver.assetExts, 'bin']
+
 module.exports = config

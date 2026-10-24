@@ -19,8 +19,9 @@ import {
   type TipoCapo,
   VALORI_ATTRIBUTO_CAPO,
   type UnitaLunghezza,
+  type ColoreCapelli,
+  type TonoPelle,
   type Vestizione,
-  type VestizioneColori,
 } from '@wardrobe/contracts'
 import { ETICHETTE } from '../tema/tokens'
 import { giornoLocale } from './righe'
@@ -155,26 +156,6 @@ export function capiDiVestizione(vestizione: Vestizione, capi: Map<string, Capo>
 }
 
 /**
- * Traduce una vestizione in colori: il ponte del manichino a primitive tinte.
- *
- * Il manichino non indossa le fotografie, tinge superfici con i colori che il
- * modello di visione ha letto dalle foto dei capi. È il primo passo, non il
- * traguardo — la direzione è che il capo si veda dalla sua foto scontornata,
- * applicata come texture (`docs/adr/0004`). Quando arriverà, questa funzione
- * resta per il ripiego: serve ancora quando la texture non c'è.
- */
-export function coloriDiVestizione(vestizione: Vestizione, capi: Map<string, Capo>): VestizioneColori {
-  const risolvi = (id: string | null | undefined) => (id ? (capi.get(id)?.colore.hex ?? null) : null)
-  return {
-    top: risolvi(vestizione.top),
-    bottom: risolvi(vestizione.bottom),
-    outer: risolvi(vestizione.outer),
-    shoes: risolvi(vestizione.shoes),
-    dress: risolvi(vestizione.dress),
-  }
-}
-
-/**
  * Una manciata di colori comuni: più veloce che digitare un esadecimale a
  * mano, per il form manuale e per la correzione di un colore letto male.
  */
@@ -190,6 +171,30 @@ export const PALETTE_COLORI = [
   { nome: 'Cammello', hex: '#A9805A' },
   { nome: 'Rosa', hex: '#D9A9A0' },
 ] as const
+
+/**
+ * Le tinte dell'avatar 3D: la pelle e i capelli. Sono dati di dominio come
+ * `PALETTE_COLORI` — il colore di una persona, non della UI —, e vengono
+ * dall'esploratore dei cursori di MakeHuman del 2026-10-18. L'ordine in cui
+ * si mostrano è quello di `VALORI_TONO_PELLE` e `VALORI_COLORE_CAPELLI`.
+ */
+export const PELLI_AVATAR: Record<TonoPelle, string> = {
+  chiarissima: '#EDC8AE',
+  chiara: '#DFAE8C',
+  dorata: '#C99470',
+  olivastra: '#A87852',
+  scura: '#7E5134',
+  molto_scura: '#4F3021',
+}
+export const CAPELLI_AVATAR: Record<ColoreCapelli, string> = {
+  neri: '#1E1916',
+  castano_scuro: '#3B2A20',
+  castani: '#6A4630',
+  biondo_scuro: '#9C7449',
+  biondi: '#D2AE76',
+  rossi: '#8E3B1F',
+  grigi: '#A3A19D',
+}
 
 /**
  * La foto da mostrare: quella scontornata se c'è, altrimenti l'originale.

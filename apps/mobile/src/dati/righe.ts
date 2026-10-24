@@ -17,6 +17,7 @@
 import type {
   AttributoCapo,
   Capo,
+  Json,
   ConversazioneChat,
   MessaggioChat,
   Misure,
@@ -179,10 +180,29 @@ export function profiloDaRiga(riga: Tables<'profili'>): Profilo {
       evita: riga.evita ?? [],
     },
     misure: Object.keys(misure).length > 0 ? misure : null,
+    // L'avatar c'è quando c'è un corpo di partenza: i cursori da soli non dicono da dove partono.
+    avatar: riga.avatar_corpo_base
+      ? {
+          corpo_base: riga.avatar_corpo_base,
+          cursori: cursoriDaRiga(riga.avatar_cursori),
+          pelle: riga.avatar_pelle,
+          capelli: riga.avatar_capelli,
+        }
+      : null,
     unita_lunghezza: riga.unita_lunghezza ?? 'cm',
     avatar_foto_chiave: riga.avatar_foto_percorso,
     creato_il: riga.creato_il,
   }
+}
+
+/**
+ * `avatar_cursori` è un `jsonb`: il database ne controlla già la forma
+ * (`privato.cursori_validi`), qui si tiene solo ciò che è un numero — un tipo
+ * `Json` non lo sa, e non si fa finta che lo sappia con un cast.
+ */
+function cursoriDaRiga(json: Json): Record<string, number> {
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return {}
+  return Object.fromEntries(Object.entries(json).filter((voce): voce is [string, number] => typeof voce[1] === 'number'))
 }
 
 /**
@@ -199,6 +219,18 @@ export function aggiornamentoDiProfilo(profilo: Profilo): TablesUpdate<'profili'
     evita: profilo.preferenze?.evita ?? [],
     unita_lunghezza: profilo.unita_lunghezza ?? 'cm',
     avatar_foto_percorso: profilo.avatar_foto_chiave ?? null,
+    // Le colonne dell'avatar solo quando c'è un avatar: un profilo senza (le misure,
+    // l'onboarding, la foto) non le tocca, e si salva anche su un database dove la
+    // migrazione dell'avatar non è ancora arrivata. Nessuna schermata toglie un
+    // avatar, quindi non c'è un `null` da scrivere.
+    ...(profilo.avatar
+      ? {
+          avatar_corpo_base: profilo.avatar.corpo_base,
+          avatar_cursori: profilo.avatar.cursori ?? {},
+          avatar_pelle: profilo.avatar.pelle ?? null,
+          avatar_capelli: profilo.avatar.capelli ?? null,
+        }
+      : {}),
     ...Object.fromEntries(CAMPI_MISURE.map((campo) => [campo, misure[campo] ?? null])),
   }
 }
