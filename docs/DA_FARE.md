@@ -370,7 +370,7 @@ accendere un gate.
 `T-23` ha tolto la causa (`react`/`react-dom` dichiarati anche in root), non
 un gate che la tenga tolta. Se domani qualcuno rimuove quella dichiarazione da
 `dependencies` di root — o aggiunge un pacchetto che richiede una versione di
-`react` incompatibile con `19.2.3` — **nessun job diventa rosso**: le due copie
+`react` incompatibile con `19.3.0` — **nessun job diventa rosso**: le due copie
 tornerebbero silenziosamente, e il prossimo sintomo sarebbe di nuovo un
 dispatcher nullo scoperto a mano, non un gate che lo dice.
 
@@ -389,6 +389,16 @@ seconda non dovrebbe esistere), o se è sufficiente affidarsi a `npm ls react
 react-dom` con `--all` che esce diverso da zero se ci sono `invalid`/duplicati
 — e in tal caso in quale workflow (`mobile.yml` ha già `paths:` su
 `apps/mobile/**`, ma la causa può tornare anche toccando solo la root).
+
+**Aggiornamento del 2026-10-24 (Expo SDK 58):** la voce pesa di più.
+`metro.config.js` non ha più `disableHierarchicalLookup`, che con l'SDK 58 non
+lasciava trovare a Metro `semver` 7, annidato sotto `react-native-reanimated`.
+Quella riga era anche una seconda difesa: una copia di `react` annidata sotto un
+pacchetto, Metro non la vedeva, e usava quella della radice. Adesso finirebbe
+nel bundle senza un errore. Resta una difesa sola, la radice che dichiara
+`react` e `react-dom` (`T-23`); il gate di questa voce è l'unico modo di
+accorgersene prima del telefono. Rimettere la riga non è il rimedio: per far
+cadere di nuovo il bundle basta il prossimo pacchetto annidato.
 
 ### T-56 — Niente controlla la configurazione dell'Auth sul progetto Supabase vero
 **Trovato il:** 2026-09-25 (audit di `security`, fase 1 di ADR 0010) · **Dove:** il pannello di Supabase, `supabase/config.toml` · **Gravità:** alta il giorno del passaggio · **Chi:** `ci-cd`

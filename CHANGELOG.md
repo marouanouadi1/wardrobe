@@ -19,8 +19,7 @@ travestita da registro.
 
 ### mobile
 - **L'app passa a Expo SDK 58**: React Native 0.88, React 19.3, Sentry 8.
-  Per chi usa l'app non cambia niente di visibile. Nello sviluppo serve Expo Go
-  per l'SDK 58. Si chiudono le vulnerabilità di `decode-uri-component`,
+  Non porta funzioni nuove. Nello sviluppo serve Expo Go per l'SDK 58. Si chiudono le vulnerabilità di `decode-uri-component`,
   `query-string` e `image-size`; restano `node-forge` e `zod`, che arrivano da
   `@expo/cli`. `metro.config.js` torna alla configurazione di Expo: la riga
   `disableHierarchicalLookup` impediva a Metro di trovare i pacchetti annidati.
