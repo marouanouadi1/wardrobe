@@ -34,14 +34,14 @@
     "lint": "npm run lint --workspaces --if-present"
   },
   "dependencies": {
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
     "typescript": "~6.0.3"
   },
   "overrides": {
     "typescript": "~6.0.3",
-    "react-native-worklets": "0.10.1"
+    "react-native-worklets": "0.13.0"
   }
 }

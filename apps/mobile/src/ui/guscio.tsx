@@ -16,6 +16,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -401,7 +402,7 @@ export function Schermata({
   // spazio lo decide la stessa funzione che decide se la barra si vede.
   const percorso = usePathname()
   const paddingBottom = schedaDi(percorso) ? altezzaBarra(bordi.bottom) : 60
-  const scrollRef = useRef<ScrollView>(null)
+  const scrollRef = useRef<ScrollViewInstance>(null)
   // Il fondo pagina, asserito: è la sola ragione per cui `su="scuro"` esiste,
   // ed è il punto più esterno da cui ogni `Scheda`/testo nudo dentro
   // `children` eredita — oggi nessuna schermata lo passa ancora. Con una

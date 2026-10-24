@@ -273,8 +273,8 @@ arrivano da `@wardrobe/contracts`. Dettaglio e catena in
 ## Una sola copia di React, dichiarata in due punti
 
 `react` e `react-dom` sono dichiarati **sia** in `package.json` di root **sia**
-in `apps/mobile/package.json`, alla stessa versione esatta (oggi `19.2.3`,
-pinnata da Expo SDK 57) — altrimenti tornano le due copie che `T-23` ha chiuso
+in `apps/mobile/package.json`, alla stessa versione esatta (oggi `19.3.0`,
+pinnata da Expo SDK 58) — altrimenti tornano le due copie che `T-23` ha chiuso
 (`docs/adr/0008`). **Quando Expo alza il pin, si alza in entrambi i file nella
 stessa modifica**: `package.json` è JSON e non può portare un commento che lo
 spieghi da solo, e questa riga è il posto dove si va a cercarlo.
