@@ -18,6 +18,14 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- **L'avatar è il corpo di MakeHuman, in 3D**: nella scheda «Come mi sta» si
+  sceglie da che corpo partire, poi lo si regola — peso, muscolatura, spalle,
+  torace, vita, lunghezza del busto, fianchi, glutei, gambe, cosce, braccia, e il
+  seno o i pettorali — su cinque livelli ciascuno, con pelle e colore dei capelli.
+  L'altezza è quella delle tue misure: cambiarla qui la cambia anche lì. Il corpo
+  si gira col dito, e sta in piedi con le braccia distese lungo i fianchi. Non
+  indossa ancora i tuoi capi: porta uno strato neutro grigio,
+  e l'outfit scelto resta nella sua scheda. Al posto della sagoma colorata di prima.
 - **La chat è attaccata al fondo, come su WhatsApp**: il campo di scrittura e
   gli spunti stanno fermi in basso e scorrono solo i messaggi, che partono dal
   fondo. Tolta la nota «Le proposte usano solo i capi che hai…» sotto il campo.
@@ -212,6 +220,9 @@ travestita da registro.
   a versione esatta, alle ultime versioni compatibili con i loro range.
 
 ### api
+- Il profilo porta l'avatar (`Profilo.avatar`: corpo di partenza, cursori per nome,
+  pelle, capelli), con le sue enum nei contratti. Richiede la migrazione
+  `20261023235648_avatar_makehuman.sql` sul progetto vero.
 - **Il backend fa solo l'IA, e la fa come te** (ADR 0010). Restano la lettura delle foto, i
   suggerimenti, la chat, l'esportazione e `/salute`. Tutto il resto (accesso,
   armadio, outfit, profilo, segnalazioni) l'app lo farà direttamente con

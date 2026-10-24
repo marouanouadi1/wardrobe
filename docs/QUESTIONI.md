@@ -16,6 +16,51 @@ prima del codice**.
 
 ## Aperte
 
+### Q-19 — Quali cursori tiene l'avatar, e come
+**Aperta il:** 2026-10-24 · **Tocca:** `apps/mobile/src/avatar/cursori.ts`, `tools/avatar/estrai.py`, i pacchetti in `apps/mobile/assets/avatar/`
+
+L'utente ha chiesto all'agente di mettere nell'avatar i cursori di MakeHuman che riteneva
+opportuni, e di dargli una lista a parte per rivederli uno per uno. La lista è la pagina
+**«Cursori dell'avatar»** (https://claude.ai/artifact/VCiG7vgCGbRFCmqhPmq8La): ogni voce si
+prova sullo stesso corpo dell'app (stesso motore, stessi pacchetti) e si marca «Tieni»,
+«Togli» o «Da cambiare»; i candidati lasciati fuori si marcano «Aggiungila». Le scelte
+restano nel database della pagina, e l'agente le legge da lì.
+
+Dentro la stessa revisione, quattro scelte che non sono un cursore solo:
+
+- **cinque livelli o un cursore continuo** (oggi livelli, per gli ADR 0011 e 0012);
+- **lo strato neutro grigio** al posto di un corpo nudo;
+- **un taglio di capelli per corpo**, con sette colori;
+- **sei toni di pelle**;
+- **i cursori dell'altro corpo**: chi passa da «Femminile» a «Maschile» si porta dietro il
+  valore del seno, invisibile, e lo ritrova tornando indietro. Toglierli al salvataggio è
+  più pulito, tenerli è più comodo: oggi restano.
+
+*Cosa cambia con la risposta:* togliere o aggiungere un cursore è una riga in
+`cursori.ts`, poi `estrai.py` e `riferimento.py` rigenerano pacchetti e riferimento del
+test. Nessuna migrazione: il profilo salva i cursori per nome (`Avatar.cursori`).
+
+### Q-18 — L'avatar e le misure dicono due volte com'è fatto un corpo
+**Aperta il:** 2026-10-24 · **Tocca:** `apps/mobile/app/misure.tsx`, `apps/mobile/app/(tabs)/avatar.tsx`, `Misure` e `Avatar` in `services/api/src/domain/models.py`
+
+L'**altezza** è una sola: l'avatar la legge da `Misure.altezza_cm` e, se la si cambia dalla
+scheda dell'avatar, la scrive lì (ADR 0011). Le altre tre misure no:
+
+| In `Misure` | Nell'avatar |
+|---|---|
+| `corporatura` (minuta, media, robusta) | i cursori Peso e Muscolatura |
+| `spalle_cm` | il cursore Spalle |
+| `lunghezza_gamba_cm` | il cursore Lunghezza delle gambe |
+
+Oggi convivono senza parlarsi: una persona può dirsi «minuta» nelle misure e avere
+l'avatar al peso massimo. È la forma concreta di `D-11` (i livelli sostituiscono i
+centimetri o li arrotondano?), che resta aperta in `DOMANDE_APERTE.md`.
+
+*Le strade:* togliere quelle tre da `Misure` e tenere solo i cursori (le misure in
+centimetri servono ancora a consigliare una taglia?), oppure collegarle — e allora dove
+finisce un livello e comincia il successivo è una tabella da scrivere una volta sola,
+misurando il corpo di MakeHuman come già si fa per l'altezza.
+
 ### Q-17 — «Esci» chiude la sessione solo qui, o su tutti i telefoni?
 **Aperta il:** 2026-09-27 (review della fase 3) · **Tocca:** `apps/mobile/src/dati/accesso.ts` (`esci`)
 

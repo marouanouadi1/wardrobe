@@ -30,7 +30,7 @@ qualcosa che fa il 90%.
 
 | File | Cosa contiene |
 |---|---|
-| `src/ui/base.tsx` | il grosso: `Toccabile`, `Campo` (con `rivelabile` per il «Mostra» sulla password), `Scheda`, `Pillola`, `Segmenti`, `BottonePrimario`, `BottoneSecondario`, `Badge`, `BollaChat`, `Icona`, `BottoneTondo`, `LinkTesto`, `Comparsa`… |
+| `src/ui/base.tsx` | il grosso: `Toccabile`, `Campo` (con `rivelabile` per il «Mostra» sulla password), `Scheda`, `Pillola`, `Segmenti`, `BottonePrimario`, `BottoneSecondario`, `Badge`, `BollaChat`, `Icona`, `BottoneTondo`, `LinkTesto`, `Comparsa`, **`Livelli`** (la scala a pochi passi dei cursori dell'avatar), **`Campione`** (un colore da scegliere)… |
 | `src/ui/testo.tsx` | `Titolo`, `Numero`, `Corpo`, `Forte`, `TestoErrore`, `Etichetta`, e il tipo `Taglia` |
 | `src/ui/stati.tsx` | `Caricamento`, **`PistaIndeterminata`**, `AttesaLunga`, `Vuoto`, `Errore`, **`SenzaRete`**, `StatoRisorsa` |
 | `src/ui/guscio.tsx` | `Testata` (con lo slot **`azioni`** a destra del titolo, che può stare accanto a `fotoProfilo`: «Oggi» ci mette il fumetto della chat), `Schermata`, `GuscioAutenticazione` (con `occhiello` sopra il titolo e `piede` sotto l'azione), **`PiedeAccesso`** (il recupero della password e «Continua con Google», veri dalla fase 3; Apple **spento col motivo**, e Google anche lui quando non c'è il suo client o si è sul web), **`BarraSchede`** + `schedaDi()`, **`SfondoAura`** (il gradiente + i due aloni radiali del deck; i colori stanno in `fondi`, la geometria qui) |
@@ -262,6 +262,29 @@ Due dettagli in `risorsa.ts` che sembrano stranezze e non lo sono — non
 «semplificarli»: la `useRef` su `carica` invece di metterla nelle dipendenze, e
 il `setTimeout(…, 0)` nell'effetto, che sposta le `setState` fuori dal corpo
 sincrono (regola `react-hooks/set-state-in-effect`).
+
+## L'avatar: il corpo si calcola, e il calcolo non sa di React Native
+
+> ADR 0013. Il corpo di MakeHuman si calcola nell'app dai suoi dati grezzi e si
+> disegna con `three` su `expo-gl`.
+
+- **`src/avatar/motore.ts`, `cursori.ts` e `scena.ts` non importano React Native.**
+  Il motore lo provano i test contro MPFB, la pagina di revisione dei cursori li
+  compila così come sono, e `tools/avatar/estrai.py` legge `cursori.ts` con `node`:
+  lì dentro solo `import type`, niente `enum`, niente valori importati.
+- **`three` da solo, mai `@react-three/fiber`**: la sua entrata nativa è CommonJS e
+  fa caricare due istanze di `three` (`T-35`). Il controllo è il comando di `T-35`
+  sulla source map di un export Android.
+- **`VistaAvatar` si carica con `import()`** (`lazy`), non in testa alla schermata:
+  `three` pesa, e sul web finisce così in un pezzo a parte.
+- **`assets/avatar/*.bin` sono output.** Si cambia `cursori.ts`, poi si rilanciano
+  `tools/avatar/estrai.py` e `tools/avatar/riferimento.py` (Blender 4.5 con MPFB
+  2.0.18) e si committano pacchetti e `test/avatar/riferimento.json` insieme: un
+  pacchetto senza il suo riferimento fa diventare rosso `motore.test.ts`, ed è giusto.
+- **I colori della scena stanno in `tokens.ts` (`scena3d`)**, quelli di pelle e
+  capelli in `dati/dominio.ts`: `scena.ts` li riceve, non ne compone.
+- **L'altezza dell'avatar è `Misure.altezza_cm`**, non un cursore: cambiarla dalla
+  scheda dell'avatar scrive le misure (ADR 0011).
 
 ## Le enum non si ridigitano
 
