@@ -1112,9 +1112,11 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
         assembleRelease`, senza EAS) esce 0 in 9 minuti e 40 secondi. L'autolinking trova
         Google sign-in, Sentry, gesture-handler, reanimated, worklets, screens, svg, async
         storage e i moduli Expo, e le loro librerie native sono nell'APK.
-      *Non verificato:* i workflow sul runner di GitHub (si vedranno sulla PR), e l'app
-      sul telefono. La build EAS non è stata lanciata: alza il `versionCode` sui server di
-      Expo.
+      Sulla PR #66 la CI è verde in tutti i job che una PR fa partire: `typecheck + lint +
+      test + export android`, `contratti allineati`, `lint + type + test`, `schema, RLS e
+      regole`, `i numeri dichiarati sono quelli veri` e `titolo conventional`.
+      *Non verificato:* l'app sul telefono. La build EAS non è stata lanciata: alza il
+      `versionCode` sui server di Expo.
 
 - [x] **Il VPS è rimasto spento dal 2026-10-18 al 2026-10-23**, e nessuno se n'è accorto
       fino a un deploy. Quello partito dal merge di #58 (certifi e pyjwt) è caduto alle 20:29
