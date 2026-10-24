@@ -552,7 +552,7 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       tutti verdi. Non provato: l'avvio reale
       dell'app (`npm run dev:app`) su un dispositivo — nessun ambiente con
       Expo Go o emulatore disponibile in questa sessione*
-- [~] **Expo SDK 58** (2026-10-24): React Native 0.88, React 19.3 (pin alzato anche
+- [x] **Expo SDK 58** (2026-10-24): React Native 0.88, React 19.3 (pin alzato anche
       nella radice, `T-23`), Sentry 8, gesture-handler 3, jest 30, e l'override di
       `react-native-worklets` portato alla 0.13.0 che l'SDK vuole (`T-03`). Il lock è
       rigenerato da zero: quello vecchio teneva `react-native` 0.86.3 nella radice e
@@ -572,11 +572,13 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
         assembleRelease`, senza EAS) esce 0, con R8 attivo come vuole l'SDK 58. Nel dex
         ci sono le classi di Google sign-in, Sentry, image picker, gesture-handler,
         reanimated e secure-store.
-      **Cosa manca:** la prova sul telefono, cioè l'APK di EAS che arriva al merge.
-      Il login con Google si prova solo lì, perché lo SHA-1 registrato è quello della
-      chiave di EAS. R8, gesture-handler 3 (la scorsa dell'intro) e Sentry 8 (il modulo
-      di segnalazione) si vedono solo a runtime. Per lo sviluppo serve Expo Go per
-      l'SDK 58
+      Poi l'APK della **0.13.3**, costruito da EAS al merge di #63. Ha lo stesso SHA-1 di
+      firma della 0.13.2, quindi Google trova il suo client, e `versionCode` 52 si installa
+      sopra la 51. Nel bundle ci sono gli indirizzi di produzione e il client Google, e ci
+      sono le librerie native per arm64 e armeabi-v7a. Sul telefono l'ha installato
+      l'utente, il 2026-10-24: *«sembra funzionare»*. È una prova a mano, non un giro di
+      tutte le schermate: R8, gesture-handler 3 e Sentry 8 non hanno avuto una prova
+      ciascuno. Per lo sviluppo serve Expo Go per l'SDK 58
 
 ## Contratti (`packages/contracts`)
 
