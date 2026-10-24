@@ -59,7 +59,7 @@ sul commit `b5ba358`, eseguiti il 2026-09-11, e da una seconda review dello
 stesso giorno sull'intero branch — quella che ha **eseguito** i gate invece di
 leggerli, e da cui vengono `T-26`, `T-27` e `T-28`.
 
-### T-69 — `VestizioneColori` non ha più chi la legga
+### T-71 — `VestizioneColori` non ha più chi la legga
 **Trovato il:** 2026-10-24 · **Dove:** `services/api/src/domain/models.py` (`VestizioneColori`), `services/api/scripts/export_schema.py` · **Gravità:** bassa · **Chi:** `api`, poi `contracts`
 
 Il modello esisteva per il manichino SVG tinto dai colori dominanti: l'app lo
