@@ -26,6 +26,11 @@ travestita da registro.
   si gira col dito, e sta in piedi con le braccia distese lungo i fianchi. Non
   indossa ancora i tuoi capi: porta uno strato neutro grigio,
   e l'outfit scelto resta nella sua scheda. Al posto della sagoma colorata di prima.
+- **L'app passa a Expo SDK 58**: React Native 0.88, React 19.3, Sentry 8.
+  Non porta funzioni nuove. Nello sviluppo serve Expo Go per l'SDK 58. Si chiudono le vulnerabilità di `decode-uri-component`,
+  `query-string` e `image-size`; restano `node-forge` e `zod`, che arrivano da
+  `@expo/cli`. `metro.config.js` torna alla configurazione di Expo: la riga
+  `disableHierarchicalLookup` impediva a Metro di trovare i pacchetti annidati.
 - **La chat è attaccata al fondo, come su WhatsApp**: il campo di scrittura e
   gli spunti stanno fermi in basso e scorrono solo i messaggi, che partono dal
   fondo. Tolta la nota «Le proposte usano solo i capi che hai…» sotto il campo.

@@ -131,7 +131,13 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       corpo largo si scostano da sole (22° sul più largo). *Verificato:* scatti di fronte e
       di lato sui due corpi e sul corpo più largo, e due controlli nuovi in
       `motore.test.ts` (braccio dritto, polso entro 15° dalla verticale), **visti rossi**
-      lasciando l'avambraccio piegato
+      lasciando l'avambraccio piegato.
+      **Riverificato sull'SDK 58** (merge di #63 nel branch): `expo-gl` passa a 58.0.3
+      (`expo install --check` pulito), una sola copia di React, React Native e `three`, e
+      ancora nessun `three.cjs` nella source map Android anche senza
+      `disableHierarchicalLookup`; `typecheck`, `lint`, `mobile:test`, `build:web` verdi, e
+      la stessa prova della schermata sul web contro lo stack locale (scelta, cursori,
+      salvataggio arrivato nel database)
 - [x] Test automatici dell'app — leggibilità del testo sul fondo dipinto,
       convenzioni delle primitive (`style` e prop `sfondo`), e nessun colore
       composto a mano (`rgba()`/esadecimale) fuori da `tema/tokens.ts` e
@@ -619,6 +625,31 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       tutti verdi. Non provato: l'avvio reale
       dell'app (`npm run dev:app`) su un dispositivo — nessun ambiente con
       Expo Go o emulatore disponibile in questa sessione*
+- [~] **Expo SDK 58** (2026-10-24): React Native 0.88, React 19.3 (pin alzato anche
+      nella radice, `T-23`), Sentry 8, gesture-handler 3, jest 30, e l'override di
+      `react-native-worklets` portato alla 0.13.0 che l'SDK vuole (`T-03`). Il lock è
+      rigenerato da zero: quello vecchio teneva `react-native` 0.86.3 nella radice e
+      annidava sotto `apps/mobile` i pacchetti nuovi. `metro.config.js` torna al
+      default di Expo: `disableHierarchicalLookup` impediva a Metro di trovare `semver`
+      7, annidato sotto `react-native-reanimated`, e `build:web` cadeva. L'unico ritocco
+      al codice è il ref di `Schermata`, che con l'API stretta dei tipi di RN 0.88 è
+      `ScrollViewInstance`.
+      *Verificato*, in un worktree con `npm ci` sul lock nuovo:
+      - `npm ls --all` esce 0, con una copia sola di `react`, `react-dom`,
+        `react-native` e `react-native-worklets`, e niente sotto `apps/mobile/node_modules`;
+      - `expo-doctor` passa tutti i controlli, la prima volta senza il rosso fisso, ed
+        `expo install --check` è pulito;
+      - `typecheck`, `lint`, `mobile:test` (conteggio invariato), `build:web` (la stessa
+        pagina sola di prima) e `contracts:check` escono 0;
+      - una build Android release in locale (`expo prebuild` più `./gradlew
+        assembleRelease`, senza EAS) esce 0, con R8 attivo come vuole l'SDK 58. Nel dex
+        ci sono le classi di Google sign-in, Sentry, image picker, gesture-handler,
+        reanimated e secure-store.
+      **Cosa manca:** la prova sul telefono, cioè l'APK di EAS che arriva al merge.
+      Il login con Google si prova solo lì, perché lo SHA-1 registrato è quello della
+      chiave di EAS. R8, gesture-handler 3 (la scorsa dell'intro) e Sentry 8 (il modulo
+      di segnalazione) si vedono solo a runtime. Per lo sviluppo serve Expo Go per
+      l'SDK 58
 
 ## Contratti (`packages/contracts`)
 

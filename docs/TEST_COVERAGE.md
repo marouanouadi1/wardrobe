@@ -200,7 +200,7 @@ visto fallire è indistinguibile da un gate che non morde.
 
 ### Come girano
 
-`jest-expo` (non vitest: React Native 0.86 distribuisce sorgente Flow non
+`jest-expo` (non vitest: React Native distribuisce sorgente Flow non
 transpilata, e `jest-expo` è l'unico preset che Expo tiene allineato a ogni SDK).
 Due dettagli di configurazione che non sono cosmetici:
 
