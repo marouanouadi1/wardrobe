@@ -21,7 +21,6 @@ import type {
   RispostaSuggerimenti,
 } from '@wardrobe/contracts'
 import Constants from 'expo-constants'
-import { Platform } from 'react-native'
 import { ErroreDati } from './errori'
 import { rinnovaSessione, tokenDiAccesso } from './supabase'
 
@@ -34,16 +33,8 @@ const PORTA_API_LOCALE = '8787'
  * lo stesso IP del QR code — assumendo che l'API giri sulla stessa macchina.
  * Non è affidabile su un build EAS: lì non c'è un Metro a cui appoggiarsi, ed
  * `EXPO_PUBLIC_API_URL` (sotto) prende sempre la precedenza.
- *
- * Sul web `Constants.expoConfig.hostUri` non esiste (non c'è un manifest
- * scaricato da un Metro remoto): l'host giusto è quello con cui il browser ha
- * già raggiunto la pagina, `window.location.hostname`.
  */
 function rilevaUrlSviluppo(): string | null {
-  if (Platform.OS === 'web') {
-    if (typeof window === 'undefined') return null
-    return `http://${window.location.hostname}:${PORTA_API_LOCALE}`
-  }
   const hostUri = Constants.expoConfig?.hostUri
   const host = hostUri?.split(':')[0]
   return host ? `http://${host}:${PORTA_API_LOCALE}` : null

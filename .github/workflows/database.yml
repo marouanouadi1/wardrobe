@@ -17,7 +17,7 @@ on:
       - "services/api/src/domain/wardrobe.py"
       - "services/api/scripts/verifica_database.py"
       - "services/api/scripts/prova_accesso.py"
-      - "packages/contracts/src/generated/database.ts"
+      - "apps/mobile/contracts/src/generated/database.ts"
       - ".github/workflows/database.yml"
   pull_request:
     paths:
@@ -27,7 +27,7 @@ on:
       - "services/api/src/domain/wardrobe.py"
       - "services/api/scripts/verifica_database.py"
       - "services/api/scripts/prova_accesso.py"
-      - "packages/contracts/src/generated/database.ts"
+      - "apps/mobile/contracts/src/generated/database.ts"
       - ".github/workflows/database.yml"
   workflow_dispatch:
 
@@ -99,8 +99,8 @@ jobs:
       - name: I tipi generati coincidono con lo schema
         run: |
           bash scripts/tipi-database.sh "$RUNNER_TEMP/database.ts"
-          if ! diff -u packages/contracts/src/generated/database.ts "$RUNNER_TEMP/database.ts"; then
-            echo "::error file=packages/contracts/src/generated/database.ts::tipi vecchi: npm run supabase:tipi e committa"
+          if ! diff -u apps/mobile/contracts/src/generated/database.ts "$RUNNER_TEMP/database.ts"; then
+            echo "::error file=apps/mobile/contracts/src/generated/database.ts::tipi vecchi: npm run supabase:tipi e committa"
             exit 1
           fi
 

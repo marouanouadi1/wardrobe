@@ -49,6 +49,10 @@ hook.
 Il segnale che distingue i due casi è nell'ultima colonna: il rimedio **toglie
 righe**, il tampone ne aggiunge.
 
+E la domanda vale anche per il rimedio. Tolta la dichiarazione dalla root, le due
+copie tornavano: anche lei aveva un custode da mantenere (`T-32`). Il 2026-10-24
+sono usciti i workspace, e con loro la root che poteva dimenticarla (ADR 0014).
+
 ## Dove stanno le regole
 
 Qui c'è **l'invariante**; in `.claude/rules/` c'è **come si rispetta e cosa succede se lo
@@ -96,7 +100,7 @@ Dettaglio in `.claude/rules/python.md`.
 `services/api/src/domain/models.py` è la fonte di verità. Se lo modifichi, esegui subito
 `npm run contracts:generate` e committa i file rigenerati. Non scrivere mai a mano un tipo
 TypeScript che duplica un modello Pydantic, e non modificare a mano i file sotto
-`packages/contracts/src/generated/`.
+`apps/mobile/contracts/src/generated/`.
 
 Lo stesso vale per gli elenchi di valori di una enum e per le soglie: si importano, non si
 ridigitano. Due copie divergono in silenzio — è già successo.
@@ -152,7 +156,7 @@ livello di bump: `feat:` alza il minor, un `!` o `BREAKING CHANGE` alza il major
 ## Rilascio: due pipeline indipendenti, e un merge è un rilascio
 
 `api.yml` e `mobile.yml` hanno filtri `paths:` distinti e possono scattare entrambi sulla
-stessa PR (es. toccando `packages/contracts/**`). Non serve un gruppo di concorrenza condiviso,
+stessa PR (es. toccando `apps/mobile/contracts/**`). Non serve un gruppo di concorrenza condiviso,
 e aggiungerne uno con `cancel-in-progress` romperebbe di nuovo tutto: una release cancellerebbe
 l'altra invece di metterla in coda.
 
@@ -197,14 +201,16 @@ distruttiva, chiedere — *prima* di eseguire. Se il disordine viene da una prop
 (righe di prova), si puliscono *quelle* righe, non la tabella.
 
 È invece **reversibile**, e non va trattato come distruttivo per paura: rigenerare
-`packages/contracts/src/generated/` e rifare da zero lo stack **locale** di Supabase
+`apps/mobile/contracts/src/generated/` e rifare da zero lo stack **locale** di Supabase
 (`npm run supabase:reset`).
 
-## `apps/web` è vuoto apposta
+## Il repo è dell'app sul telefono
 
-Due file e un `dev` che esce con 1. Non è un lavoro da finire: `apps/mobile` è già React Native
-Web. Nessun agente ci scrive — il quando e il perché aprirlo stanno in `apps/web/README.md`, e
-riaprirlo è una decisione dell'utente.
+Un solo progetto npm, `apps/mobile`, con il suo `package.json` e il suo lock: niente workspace,
+niente web (ADR 0014). La radice ha un `package.json` di soli script, senza dipendenze; le
+dipendenze si installano con `npm ci --prefix apps/mobile`. I contratti stanno in
+`apps/mobile/contracts/`. Rimettere i workspace o aprire un web è una decisione dell'utente:
+i workspace sono la causa di `T-23`, le due copie di React.
 
 ## Gli agenti e l'instradamento
 
@@ -280,7 +286,7 @@ altre. Se i test falliscono, si dice, con l'output. Se un passaggio è stato sal
 
 ## Test e verifica
 
-- `npm run typecheck && npm run lint` — su tutti i workspace
+- `npm run typecheck && npm run lint` — l'app, contratti compresi
 - `npm run api:test` — dominio e handler, offline, senza container
 - `npm run api:cov` — con la coverage e le soglie che impone la CI
 - `npm run api:lint` — ruff check + format + `mypy --strict`

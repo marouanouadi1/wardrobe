@@ -2,23 +2,15 @@
   "name": "wardrobe",
   "private": true,
   "description": "Wardrobe — armadio digitale: app Expo, API Python su un VPS",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
-  "engines": {
-    "node": ">=22"
-  },
   "scripts": {
     "dev": "bash scripts/dev.sh",
     "dev:app": "bash scripts/dev.sh --app",
-    "mobile": "npm run start --workspace @wardrobe/mobile",
-    "mobile:web": "npm run web --workspace @wardrobe/mobile",
-    "mobile:android": "npm run android --workspace @wardrobe/mobile",
-    "mobile:ios": "npm run ios --workspace @wardrobe/mobile",
-    "mobile:test": "npm run test --workspace @wardrobe/mobile",
-    "contracts:generate": "npm run generate --workspace @wardrobe/contracts",
-    "contracts:check": "npm run check --workspace @wardrobe/contracts",
+    "mobile": "npm --prefix apps/mobile run start",
+    "mobile:android": "npm --prefix apps/mobile run android",
+    "mobile:ios": "npm --prefix apps/mobile run ios",
+    "mobile:test": "npm --prefix apps/mobile run test",
+    "contracts:generate": "node apps/mobile/contracts/scripts/generate.mjs",
+    "contracts:check": "node apps/mobile/contracts/scripts/generate.mjs --verifica",
     "api:sync": "cd services/api && uv sync",
     "api:test": "cd services/api && uv run pytest",
     "api:cov": "cd services/api && uv run pytest --cov=src --cov-report=term-missing",
@@ -30,18 +22,7 @@
     "supabase:test": "supabase test db",
     "supabase:tipi": "bash scripts/tipi-database.sh",
     "supabase:verifica": "cd services/api && uv run python scripts/verifica_database.py",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
-  },
-  "dependencies": {
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
-  },
-  "devDependencies": {
-    "typescript": "~6.0.3"
-  },
-  "overrides": {
-    "typescript": "~6.0.3",
-    "react-native-worklets": "0.13.0"
+    "typecheck": "npm --prefix apps/mobile run typecheck",
+    "lint": "npm --prefix apps/mobile run lint"
   }
 }

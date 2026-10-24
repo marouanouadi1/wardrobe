@@ -10,8 +10,6 @@
  * 2 KB, e una sessione con l'identità Google li supera. Su Android Expo non
  * pone limiti, e oggi l'app è solo Android. Il giorno che arriva iOS la voce è
  * `T-63` in `docs/DA_FARE.md`.
- *
- * Sul web il portachiavi non c'è: `sessione-archivio.web.ts`.
  */
 
 import * as SecureStore from 'expo-secure-store'

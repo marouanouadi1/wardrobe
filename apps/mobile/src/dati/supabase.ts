@@ -22,7 +22,6 @@ import { type AuthError, type PostgrestError, createClient } from '@supabase/sup
 import type { Capo, Database, Outfit, OrigineOutfit, Profilo, Segnalazione, StatoSegnalazione, Tables, Vestizione } from '@wardrobe/contracts'
 import Constants from 'expo-constants'
 import { File } from 'expo-file-system'
-import { Platform } from 'react-native'
 import { ErroreDati } from './errori'
 import { archiviazioneSessione } from './sessione-archivio'
 import {
@@ -53,10 +52,6 @@ const PORTA_SUPABASE_LOCALE = '54321'
  * locale. Un build EAS lo riceve da `EXPO_PUBLIC_SUPABASE_URL`.
  */
 function rilevaUrlSviluppo(): string | null {
-  if (Platform.OS === 'web') {
-    if (typeof window === 'undefined') return null
-    return `http://${window.location.hostname}:${PORTA_SUPABASE_LOCALE}`
-  }
   const host = Constants.expoConfig?.hostUri?.split(':')[0]
   return host ? `http://${host}:${PORTA_SUPABASE_LOCALE}` : null
 }

@@ -47,12 +47,11 @@ quell'agente costa un livello di contesto in meno**. Dillo e fatti da parte.
 |---|---|
 | `services/api/src/**`, `migrations/**` | `api` |
 | `services/api/tests/**`, `apps/mobile/test/**` | `test` |
-| `services/api/scripts/export_schema.py`, `packages/contracts/**` | `contracts` |
+| `services/api/scripts/export_schema.py`, `apps/mobile/contracts/**` | `contracts` |
 | `apps/mobile/app/**`, `apps/mobile/src/**` | `mobile` |
 | `.github/**`, Docker, Caddy, `scripts/**` | `ci-cd` |
 | `README.md`, `docs/**` | `doc-writer` |
 | `CLAUDE.md`, `.claude/**` | **nessun agente**: solo la sessione principale |
-| `apps/web/**` | **nessuno** — vedi sotto |
 
 ## Le catene che non si spezzano
 
@@ -94,9 +93,8 @@ Se la migrazione contiene un `drop` o un `drop column`: **fermati e usa
 Usa `AskUserQuestion`, non decidere al posto dell'utente:
 
 - una migrazione distruttiva
-- aprire `apps/web`, che è vuoto per scelta: il suo README nomina perfino il
-  framework candidato, il che rende più probabile che qualcuno lo scaffoldi per
-  sbaglio
+- aprire un web o rimettere i workspace npm: il repo è dell'app sul telefono
+  (ADR 0014), e i workspace sono la causa delle due copie di React di `T-23`
 - un task che richiede una credenziale che non c'è (vedi «Cosa manca
   dall'esterno» in `docs/PROGRESS.md`)
 - un task che una voce di `docs/QUESTIONI.md` nomina: **la decisione arriva prima

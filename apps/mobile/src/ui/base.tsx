@@ -18,7 +18,6 @@ import { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   Animated,
-  Platform,
   Pressable,
   type PressableProps,
   StyleSheet,
@@ -53,7 +52,7 @@ export function Toccabile({ children, style, scala = 0.97, haptic = true, ...pro
       // altrimenti un pulsante già acceso risponderebbe al dito senza fare nulla.
       disabled={props.disabled ?? !props.onPress}
       onPress={(evento) => {
-        if (haptic && Platform.OS !== 'web') {
+        if (haptic) {
           void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
         }
         props.onPress?.(evento)

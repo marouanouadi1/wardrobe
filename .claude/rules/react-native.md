@@ -33,7 +33,7 @@ qualcosa che fa il 90%.
 | `src/ui/base.tsx` | il grosso: `Toccabile`, `Campo` (con `rivelabile` per il «Mostra» sulla password), `Scheda`, `Pillola`, `Segmenti`, `BottonePrimario`, `BottoneSecondario`, `Badge`, `BollaChat`, `Icona`, `BottoneTondo`, `LinkTesto`, `Comparsa`, **`Livelli`** (la scala a pochi passi dei cursori dell'avatar), **`Campione`** (un colore da scegliere)… |
 | `src/ui/testo.tsx` | `Titolo`, `Numero`, `Corpo`, `Forte`, `TestoErrore`, `Etichetta`, e il tipo `Taglia` |
 | `src/ui/stati.tsx` | `Caricamento`, **`PistaIndeterminata`**, `AttesaLunga`, `Vuoto`, `Errore`, **`SenzaRete`**, `StatoRisorsa` |
-| `src/ui/guscio.tsx` | `Testata` (con lo slot **`azioni`** a destra del titolo, che può stare accanto a `fotoProfilo`: «Oggi» ci mette il fumetto della chat), `Schermata`, `GuscioAutenticazione` (con `occhiello` sopra il titolo e `piede` sotto l'azione), **`PiedeAccesso`** (il recupero della password e «Continua con Google», veri dalla fase 3; Apple **spento col motivo**, e Google anche lui quando non c'è il suo client o si è sul web), **`BarraSchede`** + `schedaDi()`, **`SfondoAura`** (il gradiente + i due aloni radiali del deck; i colori stanno in `fondi`, la geometria qui) |
+| `src/ui/guscio.tsx` | `Testata` (con lo slot **`azioni`** a destra del titolo, che può stare accanto a `fotoProfilo`: «Oggi» ci mette il fumetto della chat), `Schermata`, `GuscioAutenticazione` (con `occhiello` sopra il titolo e `piede` sotto l'azione), **`PiedeAccesso`** (il recupero della password e «Continua con Google», veri dalla fase 3; Apple **spento col motivo**, e Google anche lui quando non c'è il suo client), **`BarraSchede`** + `schedaDi()`, **`SfondoAura`** (il gradiente + i due aloni radiali del deck; i colori stanno in `fondi`, la geometria qui) |
 | `src/ui/righe.tsx` | `RigaNavigabile`, `RigaStatistiche`, **`RigaImpostazione`** |
 | `src/ui/capi.tsx` | `SchedaFoto`, `PiedeFoto`, `CapoInGriglia`, **`CasellaAggiungi`**, **`SchedaOutfit`**, **`ElencoOutfit`**, **`RigaFotoInCoda`**, **`SlotMancanti`** (la lista che `(tabs)/armadio.tsx` e `app/outfit.tsx` mostrano **entrambe**), `Miniatura`, `MiniaturaFoto`, `MotiviProposta`, `Attributo` |
 | `src/ui/avviso.tsx` | `Avviso` (coriandolo globale), `Conferma`, **`Foglio`** (il menu che sale dal basso: una voce **senza `onPress` è spenta e mostra il suo `perche`**, non viene omessa) |
@@ -237,10 +237,9 @@ Quattro regole che non si vedono dai tipi:
 - **Gli errori si riconoscono dal codice** (`ErroreDati.codice`), mai dal testo: i
   codici di Supabase Auth sono quelli osservati sullo stack locale, elencati in
   `accesso.ts`.
-- **Un modulo nativo che il web non ha sta in un file per piattaforma**
-  (`google.ts` / `google.web.ts`, `sessione-archivio.ts` / `.web.ts`), e uno che
-  serve solo a un tocco si carica con `import()` quando serve: altrimenti i test
-  delle primitive, che arrivano fin lì passando dall'armadio, lo caricano.
+- **Un modulo nativo che serve solo a un tocco si carica con `import()`** quando
+  serve (`google.ts`): altrimenti i test delle primitive, che arrivano fin lì
+  passando dall'armadio, lo caricano.
 
 ## Lo stato di una risorsa
 
@@ -276,7 +275,7 @@ sincrono (regola `react-hooks/set-state-in-effect`).
   fa caricare due istanze di `three` (`T-35`). Il controllo è il comando di `T-35`
   sulla source map di un export Android.
 - **`VistaAvatar` si carica con `import()`** (`lazy`), non in testa alla schermata:
-  `three` pesa, e sul web finisce così in un pezzo a parte.
+  `three` pesa, e così lo carica solo chi apre la scheda.
 - **`assets/avatar/*.bin` sono output.** Si cambia `cursori.ts`, poi si rilanciano
   `tools/avatar/estrai.py` e `tools/avatar/riferimento.py` (Blender 4.5 con MPFB
   2.0.18) e si committano pacchetti e `test/avatar/riferimento.json` insieme: un
@@ -293,31 +292,39 @@ arrivano da `@wardrobe/contracts`. Dettaglio e catena in
 `.claude/rules/contratti.md`. Due copie della stessa enum divergono in silenzio —
 è già successo.
 
-## Una sola copia di React, dichiarata in due punti
+## Una sola copia di React, dichiarata in un posto solo
 
-`react` e `react-dom` sono dichiarati **sia** in `package.json` di root **sia**
-in `apps/mobile/package.json`, alla stessa versione esatta (oggi `19.3.0`,
-pinnata da Expo SDK 58) — altrimenti tornano le due copie che `T-23` ha chiuso
-(`docs/adr/0008`). **Quando Expo alza il pin, si alza in entrambi i file nella
-stessa modifica**: `package.json` è JSON e non può portare un commento che lo
-spieghi da solo, e questa riga è il posto dove si va a cercarlo.
+`react` e `react-dom` sono dichiarati in `apps/mobile/package.json`, l'unico
+progetto npm del repo (ADR 0014), alla versione esatta che pinna Expo (oggi
+`19.3.0`, SDK 58). Ogni peer `*` si risolve su quella dichiarazione, e la copia
+è una sola. **Non si rimettono i workspace**, nemmeno per un pacchetto piccolo:
+con una radice che installa per tutti tornano le due copie di `T-23`.
+
+`react-dom` serve anche senza web: `expo-router` lo chiede come peer
+obbligatoria, e senza dichiararlo npm installerebbe l'ultima versione, che
+pretende un `react` più nuovo del pin.
+
+Il caso che nessun job copre: un pacchetto che dichiara `react` come dipendenza
+normale viene annidato da npm sotto di sé, e Metro lo mette nel bundle. Lo
+mostra `npm ls react react-dom` in `apps/mobile`, che deve trovare una copia
+sola di ciascuno.
 
 Sta scritto qui perché `package.json` è JSON e non può portare un commento: il
-posto dove lo si incontra non può spiegarlo. Voce completa: `T-23` in
+posto dove lo si incontra non può spiegarlo. Voci complete: `T-23` e `T-32` in
 `docs/DA_FARE.md`.
 
 ## Dove NON vanno i test
 
 **Mai sotto `apps/mobile/app/`**: `main` è `expo-router/entry`, quindi ogni file
 lì dentro diventa una **rotta**. Un `oggi.test.tsx` registrerebbe `/oggi.test` e
-finirebbe nel bundle di `expo export --platform web`, che gira in CI. I test
+finirebbe nel bundle di `expo export --platform android`, che gira in CI. I test
 vivono in `apps/mobile/test/`.
 
 ## Verifica prima di chiudere
 
 ```bash
-npm run typecheck --workspace @wardrobe/mobile
-npm run lint --workspace @wardrobe/mobile
+npm run typecheck
+npm run lint
 npm run mobile:test
-npm run build:web --workspace @wardrobe/mobile
+npm --prefix apps/mobile run export:android
 ```

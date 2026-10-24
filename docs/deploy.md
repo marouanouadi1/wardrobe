@@ -69,7 +69,7 @@ automatico.
 ## Deploy automatico da CI
 
 Il job `deploy` in `.github/workflows/api.yml` fa da solo, a ogni merge su
-`main` che tocca `services/api/**`, `packages/contracts/**` o il workflow
+`main` che tocca `services/api/**`, `apps/mobile/contracts/**` o il workflow
 stesso, esattamente i passi manuali sopra: lo stesso comando `rsync` (stesse
 esclusioni, `.env` compresi) da un runner GitHub Actions, poi `docker compose
 up -d --build` via SSH. Intorno a quei due passi c'è il versionamento:
@@ -123,15 +123,15 @@ vero lo porta `supabase db push`, a mano: vedi «Il progetto Supabase».
 ## Deploy automatico dell'app mobile
 
 Il job `release` in `.github/workflows/mobile.yml` fa, a ogni merge su `main`
-che tocca `apps/mobile/**`, `packages/contracts/**`, `package.json`,
-`package-lock.json` o il workflow stesso, questi passi in sequenza (anche un
-aggiornamento di Dependabot al solo lockfile, quindi, è un rilascio
-dell'app):
+che tocca `apps/mobile/**` (contratti e `package-lock.json` compresi: l'app è
+l'unico progetto npm del repo, ADR 0014) o il workflow stesso, questi passi in
+sequenza (anche un aggiornamento di Dependabot al solo lockfile, quindi, è un
+rilascio dell'app):
 
 1. bump semver con `scripts/bump-versione.mjs mobile` (unica fonte di verità:
    `apps/mobile/app.json`, `expo.version`). Il **livello** — major, minor o
    patch — viene dedotto dai conventional commit dall'ultimo tag `mobile-v*`,
-   contando solo quelli che toccano `apps/mobile` o `packages/contracts`: un
+   contando solo quelli che toccano `apps/mobile`: un
    `feat:` solo backend non alza il minor dell'app. Il formato dei titoli è
    imposto da `.github/workflows/pr-title.yml`, e il ragionamento sta in
    [`docs/adr/0005`](adr/0005-le-versioni-vengono-dai-commit.md);
@@ -243,10 +243,12 @@ mai in questo file**: sul server non c'è niente che scavalchi l'RLS (ADR 0010).
 
 Dal passaggio il backend non legge più `JWT_SECRET`, `EMAIL_AMMESSE`,
 `EMAIL_AMMINISTRATORI`, `BASE_URL_PUBBLICA`, `DATABASE_URL` né `CARTELLA_FOTO`.
-Se sono ancora nel file del server non fanno niente; toglierle vuol dire
-riscrivere un file che non ha copia, e si fa a mano, sapendo cosa si toglie.
-Gli inviti stanno nella tabella `privato.inviti`, e l'amministratore in
-`app_metadata` (sotto).
+Le quattro che erano rimaste nel file del server sono uscite il 2026-10-24,
+con il via dell'utente: nel file ci sono solo `ANTHROPIC_API_KEY` e `FAL_KEY`.
+Il file com'era prima sta sul server in `~/backup-env-2026-10-24/`, fuori dalla
+cartella che `rsync` e la build di Docker vedono, finché l'utente non decide di
+cancellarlo. Gli inviti stanno nella tabella `privato.inviti`, e
+l'amministratore in `app_metadata` (sotto).
 
 **`~/wardrobe/.env`**, nella radice, conteneva `POSTGRES_PASSWORD` per il
 Postgres di prima. `docker-compose.yml` non lo legge più, ma è la password della

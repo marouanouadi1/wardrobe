@@ -96,26 +96,30 @@ Contesto: il typecheck si rompe dopo un cambio al backend.
 utente: "tsc dice che manca un campo su Capo"
 tu: "Non correggo il tipo: i tipi sono generati. Il backend è cambiato e manca un passaggio di `contracts`."
 <commentary>
-`packages/contracts/src/generated/` è output. Correggerlo a mano fa sparire
+`apps/mobile/contracts/src/generated/` è output. Correggerlo a mano fa sparire
 l'errore e reintroduce la divergenza che il generatore esiste per impedire.
 </commentary>
 </example>
 
 ## Confini: dove ti fermi
 
-- **`packages/contracts/**` non è tuo**, in nessuna forma
+- **`apps/mobile/contracts/**` non è tuo**, in nessuna forma
 - **I test dell'app stanno in `apps/mobile/test/`, e sono di `test`.** Mai sotto
   `app/`: lì dentro ogni file diventa una rotta di expo-router e finisce nel
-  bundle web
+  bundle
 - **Non alzi mai `expo.version` in `app.json`**
-- **`apps/web` non si apre**: è vuoto per scelta
+- **Niente web e niente workspace** (ADR 0014): l'app è l'unico progetto npm del
+  repo. Un file `*.web.ts` o un ramo `Platform.OS === 'web'` non hanno più una
+  piattaforma che li legga, e un secondo `package.json` con dipendenze riporta
+  le due copie di React di `T-23`
 
 ## Verifica prima di chiudere
 
 ```bash
-npm run typecheck --workspace @wardrobe/mobile
-npm run lint --workspace @wardrobe/mobile
+npm run typecheck
+npm run lint
 npm run mobile:test
+npm --prefix apps/mobile run export:android
 ```
 
 `tsc` non vede i difetti di colore su fondo: se hai toccato una primitiva che

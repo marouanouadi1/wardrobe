@@ -25,8 +25,8 @@ import { StatoRisorsa } from '../src/ui/stati'
 export default function Chat() {
   const { dati, caricamento, errore, ricarica } = useRisorsa(() => elencaConversazioni())
   const conversazioni = dati ?? []
-  // La conferma è di questa schermata (Conferma, non Alert.alert — sul web
-  // Alert.alert con più bottoni non fa nulla), l'errore di rete resta
+  // La conferma è di questa schermata (Conferma, non Alert.alert, che non ha
+  // i colori del design), l'errore di rete resta
   // sull'Alert nativo: non è la conferma di un'azione, non ha bisogno dei
   // colori del design.
   const [daEliminare, setDaEliminare] = useState<{ id: string; titolo: string } | null>(null)

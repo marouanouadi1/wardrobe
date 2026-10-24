@@ -5,16 +5,10 @@ on:
     branches: [main]
     paths:
       - "apps/mobile/**"
-      - "packages/contracts/**"
-      - "package.json"
-      - "package-lock.json"
       - ".github/workflows/mobile.yml"
   pull_request:
     paths:
       - "apps/mobile/**"
-      - "packages/contracts/**"
-      - "package.json"
-      - "package-lock.json"
       - ".github/workflows/mobile.yml"
   workflow_dispatch:
 
@@ -24,14 +18,19 @@ concurrency:
 
 # Stessa ragione scritta per esteso in api.yml: alla radice sola lettura, e lo
 # scrivere nel solo job che rilascia. `checks` esegue il codice della PR —
-# `npm ci`, `jest`, l'export web — e non ha niente da scrivere.
+# `npm ci`, `jest`, l'export Android — e non ha niente da scrivere.
 permissions:
   contents: read
 
 jobs:
   checks:
-    name: typecheck + lint + test + export web
+    name: typecheck + lint + test + export android
     runs-on: ubuntu-latest
+    # L'app è l'unico progetto npm del repo (ADR 0014): il suo package.json e il
+    # suo lock stanno in apps/mobile, non nella radice.
+    defaults:
+      run:
+        working-directory: apps/mobile
     steps:
       - uses: actions/checkout@v5
         with:
@@ -41,32 +40,35 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
 
       - run: npm ci
 
-      # I tipi in packages/contracts sono generati dal backend: se il campo
+      # I tipi in apps/mobile/contracts sono generati dal backend: se il campo
       # `materiale` cambia lì, questo tsc fallisce. È il punto in cui il
       # disallineamento frontend/backend diventa visibile.
       - name: Typecheck
-        run: npm run typecheck --workspace @wardrobe/mobile
+        run: npm run typecheck
 
       - name: Lint
-        run: npm run lint --workspace @wardrobe/mobile
+        run: npm run lint
 
       # `tsc` non vede questa classe di difetti: `su` è opzionale, e un testo
       # scuro su fondo scuro compila benissimo. È già costata una regressione —
       # PR #4, «Fix invisible text on the onboarding light button» — e adesso è
       # un test.
       #
-      # Prima dell'export web perché è più veloce e dice di più: se fallisce,
+      # Prima dell'export perché è più veloce e dice di più: se fallisce,
       # fallisce in tre secondi e nomina il componente.
       - name: Test
-        run: npm run test:ci --workspace @wardrobe/mobile
+        run: npm run test:ci
 
-      # L'export web è il controllo di build più economico che abbiamo:
-      # non serve un runner macOS né credenziali EAS.
-      - name: Export web
-        run: npm run build:web --workspace @wardrobe/mobile
+      # Il bundle JavaScript della piattaforma vera, con Metro e le sue
+      # risoluzioni: è il controllo di build più economico che abbiamo, senza
+      # Gradle né credenziali EAS. Un pacchetto che Metro non trova (`semver`
+      # 7 con l'SDK 58) cade qui, non sul telefono.
+      - name: Export Android
+        run: npm run export:android
 
   release:
     name: bump versione + build EAS + pubblica release
@@ -91,20 +93,22 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
 
       - run: npm ci
+        working-directory: apps/mobile
 
       # Unica fonte di verità: apps/mobile/app.json (expo.version). Il livello
       # (major/minor/patch) non è fisso: lo script lo deduce dai conventional
       # commit dall'ultimo tag mobile-v*, contando solo quelli che toccano
-      # apps/mobile e packages/contracts — una feature solo backend non alza il
-      # minor dell'app. Vedi docs/adr/0005.
+      # apps/mobile — una feature solo backend non alza il minor dell'app. Vedi
+      # docs/adr/0005.
       #
       # Il commit generato qui ha [skip ci] nel messaggio apposta: tocca
       # apps/mobile/**, che rientra nei path che fanno partire questo stesso
       # workflow — senza [skip ci] il push sotto si rimetterebbe in coda da solo.
-      # Vale anche per package-lock.json, che sta nello stesso filtro: lo script
-      # ci aggiorna la versione del workspace apps/mobile (T-52).
+      # Vale anche per apps/mobile/package-lock.json: lo script ci aggiorna la
+      # versione dell'app (T-52).
       - name: Bump versione app
         id: bump
         run: |
@@ -115,14 +119,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/mobile/app.json apps/mobile/package.json package-lock.json
+          git add apps/mobile/app.json apps/mobile/package.json apps/mobile/package-lock.json
           git commit -m "chore(mobile): bump versione a ${{ steps.bump.outputs.version }} [skip ci]"
 
           TAG="mobile-v${{ steps.bump.outputs.version }}"
           git tag "$TAG"
 
           # api.yml pusha su main negli stessi minuti quando una PR tocca
-          # anche packages/contracts: se il push arriva su una base ormai
+          # anche apps/mobile/contracts: se il push arriva su una base ormai
           # superata viene rifiutato (non-fast-forward). Ci si riallinea con
           # un rebase e si riprova, spostando il tag sul commit riscritto —
           # altrimenti il tag resterebbe puntato a un commit fuori da main.

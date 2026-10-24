@@ -10,7 +10,7 @@
  */
 
 import { type ReactNode, createContext, useContext, useEffect, useState } from 'react'
-import { AppState, Platform } from 'react-native'
+import { AppState } from 'react-native'
 import { esci as esciDaSupabase } from './accesso'
 import { type Session, clientAuth } from './supabase'
 
@@ -70,10 +70,7 @@ export function SessioneProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Il rinnovo automatico gira solo con l'app in primo piano: in background
-    // i timer di JavaScript non sono affidabili, e al ritorno si riparte. Solo
-    // sul telefono: sul web il client segue da sé la visibilità della pagina,
-    // e `startAutoRefresh` toglierebbe proprio quella.
-    if (Platform.OS === 'web') return
+    // i timer di JavaScript non sono affidabili, e al ritorno si riparte.
     const iscrizione = AppState.addEventListener('change', (stato) => {
       if (stato === 'active') void clientAuth.startAutoRefresh()
       else void clientAuth.stopAutoRefresh()

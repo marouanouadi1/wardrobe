@@ -21,7 +21,7 @@ Per esteso, con l'esempio, in `CLAUDE.md` e in `docs/adr/0008`.
 
 **`api.yml` e `mobile.yml` sono due pipeline indipendenti che possono scattare
 insieme sulla stessa PR** (succede ogni volta che si tocca
-`packages/contracts/**`). Ogni modifica va pensata per il minuto in cui l'altra
+`apps/mobile/contracts/**`). Ogni modifica va pensata per il minuto in cui l'altra
 sta pushando su `main`.
 
 ## Un merge su `main` è un rilascio
@@ -53,8 +53,8 @@ toccando la catena che rilascia.
 `services/api/pyproject.toml` (`version`) sono scritti **solo** da
 `scripts/bump-versione.mjs`, che deduce major/minor/patch dai conventional
 commit dall'ultimo tag. Sono **tre** file: `app.json` è la fonte di verità
-dell'app e `package.json` le viene tenuto dietro, insieme alla riga del
-workspace in `package-lock.json` (`bump-versione.mjs`, target `mobile`).
+dell'app e `package.json` le viene tenuto dietro, insieme alla versione che
+`apps/mobile/package-lock.json` registra (`bump-versione.mjs`, target `mobile`).
 Il perché sta in `docs/adr/0005-le-versioni-vengono-dai-commit.md`: *un numero
 che si alza sempre di uno non è una versione, è un contatore di merge.*
 
@@ -92,8 +92,8 @@ corpo del merge commit: è lì che lo script lo legge.
    serve un `git push origin "$TAG"` esplicito. Nel retry il tag si sposta sul
    commit riscritto con `git tag -f`.
 5. **Il lockfile segue il bump, in entrambi i gestori**: sul backend `uv lock`
-   dopo lo script, sull'app lo script stesso riscrive
-   `packages["apps/mobile"].version` in `package-lock.json`, che entra nel
+   dopo lo script, sull'app lo script stesso riscrive la versione in
+   `apps/mobile/package-lock.json` (in cima e in `packages[""]`), che entra nel
    `git add` del commit di bump (`T-52`). Il lockfile registra la versione del
    pacchetto, e lasciarlo indietro rimetterebbe in circolo la stessa bugia che
    il versioning doveva togliere.
@@ -118,15 +118,15 @@ qualunque input controllato dall'esterno che finisca in uno step.
 
 ## I filtri sui path
 
-`api.yml` → `services/api/**`, `packages/contracts/**`, sé stesso.
-`mobile.yml` → `apps/mobile/**`, `packages/contracts/**`, `package.json`,
-`package-lock.json`, sé stesso.
+`api.yml` → `services/api/**`, `apps/mobile/contracts/**`, sé stesso.
+`mobile.yml` → `apps/mobile/**` (contratti e lock compresi), sé stesso. Il
+`package.json` della radice ha solo script e non entra in nessun filtro.
 `database.yml` → `supabase/**`, lo script dei tipi, `prova_accesso.py`, i due file Python che il suo
 gate confronta con lo schema (`domain/models.py`, `domain/wardrobe.py`),
 `database.ts`, sé stesso. **Non rilascia niente**: prova lo schema sullo stack
 locale. Sul progetto vero lo porta `supabase db push`, a mano (ADR 0010).
 
-È anche il motivo per cui questo monorepo **non ha bisogno di Nx o Turborepo**:
+È anche il motivo per cui questo repo **non ha bisogno di Nx o Turborepo**:
 due workflow indipendenti e due gestori di pacchetti (npm e uv) che convivono
 senza mediatori.
 

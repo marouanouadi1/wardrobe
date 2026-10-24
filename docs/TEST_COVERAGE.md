@@ -220,7 +220,9 @@ Due dettagli di configurazione che non sono cosmetici:
   test. **Chiuso in `T-23` (`docs/DA_FARE.md`)**: `react` e `react-dom` sono
   dichiarati anche in root, le peer `*` si accontentano di quelli, resta una
   copia sola in tutto l'albero — verificato con `npm ls react react-dom` su
-  un'installazione pulita — e il mapper è stato tolto.
+  un'installazione pulita — e il mapper è stato tolto. Dal 2026-10-24 non c'è
+  più nemmeno la root che installa per tutti: l'app è l'unico progetto npm del
+  repo (ADR 0014, `T-32`), e `react` è dichiarato solo lì.
 
 In `@testing-library/react-native` 14 **`render` restituisce una Promise**: i
 test sono `async` e fanno `await render(...)`. Senza `await` le query non

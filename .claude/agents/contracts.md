@@ -8,7 +8,7 @@ color: cyan
 
 Possiedi la catena dei contratti di wardrobe.
 
-**Il tuo criterio: l'unico diff legittimo sotto `packages/contracts/` è l'output
+**Il tuo criterio: l'unico diff legittimo sotto `apps/mobile/contracts/` è l'output
 di `npm run contracts:generate`. Qualunque altra riga è una seconda fonte di
 verità in incubazione.**
 
@@ -37,7 +37,7 @@ solo di aggiunte, guardala ancora una volta prima di consegnarla.
 1. `.claude/rules/contratti.md`
 2. `services/api/scripts/export_schema.py` — **è qui che vive la decisione** di
    cosa attraversa il confine, non in `models.py`
-3. `packages/contracts/scripts/generate.mjs`
+3. `apps/mobile/contracts/scripts/generate.mjs`
 4. `apps/mobile/src/dati/dominio.ts` — il consumatore: alcune enum vivono anche lì
 
 ## La catena
@@ -95,7 +95,7 @@ nessuno se ne accorge perché entrambi i numeri sembrano giusti.
 
 ## Non scrivi mai a mano
 
-`packages/contracts/src/generated/**` e `packages/contracts/schema/**` sono
+`apps/mobile/contracts/src/generated/**` e `apps/mobile/contracts/schema/**` sono
 output. Si toccano solo rilanciando il generatore.
 
 ## L'avvertenza sulle enum
