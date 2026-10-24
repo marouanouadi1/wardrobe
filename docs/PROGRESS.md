@@ -104,10 +104,12 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       un'azione è inchiostro. Utente di prova cancellato alla fine.
       **Cosa manca:** **nessuna prova su un telefono** — né che `expo-gl` regga `three`
       0.186 (texture, indici a 32 bit), né quanto ci mette Hermes a ricalcolare, né che il
-      dito giri il corpo senza rubare lo scorrimento. **La migrazione non è sul progetto
-      vero**: va portata con `supabase db push` **prima del merge**, perché un merge è già
-      un rilascio. Senza, salvare il corpo fallisce; il resto del profilo no, perché
-      `aggiornamentoDiProfilo` manda le colonne dell'avatar solo quando c'è un avatar.
+      dito giri il corpo senza rubare lo scorrimento. **Rilasciato il 2026-10-24**: la
+      migrazione è sul progetto vero (`supabase db push` prima del merge di #62), e
+      verificata in sola lettura — le quattro colonne, le tre enum, `cursori_validi`
+      eseguibile da `authenticated`, i profili esistenti con il default; gli advisor di
+      sicurezza non segnalano niente di nuovo. Poi l'app 0.14.0 (APK nella Release
+      `mobile-v0.14.0`) e l'API 0.7.0 (deploy verificato da `GET /salute`).
       L'elenco dei cursori è **in revisione** (`Q-19`), e le misure diverse dall'altezza
       non sono collegate all'avatar (`Q-18`).
       **Corretto dopo la review di `reviewer`**, ciascuno col suo test dove serviva:
@@ -1181,7 +1183,6 @@ Le cose che **non dipendono da noi**. Si aggiornano appena se ne conosce una.
 | Conferma degli id `gpt-5.1` e `gemini-2.5-pro` | utente | niente oggi: sono sovrascrivibili da ambiente — vedi `docs/QUESTIONI.md` Q-03 |
 | Se l'avatar avrà la faccia della persona, e come i livelli si legano a `Misure` | utente | i template dei capi; il corpo è nell'app (ADR 0012, 0013), restano `docs/DOMANDE_APERTE.md` D-10, D-11, D-12 e `docs/QUESTIONI.md` Q-18 |
 | La revisione dei cursori dell'avatar | utente | l'elenco definitivo: la pagina «Cursori dell'avatar» raccoglie le scelte (`Q-19`) |
-| `supabase db push` della migrazione dell'avatar | utente | il merge del branch dell'avatar, che è già un rilascio: senza, salvare il corpo fallisce (il resto del profilo no) |
 
 ## Debiti dichiarati
 
