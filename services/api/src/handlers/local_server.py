@@ -74,14 +74,6 @@ class Ponte(BaseHTTPRequestHandler):
         self.send_response(risposta.get("statusCode", 200))
         for chiave, valore in (risposta.get("headers") or {}).items():
             self.send_header(chiave, valore)
-        # L'app gira su un'origine diversa (Expo web): senza CORS non si vede
-        # nulla.
-        self.send_header("access-control-allow-origin", "*")
-        # Per nome, non `*`: per la specifica Fetch il jolly non comprende
-        # `authorization`, e sul web una richiesta con il token di Supabase
-        # cadrebbe al preflight (`T-61`).
-        self.send_header("access-control-allow-headers", "authorization, content-type")
-        self.send_header("access-control-allow-methods", "GET,POST,OPTIONS")
         self.send_header("content-length", str(len(corpo)))
         self.end_headers()
         self.wfile.write(corpo)
@@ -91,9 +83,6 @@ class Ponte(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         self._instrada("POST")
-
-    def do_OPTIONS(self) -> None:
-        self._rispondi({"statusCode": 204, "body": ""})
 
     def log_message(self, formato: str, *argomenti: Any) -> None:
         # Il percorso senza la query, e mai le intestazioni: il token di chi
