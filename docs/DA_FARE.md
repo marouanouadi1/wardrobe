@@ -956,6 +956,30 @@ punto solo** (una regola CSS globale sul web, o una primitiva immagine), non un
 `pointerEvents="none"` sparso sulle singole foto: quello sarebbe un tampone per
 immagine.
 
+### T-69 — Un server spento lo scopre solo il deploy successivo
+**Trovato il:** 2026-10-23 · **Dove:** `.github/workflows/` (nessun job interroga `/salute` fra un deploy e l'altro) · **Gravità:** media · **Chi:** `ci-cd`
+
+Il VPS è rimasto spento dal 2026-10-18 al 2026-10-23 (`docs/PROGRESS.md`,
+«Infrastruttura e rilascio»). Per cinque giorni l'analisi delle foto, i
+suggerimenti, la chat e l'esportazione hanno risposto con un errore di rete,
+mentre login e armadio, che passano da Supabase, funzionavano. Il guasto era a
+metà, e nessuno se n'è accorto: l'ha trovato un deploy, il primo dopo il
+2026-09-27, caduto su `rsync`.
+
+`GET /salute` lo legge solo il job `deploy` di `api.yml`, subito dopo un rilascio.
+
+**Il rimedio:** un workflow a sé con `on: schedule` e `workflow_dispatch`, senza
+checkout e con `permissions: {}`, e un solo step: `curl --fail --max-time 20
+https://api.ilmioarmadio.xyz/salute`. Quando un'esecuzione pianificata fallisce,
+GitHub manda una mail a chi ha toccato per ultimo la riga `schedule`: è
+l'allarme, senza un servizio in più. Va senza filtri sui path, come
+`pr-title.yml` e `docs.yml`. Da sapere prima di contarci:
+- GitHub può ritardare le esecuzioni pianificate, e in un repo pubblico le
+  **disattiva dopo 60 giorni** senza attività. Il workflow lo dica in un
+  commento;
+- un servizio esterno di monitoraggio non ha questi limiti, ma è un account in
+  più, e sceglierlo spetta all'utente.
+
 ---
 
 ## Fatte

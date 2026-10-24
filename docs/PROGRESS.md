@@ -738,8 +738,14 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       - ~~`README.md` («Partire», «Produzione») descrive ancora `main`~~: riscritto il
         2026-10-23, con ogni comando e ogni variabile confrontati con `package.json`,
         `scripts/dev.sh`, i due `.env.example`, `supabase/seed.sql` e `supabase/config.toml`;
-      - `docs/deploy.md` descrive ancora `main`: tre container, `JWT_SECRET`, le migrazioni
-        del VPS. Il piano lo riscrive nella fase 5;
+      - ~~`docs/deploy.md` descrive ancora `main`: tre container, `JWT_SECRET`, le migrazioni
+        del VPS~~: riscritto il 2026-10-23, confrontato con `docker-compose.yml`, il job
+        `deploy` di `api.yml`, i filtri di `mobile.yml`, le variabili che `services/api/src/`
+        legge davvero e le rotte di `local_server.py`. *Verificato* anche sul server, in sola
+        lettura, il 2026-10-23. In `services/api/.env` ci sono `ANTHROPIC_API_KEY` e `FAL_KEY`,
+        più le quattro variabili che il backend non legge più, e nessuna chiave di Supabase.
+        In `~/wardrobe/.env` c'è solo `POSTGRES_PASSWORD`. I file morti di `T-50` ci sono tutti,
+        e ci sono i volumi `wardrobe_postgres_data` e `wardrobe_foto_dati`;
 
       **Il giorno del passaggio, per questa fase** (sul server, con il via dell'utente):
       - la copia di riserva sono i volumi `postgres_data` e `foto_dati`, non il container:
@@ -926,8 +932,9 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
         Google non serve (entra con la sua password), e pubblicare l'app OAuth toglierebbe la
         lista dei tester senza aprire le registrazioni, che restano dietro gli inviti;
       - la **fase 4**, perché i tre account non ritrovano ancora il loro armadio;
-      - la **fase 5**, perché `docs/deploy.md` descrive ancora il backend di prima (il README
-        è riscritto dal 2026-10-23);
+      - ~~la **fase 5**, perché README e `docs/deploy.md` descrivono ancora il backend di
+        prima~~: riscritti entrambi il 2026-10-23. Della fase 5 restano le due decisioni
+        rimandate a lei, `T-57` e `T-42` in `docs/DA_FARE.md`;
       - ~~l'account di prova non è uno dei tre account veri~~: **falso**, lo era. È stato scritto
         senza controllarlo: `ouadimarouan@gmail.com` era anche un account del VPS. La questione
         l'ha chiusa l'utente, qui sotto.
@@ -967,10 +974,24 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
 
       **Cosa resta:** il Postgres e le foto sul VPS ora sono solo di Ismail, e sono la sua
       copia di riserva. Fermare `wardrobe-postgres` (il volume resta) e poi togliere i volumi è
-      una decisione dell'utente.
+      una decisione dell'utente. *Al 2026-10-23* il container è fermo da sé, `Exited (255)` dallo
+      spegnimento del server del 2026-10-18, e al riavvio non è ripartito; i due volumi ci sono.
 
 ## Infrastruttura e rilascio
 
+- [x] **Il VPS è rimasto spento dal 2026-10-18 al 2026-10-23**, e nessuno se n'è accorto
+      fino a un deploy. Quello partito dal merge di #58 (certifi e pyjwt) è caduto alle 20:29
+      UTC allo step «Rsync codice sul VPS» (`port 22: Connection timed out`), senza toccare
+      niente: bump e tag non sono arrivati su `main`. Dal computer di sviluppo andavano in
+      timeout anche le porte 80 e 443 e il ping. L'utente l'ha riacceso il 2026-10-23 alle
+      23:40 UTC, e `api` e `caddy` sono ripartiti da soli. Il journal del server elenca un
+      solo avvio fra il 2026-09-27 e il riavvio: il 2026-10-18, dalle 16:34 alle 16:56 UTC.
+      Il perché dello spegnimento non è stato cercato.
+      *Verificato* dopo il riavvio: `gh workflow run api.yml --ref main` ha rilasciato
+      l'API **0.6.3** (`api-v0.6.3`). `/salute` risponde `0.6.3`, senza token si riceve 401,
+      e dentro il container ci sono certifi 2026.10.19 e pyjwt 2.15.0.
+      **`/salute` non lo sorveglia nessuno fuori dal deploy**: un server spento si scopre solo
+      al rilascio successivo (`T-69`)
 - [x] VPS Hetzner, Caddy, Let's Encrypt emesso al primo avvio, dominio reale. Deploy
       automatico da `api.yml` con verifica della versione servita — *dichiarato in
       README al 2026-09-08; il deploy si riverifica da solo a ogni merge sul backend*.

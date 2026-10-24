@@ -260,7 +260,12 @@ travestita da registro.
   (la CLI di Supabase, `npm run dev:app`, l'invito del seed, le email su
   Mailpit), i comandi `supabase:*` al posto di `db:*`, i due container di
   produzione, e chi è amministratore (`app_metadata`, non più
-  `EMAIL_AMMINISTRATORI`). `docs/deploy.md` resta da riscrivere.
+  `EMAIL_AMMINISTRATORI`).
+- **`docs/deploy.md` descrive il server dopo il passaggio a Supabase**: due
+  container, il volume del Postgres di prima come sola copia di riserva, un
+  deploy senza migrazioni, le due chiavi che servono davvero nel `.env` del
+  server, e una sezione nuova sul progetto Supabase — `supabase db push` a
+  mano, la configurazione del pannello, come si assegna l'amministratore.
 - Il rilascio dell'app aggiorna anche la versione registrata in
   `package-lock.json`: un `npm install` in locale non sporca più il lockfile
   con una riga che nessuno ha toccato. Chiusa `T-52`.

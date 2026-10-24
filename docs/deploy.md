@@ -20,31 +20,46 @@ commit.
   diceva «Porkbun»: era sbagliata.) Un solo record utile, `A` con host `api`
   → `89.167.15.22`: l'app parla solo con `api.ilmioarmadio.xyz`, il dominio
   nudo non serve a niente.
-- **Servizi**: `docker-compose.yml` nella radice del repo, tre container —
-  `postgres`, `api` (l'immagine di `services/api/Dockerfile`), `caddy`
-  (reverse proxy HTTPS, certificato Let's Encrypt automatico al primo avvio).
+- **Servizi**: `docker-compose.yml` nella radice del repo, due container —
+  `api` (l'immagine di `services/api/Dockerfile`) e `caddy` (reverse proxy
+  HTTPS, certificato Let's Encrypt automatico al primo avvio).
+- **Supabase**: database, login e foto stanno nel progetto
+  `lmjsrhwzjxubecgctrmd`, sul piano Free: niente backup, e una pausa dopo una
+  settimana senza richieste
+  ([`docs/adr/0010`](adr/0010-supabase-database-login-e-foto.md)). Come ci
+  arriva lo schema è in «Il progetto Supabase», qui sotto.
+- **La copia di riserva**: i volumi `postgres_data` e `foto_dati` del Postgres
+  di prima, fermi al giorno del passaggio (2026-09-27). `docker-compose.yml`
+  non li nomina più, e il deploy non tocca il container `wardrobe-postgres`
+  (niente `--remove-orphans`). **Nessuno lancia `docker compose down -v`,
+  `docker volume rm` o `prune`**: fermare quel container e togliere i volumi è
+  una decisione dell'utente, e lo stato è in `docs/PROGRESS.md`.
 
 ## Come arriva il codice sul server
 
-**Il repo è privato**: niente `git clone` sul server (richiederebbe una
-chiave di deploy da gestire per un solo aggiornamento occasionale). Si manda
-la copia di lavoro via `rsync`, dal proprio computer o, dal deploy automatico
-descritto sotto, da un runner di GitHub Actions:
+**Niente `git clone` sul server**: si manda la copia di lavoro via `rsync`, dal
+proprio computer o, dal deploy automatico descritto sotto, da un runner di
+GitHub Actions. Così il server riceve anche la versione nuova, che il job scrive
+prima del deploy e committa solo a deploy verificato. (Fino al 2026-10-23 questa
+riga diceva che il repo è privato, e che un clone avrebbe voluto una chiave di
+deploy: il repo è pubblico.)
 
 ```bash
 rsync -avz --exclude node_modules --exclude .venv --exclude .git --exclude .env -e ssh ./ marouan@89.167.15.22:~/wardrobe/
 ```
 
-Questo sovrascrive il codice sul server ma **non** i due file `.env` (esclusi
+Questo sovrascrive il codice sul server ma **non** i file `.env` (esclusi
 apposta): quelli restano quelli scritti a mano sul server, mai versionati,
 mai transitati da qui.
 
-Non c'è `--delete`, quindi **un file tolto dal repo resta sul server**: oggi ce
-ne sono due, `migrations/0003_valutazioni.sql` e `0004_valutazioni_immagini.sql`,
-rimossi col playground e ancora eseguiti a ogni deploy. Sono innocui solo perché
-`0008` ridroppa dopo quello che loro ricreano. La voce è `T-50` in
-`docs/DA_FARE.md`: aggiungere `--delete` va deciso sapendo che sul server
-vivono due `.env` che non esistono da nessun'altra parte.
+Non c'è `--delete`, quindi **un file tolto dal repo resta sul server**. Dal
+passaggio a Supabase vale anche per il codice: gli handler e gli adapter tolti
+nella fase 2 (`auth.py`, `capi.py`, `postgres.py`, …) restano in
+`~/wardrobe/services/api/src/`, e il `Dockerfile` copia `src/` intero
+nell'immagine. Nessuno li importa, ma un import accidentale diventerebbe un
+crash all'avvio. La voce è `T-50` in `docs/DA_FARE.md`: aggiungere `--delete`
+va deciso sapendo che sul server vivono file `.env` che non esistono da
+nessun'altra parte.
 
 Per aggiornare il server a mano dopo una modifica al codice: si rilancia lo
 stesso `rsync`, poi `docker compose up -d --build` (sotto). In pratica serve
@@ -54,10 +69,10 @@ automatico.
 ## Deploy automatico da CI
 
 Il job `deploy` in `.github/workflows/api.yml` fa da solo, a ogni merge su
-`main` che tocca `services/api/**` o `packages/contracts/**`, esattamente i
-passi manuali sopra: lo stesso comando `rsync` (stesse esclusioni, `.env`
-compresi) da un runner GitHub Actions, poi `docker compose up -d --build` via
-SSH. Intorno a quei due passi c'è il versionamento:
+`main` che tocca `services/api/**`, `packages/contracts/**` o il workflow
+stesso, esattamente i passi manuali sopra: lo stesso comando `rsync` (stesse
+esclusioni, `.env` compresi) da un runner GitHub Actions, poi `docker compose
+up -d --build` via SSH. Intorno a quei due passi c'è il versionamento:
 
 1. **bump della versione** in `services/api/pyproject.toml` con
    `scripts/bump-versione.mjs api`. Il livello non è fisso: viene dedotto dai
@@ -67,20 +82,13 @@ SSH. Intorno a quei due passi c'è il versionamento:
    altrimenti resterebbe indietro per sempre. Qui i file vengono solo scritti,
    così l'albero che parte col `rsync` porta già la versione nuova;
 2. `rsync` + `docker compose up -d --build --wait`, come sopra;
-3. **applicazione delle migrazioni**: `docker compose exec -T api python
-   scripts/applica_migrazioni.py`. Va qui, dopo il rebuild, perché i `.sql`
-   viaggiano dentro l'immagine (`COPY migrations ./migrations` nel
-   `Dockerfile`) e non sul filesystem del server: lanciarlo prima eseguirebbe
-   quelli del rilascio precedente. Fino al 2026-09-16 questo passo **non
-   esisteva**, ed è costato uno schema di produzione fermo a `0006` per tre
-   rilasci — con chat e segnalazioni in `500` su un backend che si dichiarava
-   sano, perché il punto 4 qui sotto non tocca il database;
-4. **verifica della versione servita**: `GET /salute` riporta la versione dai
+3. **verifica della versione servita**: `GET /salute` riporta la versione dai
    metadati del pacchetto installato, e il job confronta quel valore con la
    versione appena rilasciata. Prima qui c'era solo un `curl --fail`: un rsync
    andato a metà, o un `up` che riusava l'immagine vecchia, passavano
-   inosservati perché l'endpoint rispondeva comunque;
-5. **commit + tag `api-v<versione>`**, pushati per ultimi, a deploy verificato.
+   inosservati perché l'endpoint rispondeva comunque. **`/salute` non parla con
+   Supabase**: un progetto in pausa non fa diventare rosso questo passo;
+4. **commit + tag `api-v<versione>`**, pushati per ultimi, a deploy verificato.
    Se qualcosa sopra è andato storto il rilascio non lascia traccia su `main` e
    il tentativo successivo riparte dallo stesso numero: un tag su una versione
    che non è mai andata in produzione sarebbe una bugia scritta nella storia.
@@ -109,11 +117,16 @@ ssh-keyscan -H 89.167.15.22 > .github/deploy/known_hosts
 Un push su `main` che tocca solo `apps/mobile` non fa partire questo job:
 il backend non viene mai riavviato senza motivo.
 
+**Le migrazioni non passano da qui.** Lo schema sta su Supabase, e sul progetto
+vero lo porta `supabase db push`, a mano: vedi «Il progetto Supabase».
+
 ## Deploy automatico dell'app mobile
 
 Il job `release` in `.github/workflows/mobile.yml` fa, a ogni merge su `main`
-che tocca `apps/mobile/**` o `packages/contracts/**`, questi passi in
-sequenza:
+che tocca `apps/mobile/**`, `packages/contracts/**`, `package.json`,
+`package-lock.json` o il workflow stesso, questi passi in sequenza (anche un
+aggiornamento di Dependabot al solo lockfile, quindi, è un rilascio
+dell'app):
 
 1. bump semver con `scripts/bump-versione.mjs mobile` (unica fonte di verità:
    `apps/mobile/app.json`, `expo.version`). Il **livello** — major, minor o
@@ -205,76 +218,50 @@ gh release create "$TAG" "$HOME/wardrobe-$V.apk" \
   rifà il job da capo, bump compreso, e si ferma sul tag che esiste già — non
   riprende dalla build. L'APK di quel tag si fa qui.
 
-## I due `.env` sul server
-
-Non uno: **due**, con scopi diversi, entrambi da scrivere a mano sul server
-(non esistono altrove, `.gitignore` li tiene fuori dal repo apposta).
-
-**`~/wardrobe/.env`** — solo per l'interpolazione di Docker Compose (vedi
-`.env.example` nella radice). Va scritto **prima** del primissimo `docker
-compose up`: la password che contiene diventa quella di Postgres solo alla
-creazione del volume, cambiarla dopo non sposta nulla finché il volume non
-viene ricreato.
-
-```
-POSTGRES_PASSWORD=<openssl rand -hex 24>
-```
+## I `.env` sul server
 
 **`~/wardrobe/services/api/.env`** — le chiavi vere dell'applicazione (vedi
-`services/api/.env.example`). Sul server servono queste sei:
+`services/api/.env.example`), da scrivere a mano sul server: non esistono
+altrove, `.gitignore` le tiene fuori dal repo apposta. Sul server servono
+queste due:
 
 ```
 ANTHROPIC_API_KEY=...
-JWT_SECRET=<openssl rand -hex 32 — diverso da quello di sviluppo locale>
-EMAIL_AMMESSE=<le email a cui è permesso registrarsi, separate da virgole>
-EMAIL_AMMINISTRATORI=<chi vede e lavora le segnalazioni di tutti, separate da virgole>
-BASE_URL_PUBBLICA=https://api.ilmioarmadio.xyz
 FAL_KEY=...
 ```
 
-`DATABASE_URL` e `CARTELLA_FOTO` **non vanno scritte qui**:
+Le altre del `.env.example` sono facoltative: le chiavi degli altri provider e
+la scelta di provider e modello (`PROVIDER_VISIONE`, `PROVIDER_STILISTA`, …).
+
+`SUPABASE_URL` e `SUPABASE_CHIAVE_PUBBLICA` **non vanno scritte qui**:
 `docker-compose.yml` le fissa da solo nel blocco `environment:` del servizio
-`api`, che vince sempre su `env_file:` — scriverle in questo file non farebbe
-niente, e lascerebbe credere il contrario a chi lo legge dopo.
+`api`, che vince sempre su `env_file:`. Sono pubbliche per costruzione — chi è
+l'utente lo dice il suo token, non loro — e così un `.env` vecchio non può
+puntare l'API a un altro progetto. **La chiave di servizio di Supabase non va
+mai in questo file**: sul server non c'è niente che scavalchi l'RLS (ADR 0010).
 
-`BASE_URL_PUBBLICA` è il punto più facile da sbagliare senza accorgersene:
-sbagliata o assente, le URL delle foto puntano all'IP interno del VPS invece
-che al dominio pubblico, e login/salute continuano a rispondere bene — il
-sintomo compare solo quando il telefono prova a scaricare una foto. Si
-verifica con:
+Dal passaggio il backend non legge più `JWT_SECRET`, `EMAIL_AMMESSE`,
+`EMAIL_AMMINISTRATORI`, `BASE_URL_PUBBLICA`, `DATABASE_URL` né `CARTELLA_FOTO`.
+Se sono ancora nel file del server non fanno niente; toglierle vuol dire
+riscrivere un file che non ha copia, e si fa a mano, sapendo cosa si toglie.
+Gli inviti stanno nella tabella `privato.inviti`, e l'amministratore in
+`app_metadata` (sotto).
 
-```bash
-curl -X POST https://api.ilmioarmadio.xyz/foto/upload \
-  -H "authorization: Bearer <un token valido>" \
-  -d '{"content_type":"image/jpeg"}'
-```
+**`~/wardrobe/.env`**, nella radice, conteneva `POSTGRES_PASSWORD` per il
+Postgres di prima. `docker-compose.yml` non lo legge più, ma è la password della
+copia di riserva: non si cancella finché esistono i volumi.
 
-Il campo `"url"` nella risposta deve iniziare con
-`https://api.ilmioarmadio.xyz/foto/...`.
-
-`FAL_KEY` è un sintomo silenzioso di un altro tipo: a differenza di
-`ANTHROPIC_API_KEY`, `JWT_SECRET`, `EMAIL_AMMESSE` e `BASE_URL_PUBBLICA`, la
-sua assenza non impedisce al backend di partire né fa fallire niente — il
-backend parte, l'analisi riesce, i capi si salvano, e le foto restano con lo
-sfondo originale, senza un solo errore nei log
-(`servizio_scontorno()` in `_container.py` torna semplicemente `None`, di
-proposito: provare l'app non deve dipendere da una seconda chiave oltre a
-quella del provider di visione). Si verifica così:
+`FAL_KEY` è un sintomo silenzioso: a differenza di `ANTHROPIC_API_KEY`, la sua
+assenza non impedisce al backend di partire né fa fallire niente — il backend
+parte, l'analisi riesce, i capi si salvano, e le foto restano con lo sfondo
+originale, senza un solo errore nei log (`servizio_scontorno()` in
+`_container.py` torna semplicemente `None`, di proposito: provare l'app non deve
+dipendere da una seconda chiave oltre a quella del provider di visione). Si
+verifica così:
 
 ```bash
 docker compose exec -T api sh -c "env | grep -c FAL_KEY"   # deve dare 1
 docker compose logs api | grep -i scontorn                 # una riga di warning se fal.ai rifiuta
-docker compose exec -T api find /dati/foto -name "*-scontornata" | head -1
-```
-
-`EMAIL_AMMINISTRATORI` tace allo stesso modo, ed è fail-closed come
-`EMAIL_AMMESSE`: assente, il backend parte, ognuno vede solo le proprie
-segnalazioni e nessuno può cambiarne lo stato — restano tutte su «Ricevuta».
-Sul server è mancata fino al 2026-09-25: questa pagina non la nominava, e
-niente altro se ne sarebbe accorto. Si verifica così:
-
-```bash
-docker compose exec -T api printenv EMAIL_AMMINISTRATORI   # vuoto = nessun amministratore
 ```
 
 **Attenzione dopo aver aggiunto o cambiato una variabile di questo file a un
@@ -291,33 +278,57 @@ docker compose up -d --build
 docker compose logs -f api      # aspetta "API di Wardrobe in ascolto...", poi Ctrl-C
 ```
 
-**Migrazioni**: sul primissimo avvio le applica da sola Postgres
-(`docker-entrypoint-initdb.d`, che gira solo su un volume vuoto). Dopo, e a
-ogni rilascio, le applica il job `deploy` di `api.yml` (punto 3 sopra). Il
-comando serve ancora **quando si aggiorna il server a mano**, che è l'unico
-percorso che non passa da quel job:
+## Il progetto Supabase
 
-```bash
-docker compose exec api python scripts/applica_migrazioni.py
+**Lo schema non lo porta un merge.** Le migrazioni di `supabase/migrations/` le
+prova il job `database` sullo stack locale; sul progetto vero le porta `supabase
+db push`, lanciato a mano dal computer di sviluppo con la CLI collegata al
+progetto (`supabase link --project-ref lmjsrhwzjxubecgctrmd`). Da lì una
+migrazione è storia: si corregge con un file nuovo. **Mai `--include-seed`**: il
+seed inserisce un invito di sviluppo. Le regole complete stanno in
+`.claude/rules/migrazioni.md`.
+
+**La configurazione dell'Auth sta nel pannello, non nel repo**: l'hook degli
+inviti («Before User Created»), lo SMTP con Resend, i template con il codice
+(`supabase/templates/`), il provider Google, gli accessi anonimi spenti.
+L'elenco di cosa va impostato, e il fatto che nessun job lo controlla, è `T-56`
+in `docs/DA_FARE.md`.
+
+**L'amministratore** — chi vede e lavora le segnalazioni di tutti — è un
+account con `ruolo: "amministratore"` in `app_metadata`, che l'utente non può
+scriversi da sé (`privato.e_amministratore()` nella migrazione). Si assegna
+dall'editor SQL del pannello:
+
+```sql
+update auth.users
+set raw_app_meta_data = raw_app_meta_data || '{"ruolo": "amministratore"}'
+where email = '...';
 ```
+
+Il ruolo viaggia dentro il token: vale dal prossimo rinnovo della sessione, non
+subito.
 
 ## Scelte deliberate, da ricordare al prossimo giro
 
-- **Postgres non è raggiungibile da Internet**: `ports: ["127.0.0.1:5432:5432"]`,
-  non `"5432:5432"`. Un binding senza l'host `127.0.0.1` resterebbe
-  raggiungibile dall'esterno anche con `ufw` attivo — Docker scrive le sue
-  regole iptables prima di quelle di `ufw`, che quindi non lo vedrebbe mai.
-- **Nessun rate limiting su `/auth/*`**: l'allowlist di `EMAIL_AMMESSE` è la
-  sola barriera al brute force. Accettabile per due persone, da rivedere
-  prima di aprire la registrazione a chiunque altro.
+- **L'API si raggiunge solo passando da Caddy**: il servizio `api` ha
+  `expose:`, non `ports:`. Una porta pubblicata resterebbe raggiungibile
+  dall'esterno anche con `ufw` attivo — Docker scrive le sue regole iptables
+  prima di quelle di `ufw`, che quindi non la vedrebbe mai — e si parlerebbe
+  all'API in chiaro, scavalcando TLS.
+- **Le registrazioni passano dagli inviti**: l'hook «Before User Created»
+  rifiuta un'email che non è in `privato.inviti`, anche con Google. I tentativi
+  sul codice via email li frenano le otto cifre, la scadenza e il limite per IP
+  di Supabase Auth (`T-56`). Da rivedere prima di aprire la registrazione a
+  chiunque.
 
 ## Verifica rapida dopo ogni deploy
 
 ```bash
-curl https://api.ilmioarmadio.xyz/salute
-curl -X POST https://api.ilmioarmadio.xyz/auth/registrati -d '{"email":"...","password":"..."}'
-# con il token qui sopra, il controllo su BASE_URL_PUBBLICA descritto sopra
+curl https://api.ilmioarmadio.xyz/salute                            # la versione appena rilasciata
+curl -i -X POST https://api.ilmioarmadio.xyz/suggerimenti -d '{}'   # senza token: 401
 ```
+
+Il resto — login, foto, analisi — passa da Supabase e si prova dall'app.
 
 Se il DNS non ha ancora propagato sul proprio computer (capita, appena dopo
 aver creato o cambiato un record), si può verificare il server comunque,
