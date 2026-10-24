@@ -12,6 +12,22 @@
  * punteggio complessivo.
  */
 export type AttributoCapo = 'tipo' | 'colore' | 'materiale' | 'fantasia' | 'stagione' | 'vestibilita' | 'lavaggio'
+/**
+ * Il corpo di MakeHuman da cui parte l'avatar: i due estremi della sua macro «gender».
+ *
+ * **Si sceglie, non si deduce** — né da `SistemaTaglie`, che dice come si chiamano le taglie
+ * e promette di non indovinare il genere di nessuno, né da altro. Quali parole usare, e se
+ * chiederlo così, resta `D-12`: questo è il primo modo di chiederlo, non l'ultimo.
+ */
+export type CorpoBase = 'donna' | 'uomo'
+/**
+ * Il colore della pelle dell'avatar. I sei toni vengono dall'esploratore di MakeHuman.
+ */
+export type TonoPelle = 'chiarissima' | 'chiara' | 'dorata' | 'olivastra' | 'scura' | 'molto_scura'
+/**
+ * Il colore dei capelli dell'avatar; sopracciglia e ciglia lo seguono, più scure.
+ */
+export type ColoreCapelli = 'neri' | 'castano_scuro' | 'castani' | 'biondo_scuro' | 'biondi' | 'rossi' | 'grigi'
 export type TipoCapo = 'top' | 'pantaloni' | 'scarpe' | 'capospalla' | 'abito' | 'accessorio'
 /**
  * Le cinque posizioni che l'avatar sa vestire.
@@ -79,11 +95,14 @@ export type StatoSegnalazione = 'ricevuta' | 'in_lavorazione' | 'risolta'
 export interface Contratti {
   AnalisiVisione?: AnalisiVisione
   AttributoCapo?: AttributoCapo
+  Avatar?: Avatar
   Capo?: Capo
   CapoSintetico?: CapoSintetico
   Colore?: Colore
+  ColoreCapelli?: ColoreCapelli
   ContestoSuggerimento?: ContestoSuggerimento
   ConversazioneChat?: ConversazioneChat
+  CorpoBase?: CorpoBase
   Corporatura?: Corporatura
   EsitoAnalisi?: EsitoAnalisi
   EsportazionePronta?: EsportazionePronta
@@ -114,6 +133,7 @@ export interface Contratti {
   Suggerimento?: Suggerimento
   Taglia?: Taglia
   TipoCapo?: TipoCapo
+  TonoPelle?: TonoPelle
   UnitaLunghezza?: UnitaLunghezza
   UsoToken?: UsoToken
   Vestizione?: Vestizione
@@ -131,6 +151,29 @@ export interface AnalisiVisione {
   }
   corretti_a_mano?: AttributoCapo[]
   note?: string | null
+}
+/**
+ * Il corpo dell'avatar: da quale corpo di MakeHuman parte, e quanto ha mosso ogni cursore.
+ *
+ * **I cursori sono un dizionario, non un campo ciascuno**: la chiave è il nome di MakeHuman
+ * (`weight`, `measure-shoulder-dist-decr-incr`) e il valore è nella sua scala. Quali cursori
+ * l'app offre lo decide `apps/mobile/src/avatar/cursori.ts`, ed è un elenco ancora in
+ * revisione: un campo per cursore vorrebbe dire un cambio di contratto e una migrazione a
+ * ogni cursore tolto o aggiunto. Un cursore assente è al suo valore neutro.
+ *
+ * **L'altezza non è qui**: è `Misure.altezza_cm`, che l'avatar legge (ADR 0011).
+ */
+export interface Avatar {
+  corpo_base: CorpoBase
+  cursori?: {
+    /**
+     * This interface was referenced by `undefined`'s JSON-Schema definition
+     * via the `patternProperty` "^[a-z0-9-]{1,64}$".
+     */
+    [k: string]: number
+  }
+  pelle?: TonoPelle | null
+  capelli?: ColoreCapelli | null
 }
 export interface Capo {
   id: string
@@ -394,6 +437,7 @@ export interface Profilo {
   citta?: string | null
   preferenze?: PreferenzeStile
   misure?: Misure | null
+  avatar?: Avatar | null
   unita_lunghezza?: UnitaLunghezza
   foto_url?: string | null
   /**

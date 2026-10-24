@@ -6,7 +6,7 @@
 -- una transazione che alla fine si annulla. I conteggi guardano solo le righe
 -- di queste tre persone: il database locale può avere già dati di sviluppo.
 begin;
-select plan(103);
+select plan(107);
 
 -- ── il catalogo: quello che deve valere per ogni oggetto, anche futuro ───────
 select is(
@@ -302,6 +302,17 @@ select throws_ok(
 );
 select throws_ok($$ update public.profili set altezza_cm = 1680 $$, '23514', null,
   'un''altezza fuori dai limiti viene rifiutata');
+select lives_ok(
+  $$ update public.profili set avatar_corpo_base = 'donna', avatar_pelle = 'olivastra',
+       avatar_cursori = '{"weight": 0.75, "measure-shoulder-dist-decr-incr": -0.5}' $$,
+  'A salva il corpo del suo avatar'
+);
+select throws_ok($$ update public.profili set avatar_cursori = '{"weight": 1.5}' $$, '23514', null,
+  'un cursore oltre +1 viene rifiutato');
+select throws_ok($$ update public.profili set avatar_cursori = '{"Peso": 0.5}' $$, '23514', null,
+  'e un nome che non è di MakeHuman');
+select throws_ok($$ update public.profili set avatar_cursori = '[0.5]' $$, '23514', null,
+  'e qualcosa che non è un oggetto');
 update public.profili set nome = 'Anna';
 select is((select nome from public.profili), 'Anna', 'A modifica il suo profilo');
 

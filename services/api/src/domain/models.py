@@ -15,7 +15,7 @@ from datetime import date, datetime
 from enum import StrEnum
 from typing import Annotated, Final
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, Strict, StringConstraints
 
 # Sotto questa confidenza l'app dipinge l'attributo in corallo e invita a
 # correggerlo: il modello ha risposto, ma preferiamo chiedere all'utente.
@@ -446,12 +446,83 @@ class Misure(ModelloWardrobe):
     ) = None
 
 
+class CorpoBase(StrEnum):
+    """Il corpo di MakeHuman da cui parte l'avatar: i due estremi della sua macro «gender».
+
+    **Si sceglie, non si deduce** — né da `SistemaTaglie`, che dice come si chiamano le taglie
+    e promette di non indovinare il genere di nessuno, né da altro. Quali parole usare, e se
+    chiederlo così, resta `D-12`: questo è il primo modo di chiederlo, non l'ultimo.
+    """
+
+    DONNA = "donna"
+    UOMO = "uomo"
+
+
+class TonoPelle(StrEnum):
+    """Il colore della pelle dell'avatar. I sei toni vengono dall'esploratore di MakeHuman."""
+
+    CHIARISSIMA = "chiarissima"
+    CHIARA = "chiara"
+    DORATA = "dorata"
+    OLIVASTRA = "olivastra"
+    SCURA = "scura"
+    MOLTO_SCURA = "molto_scura"
+
+
+class ColoreCapelli(StrEnum):
+    """Il colore dei capelli dell'avatar; sopracciglia e ciglia lo seguono, più scure."""
+
+    NERI = "neri"
+    CASTANO_SCURO = "castano_scuro"
+    CASTANI = "castani"
+    BIONDO_SCURO = "biondo_scuro"
+    BIONDI = "biondi"
+    ROSSI = "rossi"
+    GRIGI = "grigi"
+
+
+#: I cursori di MakeHuman vanno da −1 a +1 (le macro da 0 a 1, dentro lo stesso intervallo):
+#: un valore fuori non è un corpo più estremo, è un numero che MakeHuman non ha. Che una macro
+#: stia fra 0 e 1 lo fa rispettare il motore dell'app (`statoDi`), che ferma lì i valori fuori.
+#: Il tetto al numero di cursori ferma un profilo gonfiato a mano: l'app ne usa una dozzina.
+LIMITI_CURSORI_AVATAR: Final[dict[str, int]] = {"min": -1, "max": 1, "quanti": 64}
+
+NomeCursore = Annotated[str, StringConstraints(pattern=r"^[a-z0-9-]{1,64}$")]
+#: Stretto: un `true` o una stringa `"0.5"` non sono numeri, e il database li rifiuta già.
+ValoreCursore = Annotated[
+    float, Strict(), Field(ge=LIMITI_CURSORI_AVATAR["min"], le=LIMITI_CURSORI_AVATAR["max"])
+]
+
+
+class Avatar(ModelloWardrobe):
+    """Il corpo dell'avatar: da quale corpo di MakeHuman parte, e quanto ha mosso ogni cursore.
+
+    **I cursori sono un dizionario, non un campo ciascuno**: la chiave è il nome di MakeHuman
+    (`weight`, `measure-shoulder-dist-decr-incr`) e il valore è nella sua scala. Quali cursori
+    l'app offre lo decide `apps/mobile/src/avatar/cursori.ts`, ed è un elenco ancora in
+    revisione: un campo per cursore vorrebbe dire un cambio di contratto e una migrazione a
+    ogni cursore tolto o aggiunto. Un cursore assente è al suo valore neutro.
+
+    **L'altezza non è qui**: è `Misure.altezza_cm`, che l'avatar legge (ADR 0011).
+    """
+
+    corpo_base: CorpoBase
+    cursori: Annotated[
+        dict[NomeCursore, ValoreCursore], Field(max_length=LIMITI_CURSORI_AVATAR["quanti"])
+    ] = Field(default_factory=dict)
+    pelle: TonoPelle | None = None
+    capelli: ColoreCapelli | None = None
+
+
 class Profilo(ModelloWardrobe):
     id: str
     nome: str
     citta: str | None = None
     preferenze: PreferenzeStile = PreferenzeStile()
     misure: Misure | None = None
+    #: `None` finché la persona non sceglie un corpo di partenza: la schermata dell'avatar
+    #: mostra allora il corpo medio, e chiede.
+    avatar: Avatar | None = None
     #: Default `cm` e non `None`: un profilo salvato prima che questo campo
     #: esistesse lo riceve leggendolo, senza migrazione e senza un ramo
     #: «non scelto» da gestire in ogni punto che mostra una lunghezza.

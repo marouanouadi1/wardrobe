@@ -75,5 +75,26 @@
   "UnitaLunghezza": [
     "cm",
     "pollici"
+  ],
+  "CorpoBase": [
+    "donna",
+    "uomo"
+  ],
+  "TonoPelle": [
+    "chiarissima",
+    "chiara",
+    "dorata",
+    "olivastra",
+    "scura",
+    "molto_scura"
+  ],
+  "ColoreCapelli": [
+    "neri",
+    "castano_scuro",
+    "castani",
+    "biondo_scuro",
+    "biondi",
+    "rossi",
+    "grigi"
   ]
 }

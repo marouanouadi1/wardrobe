@@ -30,6 +30,7 @@ sys.path.insert(0, str(RADICE / "src"))
 
 import psycopg  # noqa: E402
 from psycopg import sql  # noqa: E402
+from psycopg.types.json import Jsonb  # noqa: E402
 from pydantic import TypeAdapter, ValidationError  # noqa: E402
 
 from domain import models  # noqa: E402
@@ -54,6 +55,9 @@ ENUM: dict[str, type[StrEnum]] = {
     "taglia": models.Taglia,
     "corporatura": models.Corporatura,
     "unita_lunghezza": models.UnitaLunghezza,
+    "corpo_base": models.CorpoBase,
+    "tono_pelle": models.TonoPelle,
+    "colore_capelli": models.ColoreCapelli,
 }
 
 COLONNE_MISURE = {
@@ -65,6 +69,25 @@ COLONNE_MISURE = {
 # Valori al bordo e appena fuori, per ciascuno dei due vincoli sul capo.
 COLORI = ["#A1B2C3", "#a1b2c3", "#000000", "A1B2C3", "#A1B2C", "#A1B2C3D", "#GGGGGG", "nero"]
 CONFIDENZE = [0, 100, -1, 101]
+# I cursori dell'avatar: i bordi di `LIMITI_CURSORI_AVATAR`, appena fuori, e le forme che il
+# motore non saprebbe leggere. Un oggetto con 64 voci passa, con 65 no.
+CURSORI: list[object] = [
+    {},
+    {"weight": 1, "measure-hips-circ-decr-incr": -1},
+    {"weight": 1.0001},
+    {"weight": -1.0001},
+    {"weight": True},
+    {"weight": "0.5"},
+    {"weight": None},
+    {"Peso": 0.5},
+    {"peso\n": 0.5},
+    {"a" * 64: 0},
+    {"a" * 65: 0},
+    {f"c{i}": 0 for i in range(64)},
+    {f"c{i}": 0 for i in range(65)},
+    [0.5],
+    0.5,
+]
 
 
 def confronta_enum(conn: Connessione) -> list[str]:
@@ -168,6 +191,17 @@ def confronta_vincoli(conn: Connessione) -> list[str]:
                     f"confidenza {confidenza}: database {_si_no(nel_database)},"
                     f" Python {_si_no(in_python)}"
                 )
+        aggiorna_cursori = sql.SQL("update public.profili set avatar_cursori = %s where id = %s")
+        for cursori in CURSORI:
+            nel_database = _accettato(conn, aggiorna_cursori, (Jsonb(cursori), utente))
+            in_python = _pydantic_accetta(
+                models.Avatar, {"corpo_base": "donna", "cursori": cursori}
+            )
+            if nel_database != in_python:
+                differenze.append(
+                    f"cursori {str(cursori)[:60]}: database {_si_no(nel_database)},"
+                    f" Python {_si_no(in_python)}"
+                )
     return differenze
 
 
@@ -185,8 +219,8 @@ def main() -> None:
         )
         raise SystemExit(1)
     print(
-        f"✓ {len(ENUM)} enum, la mappa degli slot, i limiti delle misure, il colore"
-        " e le confidenze coincidono"
+        f"✓ {len(ENUM)} enum, la mappa degli slot, i limiti delle misure, il colore,"
+        " le confidenze e i cursori dell'avatar coincidono"
     )
 
 

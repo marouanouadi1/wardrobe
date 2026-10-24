@@ -85,6 +85,9 @@ ENUM = (
     ("Taglia", models.Taglia),
     ("Corporatura", models.Corporatura),
     ("UnitaLunghezza", models.UnitaLunghezza),
+    ("CorpoBase", models.CorpoBase),
+    ("TonoPelle", models.TonoPelle),
+    ("ColoreCapelli", models.ColoreCapelli),
 )
 
 COSTANTI = {

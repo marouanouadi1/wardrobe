@@ -27,3 +27,6 @@ export const VALORI_SISTEMA_TAGLIE = ['donna', 'uomo', 'unisex'] as const
 export const VALORI_TAGLIA = ['xs', 's', 'm', 'l', 'xl'] as const
 export const VALORI_CORPORATURA = ['minuta', 'media', 'robusta'] as const
 export const VALORI_UNITA_LUNGHEZZA = ['cm', 'pollici'] as const
+export const VALORI_CORPO_BASE = ['donna', 'uomo'] as const
+export const VALORI_TONO_PELLE = ['chiarissima', 'chiara', 'dorata', 'olivastra', 'scura', 'molto_scura'] as const
+export const VALORI_COLORE_CAPELLI = ['neri', 'castano_scuro', 'castani', 'biondo_scuro', 'biondi', 'rossi', 'grigi'] as const
