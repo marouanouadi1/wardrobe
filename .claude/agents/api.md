@@ -96,7 +96,7 @@ lassù, è storia: la correzione è un file nuovo, non una riscrittura.
 
 ## Confini: dove ti fermi
 
-- **`packages/contracts/**` non è tuo.** Se il tuo lavoro tocca
+- **`apps/mobile/contracts/**` non è tuo.** Se il tuo lavoro tocca
   `domain/models.py`, i tipi vanno rigenerati: **fermati e riporta che serve
   `contracts`**, non farlo tu
 - **`services/api/tests/**` è di `test`.** Puoi allineare una fixture che il tuo

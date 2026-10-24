@@ -2,18 +2,18 @@ name: api
 
 # Filtro sui path: un commit che tocca solo l'app non deve far girare
 # lint/test del backend. Vale anche per l'altro workflow — è la ragione per
-# cui questo monorepo non ha bisogno di Nx o Turborepo.
+# cui questo repo non ha bisogno di Nx o Turborepo.
 on:
   push:
     branches: [main]
     paths:
       - "services/api/**"
-      - "packages/contracts/**"
+      - "apps/mobile/contracts/**"
       - ".github/workflows/api.yml"
   pull_request:
     paths:
       - "services/api/**"
-      - "packages/contracts/**"
+      - "apps/mobile/contracts/**"
       - ".github/workflows/api.yml"
   workflow_dispatch:
 
@@ -122,12 +122,14 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
 
       - run: uv sync --frozen
 
+      # Il generatore usa le dipendenze dell'app, l'unico progetto npm del repo.
       - name: Installa dipendenze Node
         run: npm ci
-        working-directory: .
+        working-directory: apps/mobile
 
       # I modelli Pydantic in src/domain sono la fonte di verità. Questo step
       # rigenera JSON Schema e tipi TypeScript e fallisce se il committato è
@@ -267,7 +269,7 @@ jobs:
           git tag "$TAG"
 
           # mobile.yml pusha su main negli stessi minuti quando una PR tocca
-          # anche packages/contracts: se il push arriva su una base ormai
+          # anche apps/mobile/contracts: se il push arriva su una base ormai
           # superata viene rifiutato (non-fast-forward). Ci si riallinea con
           # un rebase e si riprova, spostando il tag sul commit riscritto —
           # altrimenti il tag resterebbe puntato a un commit fuori da main.

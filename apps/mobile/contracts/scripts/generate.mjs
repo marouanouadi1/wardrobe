@@ -15,7 +15,7 @@ import { compile } from 'json-schema-to-typescript'
 
 const QUI = dirname(fileURLToPath(import.meta.url))
 const PACCHETTO = join(QUI, '..')
-const RADICE = join(PACCHETTO, '..', '..')
+const RADICE = join(PACCHETTO, '..', '..', '..')
 const SCHEMI = join(PACCHETTO, 'schema')
 const GENERATI = join(PACCHETTO, 'src', 'generated')
 

@@ -2,7 +2,7 @@
 
 Primo passo della catena dei contratti:
 
-    domain/models.py  ->  packages/contracts/schema/*.json  ->  src/generated/*.ts
+    domain/models.py  ->  apps/mobile/contracts/schema/*.json  ->  src/generated/*.ts
 
 Esce un file solo, `contratti.json`, con tutti i modelli sotto `$defs`: se ogni
 modello avesse il suo file, `Colore` finirebbe duplicato in dieci schemi e da
@@ -27,7 +27,7 @@ from pydantic.json_schema import models_json_schema  # noqa: E402
 
 from domain import models  # noqa: E402
 
-DESTINAZIONE = RADICE / "packages/contracts/schema"
+DESTINAZIONE = RADICE / "apps/mobile/contracts/schema"
 
 # I modelli che attraversano il confine fra backend e app. Quello che è solo
 # interno — le porte, le richieste ai provider — resta fuori: un contratto

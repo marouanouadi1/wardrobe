@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # I tipi TypeScript dei dati salvati su Supabase, generati dallo schema locale.
 #
-#   npm run supabase:tipi                 -> scrive packages/contracts/src/generated/database.ts
+#   npm run supabase:tipi                 -> scrive apps/mobile/contracts/src/generated/database.ts
 #   bash scripts/tipi-database.sh <file>  -> li scrive altrove (la CI li confronta così)
 #
 # Uno script e non una riga in package.json perché lo usano in due, `npm` e il
@@ -9,7 +9,7 @@
 # confronto della CI fallirebbe per una differenza d'intestazione, non di tipi.
 set -euo pipefail
 
-DESTINAZIONE="${1:-packages/contracts/src/generated/database.ts}"
+DESTINAZIONE="${1:-apps/mobile/contracts/src/generated/database.ts}"
 TEMPORANEO="$(mktemp)"
 trap 'rm -f "$TEMPORANEO"' EXIT
 

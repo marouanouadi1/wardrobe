@@ -18,6 +18,9 @@ travestita da registro.
 ## Non rilasciato
 
 ### mobile
+- Niente di nuovo per chi usa l'app: la prossima versione cambia perché il
+  pacchetto è stato riorganizzato, ed è l'unico progetto npm del repo
+  (`docs/adr/0014`). Non esiste più una versione web dell'app.
 - **L'avatar è il corpo di MakeHuman, in 3D**: nella scheda «Come mi sta» si
   sceglie da che corpo partire, poi lo si regola — peso, muscolatura, spalle,
   torace, vita, lunghezza del busto, fianchi, glutei, gambe, cosce, braccia, e il
@@ -225,6 +228,9 @@ travestita da registro.
   a versione esatta, alle ultime versioni compatibili con i loro range.
 
 ### api
+- Il backend non risponde più con le intestazioni CORS e non gestisce più il
+  preflight (`OPTIONS`): servivano all'app nel browser, che non c'è più
+  (`docs/adr/0014`). Chiusa `T-70`.
 - Il profilo porta l'avatar (`Profilo.avatar`: corpo di partenza, cursori per nome,
   pelle, capelli), con le sue enum nei contratti. Richiede la migrazione
   `20261023235648_avatar_makehuman.sql` sul progetto vero.
@@ -272,6 +278,15 @@ travestita da registro.
   Ora è l'ultima.)
 
 ### progetto
+- **Il repo è dell'app sul telefono** (`docs/adr/0014`): un solo progetto npm,
+  `apps/mobile`, con il suo lock. Sono usciti i workspace, `apps/web` e la
+  versione web dell'app (`mobile:web`, `build:web`, `react-native-web`). I
+  contratti stanno in `apps/mobile/contracts/`, le dipendenze si installano con
+  `npm ci --prefix apps/mobile`, e la CI controlla il bundle con l'export
+  Android. Chiuse `T-32` e `Q-04`, decadute `T-61` e `T-66`.
+- **Il `.env` del server ha solo le chiavi che servono**: sono uscite
+  `JWT_SECRET`, `EMAIL_AMMESSE`, `BASE_URL_PUBBLICA` ed `EMAIL_AMMINISTRATORI`,
+  che il backend non leggeva più dal passaggio a Supabase.
 - **Il README descrive il progetto dopo il passaggio a Supabase**: come si parte
   (la CLI di Supabase, `npm run dev:app`, l'invito del seed, le email su
   Mailpit), i comandi `supabase:*` al posto di `db:*`, i due container di

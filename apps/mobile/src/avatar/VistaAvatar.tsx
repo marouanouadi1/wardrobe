@@ -100,9 +100,8 @@ export default function VistaAvatar({ umano, vestito, tinte, altezza }: Props) {
       // I gestori di risposta della `View`, non un `PanResponder`: leggono i ref solo dentro
       // gli eventi. Il corpo si prende il dito solo in orizzontale — in verticale il dito sta
       // scorrendo la pagina, e la pagina vince.
-      // Il punto di partenza si prende qui e non con `onTouchStart`: sul web il mouse non
-      // genera eventi touch, mentre il sistema dei responder li vede tutti e due. `false`:
-      // il gesto non si prende ancora, lo decide `onMoveShouldSetResponder`.
+      // Il punto di partenza si prende qui. `false`: il gesto non si prende ancora, lo decide
+      // `onMoveShouldSetResponder`.
       onStartShouldSetResponder={(e) => {
         inizio.current = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY, angolo: angolo.current }
         return false

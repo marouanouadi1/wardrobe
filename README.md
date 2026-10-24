@@ -34,14 +34,14 @@ c'era prima non c'è più. Il perché di questa strada sta in
 
 ```txt
 apps/
-  mobile/            app Expo (iOS, Android, web): legge e scrive i dati su Supabase
-  web/               vuoto, ma il posto c'è
+  mobile/            l'app Expo per il telefono, che legge e scrive i dati su Supabase;
+                     è l'unico progetto npm del repo (docs/adr/0014)
+    contracts/       tipi TypeScript generati: dai modelli Pydantic e dallo schema SQL
 services/api/        il backend dell'IA: analisi delle foto, suggerimenti, chat, esportazione
   src/domain/        logica pura: zero SDK, testabile con pytest
   src/handlers/      adapter sottili: evento -> domain -> risposta
   src/adapters/      Supabase, provider LLM, scontorno
 supabase/            schema e policy (migrations/), test pgTAP, configurazione dello stack locale
-packages/contracts/  tipi TypeScript generati: dai modelli Pydantic e dallo schema SQL
 tools/avatar/        i pacchetti del corpo dell'avatar, presi dai dati di MakeHuman (MPFB2)
 docs/adr/            le decisioni che valeva la pena scrivere
 ```
@@ -65,7 +65,7 @@ il lint fallisce se qualcuno prova.
 **2. I contratti sono generati, non copiati.** Le fonti sono due, ognuna col suo
 confine. Per ciò che attraversa il backend dell'IA la fonte sono i modelli
 Pydantic in `services/api/src/domain/models.py`: uno script esporta il JSON
-Schema, e da quello nascono i tipi TypeScript in `packages/contracts`. Per i dati
+Schema, e da quello nascono i tipi TypeScript in `apps/mobile/contracts`. Per i dati
 salvati la fonte è lo schema SQL di `supabase/migrations/`, e i tipi li genera
 `supabase gen types`. Rinominare un campo senza rigenerare fa fallire la CI;
 rigenerarlo fa fallire `tsc` dell'app esattamente nei punti da aggiornare. Anche
@@ -78,7 +78,7 @@ esistono in entrambe le fonti li confronta un job della CI.
 backend. I gate che valgono per tutto il repo — il titolo delle PR
 (`pr-title.yml`) e i numeri dichiarati nelle docs (`docs.yml`) — non hanno
 filtri, di proposito: una PR di sole docs non farebbe partire gli altri. È anche
-il motivo per cui questo monorepo non ha bisogno di Nx o Turborepo: workflow
+il motivo per cui questo repo non ha bisogno di Nx o Turborepo: workflow
 indipendenti e due gestori di pacchetti (npm per TypeScript, uv per Python) che
 convivono senza mediatori.
 
@@ -96,9 +96,9 @@ alla stessa versione della CI (`.github/workflows/database.yml`: un'altra
 versione genera tipi diversi) e Docker, perché lo stack gira in container.
 
 ```bash
-npm install
-npm run api:sync     # dipendenze Python (uv) — una volta sola
-npm run dev:app      # Supabase locale + API su http://localhost:8787 + l'app Expo
+npm ci --prefix apps/mobile   # dipendenze dell'app: la radice non ne ha
+npm run api:sync              # dipendenze Python (uv) — una volta sola
+npm run dev:app               # Supabase locale + API su http://localhost:8787 + l'app Expo
 ```
 
 `npm run dev:app` accende lo stack di Supabase (il primo avvio scarica le
@@ -129,10 +129,8 @@ http://127.0.0.1:54324.
 
 L'app trova da sola l'indirizzo dell'API e quello di Supabase: su Expo Go o dev
 client usa lo stesso host a cui si è già collegata per il bundle JS (lo stesso
-IP del QR code), sulla porta 8787 per l'API e 54321 per Supabase; su
-`mobile:web` usa l'host con cui il browser ha raggiunto la pagina
-(`window.location.hostname`). In entrambi i casi assume che tutto giri sulla
-stessa macchina — il caso comune in sviluppo. `EXPO_PUBLIC_API_URL` ed
+IP del QR code), sulla porta 8787 per l'API e 54321 per Supabase, e assume che
+tutto giri sulla stessa macchina — il caso comune in sviluppo. `EXPO_PUBLIC_API_URL` ed
 `EXPO_PUBLIC_SUPABASE_URL` restano per sovrascriverlo esplicitamente: è quello
 che fanno le build EAS, che li ricevono da `apps/mobile/eas.json`, o quando
 l'euristica indovina l'host sbagliato.
@@ -178,7 +176,6 @@ un file in `adapters/llm/` più una riga nel registro, e nessuna schermata cambi
 | `npm run dev` | Supabase locale + API, con un comando solo |
 | `npm run dev:app` | come sopra, più l'app Expo |
 | `npm run mobile` | avvia l'app Expo |
-| `npm run mobile:web` | l'app nel browser |
 | `npm run mobile:android` | l'app su Android |
 | `npm run mobile:ios` | l'app su iOS |
 | `npm run mobile:test` | i test dell'app |

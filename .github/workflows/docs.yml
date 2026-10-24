@@ -34,6 +34,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
 
       - uses: astral-sh/setup-uv@v7
         with:
@@ -41,6 +42,7 @@ jobs:
           cache-dependency-glob: services/api/uv.lock
 
       - run: npm ci
+        working-directory: apps/mobile
       - run: uv sync --frozen
         working-directory: services/api
 

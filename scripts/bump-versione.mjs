@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Bump semver di un target del monorepo, con il *livello* (major/minor/patch)
+// Bump semver di un target del repo, con il *livello* (major/minor/patch)
 // dedotto dai commit invece che fissato a "patch". Prima di questo script la
 // versione dell'app contava i merge, non i cambiamenti: una feature intera e
 // un fix CSS di una riga alzavano entrambi il patch. Il perché sta in
@@ -23,30 +23,31 @@ const percorso = (relativo) => fileURLToPath(new URL(relativo, import.meta.url))
 const TARGET = {
   mobile: {
     prefissoTag: "mobile-v",
-    percorsi: ["apps/mobile", "packages/contracts"],
+    percorsi: ["apps/mobile"],
     // Unica fonte di verità: apps/mobile/app.json (expo.version).
-    // apps/mobile/package.json viene tenuto sincronizzato, e così la riga del
-    // workspace in package-lock.json: il lock registra la versione di ogni
-    // workspace, e se resta indietro ogni `npm install` in locale la riscrive,
-    // sporcando un diff che nessuno ha toccato (T-52). È la metà npm di
-    // `uv lock` dopo il bump del backend.
+    // apps/mobile/package.json viene tenuto sincronizzato, e così il suo lock,
+    // che registra la versione del pacchetto in due punti (in cima e nella
+    // voce `packages[""]`): se resta indietro ogni `npm install` in locale la
+    // riscrive, sporcando un diff che nessuno ha toccato (T-52). È la metà npm
+    // di `uv lock` dopo il bump del backend.
     leggi: () => leggiJson(percorso("../apps/mobile/app.json")).expo.version,
     scrivi(nuova) {
       const app = percorso("../apps/mobile/app.json");
       const pkg = percorso("../apps/mobile/package.json");
-      const lock = percorso("../package-lock.json");
+      const lock = percorso("../apps/mobile/package-lock.json");
       const appJson = leggiJson(app);
       const pkgJson = leggiJson(pkg);
       const lockJson = leggiJson(lock);
-      // Senza questo controllo un lock rigenerato con un'altra struttura
-      // farebbe nascere una voce `apps/mobile` finta, con la sola versione.
-      const workspace = lockJson.packages?.["apps/mobile"];
-      if (!workspace) {
-        throw new Error('package-lock.json: manca la voce packages["apps/mobile"]');
+      // Senza questo controllo un lock con un'altra struttura farebbe nascere
+      // una voce `packages[""]` finta, con la sola versione.
+      const pacchetto = lockJson.packages?.[""];
+      if (!pacchetto || lockJson.name !== pkgJson.name) {
+        throw new Error('apps/mobile/package-lock.json: manca la voce packages[""] dell\'app');
       }
       appJson.expo.version = nuova;
       pkgJson.version = nuova;
-      workspace.version = nuova;
+      lockJson.version = nuova;
+      pacchetto.version = nuova;
       scriviJson(app, appJson);
       scriviJson(pkg, pkgJson);
       scriviJson(lock, lockJson);
@@ -54,7 +55,7 @@ const TARGET = {
   },
   api: {
     prefissoTag: "api-v",
-    percorsi: ["services/api", "packages/contracts"],
+    percorsi: ["services/api", "apps/mobile/contracts"],
     // Unica fonte di verità: la `version` del blocco [project]. L'ancora a
     // inizio riga è quello che la distingue da `target-version` e
     // `python_version`, che stanno nello stesso file.

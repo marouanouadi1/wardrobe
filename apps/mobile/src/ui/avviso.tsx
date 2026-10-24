@@ -47,8 +47,7 @@ export function Avviso() {
 /**
  * Il dialogo di conferma per un'azione distruttiva — uscire, eliminare una
  * conversazione. Sostituisce `Alert.alert`: nativo, senza i colori del
- * design (il pulsante non poteva essere in pericolo), e sul web con più di due
- * bottoni non fa proprio nulla — due schermate lo scoprivano a modo loro.
+ * design (il pulsante non poteva essere in pericolo).
  *
  * Controllato dalla schermata (`visibile` + un `useState` locale), non
  * imperativo come `Alert.alert`: coerente con come il resto del design è

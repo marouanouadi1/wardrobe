@@ -1,7 +1,7 @@
 """Modelli di dominio — e fonte di verità dei contratti.
 
 `scripts/export_schema.py` esporta da qui il JSON Schema, e da quello nascono i
-tipi TypeScript in packages/contracts. Quindi: rinominare un campo in questo
+tipi TypeScript in apps/mobile/contracts. Quindi: rinominare un campo in questo
 file rompe la build dell'app in CI, che è esattamente quello che vogliamo.
 
 I nomi sono in italiano perché lo sono il prodotto e il suo design. Le uniche

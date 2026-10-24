@@ -158,15 +158,6 @@ arrivano dall'SDK ufficiale.
 *Nel frattempo:* non bloccano — sono sovrascrivibili da `MODELLI_OPENAI` e
 `MODELLI_GOOGLE`.
 
-### Q-04 — `apps/web` resta un segnaposto o si toglie?
-**Aperta il:** 2026-09-11 · **Tocca:** `apps/web/`, `package.json` (workspaces)
-
-Due file, un `dev` che esce con 1, registrato nei workspace. Costa poco tenerlo e
-confonde chi legge `## Struttura` del README.
-
-*Nel frattempo:* nessun agente ci scrive — il quando e il perché riaprirlo
-stanno in `apps/web/README.md`, che nomina perfino Next.js come candidato.
-
 ### Q-05 — I buchi di numerazione si documentano o si riempiono?
 **Aperta il:** 2026-09-11 · **Tocca:** `services/api/migrations/`, `docs/adr/`
 
@@ -178,6 +169,21 @@ Le migrazioni saltano `0003` e `0004` (playground rimosso); gli ADR partono da
 sarebbe **pericoloso**, perché l'ordine di esecuzione è lessicografico.
 
 ## Chiuse
+
+### Q-04 — `apps/web` resta un segnaposto o si toglie? (**chiusa**)
+**Aperta il:** 2026-09-11 · **Tocca:** `apps/web/`, `package.json` (workspaces)
+
+Due file, un `dev` che esce con 1, registrato nei workspace. Costa poco tenerlo e
+confonde chi legge `## Struttura` del README.
+
+*Nel frattempo:* nessun agente ci scrive — il quando e il perché riaprirlo
+stanno in `apps/web/README.md`, che nomina perfino Next.js come candidato.
+
+**Chiusa il 2026-10-24: si toglie**, e con lui il resto del web. L'utente ha
+deciso che una versione web non è in programma e che il repo è dell'app sul
+telefono. Sono usciti `apps/web`, i workspace, `react-native-web` e l'export web
+della CI; i contratti stanno in `apps/mobile/contracts/` (ADR 0014). Con i
+workspace è uscita anche la causa delle due copie di React (`T-32`).
 
 ### Q-14 — L'opzione «RLS automatico» del progetto Supabase: la si tiene? (**chiusa**)
 **Aperta il:** 2026-09-27 · **Tocca:** il pannello di Supabase, `supabase/migrations/`
@@ -336,7 +342,7 @@ parte, con il suo piano. Voce `T-38` in `docs/DA_FARE.md`.
 *(La domanda, com'era posta:)*
 
 **Aperta il:** 2026-09-18 · **Tocca:** `apps/mobile/app.json` (`name`, `slug`),
-`package.json` dei workspace (`@wardrobe/*`), i testi delle schermate, il repo
+i `package.json` (`@wardrobe/*`), i testi delle schermate, il repo
 
 Il nome del prodotto è **Aura** — deciso dall'utente il 2026-09-18, mentre si
 disegnava l'avvio dell'app (`schermate/aura-avvio.html`, dove il wordmark è già

@@ -6,7 +6,6 @@ npm-debug.log*
 # expo
 .expo/
 dist/
-web-build/
 *.jks
 *.p8
 *.p12

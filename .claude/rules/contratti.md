@@ -1,4 +1,4 @@
-# Standard contratti — `packages/contracts`
+# Standard contratti — `apps/mobile/contracts`
 
 Lo legge: `contracts` sempre; `api` e `mobile` quando il task attraversa il
 confine fra backend e app.
@@ -20,7 +20,7 @@ Per esteso, con l'esempio, in `CLAUDE.md` e in `docs/adr/0008`.
 
 ## L'invariante
 
-**Sotto `packages/contracts/` si scrive a mano solo il cablaggio** —
+**Sotto `apps/mobile/contracts/` si scrive a mano solo il cablaggio** —
 `src/index.ts` che espone i file generati, `package.json`, gli script dei
 generatori. Tutto il resto è l'output di `npm run contracts:generate` e, per i
 dati salvati su Supabase, di `npm run supabase:tipi`. Un tipo scritto a mano lì
@@ -30,7 +30,7 @@ dentro è una seconda fonte di verità in incubazione.
 
 Dal 2026-09-25 (ADR 0010) i **dati salvati** hanno come fonte lo schema SQL di
 `supabase/migrations/`. I loro tipi TypeScript li scrive `npm run supabase:tipi`
-(`supabase gen types`) in `packages/contracts/src/generated/database.ts`, e il job
+(`supabase gen types`) in `apps/mobile/contracts/src/generated/database.ts`, e il job
 `database` della CI rigenera e confronta, come `contracts:check` fa per l'altra catena.
 
 Pydantic resta la fonte di ciò che attraversa il backend dell'IA. Le enum e i limiti
@@ -55,10 +55,10 @@ che l'app chiama restituisce **colonne**, non `jsonb` (`svuota_armadio`): così
 services/api/src/domain/models.py          ← la fonte di verità
         │  uv run python scripts/export_schema.py
         ▼
-packages/contracts/schema/*.json           ← contratti.json · _enums.json · _costanti.json
-        │  packages/contracts/scripts/generate.mjs  (json-schema-to-typescript)
+apps/mobile/contracts/schema/*.json        ← contratti.json · _enums.json · _costanti.json
+        │  apps/mobile/contracts/scripts/generate.mjs  (json-schema-to-typescript)
         ▼
-packages/contracts/src/generated/*.ts      ← modelli.ts · runtime.ts
+apps/mobile/contracts/src/generated/*.ts   ← modelli.ts · runtime.ts
 ```
 
 `npm run contracts:check` rigenera in memoria e confronta col committato: esce 1
@@ -139,5 +139,5 @@ quei due file vanno guardati nello stesso passaggio.
 
 ## Non si scrive mai a mano
 
-`packages/contracts/src/generated/**` e `packages/contracts/schema/**` sono
+`apps/mobile/contracts/src/generated/**` e `apps/mobile/contracts/schema/**` sono
 output: si toccano solo rilanciando il generatore.

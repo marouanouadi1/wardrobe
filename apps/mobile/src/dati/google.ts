@@ -23,8 +23,6 @@
  * nativo si registra all'import, e chi non tocca «Continua con Google» — i
  * test delle primitive compresi, che arrivano fin qui passando dall'armadio —
  * non ha motivo di caricarlo.
- *
- * Sul web la libreria gratuita non accede: `google.web.ts`.
  */
 
 import { ErroreDati } from './errori'

@@ -653,7 +653,7 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       tutte le schermate: R8, gesture-handler 3 e Sentry 8 non hanno avuto una prova
       ciascuno. Per lo sviluppo serve Expo Go per l'SDK 58
 
-## Contratti (`packages/contracts`)
+## Contratti (`apps/mobile/contracts`)
 
 - [x] Generati da `domain/models.py`; `contracts:check` blocca in CI il disallineamento.
       *Verificato anche al contrario, rinominando un campo nel backend per vedere la CI
@@ -858,9 +858,15 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
         controlla più `iat`, ma `exp` resta rigido, e un orologio avanti accorcia le
         sessioni;
       - sul progetto vero, gli accessi anonimi spenti (`T-56`);
-      - nel `.env` del server restano `JWT_SECRET`, `EMAIL_AMMESSE`,
+      - ~~nel `.env` del server restano `JWT_SECRET`, `EMAIL_AMMESSE`,
         `EMAIL_AMMINISTRATORI` e `BASE_URL_PUBBLICA`, che non legge più nessuno. Sono
-        innocui, e toglierli tocca il `.env` del server: lo decide l'utente;
+        innocui, e toglierli tocca il `.env` del server: lo decide l'utente~~: tolte il
+        2026-10-24, con il via dell'utente. *Verificato* sul server: copia del file com'era
+        in `~/backup-env-2026-10-24/` (permessi 600), poi `sed` sulle quattro righe; nel
+        file restano `ANTHROPIC_API_KEY` e `FAL_KEY`, con i valori di prima. Dopo
+        `docker compose up -d api` il container ha ripreso solo quelle due chiavi più le
+        due di Supabase, il log dice «in ascolto», e `https://api.ilmioarmadio.xyz/salute`
+        risponde `0.7.0`. `~/wardrobe/.env` (`POSTGRES_PASSWORD`) non è stato toccato;
       - `rsync` senza `--delete` lascia sul server gli handler e gli adapter tolti
         (`T-50`).
 
@@ -1078,6 +1084,37 @@ di prima, con le loro verifiche, sono nella storia di git fino a `ed337c9`.
       spegnimento del server del 2026-10-18, e al riavvio non è ripartito; i due volumi ci sono.
 
 ## Infrastruttura e rilascio
+
+- [x] **Il repo è dell'app sul telefono** (2026-10-24, ADR 0014, branch
+      `refactor/repo-solo-mobile`). Un solo progetto npm, `apps/mobile`, con il suo
+      lock: via i workspace, `apps/web`, `react-native-web`, `mobile:web`, `build:web`, i
+      tre file `*.web.ts` e i rami `Platform.OS === 'web'`. I contratti sono passati in
+      `apps/mobile/contracts/` (`"@wardrobe/contracts": "file:./contracts"`), la radice ha
+      un `package.json` di soli script, e la CI installa in `apps/mobile` e controlla il
+      bundle con `export:android`. Chiude `T-32`. Nella stessa PR il backend perde le
+      intestazioni CORS e `do_OPTIONS`, che servivano solo all'app nel browser (`T-70`):
+      `api:lint` e `api:cov` verdi, e in locale `GET /salute` risponde 200 senza CORS
+      mentre `OPTIONS` riceve 501.
+      *Verificato* in una copia pulita del repo, senza `node_modules` nella radice:
+      - il lock nasce da quello di prima: le stesse versioni, escono solo
+        `react-native-web`, le 13 dipendenze che usava lui e i link dei workspace. Dopo
+        `npm ci` e `npm install` resta identico;
+      - `npm ls react react-dom` esce 0 con una copia sola di ciascuno, alla 19.3.0;
+      - `typecheck`, `lint` (che ora vede anche `contracts/`), `mobile:test` (conteggio
+        invariato), `contracts:check`, `export:android` ed `expo-doctor` (20 su 20)
+        escono 0;
+      - `scripts/bump-versione.mjs mobile`, in scrittura e poi buttato via, cambia solo le
+        quattro righe della versione in `app.json`, `package.json` e nel lock dell'app;
+      - il comando del README, `npm ci --prefix apps/mobile` dalla radice, non crea
+        `node_modules` in radice, e dopo `typecheck`, `lint` e `mobile:test` lanciati
+        dalla radice escono 0;
+      - una build Android release in locale (`expo prebuild` più `./gradlew
+        assembleRelease`, senza EAS) esce 0 in 9 minuti e 40 secondi. L'autolinking trova
+        Google sign-in, Sentry, gesture-handler, reanimated, worklets, screens, svg, async
+        storage e i moduli Expo, e le loro librerie native sono nell'APK.
+      *Non verificato:* i workflow sul runner di GitHub (si vedranno sulla PR), e l'app
+      sul telefono. La build EAS non è stata lanciata: alza il `versionCode` sui server di
+      Expo.
 
 - [x] **Il VPS è rimasto spento dal 2026-10-18 al 2026-10-23**, e nessuno se n'è accorto
       fino a un deploy. Quello partito dal merge di #58 (certifi e pyjwt) è caduto alle 20:29

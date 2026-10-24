@@ -73,7 +73,7 @@ il rimedio è toglierlo da `models.py` e da `RISPOSTE`, poi `contracts:generate`
 fatto qui perché tocca il contratto del backend, che si rilascia a parte.
 
 ### T-16 — Gli strumenti di test sono in `dependencies`
-**Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/package.json:22-23,38-39` · **Gravità:** bassa · **Chi:** `mobile`
+**Trovato il:** 2026-09-11 · **Dove:** `apps/mobile/package.json:26-27,44-45` · **Gravità:** bassa · **Chi:** `mobile`
 
 `jest`, `jest-expo`, `@types/jest` e `@testing-library/react-native` stanno in
 `dependencies`, mentre `devDependencies` è due righe sotto. Impatto pratico
@@ -377,42 +377,6 @@ deciso sapendolo.
 PR che tocca solo l'altro. Oggi passerebbe verde, che è la condizione per
 accendere un gate.
 
-### T-32 — Niente impedisce che tornino due copie di React
-**Trovato il:** 2026-09-13 · **Dove:** `package.json`, `apps/mobile/package.json` · **Gravità:** bassa · **Chi:** `ci-cd` + `mobile`
-
-`T-23` ha tolto la causa (`react`/`react-dom` dichiarati anche in root), non
-un gate che la tenga tolta. Se domani qualcuno rimuove quella dichiarazione da
-`dependencies` di root — o aggiunge un pacchetto che richiede una versione di
-`react` incompatibile con `19.3.0` — **nessun job diventa rosso**: le due copie
-tornerebbero silenziosamente, e il prossimo sintomo sarebbe di nuovo un
-dispatcher nullo scoperto a mano, non un gate che lo dice.
-
-È lo stesso caso di `T-30`: l'asserzione debole («`node_modules/react` risolve
-a una versione sola nel lock») è poche righe; quella robusta («ogni pacchetto
-che dichiara `react` come peer è soddisfatto senza doppioni») richiede
-modellare l'intero albero delle peer, che è quello che npm già fa da solo a
-ogni `install`. Non deciso in questa PR: **il rimedio di T-23 toglieva righe,
-un gate le aggiunge**, e va deciso sapendolo — non acceso di rimbalzo dentro
-la stessa modifica che ha appena chiuso il tampone.
-
-**Cosa serve:** decidere se basta un controllo in CI che conti le occorrenze di
-`"version"` sotto le chiavi `node_modules/react` e
-`apps/mobile/node_modules/react` nel lock (dovrebbe essercene una sola, e la
-seconda non dovrebbe esistere), o se è sufficiente affidarsi a `npm ls react
-react-dom` con `--all` che esce diverso da zero se ci sono `invalid`/duplicati
-— e in tal caso in quale workflow (`mobile.yml` ha già `paths:` su
-`apps/mobile/**`, ma la causa può tornare anche toccando solo la root).
-
-**Aggiornamento del 2026-10-24 (Expo SDK 58):** la voce pesa di più.
-`metro.config.js` non ha più `disableHierarchicalLookup`, che con l'SDK 58 non
-lasciava trovare a Metro `semver` 7, annidato sotto `react-native-reanimated`.
-Quella riga era anche una seconda difesa: una copia di `react` annidata sotto un
-pacchetto, Metro non la vedeva, e usava quella della radice. Adesso finirebbe
-nel bundle senza un errore. Resta una difesa sola, la radice che dichiara
-`react` e `react-dom` (`T-23`); il gate di questa voce è l'unico modo di
-accorgersene prima del telefono. Rimettere la riga non è il rimedio: per far
-cadere di nuovo il bundle basta il prossimo pacchetto annidato.
-
 ### T-56 — Niente controlla la configurazione dell'Auth sul progetto Supabase vero
 **Trovato il:** 2026-09-25 (audit di `security`, fase 1 di ADR 0010) · **Dove:** il pannello di Supabase, `supabase/config.toml` · **Gravità:** alta il giorno del passaggio · **Chi:** `ci-cd`
 
@@ -446,10 +410,10 @@ nei segreti della CI, e lo crea l'utente. Fino ad allora, la lista sta nella voc
 di `docs/PROGRESS.md` e si controlla a mano il giorno del passaggio.
 
 ### T-57 — `database.ts` sta dentro i filtri che rilasciano backend e app
-**Trovato il:** 2026-09-25 (review della fase 1) · **Dove:** `.github/workflows/api.yml` e `mobile.yml`, filtro `packages/contracts/**` · **Gravità:** bassa · **Chi:** `ci-cd`
+**Trovato il:** 2026-09-25 (review della fase 1) · **Dove:** `.github/workflows/api.yml` e `mobile.yml`, filtri `apps/mobile/contracts/**` e `apps/mobile/**` · **Gravità:** bassa · **Chi:** `ci-cd`
 
-Dal passaggio, ogni cambio di schema rigenera `packages/contracts/src/generated/database.ts`,
-che sta sotto `packages/contracts/**`: fa scattare il rilascio di `api.yml`, che quel file
+Dal passaggio, ogni cambio di schema rigenera `apps/mobile/contracts/src/generated/database.ts`,
+che sta sotto `apps/mobile/contracts/**`: fa scattare il rilascio di `api.yml`, che quel file
 non lo legge, e di `mobile.yml`. E lo schema sul progetto vero lo porta `supabase db push`,
 fatto a mano, non il merge. **Da decidere nella fase 5**, quando l'app lo userà davvero:
 togliere `database.ts` dal filtro di `api.yml`, e legare il `db push` al merge.
@@ -538,16 +502,6 @@ endpoint con quei campi rispondono 422; un `ErroreProvider` con un marcatore nel
 risposta non lo mostra al client. **Non fatto nella fase 2 di proposito**: è su `main` oggi,
 e una correzione che arriva con il giorno X lo lascerebbe aperto fino ad allora. Va in una
 PR sua su `main`, quando l'utente lo decide (un merge su `main` è un rilascio).
-
-### T-61 — `access-control-allow-headers: *` non copre `Authorization`
-**Trovato il:** 2026-09-27 (review della fase 2) · **Dove:** `services/api/src/handlers/local_server.py`, `_rispondi` · **Gravità:** da verificare · **Chi:** `api`, con `mobile` nella fase 3
-
-Per la specifica Fetch il jolly di `access-control-allow-headers` **non** comprende
-`Authorization`: sul web una richiesta con il token può cadere al preflight. C'era già
-prima; conta dalla fase 3, quando l'app web manderà il token di Supabase al backend.
-**Il rimedio c'è dalla fase 3**: `authorization, content-type` scritti per nome in
-`_rispondi`. **Manca la verifica nel browser**, con l'app web che manda il token al backend:
-fatta quella, la voce si chiude.
 
 ### T-62 — In sviluppo l'indirizzo firmato dell'esportazione nasce da `127.0.0.1`
 **Trovato il:** 2026-09-27 (review della fase 2) · **Dove:** `ArchivioSupabase.firma_lettura`, `scripts/dev.sh` · **Gravità:** bassa, solo sviluppo · **Chi:** `api`, `mobile` nella fase 3
@@ -962,23 +916,6 @@ provate; ripristinato, verdi.
 **nessuno l'ha ancora guardato su un telefono** — il conto dice che entra, non
 come si vede.
 
-### T-66 — Sul web, col mouse, un trascinamento che parte da un'immagine non arriva ai gesti
-**Trovato il:** 2026-09-27 · **Dove:** `apps/mobile/app/intro.tsx` (la scorsa fra i passi), e ogni `Image` di `expo-image` sotto un `GestureDetector` · **Gravità:** bassa · **Chi:** `mobile`
-
-Provato sulla build web con Chrome headless: la scorsa orizzontale dell'intro
-funziona col **tocco** su tutti e tre i passi, e col **mouse** solo se il
-trascinamento parte fuori da un'immagine. Partendo dall'omino del passo 2 il
-passo non cambia; partendo dal testo sì. È il trascinamento nativo del browser
-sugli `<img>`, che si prende gli eventi prima di gesture-handler.
-
-Su un telefono non succede — lì non c'è un mouse — ed è il motivo per cui non è
-stato corretto nella stessa modifica.
-
-**Cosa serve:** togliere il trascinamento nativo delle immagini sul web **in un
-punto solo** (una regola CSS globale sul web, o una primitiva immagine), non un
-`pointerEvents="none"` sparso sulle singole foto: quello sarebbe un tampone per
-immagine.
-
 ### T-69 — Un server spento lo scopre solo il deploy successivo
 **Trovato il:** 2026-10-23 · **Dove:** `.github/workflows/` (nessun job interroga `/salute` fra un deploy e l'altro) · **Gravità:** media · **Chi:** `ci-cd`
 
@@ -1006,6 +943,124 @@ l'allarme, senza un servizio in più. Va senza filtri sui path, come
 ---
 
 ## Fatte
+
+Chiuse il **2026-10-24** dall'ADR 0014 (branch `refactor/repo-solo-mobile`): il
+repo è dell'app sul telefono, con un solo progetto npm e niente web.
+
+### T-32 — Niente impedisce che tornino due copie di React (**chiusa**: la causa non c'è più)
+**Trovato il:** 2026-09-13 · **Dove:** `package.json`, `apps/mobile/package.json` · **Gravità:** bassa · **Chi:** `ci-cd` + `mobile`
+
+`T-23` ha tolto la causa (`react`/`react-dom` dichiarati anche in root), non
+un gate che la tenga tolta. Se domani qualcuno rimuove quella dichiarazione da
+`dependencies` di root — o aggiunge un pacchetto che richiede una versione di
+`react` incompatibile con `19.3.0` — **nessun job diventa rosso**: le due copie
+tornerebbero silenziosamente, e il prossimo sintomo sarebbe di nuovo un
+dispatcher nullo scoperto a mano, non un gate che lo dice.
+
+È lo stesso caso di `T-30`: l'asserzione debole («`node_modules/react` risolve
+a una versione sola nel lock») è poche righe; quella robusta («ogni pacchetto
+che dichiara `react` come peer è soddisfatto senza doppioni») richiede
+modellare l'intero albero delle peer, che è quello che npm già fa da solo a
+ogni `install`. Non deciso in questa PR: **il rimedio di T-23 toglieva righe,
+un gate le aggiunge**, e va deciso sapendolo — non acceso di rimbalzo dentro
+la stessa modifica che ha appena chiuso il tampone.
+
+**Cosa serve:** decidere se basta un controllo in CI che conti le occorrenze di
+`"version"` sotto le chiavi `node_modules/react` e
+`apps/mobile/node_modules/react` nel lock (dovrebbe essercene una sola, e la
+seconda non dovrebbe esistere), o se è sufficiente affidarsi a `npm ls react
+react-dom` con `--all` che esce diverso da zero se ci sono `invalid`/duplicati
+— e in tal caso in quale workflow (`mobile.yml` ha già `paths:` su
+`apps/mobile/**`, ma la causa può tornare anche toccando solo la root).
+
+**Aggiornamento del 2026-10-24 (Expo SDK 58):** la voce pesa di più.
+`metro.config.js` non ha più `disableHierarchicalLookup`, che con l'SDK 58 non
+lasciava trovare a Metro `semver` 7, annidato sotto `react-native-reanimated`.
+Quella riga era anche una seconda difesa: una copia di `react` annidata sotto un
+pacchetto, Metro non la vedeva, e usava quella della radice. Adesso finirebbe
+nel bundle senza un errore. Resta una difesa sola, la radice che dichiara
+`react` e `react-dom` (`T-23`); il gate di questa voce è l'unico modo di
+accorgersene prima del telefono. Rimettere la riga non è il rimedio: per far
+cadere di nuovo il bundle basta il prossimo pacchetto annidato.
+
+**Come è stata chiusa.** Senza gate, perché la condizione che il gate avrebbe
+controllato non esiste più. Le due copie nascevano dai workspace: una radice che
+installa per tutti e che doveva ricordarsi di dichiarare `react`. Con l'ADR 0014
+l'app è l'unico progetto npm del repo, `react` e `react-dom` sono dichiarati in
+`apps/mobile/package.json` e basta, e ogni peer `*` si risolve su quella
+dichiarazione. Il pin di Expo si alza in un file solo.
+
+Verificato in una copia pulita del repo, senza `node_modules` nella radice:
+- `npm ci` in `apps/mobile`, poi `npm ls react react-dom`: una copia sola di
+  ciascuno, alla 19.3.0, ed esce 0;
+- il lock nuovo è quello di prima con le stesse versioni: escono solo
+  `react-native-web`, le 13 dipendenze che usava lui e i link dei workspace;
+- `typecheck`, `lint`, `mobile:test`, `contracts:check`, `export:android` ed
+  `expo-doctor` verdi.
+
+**Cosa resta**, e lo dice anche l'ADR: un pacchetto difettoso che dichiari
+`react` come dipendenza normale, con un intervallo incompatibile, verrebbe
+annidato da npm, e Metro lo metterebbe nel bundle. Non è una conseguenza della
+struttura e non lo prova nessun job; lo mostra `npm ls react react-dom` in
+`apps/mobile`.
+
+### T-61 — `access-control-allow-headers: *` non copre `Authorization` (**decaduta**)
+**Trovato il:** 2026-09-27 (review della fase 2) · **Dove:** `services/api/src/handlers/local_server.py`, `_rispondi` · **Gravità:** da verificare · **Chi:** `api`, con `mobile` nella fase 3
+
+Per la specifica Fetch il jolly di `access-control-allow-headers` **non** comprende
+`Authorization`: sul web una richiesta con il token può cadere al preflight. C'era già
+prima; conta dalla fase 3, quando l'app web manderà il token di Supabase al backend.
+**Il rimedio c'è dalla fase 3**: `authorization, content-type` scritti per nome in
+`_rispondi`. **Manca la verifica nel browser**, con l'app web che manda il token al backend:
+fatta quella, la voce si chiude.
+
+**Decaduta il 2026-10-24.** Mancava solo la verifica nel browser, e il browser non
+è più un client dell'app (ADR 0014): l'app sul telefono non fa preflight. Le
+intestazioni CORS, rimedio compreso, sono uscite con `T-70`.
+
+### T-66 — Sul web, col mouse, un trascinamento che parte da un'immagine non arriva ai gesti (**decaduta**)
+**Trovato il:** 2026-09-27 · **Dove:** `apps/mobile/app/intro.tsx` (la scorsa fra i passi), e ogni `Image` di `expo-image` sotto un `GestureDetector` · **Gravità:** bassa · **Chi:** `mobile`
+
+Provato sulla build web con Chrome headless: la scorsa orizzontale dell'intro
+funziona col **tocco** su tutti e tre i passi, e col **mouse** solo se il
+trascinamento parte fuori da un'immagine. Partendo dall'omino del passo 2 il
+passo non cambia; partendo dal testo sì. È il trascinamento nativo del browser
+sugli `<img>`, che si prende gli eventi prima di gesture-handler.
+
+Su un telefono non succede — lì non c'è un mouse — ed è il motivo per cui non è
+stato corretto nella stessa modifica.
+
+**Cosa serve:** togliere il trascinamento nativo delle immagini sul web **in un
+punto solo** (una regola CSS globale sul web, o una primitiva immagine), non un
+`pointerEvents="none"` sparso sulle singole foto: quello sarebbe un tampone per
+immagine.
+
+**Decaduta il 2026-10-24.** L'app non ha più una versione web (ADR 0014): senza
+browser non c'è un mouse, e sul telefono il difetto non esisteva.
+
+### T-70 — Le intestazioni CORS del backend non servono più a nessun client (**chiusa**)
+**Trovato il:** 2026-10-24 (ADR 0014, chiudendo `T-61`) · **Dove:** `services/api/src/handlers/local_server.py`, `_rispondi` e `do_OPTIONS` · **Gravità:** bassa · **Chi:** `api`
+
+Il backend risponde con `access-control-allow-*` e gestisce il preflight per un
+client che girava nel browser, l'app web. Dal 2026-10-24 l'app è solo sul
+telefono, che non fa preflight, e nessun altro client chiama l'API da un browser.
+Le intestazioni non fanno danni, ma sono codice che dichiara un client che non
+c'è.
+
+**Il rimedio:** toglierle insieme a `do_OPTIONS`, in una modifica del
+backend a sé (è un rilascio dell'API), dopo aver controllato che niente nel
+browser chiami l'API, e la pagina di revisione dei cursori in `tools/avatar/`
+per prima.
+
+**Come è stata chiusa**, nella stessa PR che l'ha trovata, su richiesta
+dell'utente: il rilascio dell'API c'era comunque, perché la PR tocca già
+`export_schema.py`. Prima i controlli: in `tools/avatar/` niente chiama l'API, e
+la pagina di revisione dei cursori non è nel repo; «Scarica i tuoi dati» apre
+nel browser un indirizzo firmato di Supabase, non il backend. Poi sono uscite da `_rispondi` le tre intestazioni
+`access-control-allow-*`, insieme a `do_OPTIONS`. *Verificato* con `api:lint`,
+`api:cov` (conteggio invariato, coverage sopra la soglia) e il server avviato in
+locale: `GET /salute` risponde 200 senza intestazioni CORS, e `OPTIONS` riceve
+il 501 della libreria standard.
 
 Chiusa il **2026-10-06**, nella stessa PR che l'ha trovata (#54).
 

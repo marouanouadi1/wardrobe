@@ -484,8 +484,8 @@ export function Schermata({
  * voce nascosta insegna che quella cosa non esiste, una spenta che dice cosa
  * manca insegna che non esiste *ancora*. Dal passaggio a Supabase (ADR 0010)
  * il recupero e Google ci sono; Apple no, finché l'app non arriva su iPhone.
- * Google può essere spento anche lui — sul web, o in una versione senza il suo
- * client — e allora porta il suo `motivo`.
+ * Google può essere spento anche lui, in una versione senza il suo client, e
+ * allora porta il suo `motivo`.
  */
 export function PiedeAccesso({
   onRecupero,

@@ -110,4 +110,3 @@ ancora al vincolo. Gli ADR sono un registro, non uno stato corrente.
   riscrivere `CLAUDE.md` può riscrivere le proprie istruzioni
 - **Non marchi `[x]` una riga di `PROGRESS.md`** che non hai verificato: `[x]`
   significa verificato, e la riga deve dire **come**
-- `apps/web/README.md` è l'unico file di `apps/web/` che ti riguarda
